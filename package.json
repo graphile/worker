@@ -1,0 +1,51 @@
+{
+  "name": "graphile-worker",
+  "version": "0.0.0",
+  "description": "Job queue for PostgreSQL",
+  "main": "dist/index.js",
+  "scripts": {
+    "prepack": "tsc && chmod +x dist/cli.js",
+    "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && tsc --watch"
+  },
+  "bin": {
+    "graphile-worker": "./dist/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/graphile/worker.git"
+  },
+  "keywords": [
+    "postgresql",
+    "postgres",
+    "pg",
+    "worker",
+    "sql",
+    "easy",
+    "fast",
+    "jobs",
+    "background",
+    "tasks"
+  ],
+  "author": "Benjie Gillam <code@benjiegillam.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/graphile/worker/issues"
+  },
+  "homepage": "https://github.com/graphile/worker#readme",
+  "dependencies": {
+    "@types/chokidar": "^1.7.5",
+    "@types/pg": "^7.4.11",
+    "chokidar": "^2.1.1",
+    "pg": ">=6.5 <8",
+    "pg-connection-string": "^2.0.0"
+  },
+  "devDependencies": {
+    "prettier": "^1.16.4",
+    "tslint": "^5.13.1",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^3.3.3333"
+  },
+  "files": [
+    "dist"
+  ]
+}
