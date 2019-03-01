@@ -11,3 +11,29 @@ Job queue for PostgreSQL.
 - Simple implementation - easy to contribute to
 - Executes tasks written in JavaScript, these can call out to any other language or networked service
 - Modern JS with async/await
+
+## Requirements
+
+PostgreSQL 9.6+ and Node v8.6+.
+
+If your database doesn't already include the `pgcrypto` and `uuid-ossp` extensions we'll automatically install them into the public schema for you.
+
+## Installation
+
+```
+yarn add graphile-worker
+```
+
+`graphile-worker` manages it's own database schema, `graphile-worker`, just point graphile-worker at your database and we handle the rest:
+
+```
+graphile-worker -c "postgres://localhost/mydb"
+```
+
+## Uninstallation
+
+To delete the worker code and all the tasks from your database, just run this one SQL statement:
+
+```sql
+DROP SCHEMA graphile_worker CASCADE;
+```
