@@ -42,8 +42,9 @@ export interface Job {
 }
 
 export interface Worker {
-  doNext: () => Promise<null>;
   nudge: () => boolean;
   workerId: string;
   release: () => void;
+  promise: Promise<void>;
+  getActiveJob: () => Job | null;
 }

@@ -1,20 +1,11 @@
 import { Pool, PoolClient } from "pg";
-import { Helpers, TaskList, Worker, Job, WithPgClient } from "./interfaces";
-import debug, { debugFactory } from "./debug";
+import { TaskList, Worker, Job } from "./interfaces";
+import debug from "./debug";
 import deferred from "./deferred";
 import SIGNALS from "./signals";
-
-/*
- * idleDelay: This is how long to wait between polling for jobs.
- *
- * Note: this does NOT need to be short, because we use LISTEN/NOTIFY to be
- * notified when new jobs are added - this is just used in the case where
- * LISTEN/NOTIFY fails for whatever reason.
- */
-const idleDelay = 15000;
+import { makeNewWorker } from "./worker";
 
 let shuttingDown = false;
-const jobsInProgress: Array<number> = [];
 debug("Booting worker");
 
 function makeWithPgClientFromPool(pgPool: Pool) {
@@ -34,149 +25,16 @@ function makeWithPgClientFromClient(pgClient: PoolClient) {
   };
 }
 
-function makeNewWorker(
-  tasks: TaskList,
-  withPgClient: WithPgClient,
-  continuous = true,
-  workerId = `worker-${Math.random()}`
-): Worker {
-  let doNextTimer: NodeJS.Timer | undefined;
-
-  debug(`!!! Worker '${workerId}' spawned`);
-
-  const doNext = async (): Promise<null> => {
-    if (shuttingDown) {
-      return null;
-    }
-    if (doNextTimer) {
-      clearTimeout(doNextTimer);
-    }
-    doNextTimer = undefined;
-    try {
-      const supportedTaskNames = Object.keys(tasks);
-      const {
-        rows: [jobRow]
-      } = await withPgClient(client =>
-        client.query("SELECT * FROM graphile_worker.get_job($1, $2);", [
-          workerId,
-          supportedTaskNames
-        ])
-      );
-      const job = jobRow as Job;
-      if (!job || !job.id) {
-        if (continuous) {
-          doNextTimer = setTimeout(() => doNext(), idleDelay);
-        }
-        return null;
-      }
-      jobsInProgress.push(job.id);
-      debug(
-        `Found task ${job.id} (${job.task_identifier}); worker ${workerId}`
-      );
-      const startTimestamp = process.hrtime();
-      const worker = tasks[job.task_identifier];
-      if (!worker) {
-        throw new Error("Unsupported task");
-      }
-      const helpers: Helpers = {
-        debug: debugFactory(`${job.task_identifier}`),
-        withPgClient
-        // TODO: add an API for giving workers more helpers
-      };
-      let err: Error | null = null;
-      try {
-        await worker(job, helpers);
-      } catch (error) {
-        err = error;
-      }
-      const durationRaw = process.hrtime(startTimestamp);
-      const duration = ((durationRaw[0] * 1e9 + durationRaw[1]) / 1e6).toFixed(
-        2
-      );
-      try {
-        if (err) {
-          const error = err;
-          // tslint:disable-next-line no-console
-          console.error(
-            `Failed task ${job.id} (${job.task_identifier}) with error ${
-              err.message
-            } (${duration}ms)`,
-            { stack: error.stack }
-          );
-          // tslint:disable-next-line no-console
-          console.error(err.stack);
-          await withPgClient(client =>
-            client.query(
-              "SELECT * FROM graphile_worker.fail_job($1, $2, $3);",
-              [workerId, job.id, error.message]
-            )
-          );
-        } else {
-          // tslint:disable-next-line no-console
-          console.log(
-            `Completed task ${job.id} (${
-              job.task_identifier
-            }) with success (${duration}ms)`
-          );
-          await withPgClient(client =>
-            client.query(
-              "SELECT * FROM graphile_worker.complete_job($1, $2);",
-              [workerId, job.id]
-            )
-          );
-        }
-      } catch (fatalError) {
-        const when = err ? `after failure '${err.message}'` : "after success";
-        // tslint:disable-next-line no-console
-        console.error(
-          `Failed to release job '${job.id}' ${when}; committing seppuku`
-        );
-        // tslint:disable-next-line no-console
-        console.error(fatalError.message);
-        if (continuous) {
-          process.exit(1);
-        }
-      }
-      const idx = jobsInProgress.indexOf(job.id);
-      if (idx >= 0) {
-        jobsInProgress.splice(idx, 1);
-      }
-      return doNext();
-    } catch (err) {
-      if (continuous) {
-        debug(`ERROR! ${err.message}`);
-        doNextTimer = setTimeout(() => doNext(), idleDelay);
-        return null;
-      } else {
-        throw err;
-      }
-    }
-  };
-
-  const nudge = () => {
-    if (doNextTimer) {
-      // Must be idle
-      doNext();
-      return true;
-    }
-    return false;
-  };
-
-  const release = () => {
-    // TODO: implement me!
-    throw new Error("Unimplemented");
-  };
-
-  return { doNext, nudge, workerId, release };
-}
-
 export function start(tasks: TaskList, pgPool: Pool, workerCount = 1) {
   const promise = deferred();
   // Make sure we clean up after ourselves
-  const workerIds: Array<string> = [];
   async function gracefulShutdown(signal: string) {
     // Release all jobs
     try {
+      const workerIds = workers.map(worker => worker.workerId);
+      const jobsInProgress: Array<Job> = workers
+        .map(worker => worker.getActiveJob())
+        .filter((job): job is Job => !!job);
       debug("RELEASING THE JOBS", workerIds);
       const { rows: cancelledJobs } = await pgPool.query(
         `
@@ -185,28 +43,39 @@ export function start(tasks: TaskList, pgPool: Pool, workerCount = 1) {
           INNER JOIN graphile_worker.job_queues ON (job_queues.queue_name = jobs.queue_name)
           WHERE job_queues.locked_by = ANY($1::text[]) AND jobs.id = ANY($3::int[]);
         `,
-        [workerIds, `Forced worker shutdown due to ${signal}`, jobsInProgress]
+        [
+          workerIds,
+          `Forced worker shutdown due to ${signal}`,
+          jobsInProgress.map(job => job.id)
+        ]
       );
       debug(cancelledJobs);
       debug("JOBS RELEASED");
     } catch (e) {
-      // tslint:disable-next-line no-console
-      console.error(e);
+      console.error(e.message); // tslint:disable-line no-console
     }
   }
 
   SIGNALS.forEach(signal => {
     debug("Registering signal handler for ", signal);
+    const removeHandler = () => {
+      debug("Removing signal handler for ", signal);
+      process.removeListener(signal, handler);
+    };
     const handler = function() {
-      setTimeout(() => {
-        process.removeListener(signal, handler);
-      }, 5000);
+      // tslint:disable-next-line no-console
+      console.error(`Received '${signal}'; attempting graceful shutdown...`);
+      setTimeout(removeHandler, 5000);
       if (shuttingDown) {
         return;
       }
       shuttingDown = true;
       gracefulShutdown(signal).finally(() => {
-        process.removeListener(signal, handler);
+        removeHandler();
+        // tslint:disable-next-line no-console
+        console.error(
+          `Graceful shutdown attempted; killing self via ${signal}`
+        );
         process.kill(process.pid, signal);
       });
     };
@@ -222,7 +91,11 @@ export function start(tasks: TaskList, pgPool: Pool, workerCount = 1) {
   ) => {
     if (err) {
       // tslint:disable-next-line no-console
-      console.error("Error connecting with notify listener", err.message);
+      console.error(
+        `Error connecting with notify listener (trying again in 5 seconds): ${
+          err.message
+        }`
+      );
       // Try again in 5 seconds
       setTimeout(() => {
         pgPool.connect(listenForChanges);
@@ -230,15 +103,21 @@ export function start(tasks: TaskList, pgPool: Pool, workerCount = 1) {
       return;
     }
     client.on("notification", () => {
+      // Find a worker that's available
       workers.some(worker => worker.nudge());
     });
+
+    // Subscribe to jobs:insert message
     client.query('LISTEN "jobs:insert"');
+
+    // On error, release this client and try again
     client.on("error", (e: Error) => {
       // tslint:disable-next-line no-console
       console.error("Error with database notify listener", e.message);
       release();
       pgPool.connect(listenForChanges);
     });
+
     const supportedTaskNames = Object.keys(tasks);
     // tslint:disable-next-line no-console
     console.log(
@@ -248,21 +127,20 @@ export function start(tasks: TaskList, pgPool: Pool, workerCount = 1) {
     );
   };
   pgPool.connect(listenForChanges);
+
+  const withPgClient = makeWithPgClientFromPool(pgPool);
   for (let i = 0; i < workerCount; i++) {
-    // TODO: reuse listenForChanges client
-    const worker = makeNewWorker(tasks, makeWithPgClientFromPool(pgPool));
-    workers.push(worker);
-    workerIds.push(worker.workerId);
-    worker.doNext();
+    workers.push(makeNewWorker(tasks, withPgClient));
   }
+
   return {
     release: () => {
       promise.resolve();
-      workers.forEach(worker => worker.release());
+      return Promise.all(workers.map(worker => worker.release()));
     },
     promise
   };
 }
 
 export const runAllJobs = (tasks: TaskList, client: PoolClient) =>
-  makeNewWorker(tasks, makeWithPgClientFromClient(client), false).doNext();
+  makeNewWorker(tasks, makeWithPgClientFromClient(client), false).promise;

@@ -4,6 +4,13 @@ export { IDebugger };
 
 export default debug("graphile-worker");
 
-export function debugFactory(namespace: string) {
-  return debug(`graphile-worker:${namespace}`);
+const debuggers: {
+  [namespace: string]: IDebugger;
+} = {};
+
+export function debugFactory(namespace: string): IDebugger {
+  if (!debuggers[namespace]) {
+    debuggers[namespace] = debug(`graphile-worker:${namespace}`);
+  }
+  return debuggers[namespace];
 }
