@@ -86,7 +86,7 @@ create function graphile_worker.get_job(worker_id text, task_identifiers text[] 
 declare
   v_job_id bigint;
   v_queue_name text;
-  v_default_job_maximum_attempts text = '25';
+  v_default_job_max_attempts text = '25';
   v_row graphile_worker.jobs;
 begin
   if worker_id is null or length(worker_id) < 10 then
@@ -98,7 +98,7 @@ begin
     inner join graphile_worker.jobs using (queue_name)
     where (locked_at is null or locked_at < (now() - job_expiry))
     and run_at <= now()
-    and attempts < maximum_attempts
+    and attempts < max_attempts
     and (task_identifiers is null or task_identifier = any(task_identifiers))
     order by priority asc, run_at asc, id asc
     limit 1
