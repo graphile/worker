@@ -1,6 +1,6 @@
 import { Pool, PoolClient } from "pg";
 import debugFactory from "debug";
-import { Helpers, TaskList, Worker, Job } from "./interfaces";
+import { Helpers, TaskList, Worker, Job, WithPgClient } from "./interfaces";
 
 /*
  * idleDelay: This is how long to wait between polling for jobs.
@@ -11,29 +11,50 @@ import { Helpers, TaskList, Worker, Job } from "./interfaces";
  */
 const idleDelay = 15000;
 
-const debug = debugFactory("worker");
+const debug = debugFactory("graphile-worker");
 
 let shuttingDown = false;
 const jobsInProgress: Array<number> = [];
 debug("Booting worker");
 
-function fakePgPool(client: PoolClient): Pool {
-  // Only really intended for usage during testing!
-  const fakeQuery = (arg1: any, ...args: Array<any>) =>
-    client.query(arg1, ...args);
-  return ({
-    connect: () => ({
-      query: fakeQuery,
-      release: () => {}
-    }),
-    query: fakeQuery
-  } as any) as Pool;
+interface Deferred<T> extends Promise<T> {
+  resolve: (result?: T) => void;
+  reject: (error: Error) => void;
 }
 
-export function makeNewWorker(
+function deferred<T>(): Deferred<T> {
+  let resolve: (result?: T) => void;
+  let reject: (error: Error) => void;
+  return Object.assign(
+    new Promise<T>((_resolve, _reject) => {
+      resolve = _resolve;
+      reject = _reject;
+    }),
+    // @ts-ignore Non-sense, these aren't used before being defined.
+    { resolve, reject }
+  );
+}
+
+function makeWithPgClientFromPool(pgPool: Pool) {
+  return async <T>(callback: (pgClient: PoolClient) => Promise<T>) => {
+    const client = await pgPool.connect();
+    try {
+      return await callback(client);
+    } finally {
+      await client.release();
+    }
+  };
+}
+
+function makeWithPgClientFromClient(pgClient: PoolClient) {
+  return async <T>(callback: (pgClient: PoolClient) => Promise<T>) => {
+    return callback(pgClient);
+  };
+}
+
+function makeNewWorker(
   tasks: TaskList,
-  pgPool: Pool,
-  client: PoolClient,
+  withPgClient: WithPgClient,
   continuous = true,
   workerId = `worker-${Math.random()}`
 ): Worker {
@@ -42,11 +63,6 @@ export function makeNewWorker(
   debug(`!!! Worker '${workerId}' spawned`);
 
   const doNext = async (): Promise<null> => {
-    if (!continuous && process.env.NODE_ENV !== "test") {
-      throw new Error(
-        "Continuous should always be true except in a test environment"
-      );
-    }
     if (shuttingDown) {
       return null;
     }
@@ -58,10 +74,12 @@ export function makeNewWorker(
       const supportedTaskNames = Object.keys(tasks);
       const {
         rows: [jobRow]
-      } = await client.query("SELECT * FROM graphile_worker.get_job($1, $2);", [
-        workerId,
-        supportedTaskNames
-      ]);
+      } = await withPgClient(client =>
+        client.query("SELECT * FROM graphile_worker.get_job($1, $2);", [
+          workerId,
+          supportedTaskNames
+        ])
+      );
       const job = jobRow as Job;
       if (!job || !job.id) {
         if (continuous) {
@@ -80,10 +98,10 @@ export function makeNewWorker(
       }
       const helpers: Helpers = {
         debug: debugFactory(`worker:${job.task_identifier}`),
-        pgPool
-        // You can give your workers more context here if you like.
+        withPgClient
+        // TODO: add an API for giving workers more helpers
       };
-      let err;
+      let err: Error | null = null;
       try {
         await worker(job, helpers);
       } catch (error) {
@@ -95,18 +113,21 @@ export function makeNewWorker(
       );
       try {
         if (err) {
+          const error = err;
           // tslint:disable-next-line no-console
           console.error(
             `Failed task ${job.id} (${job.task_identifier}) with error ${
               err.message
             } (${duration}ms)`,
-            { err, stack: err.stack }
+            { stack: error.stack }
           );
           // tslint:disable-next-line no-console
           console.error(err.stack);
-          await client.query(
-            "SELECT * FROM graphile_worker.fail_job($1, $2, $3);",
-            [workerId, job.id, err.message]
+          await withPgClient(client =>
+            client.query(
+              "SELECT * FROM graphile_worker.fail_job($1, $2, $3);",
+              [workerId, job.id, error.message]
+            )
           );
         } else {
           // tslint:disable-next-line no-console
@@ -115,9 +136,11 @@ export function makeNewWorker(
               job.task_identifier
             }) with success (${duration}ms)`
           );
-          await client.query(
-            "SELECT * FROM graphile_worker.complete_job($1, $2);",
-            [workerId, job.id]
+          await withPgClient(client =>
+            client.query(
+              "SELECT * FROM graphile_worker.complete_job($1, $2);",
+              [workerId, job.id]
+            )
           );
         }
       } catch (fatalError) {
@@ -157,10 +180,16 @@ export function makeNewWorker(
     return false;
   };
 
-  return { doNext, nudge, workerId };
+  const release = () => {
+    // TODO: implement me!
+    throw new Error("Unimplemented");
+  };
+
+  return { doNext, nudge, workerId, release };
 }
 
-export async function start(tasks: TaskList, pgPool: Pool, workerCount = 1) {
+export function start(tasks: TaskList, pgPool: Pool, workerCount = 1) {
+  const promise = deferred();
   // Make sure we clean up after ourselves
   const workerIds: Array<string> = [];
   async function gracefulShutdown(signal: string) {
@@ -233,20 +262,27 @@ export async function start(tasks: TaskList, pgPool: Pool, workerCount = 1) {
     const supportedTaskNames = Object.keys(tasks);
     // tslint:disable-next-line no-console
     console.log(
-      "Worker connected and looking for jobs...\n" +
-        `  - Supported task names: '${supportedTaskNames.join("', '")}'`
+      `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
+        "', '"
+      )}')`
     );
   };
   pgPool.connect(listenForChanges);
   for (let i = 0; i < workerCount; i++) {
     // TODO: reuse listenForChanges client
-    const workerClient = await pgPool.connect();
-    const worker = makeNewWorker(tasks, pgPool, workerClient);
+    const worker = makeNewWorker(tasks, makeWithPgClientFromPool(pgPool));
     workers.push(worker);
     workerIds.push(worker.workerId);
     worker.doNext();
   }
+  return {
+    release: () => {
+      promise.resolve();
+      workers.forEach(worker => worker.release());
+    },
+    promise
+  };
 }
 
 export const runAllJobs = (tasks: TaskList, client: PoolClient) =>
-  makeNewWorker(tasks, fakePgPool(client), client, false).doNext();
+  makeNewWorker(tasks, makeWithPgClientFromClient(client), false).doNext();

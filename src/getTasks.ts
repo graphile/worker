@@ -2,10 +2,12 @@ import * as rawFs from "fs";
 import { promisify } from "util";
 import { dirname, basename } from "path";
 import * as chokidar from "chokidar";
+import debugFactory from "debug";
 import { Task, TaskList, WatchedTaskList } from "./interfaces";
 import m = require("module");
 
 const { Module } = m;
+const debug = debugFactory("graphile-worker");
 
 const stat = promisify(rawFs.stat);
 const readFile = promisify(rawFs.readFile);
@@ -26,11 +28,28 @@ function stripBOM(str: string) {
   return str;
 }
 
-function ensureValidTask(fn: any): fn is Task {
+function isValidTask(fn: any): fn is Task {
   if (typeof fn === "function") {
     return true;
   }
   return false;
+}
+
+function validTasks(obj: any) {
+  const tasks: TaskList = {};
+  Object.keys(obj).forEach(taskName => {
+    const task = obj[taskName];
+    if (isValidTask(task)) {
+      tasks[taskName] = task;
+    } else {
+      // tslint:disable-next-line no-console
+      console.warn(
+        `Not a valid task '${taskName}' - expected function, received ${
+          task ? typeof task : String(task)
+        }.`
+      );
+    }
+  });
 }
 
 /**
@@ -68,13 +87,34 @@ async function loadFileIntoTasks(
 
   replacementModule.loaded = true;
 
-  if (name) {
-    tasks[name] = ensureValidTask(
-      replacementModule.exports.default || replacementModule.exports
-    );
+  if (!replacementModule.exports) {
+    throw new Error(`Module '${filename}' doesn't have an export`);
   }
 
-  return replacementModule.exports;
+  if (name) {
+    const task = replacementModule.exports.default || replacementModule.exports;
+    if (isValidTask(task)) {
+      tasks[name] = task;
+    } else {
+      throw new Error(
+        `Invalid task '${name}' - expected function, received ${
+          task ? typeof task : String(task)
+        }.`
+      );
+    }
+  } else {
+    Object.keys(tasks).forEach(taskName => {
+      delete tasks[taskName];
+    });
+    if (
+      !replacementModule.exports.default ||
+      typeof replacementModule.exports.default === "function"
+    ) {
+      Object.assign(tasks, validTasks(replacementModule.exports));
+    } else {
+      Object.assign(tasks, validTasks(replacementModule.exports.default));
+    }
+  }
 }
 
 export async function getTasks(
@@ -88,18 +128,25 @@ export async function getTasks(
     );
   }
   const watchers: Array<chokidar.FSWatcher> = [];
+  let taskNames: Array<string> = [];
   const tasks: TaskList = {};
+  const debugSupported = () => {
+    const oldTaskNames = taskNames;
+    taskNames = Object.keys(tasks).sort();
+    if (oldTaskNames.join(",") !== taskNames.join(",")) {
+      debug(`Supported task names: '${taskNames.join("', '")}'`);
+    }
+  };
   if (pathStat.isFile()) {
     if (watch) {
       watchers.push(
-        chokidar.watch(taskPath).on("all", event => {
-          console.log(event, taskPath);
-          loadFileIntoTasks(tasks, taskPath).catch(e => {
-            // tslint:disable-next-line no-console
-            console.error(
-              `Error loading updated tasks file ${taskPath}: ${e.message}`
-            );
-          });
+        chokidar.watch(taskPath).on("all", () => {
+          loadFileIntoTasks(tasks, taskPath)
+            .then(debugSupported)
+            .catch(e => {
+              // tslint:disable-next-line no-console
+              console.error(`Error in ${taskPath}: ${e.message}`);
+            });
         })
       );
     }
@@ -108,20 +155,24 @@ export async function getTasks(
   } else if (pathStat.isDirectory()) {
     if (watch) {
       watchers.push(
-        chokidar.watch(`${taskPath}/*.js`).on("all", (event, eventFilePath) => {
-          const taskName = basename(taskPath, ".js");
-          console.log(event, eventFilePath, taskName);
-          if (event === "unlink") {
-            delete tasks[taskName];
-          } else {
-            loadFileIntoTasks(tasks, eventFilePath, taskName).catch(e => {
-              // tslint:disable-next-line no-console
-              console.error(
-                `Error loading updated tasks file ${taskPath}: ${e.message}`
-              );
-            });
-          }
-        })
+        chokidar
+          .watch(`${taskPath}/*.js`, {
+            ignoreInitial: true
+          })
+          .on("all", (event, eventFilePath) => {
+            const taskName = basename(eventFilePath, ".js");
+            if (event === "unlink") {
+              delete tasks[taskName];
+              debugSupported();
+            } else {
+              loadFileIntoTasks(tasks, eventFilePath, taskName)
+                .then(debugSupported)
+                .catch(e => {
+                  // tslint:disable-next-line no-console
+                  console.error(`Error in ${eventFilePath}: ${e.message}`);
+                });
+            }
+          })
       );
     }
     // Try and require its contents
@@ -129,11 +180,24 @@ export async function getTasks(
     for (const file of files) {
       if (file.endsWith(".js")) {
         const taskName = file.substr(0, file.length - 3);
-        await loadFileIntoTasks(tasks, `${taskPath}/${file}`, taskName);
+        try {
+          await loadFileIntoTasks(tasks, `${taskPath}/${file}`, taskName);
+        } catch (e) {
+          const message = `Error processing '${taskPath}/${file}': ${
+            e.message
+          }`;
+          if (watch) {
+            // tslint:disable-next-line no-console
+            console.error(message);
+          } else {
+            throw new Error(message);
+          }
+        }
       }
     }
   }
 
+  taskNames = Object.keys(tasks).sort();
   return {
     tasks,
     release: () => {

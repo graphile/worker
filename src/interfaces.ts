@@ -1,9 +1,13 @@
-import { Pool } from "pg";
+import { PoolClient } from "pg";
 import { IDebugger } from "debug";
+
+export type WithPgClient = <T = void>(
+  callback: (pgClient: PoolClient) => Promise<T>
+) => Promise<T>;
 
 export interface Helpers {
   debug: IDebugger;
-  pgPool: Pool;
+  withPgClient: WithPgClient;
 }
 
 export type Task = (payload: any, helpers: Helpers) => Promise<void>;
@@ -34,4 +38,5 @@ export interface Worker {
   doNext: () => Promise<null>;
   nudge: () => boolean;
   workerId: string;
+  release: () => void;
 }

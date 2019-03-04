@@ -29,7 +29,8 @@ async function main() {
         await client.release();
       }
     } else {
-      await start(watchedTasks.tasks, pgPool);
+      const { promise } = start(watchedTasks.tasks, pgPool);
+      await promise;
     }
   } finally {
     await pgPool.end();
