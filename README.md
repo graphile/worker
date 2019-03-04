@@ -24,11 +24,25 @@ If your database doesn't already include the `pgcrypto` and `uuid-ossp` extensio
 yarn add graphile-worker
 ```
 
+## Running:
+
 `graphile-worker` manages it's own database schema, `graphile-worker`, just point graphile-worker at your database and we handle the rest:
 
 ```
 graphile-worker -c "postgres://localhost/mydb"
 ```
+
+## Creating task executors
+
+There's no point having a job queue if there's nothing to execute the jobs!
+
+A task executor is a simple async JS function which receives as input the job
+payload and a collection of helpers. It does the work and then returns. If it
+returns then the job is deemed a success and is deleted from the queue. If it
+throws an error then the job is deemed a failure and the task is rescheduled
+using an exponential backoff algorithm.
+
+Tasks are created in the `tasks` folder in the directory from which you run `graphile-worker`.
 
 ## Uninstallation
 
