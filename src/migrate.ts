@@ -1,9 +1,5 @@
 import { Pool, PoolClient } from "pg";
-import * as rawFs from "fs";
-import { promisify } from "util";
-
-const readdir = promisify(rawFs.readdir);
-const readFile = promisify(rawFs.readFile);
+import { readdir, readFile } from "./fs";
 
 async function installSchema(client: PoolClient) {
   await client.query(`

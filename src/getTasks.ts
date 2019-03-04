@@ -1,17 +1,12 @@
-import * as rawFs from "fs";
-import { promisify } from "util";
 import { dirname, basename } from "path";
 import * as chokidar from "chokidar";
 import debugFactory from "debug";
 import { Task, TaskList, WatchedTaskList } from "./interfaces";
 import m = require("module");
+import { stat, readFile, readdir } from "./fs";
 
 const { Module } = m;
 const debug = debugFactory("graphile-worker");
-
-const stat = promisify(rawFs.stat);
-const readFile = promisify(rawFs.readFile);
-const readdir = promisify(rawFs.readdir);
 
 async function tryStat(pathToStat: string) {
   try {
