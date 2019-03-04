@@ -1,5 +1,5 @@
 import { PoolClient } from "pg";
-import { IDebugger } from "debug";
+import { IDebugger } from "./debug";
 
 export type WithPgClient = <T = void>(
   callback: (pgClient: PoolClient) => Promise<T>
@@ -11,6 +11,13 @@ export interface Helpers {
 }
 
 export type Task = (payload: any, helpers: Helpers) => Promise<void>;
+
+export function isValidTask(fn: any): fn is Task {
+  if (typeof fn === "function") {
+    return true;
+  }
+  return false;
+}
 
 export interface TaskList {
   [name: string]: Task;

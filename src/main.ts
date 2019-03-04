@@ -1,6 +1,8 @@
 import { Pool, PoolClient } from "pg";
-import debugFactory from "debug";
 import { Helpers, TaskList, Worker, Job, WithPgClient } from "./interfaces";
+import debug, { debugFactory } from "./debug";
+import deferred from "./deferred";
+import SIGNALS from "./signals";
 
 /*
  * idleDelay: This is how long to wait between polling for jobs.
@@ -11,29 +13,9 @@ import { Helpers, TaskList, Worker, Job, WithPgClient } from "./interfaces";
  */
 const idleDelay = 15000;
 
-const debug = debugFactory("graphile-worker");
-
 let shuttingDown = false;
 const jobsInProgress: Array<number> = [];
 debug("Booting worker");
-
-interface Deferred<T> extends Promise<T> {
-  resolve: (result?: T) => void;
-  reject: (error: Error) => void;
-}
-
-function deferred<T>(): Deferred<T> {
-  let resolve: (result?: T) => void;
-  let reject: (error: Error) => void;
-  return Object.assign(
-    new Promise<T>((_resolve, _reject) => {
-      resolve = _resolve;
-      reject = _reject;
-    }),
-    // @ts-ignore Non-sense, these aren't used before being defined.
-    { resolve, reject }
-  );
-}
 
 function makeWithPgClientFromPool(pgPool: Pool) {
   return async <T>(callback: (pgClient: PoolClient) => Promise<T>) => {
@@ -97,7 +79,7 @@ function makeNewWorker(
         throw new Error("Unsupported task");
       }
       const helpers: Helpers = {
-        debug: debugFactory(`worker:${job.task_identifier}`),
+        debug: debugFactory(`${job.task_identifier}`),
         withPgClient
         // TODO: add an API for giving workers more helpers
       };
@@ -213,9 +195,7 @@ export function start(tasks: TaskList, pgPool: Pool, workerCount = 1) {
     }
   }
 
-  (["SIGUSR2", "SIGINT", "SIGTERM", "SIGPIPE", "SIGHUP", "SIGABRT"] as Array<
-    "SIGUSR2" | "SIGINT" | "SIGTERM" | "SIGPIPE" | "SIGHUP" | "SIGABRT"
-  >).forEach(signal => {
+  SIGNALS.forEach(signal => {
     debug("Registering signal handler for ", signal);
     const handler = function() {
       setTimeout(() => {
