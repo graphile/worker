@@ -34,8 +34,10 @@
   "homepage": "https://github.com/graphile/worker#readme",
   "dependencies": {
     "@types/chokidar": "^1.7.5",
+    "@types/debug": "^4.1.2",
     "@types/pg": "^7.4.11",
-    "chokidar": "^2.1.1",
+    "chokidar": "^2.1.2",
+    "debug": "^4.1.1",
     "pg": ">=6.5 <8",
     "pg-connection-string": "^2.0.0"
   },
