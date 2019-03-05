@@ -48,3 +48,9 @@ export interface Worker {
   promise: Promise<void>;
   getActiveJob: () => Job | null;
 }
+
+export interface WorkerPool {
+  release: () => Promise<void>;
+  gracefulShutdown: (message: string) => Promise<void>;
+  promise: Promise<void>;
+}

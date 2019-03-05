@@ -1,12 +1,59 @@
 import { Pool, PoolClient } from "pg";
-import { TaskList, Worker, Job } from "./interfaces";
+import { TaskList, Worker, Job, WorkerPool } from "./interfaces";
 import debug from "./debug";
 import deferred from "./deferred";
 import SIGNALS from "./signals";
 import { makeNewWorker } from "./worker";
 
-let shuttingDown = false;
+const allWorkerPools: Array<WorkerPool> = [];
+
+// Exported for testing only
+export { allWorkerPools as _allWorkerPools };
+
 debug("Booting worker");
+
+let _registeredSignalHandlers = false;
+let _shuttingDown = false;
+function registerSignalHandlers() {
+  if (_shuttingDown) {
+    throw new Error(
+      "System has already gone into shutdown, should not be spawning new workers now!"
+    );
+  }
+  if (_registeredSignalHandlers) {
+    return;
+  }
+  _registeredSignalHandlers = true;
+  SIGNALS.forEach(signal => {
+    debug("Registering signal handler for ", signal);
+    const removeHandler = () => {
+      debug("Removing signal handler for ", signal);
+      process.removeListener(signal, handler);
+    };
+    const handler = function() {
+      // tslint:disable-next-line no-console
+      console.error(`Received '${signal}'; attempting graceful shutdown...`);
+      setTimeout(removeHandler, 5000);
+      if (_shuttingDown) {
+        return;
+      }
+      _shuttingDown = true;
+      Promise.all(
+        allWorkerPools.map(pool =>
+          pool.gracefulShutdown(`Forced worker shutdown due to ${signal}`)
+        )
+      ).finally(() => {
+        removeHandler();
+        // tslint:disable-next-line no-console
+        console.error(
+          `Graceful shutdown attempted; killing self via ${signal}`
+        );
+        process.kill(process.pid, signal);
+      });
+    };
+    process.on(signal, handler);
+  });
+}
 
 function makeWithPgClientFromPool(pgPool: Pool) {
   return async <T>(callback: (pgClient: PoolClient) => Promise<T>) => {
@@ -25,65 +72,17 @@ function makeWithPgClientFromClient(pgClient: PoolClient) {
   };
 }
 
-export function start(tasks: TaskList, pgPool: Pool, workerCount = 1) {
+export function start(
+  tasks: TaskList,
+  pgPool: Pool,
+  workerCount = 1
+): WorkerPool {
+  // Clean up when certain signals occur
+  registerSignalHandlers();
+
   const promise = deferred();
-  // Make sure we clean up after ourselves
-  async function gracefulShutdown(signal: string) {
-    // Release all jobs
-    try {
-      const workerIds = workers.map(worker => worker.workerId);
-      const jobsInProgress: Array<Job> = workers
-        .map(worker => worker.getActiveJob())
-        .filter((job): job is Job => !!job);
-      debug("RELEASING THE JOBS", workerIds);
-      const { rows: cancelledJobs } = await pgPool.query(
-        `
-          SELECT graphile_worker.fail_job(job_queues.locked_by, jobs.id, $2)
-          FROM graphile_worker.jobs
-          INNER JOIN graphile_worker.job_queues ON (job_queues.queue_name = jobs.queue_name)
-          WHERE job_queues.locked_by = ANY($1::text[]) AND jobs.id = ANY($3::int[]);
-        `,
-        [
-          workerIds,
-          `Forced worker shutdown due to ${signal}`,
-          jobsInProgress.map(job => job.id)
-        ]
-      );
-      debug(cancelledJobs);
-      debug("JOBS RELEASED");
-    } catch (e) {
-      console.error(e.message); // tslint:disable-line no-console
-    }
-  }
-
-  SIGNALS.forEach(signal => {
-    debug("Registering signal handler for ", signal);
-    const removeHandler = () => {
-      debug("Removing signal handler for ", signal);
-      process.removeListener(signal, handler);
-    };
-    const handler = function() {
-      // tslint:disable-next-line no-console
-      console.error(`Received '${signal}'; attempting graceful shutdown...`);
-      setTimeout(removeHandler, 5000);
-      if (shuttingDown) {
-        return;
-      }
-      shuttingDown = true;
-      gracefulShutdown(signal).finally(() => {
-        removeHandler();
-        // tslint:disable-next-line no-console
-        console.error(
-          `Graceful shutdown attempted; killing self via ${signal}`
-        );
-        process.kill(process.pid, signal);
-      });
-    };
-    process.on(signal, handler);
-  });
-
-  // Okay, start working
   const workers: Array<Worker> = [];
+
   const listenForChanges = (
     err: Error | undefined,
     client: PoolClient,
@@ -126,20 +125,61 @@ export function start(tasks: TaskList, pgPool: Pool, workerCount = 1) {
       )}')`
     );
   };
+
+  // Create a client dedicated to listening for new jobs.
   pgPool.connect(listenForChanges);
 
+  // This is a representation of us that can be interacted with externally
+  const workerPool = {
+    release: async () => {
+      promise.resolve();
+      await Promise.all(workers.map(worker => worker.release()));
+      const idx = allWorkerPools.indexOf(workerPool);
+      allWorkerPools.splice(idx, 1);
+    },
+
+    // Make sure we clean up after ourselves even if a signal is caught
+    async gracefulShutdown(message: string) {
+      try {
+        // Release all our workers' jobs
+        const workerIds = workers.map(worker => worker.workerId);
+        const jobsInProgress: Array<Job> = workers
+          .map(worker => worker.getActiveJob())
+          .filter((job): job is Job => !!job);
+        // Remove all the workers - we're shutting them down manually
+        workers.splice(0, workers.length).map(worker => worker.release());
+        debug("RELEASING THE JOBS", workerIds);
+        const { rows: cancelledJobs } = await pgPool.query(
+          `
+          SELECT graphile_worker.fail_job(job_queues.locked_by, jobs.id, $2)
+          FROM graphile_worker.jobs
+          INNER JOIN graphile_worker.job_queues ON (job_queues.queue_name = jobs.queue_name)
+          WHERE job_queues.locked_by = ANY($1::text[]) AND jobs.id = ANY($3::int[]);
+        `,
+          [workerIds, message, jobsInProgress.map(job => job.id)]
+        );
+        debug(cancelledJobs);
+        debug("JOBS RELEASED");
+      } catch (e) {
+        console.error(e.message); // tslint:disable-line no-console
+      }
+      // Remove ourself from the list of worker pools
+      this.release();
+    },
+
+    promise
+  };
+
+  // Ensure that during a forced shutdown we get cleaned up too
+  allWorkerPools.push(workerPool);
+
+  // Spawn our workers; they can share clients from the pool.
   const withPgClient = makeWithPgClientFromPool(pgPool);
   for (let i = 0; i < workerCount; i++) {
     workers.push(makeNewWorker(tasks, withPgClient));
   }
 
-  return {
-    release: () => {
-      promise.resolve();
-      return Promise.all(workers.map(worker => worker.release()));
-    },
-    promise
-  };
+  return workerPool;
 }
 
 export const runAllJobs = (tasks: TaskList, client: PoolClient) =>
