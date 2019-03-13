@@ -5,7 +5,7 @@ import { tryStat, readdir } from "./fs";
 import debug from "./debug";
 import { fauxRequire } from "./module";
 
-function validTasks(obj: any) {
+function validTasks(obj: any): TaskList {
   const tasks: TaskList = {};
   Object.keys(obj).forEach(taskName => {
     const task = obj[taskName];
@@ -20,6 +20,7 @@ function validTasks(obj: any) {
       );
     }
   });
+  return tasks;
 }
 
 async function loadFileIntoTasks(
