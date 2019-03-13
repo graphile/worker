@@ -3,6 +3,7 @@ import { withPgClient } from "./helpers";
 
 test("migration installs schema; second migration does no harm", () =>
   withPgClient(async pgClient => {
+    await pgClient.query("drop schema if exists graphile_worker cascade;");
     // Assert DB is empty
     const {
       rows: [graphileWorkerNamespaceBeforeMigration]
