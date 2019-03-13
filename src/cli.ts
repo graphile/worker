@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 import { migrate } from "./migrate";
 import { getTasks } from "./getTasks";
 import { start, runAllJobs } from "./main";
@@ -7,11 +7,23 @@ import { start, runAllJobs } from "./main";
 const ONCE = process.argv.slice(2).includes("--once");
 const WATCH = process.argv.slice(2).includes("--watch");
 
-async function main() {
-  if (WATCH && ONCE) {
-    throw new Error("Cannot specify both --watch and --once");
-  }
+if (WATCH && ONCE) {
+  throw new Error("Cannot specify both --watch and --once");
+}
 
+async function withPgClient<T = any>(
+  pgPool: Pool,
+  cb: (pgClient: PoolClient) => Promise<T>
+): Promise<T> {
+  const pgClient = await pgPool.connect();
+  try {
+    return await cb(pgClient);
+  } finally {
+    pgClient.release();
+  }
+}
+
+async function main() {
   const watchedTasks = await getTasks(`${process.cwd()}/tasks`, WATCH);
 
   const pgPool = new Pool({
@@ -19,17 +31,18 @@ async function main() {
   });
 
   try {
-    await migrate(pgPool);
+    // Migrate
+    await withPgClient(pgPool, client => migrate(client));
 
     if (ONCE) {
-      const client = await pgPool.connect();
-      try {
-        await runAllJobs(watchedTasks.tasks, client);
-      } finally {
-        await client.release();
-      }
+      // Just run all jobs then exit
+      await withPgClient(pgPool, client =>
+        runAllJobs(watchedTasks.tasks, client)
+      );
     } else {
+      // Watch for new jobs
       const { promise } = start(watchedTasks.tasks, pgPool);
+      // Continue forever(ish)
       await promise;
     }
   } finally {
