@@ -1,7 +1,7 @@
 import { migrate } from "../src/migrate";
 import { withPgClient } from "./helpers";
 
-test("installs schema", () =>
+test("migration installs schema; second migration does no harm", () =>
   withPgClient(async pgClient => {
     // Assert DB is empty
     const {
@@ -24,8 +24,24 @@ test("installs schema", () =>
     expect(migration.id).toEqual(1);
 
     // Assert job schema files have been created (we're asserting no error is thrown)
-    const { rows: jobsRows } = await pgClient.query(
-      `select * from graphile_worker.jobs`
-    );
-    expect(jobsRows).toHaveLength(0);
+    await pgClient.query(`select graphile_worker.add_job('assert_jobs_work')`);
+    {
+      const { rows: jobsRows } = await pgClient.query(
+        "select * from graphile_worker.jobs"
+      );
+      expect(jobsRows).toHaveLength(1);
+      expect(jobsRows[0].task_identifier).toEqual("assert_jobs_work");
+    }
+
+    // Assert that re-migrating causes no issues
+    await migrate(pgClient);
+    await migrate(pgClient);
+    await migrate(pgClient);
+    {
+      const { rows: jobsRows } = await pgClient.query(
+        "select * from graphile_worker.jobs"
+      );
+      expect(jobsRows).toHaveLength(1);
+      expect(jobsRows[0].task_identifier).toEqual("assert_jobs_work");
+    }
   }));
