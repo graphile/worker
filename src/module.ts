@@ -41,5 +41,5 @@ export async function fauxRequire(filename: string) {
 
   replacementModule.loaded = true;
 
-  return replacementModule;
+  return replacementModule.exports;
 }

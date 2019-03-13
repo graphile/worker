@@ -4,6 +4,10 @@ import debug from "./debug";
 import deferred from "./deferred";
 import SIGNALS from "./signals";
 import { makeNewWorker } from "./worker";
+import {
+  makeWithPgClientFromPool,
+  makeWithPgClientFromClient
+} from "./helpers";
 
 const allWorkerPools: Array<WorkerPool> = [];
 
@@ -53,23 +57,6 @@ function registerSignalHandlers() {
     };
     process.on(signal, handler);
   });
-}
-
-function makeWithPgClientFromPool(pgPool: Pool) {
-  return async <T>(callback: (pgClient: PoolClient) => Promise<T>) => {
-    const client = await pgPool.connect();
-    try {
-      return await callback(client);
-    } finally {
-      await client.release();
-    }
-  };
-}
-
-function makeWithPgClientFromClient(pgClient: PoolClient) {
-  return async <T>(callback: (pgClient: PoolClient) => Promise<T>) => {
-    return callback(pgClient);
-  };
 }
 
 export function start(

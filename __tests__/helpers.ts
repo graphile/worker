@@ -1,4 +1,5 @@
 import * as pg from "pg";
+import { Job } from "../src/interfaces";
 
 export async function withPgPool<T = any>(
   cb: (pool: pg.Pool) => Promise<T>
@@ -38,4 +39,20 @@ export async function withTransaction<T = any>(
       await client.query(closeCommand);
     }
   });
+}
+
+export function makeMockJob(taskIdentifier: string): Job {
+  const createdAt = new Date(Date.now() - 12345678);
+  return {
+    id: Math.floor(Math.random() * 4294967296),
+    queue_name: "3ED1F485-5D29-4C53-9F47-40925AA81D3B",
+    task_identifier: taskIdentifier,
+    payload: {},
+    priority: 0,
+    run_at: new Date(Date.now() - Math.random() * 2000),
+    attempts: 0,
+    last_error: null,
+    created_at: createdAt,
+    updated_at: createdAt
+  };
 }

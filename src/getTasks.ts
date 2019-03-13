@@ -32,12 +32,12 @@ async function loadFileIntoTasks(
     ? await fauxRequire(filename)
     : require(filename);
 
-  if (!replacementModule.exports) {
+  if (!replacementModule) {
     throw new Error(`Module '${filename}' doesn't have an export`);
   }
 
   if (name) {
-    const task = replacementModule.exports.default || replacementModule.exports;
+    const task = replacementModule.default || replacementModule;
     if (isValidTask(task)) {
       tasks[name] = task;
     } else {
@@ -52,17 +52,17 @@ async function loadFileIntoTasks(
       delete tasks[taskName];
     });
     if (
-      !replacementModule.exports.default ||
-      typeof replacementModule.exports.default === "function"
+      !replacementModule.default ||
+      typeof replacementModule.default === "function"
     ) {
-      Object.assign(tasks, validTasks(replacementModule.exports));
+      Object.assign(tasks, validTasks(replacementModule));
     } else {
-      Object.assign(tasks, validTasks(replacementModule.exports.default));
+      Object.assign(tasks, validTasks(replacementModule.default));
     }
   }
 }
 
-export async function getTasks(
+export default async function getTasks(
   taskPath: string,
   watch = false
 ): Promise<WatchedTaskList> {

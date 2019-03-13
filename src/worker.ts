@@ -1,8 +1,9 @@
-import { Helpers, TaskList, Worker, Job, WithPgClient } from "./interfaces";
-import globalDebug, { debugFactory } from "./debug";
+import { TaskList, Worker, Job, WithPgClient } from "./interfaces";
+import globalDebug from "./debug";
 import { IDLE_DELAY, MAX_CONTIGUOUS_ERRORS } from "./config";
 import * as assert from "assert";
 import deferred from "./deferred";
+import { makeHelpers } from "./helpers";
 
 export function makeNewWorker(
   tasks: TaskList,
@@ -128,11 +129,7 @@ export function makeNewWorker(
         debug(`Found task ${job.id} (${job.task_identifier})`);
         const worker = tasks[job.task_identifier];
         assert(worker, `Unsupported task '${job.task_identifier}'`);
-        const helpers: Helpers = {
-          debug: debugFactory(`${job.task_identifier}`),
-          withPgClient
-          // TODO: add an API for giving workers more helpers
-        };
+        const helpers = makeHelpers(job, { withPgClient });
         await worker(job, helpers);
       } catch (error) {
         err = error;

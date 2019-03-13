@@ -1,6 +1,6 @@
 import { Pool, PoolClient } from "pg";
 import { migrate } from "./migrate";
-import { getTasks } from "./getTasks";
+import getTasks from "./getTasks";
 import { start, runAllJobs } from "./main";
 
 // TODO: use a proper CLI parser!

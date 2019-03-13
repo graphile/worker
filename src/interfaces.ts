@@ -6,11 +6,12 @@ export type WithPgClient = <T = void>(
 ) => Promise<T>;
 
 export interface Helpers {
+  job: Job;
   debug: IDebugger;
   withPgClient: WithPgClient;
 }
 
-export type Task = (payload: any, helpers: Helpers) => Promise<void>;
+export type Task = (payload: unknown, helpers: Helpers) => Promise<void>;
 
 export function isValidTask(fn: any): fn is Task {
   if (typeof fn === "function") {
@@ -32,7 +33,7 @@ export interface Job {
   id: number;
   queue_name: string;
   task_identifier: string;
-  payload: object;
+  payload: unknown;
   priority: number;
   run_at: Date;
   attempts: number;
