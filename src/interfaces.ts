@@ -11,7 +11,7 @@ export interface Helpers {
   withPgClient: WithPgClient;
 }
 
-export type Task = (payload: unknown, helpers: Helpers) => Promise<void>;
+export type Task = (payload: unknown, helpers: Helpers) => void | Promise<void>;
 
 export function isValidTask(fn: any): fn is Task {
   if (typeof fn === "function") {

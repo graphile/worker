@@ -130,7 +130,7 @@ export function makeNewWorker(
         const worker = tasks[job.task_identifier];
         assert(worker, `Unsupported task '${job.task_identifier}'`);
         const helpers = makeHelpers(job, { withPgClient });
-        await worker(job, helpers);
+        await worker(job.payload, helpers);
       } catch (error) {
         err = error;
       }
