@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "prepack": "tsc && chmod +x dist/cli.js",
-    "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && tsc --watch"
+    "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && tsc --watch",
+    "test": "psql -Xv ON_ERROR_STOP=1 -f __tests__/reset-db.sql graphile_worker_test && jest -i"
   },
   "bin": {
     "graphile-worker": "./dist/cli.js"
@@ -42,7 +43,10 @@
     "pg-connection-string": "^2.0.0"
   },
   "devDependencies": {
+    "@types/jest": "^24.0.11",
+    "jest": "^24.5.0",
     "prettier": "^1.16.4",
+    "ts-jest": "^24.0.0",
     "tslint": "^5.13.1",
     "tslint-config-prettier": "^1.18.0",
     "typescript": "^3.3.3333"

@@ -51,3 +51,17 @@ To delete the worker code and all the tasks from your database, just run this on
 ```sql
 DROP SCHEMA graphile_worker CASCADE;
 ```
+
+## Development
+
+```
+yarn
+yarn watch
+```
+
+In another terminal:
+
+```
+createdb graphile_worker_test
+yarn test
+```

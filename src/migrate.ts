@@ -1,4 +1,4 @@
-import { Pool, PoolClient } from "pg";
+import { PoolClient } from "pg";
 import { readdir, readFile } from "./fs";
 
 async function installSchema(client: PoolClient) {
@@ -28,35 +28,32 @@ async function runMigration(
   });
 }
 
-export async function migrate(pgPool: Pool) {
-  const client = await pgPool.connect();
+export async function migrate(client: PoolClient) {
+  let latestMigration: number | null = null;
   try {
-    let latestMigration: number | null = null;
-    try {
-      const {
-        rows: [row]
-      } = await client.query(
-        "select id from graphile_worker.migrations order by id desc limit 1;"
-      );
-      if (row) latestMigration = row.id;
-    } catch (e) {
-      if (e.code === "42P01") {
-        await installSchema(client);
-      } else {
-        console.log(e.code);
-        throw e;
-      }
+    const {
+      rows: [row]
+    } = await client.query(
+      "select id from graphile_worker.migrations order by id desc limit 1;"
+    );
+    if (row) {
+      latestMigration = row.id;
     }
-    const migrationFiles = (await readdir(`${__dirname}/../sql`))
-      .filter(f => f.match(/^[0-9]{6}\.sql$/))
-      .sort();
-    for (const migrationFile of migrationFiles) {
-      const migrationNumber = parseInt(migrationFile.substr(0, 6), 10);
-      if (latestMigration == null || migrationNumber > latestMigration) {
-        await runMigration(client, migrationFile, migrationNumber);
-      }
+  } catch (e) {
+    if (e.code === "42P01") {
+      await installSchema(client);
+    } else {
+      console.log(e.code);
+      throw e;
     }
-  } finally {
-    client.release();
+  }
+  const migrationFiles = (await readdir(`${__dirname}/../sql`))
+    .filter(f => f.match(/^[0-9]{6}\.sql$/))
+    .sort();
+  for (const migrationFile of migrationFiles) {
+    const migrationNumber = parseInt(migrationFile.substr(0, 6), 10);
+    if (latestMigration == null || migrationNumber > latestMigration) {
+      await runMigration(client, migrationFile, migrationNumber);
+    }
   }
 }
