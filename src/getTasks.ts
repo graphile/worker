@@ -25,9 +25,12 @@ function validTasks(obj: any) {
 async function loadFileIntoTasks(
   tasks: any,
   filename: string,
-  name: string | null = null
+  name: string | null = null,
+  watch: boolean = false
 ) {
-  const replacementModule = await fauxRequire(filename);
+  const replacementModule = watch
+    ? await fauxRequire(filename)
+    : require(filename);
 
   if (!replacementModule.exports) {
     throw new Error(`Module '${filename}' doesn't have an export`);
@@ -86,7 +89,7 @@ export async function getTasks(
     if (watch) {
       watchers.push(
         chokidar.watch(taskPath, { ignoreInitial: true }).on("all", () => {
-          loadFileIntoTasks(tasks, taskPath)
+          loadFileIntoTasks(tasks, taskPath, null, watch)
             .then(debugSupported)
             .catch(e => {
               // tslint:disable-next-line no-console
@@ -96,7 +99,7 @@ export async function getTasks(
       );
     }
     // Try and require it
-    await loadFileIntoTasks(tasks, taskPath);
+    await loadFileIntoTasks(tasks, taskPath, null, watch);
   } else if (pathStat.isDirectory()) {
     if (watch) {
       watchers.push(
@@ -110,7 +113,7 @@ export async function getTasks(
               delete tasks[taskName];
               debugSupported();
             } else {
-              loadFileIntoTasks(tasks, eventFilePath, taskName)
+              loadFileIntoTasks(tasks, eventFilePath, taskName, watch)
                 .then(debugSupported)
                 .catch(e => {
                   // tslint:disable-next-line no-console
@@ -127,7 +130,12 @@ export async function getTasks(
       if (file.endsWith(".js")) {
         const taskName = file.substr(0, file.length - 3);
         try {
-          await loadFileIntoTasks(tasks, `${taskPath}/${file}`, taskName);
+          await loadFileIntoTasks(
+            tasks,
+            `${taskPath}/${file}`,
+            taskName,
+            watch
+          );
         } catch (e) {
           const message = `Error processing '${taskPath}/${file}': ${
             e.message

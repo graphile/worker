@@ -43,7 +43,6 @@ export async function migrate(client: PoolClient) {
     if (e.code === "42P01") {
       await installSchema(client);
     } else {
-      console.log(e.code);
       throw e;
     }
   }
