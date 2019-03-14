@@ -11,6 +11,7 @@ const argv = yargs
       "Database connection string, defaults to the 'DATABASE_URL' envvar",
     alias: "c"
   })
+  .string("connection")
   .option("once", {
     description: "Run until there are no runnable jobs left, then exit",
     alias: "1",
@@ -35,7 +36,7 @@ const isInteger = (n: number): boolean => {
   return isFinite(n) && Math.round(n) === n;
 };
 
-const DATABASE_URL = argv.connection || process.env.DATABASE_URL;
+const DATABASE_URL = argv.connection || process.env.DATABASE_URL || undefined;
 const ONCE = argv.once;
 const WATCH = argv.watch;
 const JOBS = isInteger(argv.jobs) ? argv.jobs : 1;
