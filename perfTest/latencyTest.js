@@ -28,16 +28,20 @@ async function main() {
 
   console.log("Beginning latency test");
 
+  const SAMPLES = 100;
+
   {
     const client = await pgPool.connect();
     try {
-      for (let id = 0; id < 100; id++) {
+      for (let id = 0; id < SAMPLES; id++) {
         startTimes[id] = process.hrtime();
         await client.query(
-          `select graphile_worker.add_job('latency', json_build_object('id', $1::text))`,
+          `select graphile_worker.add_job('latency', json_build_object('id', $1::int))`,
           [id]
         );
-        sleep(100);
+        while (latencies.length < id + 1) {
+          await sleep(5);
+        }
       }
     } finally {
       await client.release();
@@ -46,7 +50,7 @@ async function main() {
 
   await forEmptyQueue(pgPool);
 
-  assert.equal(latencies.length, 100, "Incorrect latency count");
+  assert.equal(latencies.length, SAMPLES, "Incorrect latency count");
   // Study the latencies
   const numericLatencies = latencies.map(
     ([seconds, nanoseconds]) => seconds * 1e3 + nanoseconds * 1e-6
