@@ -58,6 +58,11 @@ async function withPgClient<T = any>(
 }
 
 async function main() {
+  if (!DATABASE_URL) {
+    throw new Error(
+      "Please use `--connection` flag or set `DATABASE_URL` envvar to indicate the PostgreSQL connection string."
+    );
+  }
   const watchedTasks = await getTasks(`${process.cwd()}/tasks`, WATCH);
 
   const pgPool = new Pool({
