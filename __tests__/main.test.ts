@@ -304,7 +304,7 @@ test("runs jobs in parallel", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
 
-    // Schedule a job
+    // Schedule 5 jobs
     const start = new Date();
     await pgClient.query(
       `select graphile_worker.add_job('job1', '{"a": 1}') from generate_series(1, 5)`
@@ -377,6 +377,57 @@ test("runs jobs in parallel", () =>
     expect(executed).toBeFalsy();
     jobPromises.forEach(jobPromise => jobPromise!.resolve());
     await Promise.all(runPromises);
+    expect(executed).toBeTruthy();
+
+    // Job should not have been called any more times
+    expect(job1).toHaveBeenCalledTimes(5);
+  }));
+
+test("purges queue before exiting", () =>
+  withPgClient(async pgClient => {
+    await reset(pgClient);
+
+    // Schedule 5 jobs
+    await pgClient.query(
+      `select graphile_worker.add_job('job1', '{"a": 1}') from generate_series(1, 5)`
+    );
+
+    // Run the task
+    const jobPromises: Array<Deferred<void>> = [];
+    const job1: Task = jest.fn(() => {
+      const jobPromise = deferred();
+      jobPromises.push(jobPromise);
+      return jobPromise;
+    });
+    const tasks: TaskList = {
+      job1
+    };
+    const runPromise = runAllJobs(tasks, pgClient);
+    let executed = false;
+    runPromise.then(() => {
+      executed = true;
+    });
+
+    for (let i = 0; i < 5; i++) {
+      let attempts = 0;
+      // Wait up to a second for the next job to be executed
+      while (jobPromises.length < i + 1 && attempts++ < 200) {
+        await sleep(5);
+      }
+      expect(jobPromises).toHaveLength(i + 1);
+      expect(job1).toHaveBeenCalledTimes(i + 1);
+
+      // Shouldn't be finished yet
+      expect(executed).toBeFalsy();
+
+      // Complete this job, on to the next one
+      jobPromises[i].resolve();
+    }
+
+    expect(jobPromises).toHaveLength(5);
+    expect(job1).toHaveBeenCalledTimes(5);
+
+    await runPromise;
     expect(executed).toBeTruthy();
 
     // Job should not have been called any more times
