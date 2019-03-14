@@ -433,3 +433,61 @@ test("single worker runs jobs in series, purges all before exit", () =>
     // Job should not have been called any more times
     expect(job1).toHaveBeenCalledTimes(5);
   }));
+
+test("jobs added to the same queue will be ran serially (even if multiple workers)", () =>
+  withPgClient(async pgClient => {
+    await reset(pgClient);
+
+    // Schedule 5 jobs
+    await pgClient.query(
+      `select graphile_worker.add_job('job1', '{"a": 1}', 'serial') from generate_series(1, 5)`
+    );
+
+    // Run the task
+    const jobPromises: Array<Deferred<void>> = [];
+    const job1: Task = jest.fn(() => {
+      const jobPromise = deferred();
+      jobPromises.push(jobPromise);
+      return jobPromise;
+    });
+    const tasks: TaskList = {
+      job1
+    };
+    const runPromises = [
+      runAllJobs(tasks, pgClient),
+      runAllJobs(tasks, pgClient),
+      runAllJobs(tasks, pgClient)
+    ];
+    let executed = false;
+    Promise.all(runPromises).then(() => {
+      executed = true;
+    });
+
+    for (let i = 0; i < 5; i++) {
+      // Give the other workers a chance to interfere (they shouldn't)
+      sleep(50);
+
+      let attempts = 0;
+      // Wait up to a second for the next job to be executed
+      while (jobPromises.length < i + 1 && attempts++ < 200) {
+        await sleep(5);
+      }
+      expect(jobPromises).toHaveLength(i + 1);
+      expect(job1).toHaveBeenCalledTimes(i + 1);
+
+      // Shouldn't be finished yet
+      expect(executed).toBeFalsy();
+
+      // Complete this job, on to the next one
+      jobPromises[i].resolve();
+    }
+
+    expect(jobPromises).toHaveLength(5);
+    expect(job1).toHaveBeenCalledTimes(5);
+
+    await Promise.all(runPromises);
+    expect(executed).toBeTruthy();
+
+    // Job should not have been called any more times
+    expect(job1).toHaveBeenCalledTimes(5);
+  }));
