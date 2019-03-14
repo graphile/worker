@@ -140,8 +140,8 @@ starting the command, checking for jobs, and exiting takes about 0.40s and
 running 20,000 [trivial](perfTest/tasks/log_if_999.js) queued jobs across a
 single worker pool of size 1 takes 27.35s (~731 jobs per second). Latencies
 are also measured, from before the call to queue the job is fired until when
-the job is actually executed. These latencies ranged from 1.6ms to 7.9ms with
-an average of 2.16ms.
+the job is actually executed. These latencies ranged from 1.39ms to 19.66ms
+with an average of 1.90ms.
 
 ## Exponential backoff
 
