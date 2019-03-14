@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+export NO_LOG_SUCCESS=1
+
 # Reset the database
 dropdb graphile_worker_perftest || true;
 createdb graphile_worker_perftest;

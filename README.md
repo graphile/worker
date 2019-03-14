@@ -43,8 +43,8 @@ graphile-worker -c "postgres://localhost/mydb"
 dedicated job queues, it's intended to be a very easy way to get a job queue
 up and running with Node.js and PostgreSQL. But this doesn't mean it's a
 slouch by any means - it achieves an average latency from triggering a job in
-one process to executing it in another of just 75ms, and each worker can
-handle up to 570 jobs per second on modest hardware (2011 iMac).
+one process to executing it in another of just 72ms, and each worker can
+handle up to 731 jobs per second on modest hardware (2011 iMac).
 
 `graphile-worker` is horizontally scalable. Each instance has a customisable
 worker pool, this pool defaults to size 1 (only one job at a time on this
@@ -57,11 +57,12 @@ significantly impacting the main worker's runloop.
 
 To test performance you can run `yarn perfTest`. This reveals that on a 2011
 iMac running both the worker and the database (and a bunch of other stuff)
-starting the command, checking for jobs, and exiting takes about 0.32s and
-running 20000 trivial queued jobs across a single worker pool of size 1 takes
-35.10s (~570 jobs per second). Latencies are also measured - from before the
-call to queue the job is fired until when the job is actually executed. These
-latencies ranged from 3ms to 147ms with an average of 75.6ms.
+starting the command, checking for jobs, and exiting takes about 0.40s and
+running 20,000 [trivial](perfTest/tasks/log_if_999.js) queued jobs across a
+single worker pool of size 1 takes 27.35s (~731 jobs per second). Latencies
+are also measured, from before the call to queue the job is fired until when
+the job is actually executed. These latencies ranged from 3ms to 120ms with
+an average of 71.6ms.
 
 ## Creating task executors
 

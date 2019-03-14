@@ -159,12 +159,14 @@ export function makeNewWorker(
           ])
         );
       } else {
-        // tslint:disable-next-line no-console
-        console.log(
-          `Completed task ${job.id} (${
-            job.task_identifier
-          }) with success (${duration.toFixed(2)}ms)`
-        );
+        if (!process.env.NO_LOG_SUCCESS) {
+          // tslint:disable-next-line no-console
+          console.log(
+            `Completed task ${job.id} (${
+              job.task_identifier
+            }) with success (${duration.toFixed(2)}ms)`
+          );
+        }
         // TODO: retry logic, in case of server connection interruption
         await withPgClient(client =>
           client.query("SELECT * FROM graphile_worker.complete_job($1, $2);", [
