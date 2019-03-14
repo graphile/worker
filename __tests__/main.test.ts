@@ -50,6 +50,7 @@ test("schedules errors for retry", () =>
     const job = jobs[0];
     expect(job.task_identifier).toEqual("job1");
     expect(job.attempts).toEqual(1);
+    expect(job.max_attempts).toEqual(25);
     expect(job.last_error).toEqual("TEST_ERROR");
     // It's the first attempt, so delay is exp(1) ~= 2.719 seconds
     expect(+job.run_at).toBeGreaterThan(+start + 2718);
@@ -98,8 +99,48 @@ test("retries job", () =>
     const job = jobs[0];
     expect(job.task_identifier).toEqual("job1");
     expect(job.attempts).toEqual(2);
+    expect(job.max_attempts).toEqual(25);
     expect(job.last_error).toEqual("TEST_ERROR 2");
     // It's the second attempt, so delay is exp(2) ~= 7.389 seconds
     expect(+job.run_at).toBeGreaterThan(+start + 7388);
     expect(+job.run_at).toBeLessThan(+new Date() + 7389);
+  }));
+
+test("supports future-scheduled jobs", () =>
+  withPgClient(async pgClient => {
+    await reset(pgClient);
+
+    // Add the job
+    await pgClient.query(
+      `select graphile_worker.add_job('future', run_at := now() + interval '3 seconds')`
+    );
+    const future: Task = jest.fn();
+    const tasks: TaskList = {
+      future
+    };
+
+    // Run all jobs (none are ready)
+    await runAllJobs(tasks, pgClient);
+    expect(future).not.toHaveBeenCalled();
+
+    // Still not ready
+    await runAllJobs(tasks, pgClient);
+    expect(future).not.toHaveBeenCalled();
+
+    // Tell the job to be runnable
+    await pgClient.query(
+      `update graphile_worker.jobs set run_at = now() where task_identifier = 'future'`
+    );
+
+    // Run the job
+    await runAllJobs(tasks, pgClient);
+
+    // It should have ran again
+    expect(future).toHaveBeenCalledTimes(1);
+
+    // It should be successful
+    const { rows: jobs } = await pgClient.query(
+      `select * from graphile_worker.jobs`
+    );
+    expect(jobs).toHaveLength(0);
   }));
