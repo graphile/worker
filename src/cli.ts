@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { Pool, PoolClient } from "pg";
 import { migrate } from "./migrate";
 import getTasks from "./getTasks";
@@ -5,24 +6,39 @@ import { start, runAllJobs } from "./main";
 import * as yargs from "yargs";
 
 const argv = yargs
+  .option("connection", {
+    description:
+      "Database connection string, defaults to the 'DATABASE_URL' envvar",
+    alias: "c"
+  })
   .option("once", {
+    description: "Run until there are no runnable jobs left, then exit",
     alias: "1",
     default: false
   })
   .boolean("once")
   .option("watch", {
+    description:
+      "[EXPERIMENTAL] Watch task files for changes, automatically reloading the task code without restarting worker",
     alias: "w",
     default: false
   })
   .boolean("watch")
   .option("jobs", {
+    description: "number of jobs to run concurrently",
     alias: "j",
     default: 1
-  }).argv;
+  })
+  .number("jobs").argv;
 
+const isInteger = (n: number): boolean => {
+  return isFinite(n) && Math.round(n) === n;
+};
+
+const DATABASE_URL = argv.connection || process.env.DATABASE_URL;
 const ONCE = argv.once;
 const WATCH = argv.watch;
-const JOBS = argv.jobs;
+const JOBS = isInteger(argv.jobs) ? argv.jobs : 1;
 
 if (WATCH && ONCE) {
   throw new Error("Cannot specify both --watch and --once");
@@ -44,7 +60,7 @@ async function main() {
   const watchedTasks = await getTasks(`${process.cwd()}/tasks`, WATCH);
 
   const pgPool = new Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: DATABASE_URL
   });
 
   try {

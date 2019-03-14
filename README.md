@@ -1,6 +1,6 @@
 # graphile-worker
 
-Job queue for PostgreSQL.
+Job queue for PostgreSQL running on Node.js. Can be used with any PostgreSQL-backed application. Pairs beautifully with [PostGraphile](https://www.graphile.org/postgraphile/).
 
 - Standalone and embedded modes
 - Easy to test with (including `runAllJobs` util)
@@ -15,6 +15,12 @@ Job queue for PostgreSQL.
 - Executes tasks written in Node.js (can call out to any other language or networked service)
 - Modern JS with async/await
 - Watch mode for development (experimental - iterate your jobs without restarting worker)
+
+## Status
+
+Seems stable and has good test suite, but needs real-world testing before it
+can be deemed production ready. Reach out on GitHub issues or Discord chat if
+you'd like to help with this: http://discord.gg/graphile
 
 ## Requirements
 
@@ -34,8 +40,11 @@ yarn add graphile-worker
 point graphile-worker at your database and we handle our own migrations:
 
 ```
-graphile-worker -c "postgres://localhost/mydb"
+npx graphile-worker -c "postgres://localhost/mydb"
 ```
+
+(`npx` looks for the `graphile-worker` binary locally; it's often better to
+use the `"scripts"` entry in `package.json` instead.)
 
 ## Performance
 
