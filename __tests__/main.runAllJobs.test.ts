@@ -1,16 +1,9 @@
-import { migrate } from "../src/migrate";
-import { withPgClient } from "./helpers";
+import { withPgClient, reset } from "./helpers";
 import { TaskList, Task, Worker } from "../src/interfaces";
 import { runAllJobs } from "../src/main";
-import { PoolClient } from "pg";
 import deferred, { Deferred } from "../src/deferred";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-async function reset(pgClient: PoolClient) {
-  await pgClient.query("drop schema if exists graphile_worker cascade;");
-  await migrate(pgClient);
-}
 
 test("runs jobs", () =>
   withPgClient(async pgClient => {

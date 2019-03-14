@@ -1,5 +1,6 @@
 import * as pg from "pg";
 import { Job } from "../src/interfaces";
+import { migrate } from "../src/migrate";
 
 export async function withPgPool<T = any>(
   cb: (pool: pg.Pool) => Promise<T>
@@ -39,6 +40,11 @@ export async function withTransaction<T = any>(
       await client.query(closeCommand);
     }
   });
+}
+
+export async function reset(pgClient: pg.PoolClient) {
+  await pgClient.query("drop schema if exists graphile_worker cascade;");
+  await migrate(pgClient);
 }
 
 export function makeMockJob(taskIdentifier: string): Job {
