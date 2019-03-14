@@ -12,7 +12,30 @@ async function reset(pgClient: PoolClient) {
 test("runs jobs", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
+
+    // Schedule a job
+    const start = new Date();
     await pgClient.query(`select graphile_worker.add_job('job1', '{"a": 1}')`);
+
+    // Assert that it has an entry in jobs / job_queues
+    const { rows: jobs } = await pgClient.query(
+      `select * from graphile_worker.jobs`
+    );
+    expect(jobs).toHaveLength(1);
+    const job = jobs[0];
+    expect(+job.run_at).toBeGreaterThanOrEqual(+start);
+    expect(+job.run_at).toBeLessThanOrEqual(+new Date());
+    const { rows: jobQueues } = await pgClient.query(
+      `select * from graphile_worker.job_queues`
+    );
+    expect(jobQueues).toHaveLength(1);
+    const q = jobQueues[0];
+    expect(q.queue_name).toEqual(job.queue_name);
+    expect(q.job_count).toEqual(1);
+    expect(q.locked_at).toBeFalsy();
+    expect(q.locked_by).toBeFalsy();
+
+    // Run the task
     const job1: Task = jest.fn(o => {
       expect(o).toMatchInlineSnapshot(`
 Object {
@@ -26,6 +49,8 @@ Object {
       job2
     };
     await runAllJobs(tasks, pgClient);
+
+    // Job should have been called once only
     expect(job1).toHaveBeenCalledTimes(1);
     expect(job2).not.toHaveBeenCalled();
   }));
@@ -33,8 +58,34 @@ Object {
 test("schedules errors for retry", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
-    await pgClient.query(`select graphile_worker.add_job('job1', '{"a": 1}')`);
+
+    // Schedule a job
     const start = new Date();
+    await pgClient.query(`select graphile_worker.add_job('job1', '{"a": 1}')`);
+
+    {
+      const { rows: jobs } = await pgClient.query(
+        `select * from graphile_worker.jobs`
+      );
+      expect(jobs).toHaveLength(1);
+      const job = jobs[0];
+      expect(job.task_identifier).toEqual("job1");
+      expect(job.payload).toEqual({ a: 1 });
+      expect(+job.run_at).toBeGreaterThanOrEqual(+start);
+      expect(+job.run_at).toBeLessThanOrEqual(+new Date());
+
+      const { rows: jobQueues } = await pgClient.query(
+        `select * from graphile_worker.job_queues`
+      );
+      expect(jobQueues).toHaveLength(1);
+      const q = jobQueues[0];
+      expect(q.queue_name).toEqual(job.queue_name);
+      expect(q.job_count).toEqual(1);
+      expect(q.locked_at).toBeFalsy();
+      expect(q.locked_by).toBeFalsy();
+    }
+
+    // Run the job (it will fail)
     const job1: Task = jest.fn(() => {
       throw new Error("TEST_ERROR");
     });
@@ -43,18 +94,32 @@ test("schedules errors for retry", () =>
     };
     await runAllJobs(tasks, pgClient);
     expect(job1).toHaveBeenCalledTimes(1);
-    const { rows: jobs } = await pgClient.query(
-      `select * from graphile_worker.jobs`
-    );
-    expect(jobs).toHaveLength(1);
-    const job = jobs[0];
-    expect(job.task_identifier).toEqual("job1");
-    expect(job.attempts).toEqual(1);
-    expect(job.max_attempts).toEqual(25);
-    expect(job.last_error).toEqual("TEST_ERROR");
-    // It's the first attempt, so delay is exp(1) ~= 2.719 seconds
-    expect(+job.run_at).toBeGreaterThan(+start + 2718);
-    expect(+job.run_at).toBeLessThan(+new Date() + 2719);
+
+    // Check that it failed as expected
+    {
+      const { rows: jobs } = await pgClient.query(
+        `select * from graphile_worker.jobs`
+      );
+      expect(jobs).toHaveLength(1);
+      const job = jobs[0];
+      expect(job.task_identifier).toEqual("job1");
+      expect(job.attempts).toEqual(1);
+      expect(job.max_attempts).toEqual(25);
+      expect(job.last_error).toEqual("TEST_ERROR");
+      // It's the first attempt, so delay is exp(1) ~= 2.719 seconds
+      expect(+job.run_at).toBeGreaterThanOrEqual(+start + 2718);
+      expect(+job.run_at).toBeLessThanOrEqual(+new Date() + 2719);
+
+      const { rows: jobQueues } = await pgClient.query(
+        `select * from graphile_worker.job_queues`
+      );
+      expect(jobQueues).toHaveLength(1);
+      const q = jobQueues[0];
+      expect(q.queue_name).toEqual(job.queue_name);
+      expect(q.job_count).toEqual(1);
+      expect(q.locked_at).toBeFalsy();
+      expect(q.locked_by).toBeFalsy();
+    }
   }));
 
 test("retries job", () =>
@@ -92,18 +157,30 @@ test("retries job", () =>
     expect(job1).toHaveBeenCalledTimes(2);
 
     // And it should have been rejected again
-    const { rows: jobs } = await pgClient.query(
-      `select * from graphile_worker.jobs`
-    );
-    expect(jobs).toHaveLength(1);
-    const job = jobs[0];
-    expect(job.task_identifier).toEqual("job1");
-    expect(job.attempts).toEqual(2);
-    expect(job.max_attempts).toEqual(25);
-    expect(job.last_error).toEqual("TEST_ERROR 2");
-    // It's the second attempt, so delay is exp(2) ~= 7.389 seconds
-    expect(+job.run_at).toBeGreaterThan(+start + 7388);
-    expect(+job.run_at).toBeLessThan(+new Date() + 7389);
+    {
+      const { rows: jobs } = await pgClient.query(
+        `select * from graphile_worker.jobs`
+      );
+      expect(jobs).toHaveLength(1);
+      const job = jobs[0];
+      expect(job.task_identifier).toEqual("job1");
+      expect(job.attempts).toEqual(2);
+      expect(job.max_attempts).toEqual(25);
+      expect(job.last_error).toEqual("TEST_ERROR 2");
+      // It's the second attempt, so delay is exp(2) ~= 7.389 seconds
+      expect(+job.run_at).toBeGreaterThanOrEqual(+start + 7388);
+      expect(+job.run_at).toBeLessThanOrEqual(+new Date() + 7389);
+
+      const { rows: jobQueues } = await pgClient.query(
+        `select * from graphile_worker.job_queues`
+      );
+      expect(jobQueues).toHaveLength(1);
+      const q = jobQueues[0];
+      expect(q.queue_name).toEqual(job.queue_name);
+      expect(q.job_count).toEqual(1);
+      expect(q.locked_at).toBeFalsy();
+      expect(q.locked_by).toBeFalsy();
+    }
   }));
 
 test("supports future-scheduled jobs", () =>
@@ -139,8 +216,14 @@ test("supports future-scheduled jobs", () =>
     expect(future).toHaveBeenCalledTimes(1);
 
     // It should be successful
-    const { rows: jobs } = await pgClient.query(
-      `select * from graphile_worker.jobs`
-    );
-    expect(jobs).toHaveLength(0);
+    {
+      const { rows: jobs } = await pgClient.query(
+        `select * from graphile_worker.jobs`
+      );
+      expect(jobs).toHaveLength(0);
+      const { rows: jobQueues } = await pgClient.query(
+        `select * from graphile_worker.job_queues`
+      );
+      expect(jobQueues).toHaveLength(0);
+    }
   }));
