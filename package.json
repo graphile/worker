@@ -41,7 +41,8 @@
     "chokidar": "^2.1.2",
     "debug": "^4.1.1",
     "pg": ">=6.5 <8",
-    "pg-connection-string": "^2.0.0"
+    "pg-connection-string": "^2.0.0",
+    "yargs": "^13.2.2"
   },
   "devDependencies": {
     "@types/jest": "^24.0.11",

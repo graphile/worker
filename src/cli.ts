@@ -2,10 +2,27 @@ import { Pool, PoolClient } from "pg";
 import { migrate } from "./migrate";
 import getTasks from "./getTasks";
 import { start, runAllJobs } from "./main";
+import * as yargs from "yargs";
 
-// TODO: use a proper CLI parser!
-const ONCE = process.argv.slice(2).includes("--once");
-const WATCH = process.argv.slice(2).includes("--watch");
+const argv = yargs
+  .option("once", {
+    alias: "1",
+    default: false
+  })
+  .boolean("once")
+  .option("watch", {
+    alias: "w",
+    default: false
+  })
+  .boolean("watch")
+  .option("jobs", {
+    alias: "j",
+    default: 1
+  }).argv;
+
+const ONCE = argv.once;
+const WATCH = argv.watch;
+const JOBS = argv.jobs;
 
 if (WATCH && ONCE) {
   throw new Error("Cannot specify both --watch and --once");
@@ -41,7 +58,7 @@ async function main() {
       );
     } else {
       // Watch for new jobs
-      const { promise } = start(watchedTasks.tasks, pgPool);
+      const { promise } = start(watchedTasks.tasks, pgPool, JOBS);
       // Continue forever(ish)
       await promise;
     }
