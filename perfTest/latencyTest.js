@@ -1,6 +1,7 @@
 const assert = require("assert");
 const { Pool } = require("pg");
 const { start } = require("../dist/main");
+const { default: deferred } = require("../dist/deferred");
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -8,9 +9,11 @@ async function main() {
   const pgPool = new Pool({ connectionString: "graphile_worker_perftest" });
   const startTimes = {};
   let latencies = [];
+  const deferreds = {};
   const tasks = {
     latency: ({ id }) => {
       latencies.push(process.hrtime(startTimes[id]));
+      if (deferreds[id]) deferreds[id].resolve();
     }
   };
   const workerPool = start(tasks, pgPool, 1);
@@ -24,7 +27,7 @@ async function main() {
   latencies = [];
 
   // Let things settle
-  await sleep(500);
+  await sleep(1000);
 
   console.log("Beginning latency test");
 
@@ -34,14 +37,13 @@ async function main() {
     const client = await pgPool.connect();
     try {
       for (let id = 0; id < SAMPLES; id++) {
+        deferreds[id] = deferred();
         startTimes[id] = process.hrtime();
         await client.query(
           `select graphile_worker.add_job('latency', json_build_object('id', $1::int))`,
           [id]
         );
-        while (latencies.length < id + 1) {
-          await sleep(5);
-        }
+        await deferreds[id];
       }
     } finally {
       await client.release();
