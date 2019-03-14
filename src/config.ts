@@ -5,7 +5,7 @@
  * notified when new jobs are added - this is just used in the case where
  * LISTEN/NOTIFY fails for whatever reason.
  */
-export const IDLE_DELAY = 15000;
+export const IDLE_DELAY = 2000;
 
 /**
  * How many errors in a row can we get fetching a job before we raise a higher

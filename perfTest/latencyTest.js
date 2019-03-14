@@ -31,7 +31,7 @@ async function main() {
 
   console.log("Beginning latency test");
 
-  const SAMPLES = 100;
+  const SAMPLES = 1000;
 
   {
     const client = await pgPool.connect();

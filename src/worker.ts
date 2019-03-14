@@ -45,7 +45,7 @@ export function makeNewWorker(
 
   let contiguousErrors = 0;
 
-  const doNext = async (): Promise<void> => {
+  const doNext = async (secondAttempt = false): Promise<void> => {
     cancelDoNext();
     assert(active, "doNext called when active was false");
     assert(!activeJob, "There should be no active job");
@@ -103,7 +103,15 @@ export function makeNewWorker(
     if (!activeJob) {
       if (continuous) {
         if (active) {
-          doNextTimer = setTimeout(() => doNext(), IDLE_DELAY);
+          // tslint:disable-next-line prefer-conditional-expression
+          if (!secondAttempt) {
+            // This could be a synchronisation issue where we were notified of
+            // the job but it's not visible yet, lets try again in just a
+            // moment.
+            doNextTimer = setTimeout(() => doNext(true), 50);
+          } else {
+            doNextTimer = setTimeout(() => doNext(), IDLE_DELAY);
+          }
         } else {
           promise.resolve();
         }
