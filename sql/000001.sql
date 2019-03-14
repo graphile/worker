@@ -102,7 +102,7 @@ begin
     and (task_identifiers is null or task_identifier = any(task_identifiers))
     order by priority asc, run_at asc, id asc
     limit 1
-    for update
+    for update of job_queues
     skip locked;
 
   if v_queue_name is null then
