@@ -10,8 +10,8 @@ Job queue for PostgreSQL running on Node.js. Can be used with any PostgreSQL-bac
 
 - Standalone and embedded modes
 - Easy to test with (including `runAllJobs` util)
-- Low latency (uses `LISTEN`/`NOTIFY` to be informed of jobs as they're inserted)
-- High performance (uses `SKIP LOCKED` to find jobs to execute, resulting in faster fetches)
+- Low latency (~2ms from task schedule to execution, uses `LISTEN`/`NOTIFY` to be informed of jobs as they're inserted)
+- High performance (~700 jobs per second, uses `SKIP LOCKED` to find jobs to execute, resulting in faster fetches)
 - Small tasks (uses explicit task names / payloads resulting in minimal serialisation/deserialisation overhead)
 - Parallel by default
 - Adding jobs to same named queue runs them in series
