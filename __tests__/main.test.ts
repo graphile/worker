@@ -299,3 +299,86 @@ test("runs jobs asynchronously", () =>
     // Job should have been called once only
     expect(job1).toHaveBeenCalledTimes(1);
   }));
+
+test("runs jobs in parallel", () =>
+  withPgClient(async pgClient => {
+    await reset(pgClient);
+
+    // Schedule a job
+    const start = new Date();
+    await pgClient.query(
+      `select graphile_worker.add_job('job1', '{"a": 1}') from generate_series(1, 5)`
+    );
+
+    // Run the task
+    const jobPromises: Array<Deferred<void>> = [];
+    const job1: Task = jest.fn(() => {
+      const jobPromise = deferred();
+      jobPromises.push(jobPromise);
+      return jobPromise;
+    });
+    const tasks: TaskList = {
+      job1
+    };
+    const runPromises = [
+      runAllJobs(tasks, pgClient),
+      runAllJobs(tasks, pgClient),
+      runAllJobs(tasks, pgClient),
+      runAllJobs(tasks, pgClient),
+      runAllJobs(tasks, pgClient)
+    ];
+    let executed = false;
+    Promise.all(runPromises).then(() => {
+      executed = true;
+    });
+
+    let attempts = 0;
+    // Wait up to a second for the job to be executed
+    while (jobPromises.length < 5 && attempts++ < 200) {
+      await sleep(5);
+    }
+
+    // Job should have been called once for each task
+    expect(jobPromises).toHaveLength(5);
+    expect(job1).toHaveBeenCalledTimes(5);
+
+    expect(executed).toBeFalsy();
+
+    {
+      const { rows: jobs } = await pgClient.query(
+        `select * from graphile_worker.jobs`
+      );
+      expect(jobs).toHaveLength(5);
+      jobs.forEach(job => {
+        expect(job.task_identifier).toEqual("job1");
+        expect(job.payload).toEqual({ a: 1 });
+        expect(+job.run_at).toBeGreaterThanOrEqual(+start);
+        expect(+job.run_at).toBeLessThanOrEqual(+new Date());
+        expect(job.attempts).toEqual(1); // It gets increased when the job is checked out
+      });
+
+      const { rows: jobQueues } = await pgClient.query(
+        `select * from graphile_worker.job_queues`
+      );
+      expect(jobQueues).toHaveLength(5);
+      const locks: Array<string> = [];
+      jobQueues.forEach(q => {
+        const job = jobs.find(j => j.queue_name === q.queue_name);
+        expect(job).toBeTruthy();
+        expect(q.job_count).toEqual(1);
+        expect(+q.locked_at).toBeGreaterThanOrEqual(+start);
+        expect(+q.locked_at).toBeLessThanOrEqual(+new Date());
+        expect(locks.indexOf(q.locked_by)).toEqual(-1);
+        locks.push(q.locked_by);
+      });
+      expect(locks.length).toEqual(5);
+    }
+
+    expect(executed).toBeFalsy();
+    jobPromises.forEach(jobPromise => jobPromise!.resolve());
+    await Promise.all(runPromises);
+    expect(executed).toBeTruthy();
+
+    // Job should not have been called any more times
+    expect(job1).toHaveBeenCalledTimes(5);
+  }));
