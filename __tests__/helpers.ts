@@ -60,6 +60,17 @@ export async function reset(pgPoolOrClient: pg.Pool | pg.PoolClient) {
   }
 }
 
+export async function jobCount(
+  pgPoolOrClient: pg.Pool | pg.PoolClient
+): Promise<number> {
+  const {
+    rows: [row]
+  } = await pgPoolOrClient.query(
+    "select count(*)::int from graphile_worker.jobs"
+  );
+  return row ? row.count || 0 : 0;
+}
+
 export function makeMockJob(taskIdentifier: string): Job {
   const createdAt = new Date(Date.now() - 12345678);
   return {

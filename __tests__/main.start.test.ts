@@ -1,5 +1,5 @@
 // See also main.runAllJobs.test.ts
-import { reset, withPgPool, sleepUntil, sleep } from "./helpers";
+import { reset, withPgPool, sleepUntil, sleep, jobCount } from "./helpers";
 import { TaskList, Task } from "../src/interfaces";
 import { start } from "../src/main";
 import deferred, { Deferred } from "../src/deferred";
@@ -57,4 +57,5 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
     await sleep(1);
     expect(finished).toBeTruthy();
     await workerPool.promise;
+    expect(await jobCount(pgPool)).toEqual(0);
   }));

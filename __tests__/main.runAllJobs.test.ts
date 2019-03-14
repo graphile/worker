@@ -1,4 +1,4 @@
-import { withPgClient, reset, sleepUntil } from "./helpers";
+import { withPgClient, reset, sleepUntil, jobCount } from "./helpers";
 import { TaskList, Task, Worker } from "../src/interfaces";
 import { runAllJobs } from "../src/main";
 import deferred, { Deferred } from "../src/deferred";
@@ -49,6 +49,7 @@ Object {
     // Job should have been called once only
     expect(job1).toHaveBeenCalledTimes(1);
     expect(job2).not.toHaveBeenCalled();
+    expect(await jobCount(pgClient)).toEqual(0);
   }));
 
 test("schedules errors for retry", () =>
@@ -287,6 +288,7 @@ test("runs jobs asynchronously", () =>
 
     // Job should have been called once only
     expect(job1).toHaveBeenCalledTimes(1);
+    expect(await jobCount(pgClient)).toEqual(0);
   }));
 
 test("runs jobs in parallel", () =>
@@ -366,6 +368,7 @@ test("runs jobs in parallel", () =>
 
     // Job should not have been called any more times
     expect(job1).toHaveBeenCalledTimes(5);
+    expect(await jobCount(pgClient)).toEqual(0);
   }));
 
 test("single worker runs jobs in series, purges all before exit", () =>
@@ -413,6 +416,7 @@ test("single worker runs jobs in series, purges all before exit", () =>
 
     // Job should not have been called any more times
     expect(job1).toHaveBeenCalledTimes(5);
+    expect(await jobCount(pgClient)).toEqual(0);
   }));
 
 test("jobs added to the same queue will be ran serially (even if multiple workers)", () =>
@@ -467,4 +471,5 @@ test("jobs added to the same queue will be ran serially (even if multiple worker
 
     // Job should not have been called any more times
     expect(job1).toHaveBeenCalledTimes(5);
+    expect(await jobCount(pgClient)).toEqual(0);
   }));
