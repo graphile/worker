@@ -94,8 +94,8 @@ begin
   end if;
 
   select job_queues.queue_name, jobs.id into v_queue_name, v_job_id
-    from graphile_worker.job_queues
-    inner join graphile_worker.jobs using (queue_name)
+    from graphile_worker.jobs
+    inner join graphile_worker.job_queues using (queue_name)
     where (locked_at is null or locked_at < (now() - job_expiry))
     and run_at <= now()
     and attempts < max_attempts
