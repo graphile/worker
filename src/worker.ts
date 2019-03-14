@@ -142,8 +142,13 @@ export function makeNewWorker(
         console.error(
           `Failed task ${job.id} (${job.task_identifier}) with error ${
             err.message
-          } (${duration.toFixed(2)}ms)`,
-          { stack }
+          } (${duration.toFixed(2)}ms)${
+            stack
+              ? `:\n  ${String(stack)
+                  .replace(/\n/g, "\n  ")
+                  .trim()}`
+              : ""
+          }`
         );
         // TODO: retry logic, in case of server connection interruption
         await withPgClient(client =>
