@@ -383,7 +383,7 @@ test("runs jobs in parallel", () =>
     expect(job1).toHaveBeenCalledTimes(5);
   }));
 
-test("purges queue before exiting", () =>
+test("single worker runs jobs in series, purges all before exit", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
 
