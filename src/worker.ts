@@ -203,11 +203,16 @@ export function makeNewWorker(
   // Start!
   doNext();
 
-  return {
+  const worker = {
     nudge,
     workerId,
     release,
     promise,
     getActiveJob: () => activeJob
   };
+
+  // For tests
+  promise["worker"] = worker;
+
+  return worker;
 }

@@ -1,8 +1,11 @@
 import { migrate } from "../src/migrate";
 import { withPgClient } from "./helpers";
-import { TaskList, Task } from "../src/interfaces";
+import { TaskList, Task, Worker } from "../src/interfaces";
 import { runAllJobs } from "../src/main";
 import { PoolClient } from "pg";
+import deferred, { Deferred } from "../src/deferred";
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function reset(pgClient: PoolClient) {
   await pgClient.query("drop schema if exists graphile_worker cascade;");
@@ -226,4 +229,73 @@ test("supports future-scheduled jobs", () =>
       );
       expect(jobQueues).toHaveLength(0);
     }
+  }));
+
+test("runs jobs asynchronously", () =>
+  withPgClient(async pgClient => {
+    await reset(pgClient);
+
+    // Schedule a job
+    const start = new Date();
+    await pgClient.query(`select graphile_worker.add_job('job1', '{"a": 1}')`);
+
+    // Run the task
+    let jobPromise: Deferred<void> | null = null;
+    const job1: Task = jest.fn(() => {
+      jobPromise = deferred();
+      return jobPromise;
+    });
+    const tasks: TaskList = {
+      job1
+    };
+    const runPromise = runAllJobs(tasks, pgClient);
+    const worker: Worker = runPromise["worker"];
+    expect(worker).toBeTruthy();
+    let executed = false;
+    runPromise.then(() => {
+      executed = true;
+    });
+
+    let attempts = 0;
+    // Wait up to a second for the job to be executed
+    while (!jobPromise && attempts++ < 200) {
+      await sleep(5);
+    }
+
+    // Job should have been called once only
+    expect(jobPromise).toBeTruthy();
+    expect(job1).toHaveBeenCalledTimes(1);
+
+    expect(executed).toBeFalsy();
+
+    {
+      const { rows: jobs } = await pgClient.query(
+        `select * from graphile_worker.jobs`
+      );
+      expect(jobs).toHaveLength(1);
+      const job = jobs[0];
+      expect(job.task_identifier).toEqual("job1");
+      expect(job.payload).toEqual({ a: 1 });
+      expect(+job.run_at).toBeGreaterThanOrEqual(+start);
+      expect(+job.run_at).toBeLessThanOrEqual(+new Date());
+      expect(job.attempts).toEqual(1); // It gets increased when the job is checked out
+
+      const { rows: jobQueues } = await pgClient.query(
+        `select * from graphile_worker.job_queues`
+      );
+      expect(jobQueues).toHaveLength(1);
+      const q = jobQueues[0];
+      expect(q.queue_name).toEqual(job.queue_name);
+      expect(q.job_count).toEqual(1);
+      expect(+q.locked_at).toBeGreaterThanOrEqual(+start);
+      expect(+q.locked_at).toBeLessThanOrEqual(+new Date());
+      expect(q.locked_by).toEqual(worker.workerId);
+    }
+
+    jobPromise!.resolve();
+    await runPromise;
+    expect(executed).toBeTruthy();
+
+    // Job should have been called once only
+    expect(job1).toHaveBeenCalledTimes(1);
   }));
