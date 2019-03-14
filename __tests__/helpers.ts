@@ -79,7 +79,7 @@ export function makeMockJob(taskIdentifier: string): Job {
 export const sleep = (ms: number) =>
   new Promise(resolve => setTimeout(resolve, ms));
 
-export async function sleepUntil(condition: () => boolean, maxDuration = 1000) {
+export async function sleepUntil(condition: () => boolean, maxDuration = 2000) {
   const start = Date.now();
   // Wait up to a second for the job to be executed
   while (!condition() && Date.now() - start < maxDuration) {
