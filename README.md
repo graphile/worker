@@ -37,7 +37,7 @@ you'd like to help with this: http://discord.gg/graphile
 
 ## Requirements
 
-PostgreSQL 9.6+ and Node v8.6+.
+PostgreSQL 10+ and Node 10+.
 
 If your database doesn't already include the `pgcrypto` and `uuid-ossp` extensions we'll automatically install them into the public schema for you. If you have them installed in a different schema (unlikely) you may face issues.
 
