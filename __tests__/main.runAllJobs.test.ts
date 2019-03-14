@@ -1,4 +1,4 @@
-import { withPgClient, reset } from "./helpers";
+import { withPgClient, reset, sleepUntil } from "./helpers";
 import { TaskList, Task, Worker } from "../src/interfaces";
 import { runAllJobs } from "../src/main";
 import deferred, { Deferred } from "../src/deferred";
@@ -249,11 +249,7 @@ test("runs jobs asynchronously", () =>
       executed = true;
     });
 
-    let attempts = 0;
-    // Wait up to a second for the job to be executed
-    while (!jobPromise && attempts++ < 200) {
-      await sleep(5);
-    }
+    await sleepUntil(() => !!jobPromise);
 
     // Job should have been called once only
     expect(jobPromise).toBeTruthy();
@@ -325,11 +321,7 @@ test("runs jobs in parallel", () =>
       executed = true;
     });
 
-    let attempts = 0;
-    // Wait up to a second for the job to be executed
-    while (jobPromises.length < 5 && attempts++ < 200) {
-      await sleep(5);
-    }
+    await sleepUntil(() => jobPromises.length >= 5);
 
     // Job should have been called once for each task
     expect(jobPromises).toHaveLength(5);
@@ -402,11 +394,7 @@ test("single worker runs jobs in series, purges all before exit", () =>
     });
 
     for (let i = 0; i < 5; i++) {
-      let attempts = 0;
-      // Wait up to a second for the next job to be executed
-      while (jobPromises.length < i + 1 && attempts++ < 200) {
-        await sleep(5);
-      }
+      await sleepUntil(() => jobPromises.length >= i + 1);
       expect(jobPromises).toHaveLength(i + 1);
       expect(job1).toHaveBeenCalledTimes(i + 1);
 
@@ -460,11 +448,7 @@ test("jobs added to the same queue will be ran serially (even if multiple worker
       // Give the other workers a chance to interfere (they shouldn't)
       sleep(50);
 
-      let attempts = 0;
-      // Wait up to a second for the next job to be executed
-      while (jobPromises.length < i + 1 && attempts++ < 200) {
-        await sleep(5);
-      }
+      await sleepUntil(() => jobPromises.length >= i + 1);
       expect(jobPromises).toHaveLength(i + 1);
       expect(job1).toHaveBeenCalledTimes(i + 1);
 
