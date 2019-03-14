@@ -6,7 +6,8 @@
   "scripts": {
     "prepack": "tsc && chmod +x dist/cli.js",
     "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && tsc --watch",
-    "test": "psql -Xv ON_ERROR_STOP=1 -f __tests__/reset-db.sql graphile_worker_test && jest -i"
+    "test": "psql -Xv ON_ERROR_STOP=1 -f __tests__/reset-db.sql graphile_worker_test && jest -i",
+    "perfTest": "cd perfTest && ./run.sh"
   },
   "bin": {
     "graphile-worker": "./dist/cli.js"
