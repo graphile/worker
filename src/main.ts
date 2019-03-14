@@ -106,8 +106,10 @@ export function start(
     }
     listenForChangesClient = client;
     client.on("notification", () => {
-      // Find a worker that's available
-      workers.some(worker => worker.nudge());
+      if (listenForChangesClient === client) {
+        // Find a worker that's available
+        workers.some(worker => worker.nudge());
+      }
     });
 
     // Subscribe to jobs:insert message
