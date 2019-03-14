@@ -34,7 +34,7 @@ export function makeNewWorker(
       return;
     }
     active = false;
-    if (!cancelDoNext()) {
+    if (cancelDoNext()) {
       // Nothing in progress; resolve the promise
       promise.resolve();
     }
@@ -127,10 +127,10 @@ export function makeNewWorker(
       const startTimestamp = process.hrtime();
       try {
         debug(`Found task ${job.id} (${job.task_identifier})`);
-        const worker = tasks[job.task_identifier];
-        assert(worker, `Unsupported task '${job.task_identifier}'`);
+        const task = tasks[job.task_identifier];
+        assert(task, `Unsupported task '${job.task_identifier}'`);
         const helpers = makeHelpers(job, { withPgClient });
-        await worker(job.payload, helpers);
+        await task(job.payload, helpers);
       } catch (error) {
         err = error;
       }

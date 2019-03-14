@@ -42,9 +42,22 @@ export async function withTransaction<T = any>(
   });
 }
 
-export async function reset(pgClient: pg.PoolClient) {
-  await pgClient.query("drop schema if exists graphile_worker cascade;");
-  await migrate(pgClient);
+function isPoolClient(o: any): o is pg.PoolClient {
+  return o && typeof o.release === "function";
+}
+
+export async function reset(pgPoolOrClient: pg.Pool | pg.PoolClient) {
+  await pgPoolOrClient.query("drop schema if exists graphile_worker cascade;");
+  if (isPoolClient(pgPoolOrClient)) {
+    await migrate(pgPoolOrClient);
+  } else {
+    const client = await pgPoolOrClient.connect();
+    try {
+      await migrate(client);
+    } finally {
+      await client.release();
+    }
+  }
 }
 
 export function makeMockJob(taskIdentifier: string): Job {
@@ -61,4 +74,20 @@ export function makeMockJob(taskIdentifier: string): Job {
     created_at: createdAt,
     updated_at: createdAt
   };
+}
+
+export const sleep = (ms: number) =>
+  new Promise(resolve => setTimeout(resolve, ms));
+
+export async function sleepUntil(condition: () => boolean, maxDuration = 1000) {
+  const start = Date.now();
+  // Wait up to a second for the job to be executed
+  while (!condition() && Date.now() - start < maxDuration) {
+    await sleep(2);
+  }
+  if (!condition()) {
+    throw new Error(
+      `Slept for ${Date.now() - start}ms but condition never passed`
+    );
+  }
 }

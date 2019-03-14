@@ -70,6 +70,22 @@ export function start(
   const promise = deferred();
   const workers: Array<Worker> = [];
 
+  let listenForChangesClient: PoolClient | null = null;
+
+  const unlistenForChanges = async () => {
+    if (listenForChangesClient) {
+      const client = listenForChangesClient;
+      listenForChangesClient = null;
+      // Subscribe to jobs:insert message
+      try {
+        await client.query('UNLISTEN "jobs:insert"');
+      } catch (e) {
+        // Ignore
+      }
+      await client.release();
+    }
+  };
+
   const listenForChanges = (
     err: Error | undefined,
     client: PoolClient,
@@ -88,6 +104,7 @@ export function start(
       }, 5000);
       return;
     }
+    listenForChangesClient = client;
     client.on("notification", () => {
       // Find a worker that's available
       workers.some(worker => worker.nudge());
@@ -100,7 +117,13 @@ export function start(
     client.on("error", (e: Error) => {
       // tslint:disable-next-line no-console
       console.error("Error with database notify listener", e.message);
-      release();
+      listenForChangesClient = null;
+      try {
+        release();
+      } catch (e) {
+        // tslint:disable-next-line no-console
+        console.error("Error occurred releasing client: " + e.stack);
+      }
       pgPool.connect(listenForChanges);
     });
 
@@ -119,6 +142,7 @@ export function start(
   // This is a representation of us that can be interacted with externally
   const workerPool = {
     release: async () => {
+      unlistenForChanges();
       promise.resolve();
       await Promise.all(workers.map(worker => worker.release()));
       const idx = allWorkerPools.indexOf(workerPool);
