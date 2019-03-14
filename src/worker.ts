@@ -16,7 +16,7 @@ export function makeNewWorker(
 
   let doNextTimer: NodeJS.Timer | null = null;
   const cancelDoNext = () => {
-    if (doNextTimer) {
+    if (doNextTimer !== null) {
       clearTimeout(doNextTimer);
       doNextTimer = null;
       return true;
