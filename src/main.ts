@@ -190,6 +190,8 @@ export function start(
     workers.push(makeNewWorker(tasks, withPgClient));
   }
 
+  // TODO: handle when a worker shuts down (spawn a new one)
+
   return workerPool;
 }
 
