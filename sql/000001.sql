@@ -64,8 +64,8 @@ end;
 $$ language plpgsql;
 create trigger _500_increase_job_queue_count after insert on graphile_worker.jobs for each row execute procedure graphile_worker.jobs__increase_job_queue_count();
 create trigger _500_decrease_job_queue_count after delete on graphile_worker.jobs for each row execute procedure graphile_worker.jobs__decrease_job_queue_count();
-create trigger _500_increase_job_queue_count_update after update on graphile_worker.jobs for each row when (new.queue_name is distinct from old.queue_name) execute procedure graphile_worker.jobs__increase_job_queue_count();
-create trigger _500_decrease_job_queue_count_update after update on graphile_worker.jobs for each row when (new.queue_name is distinct from old.queue_name) execute procedure graphile_worker.jobs__decrease_job_queue_count();
+create trigger _500_increase_job_queue_count_update after update of queue_name on graphile_worker.jobs for each row execute procedure graphile_worker.jobs__increase_job_queue_count();
+create trigger _500_decrease_job_queue_count_update after update of queue_name on graphile_worker.jobs for each row execute procedure graphile_worker.jobs__decrease_job_queue_count();
 
 -- Notify worker of new jobs
 create function graphile_worker.tg_jobs__notify_new_jobs() returns trigger as $$
