@@ -56,5 +56,8 @@
   "files": [
     "dist",
     "sql"
-  ]
+  ],
+  "engines": {
+    "node": ">=10.0.0"
+  }
 }
