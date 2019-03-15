@@ -32,15 +32,22 @@ module.exports = async ({ name }) => {
 
 ### Run the worker
 
+(Make sure you're in the folder that contains the `tasks` folder.)
+
 ```
 npx graphile-worker -c "my_db"
 # or, if you have a remote database, something like:
 # npx graphile-worker -c "postgres://user:pass@host:port/db?ssl=1"
+# or, if you prefer envvars
+# DATABASE_URL="..." npx graphile-worker
 ```
+
+(Note: `npx` runs the local copy of an npm module if it is installed, when
+you're ready, switch to using the `package.json` `"scripts"` entry instead.)
 
 ### Schedule a job:
 
-Run the following SQL against your database:
+Connect to your database and run the following SQL:
 
 ```sql
 SELECT graphile_worker.add_job('hello', json_build_object('name', 'Bobby Tables'));
@@ -148,6 +155,22 @@ module.exports = async (payload, { debug }) => {
   // async is optional, but best practice
   debug(`Received ${JSON.stringify(payload)}`);
 };
+```
+
+Each task function is passed two arguments:
+
+- `payload` - the payload you passed when calling `add_job`
+- `helpers` - an object containing:
+  - `debug` - a helpful [`debug`](https://www.npmjs.com/package/debug) instance scoped to the name of the task (use the `DEBUG` envvar to expose)
+  - `job` - the whole job (including `uuid`, `attempts`, etc) - you shouldn't need this
+  - `withPgClient` - a helper to use to get a database client
+
+withPgClient example:
+
+```js
+const {
+  rows: [row]
+} = await withPgClient(pgClient => pgClient.query("select 1 as one"));
 ```
 
 ## Scheduling jobs
