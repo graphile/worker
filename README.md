@@ -6,7 +6,51 @@
 [![MIT license](https://img.shields.io/npm/l/graphile-worker.svg)](LICENSE.md)
 [![Follow](https://img.shields.io/badge/twitter-@GraphileHQ-blue.svg)](https://twitter.com/GraphileHQ)
 
-Job queue for PostgreSQL running on Node.js. Can be used with any PostgreSQL-backed application. Pairs beautifully with [PostGraphile](https://www.graphile.org/postgraphile/).
+Job queue for PostgreSQL running on Node.js - allows you to run jobs (e.g. sending emails, performing calculations, generating PDFs, etc) "in the background" so that your HTTP response is not held up. Can be used with any PostgreSQL-backed application. Pairs beautifully with [PostGraphile](https://www.graphile.org/postgraphile/).
+
+## Quickstart
+
+In your existing Node.js project:
+
+### Add the worker to your project:
+
+```
+yarn add graphile-worker
+```
+
+### Create tasks:
+
+Create a `tasks` folder, and place in it JS files containing your task specs.
+The names of these files will be the task identifiers, e.g. `hello` below:
+
+```js
+// tasks/hello.js
+module.exports = async ({ name }) => {
+  console.log(`Hello, ${name}`);
+};
+```
+
+### Run the worker
+
+```
+npx graphile-worker -c "my_db"
+# or, if you have a remote database, something like:
+# npx graphile-worker -c "postgres://user:pass@host:port/db?ssl=1"
+```
+
+### Schedule a job:
+
+Run the following SQL against your database:
+
+```sql
+SELECT graphile_worker.add_job('hello', json_build_object('name', 'Bobby Tables'));
+```
+
+### Success!
+
+You should see the worker output `Hello, Bobby Tables`. Gosh, that was fast!
+
+## Features
 
 - Standalone and embedded modes
 - Easy to test with (including `runAllJobs` util)
@@ -61,8 +105,6 @@ use the `"scripts"` entry in `package.json` instead.)
 
 ## Creating task executors
 
-There's no point having a job queue if there's nothing to execute the jobs!
-
 A task executor is a simple async JS function which receives as input the job
 payload and a collection of helpers. It does the work and then returns. If it
 returns then the job is deemed a success and is deleted from the queue. If it
@@ -106,6 +148,38 @@ module.exports = async (payload, { debug }) => {
   // async is optional, but best practice
   debug(`Received ${JSON.stringify(payload)}`);
 };
+```
+
+## Scheduling jobs
+
+You can schedule jobs directly in the database, e.g. from a trigger or
+function, or by calling SQL from your application code. You do this using the
+`graphile_worker.add_job` function. (We'll add a JS helper for this soon...)
+
+`add_job` accepts the following parameters (in this order):
+
+- `identifier` - the only **required** field, indicates the name of the task executor to run (omit the `.js` suffix!)
+- `payload` - a JSON object with information to tell the task executor what to do (defaults to an empty object)
+- `queue_name` - if you want certain tasks to run one at a time, add them to the same named queue (defaults to a random value)
+- `run_at` - a timestamp after which to run the job; defaults to now.
+- `max_attempts` - if this task fails, how many times should we retry it? Default: 25.
+
+Typically you'll want to set the `identifier` and `payload`:
+
+```sql
+SELECT graphile_worker.add_job(
+  'send_email',
+  json_build_object(
+    'to', 'someone@example.com',
+    'subject', 'graphile-worker test'
+  )
+);
+```
+
+You can skip parameters you don't need by using PostgreSQL's named parameter support:
+
+```sql
+SELECT graphile_worker.add_job('reminder', run_at := NOW() + INTERVAL '2 days');
 ```
 
 ## Uninstallation
