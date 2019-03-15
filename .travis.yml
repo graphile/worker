@@ -1,0 +1,29 @@
+language: node_js
+
+services:
+  - postgresql
+
+addons:
+  postgresql: "10"
+  apt:
+    packages:
+    - postgresql-10
+    - postgresql-client-10
+
+node_js:
+  - "10"
+
+env:
+  DATABASE_URL: postgresql://localhost:5433/graphile_worker_test
+  global:
+    - PGPORT=5433
+
+before_install:
+  - sudo cp /etc/postgresql/{9.6,10}/main/pg_hba.conf
+  - sudo /etc/init.d/postgresql restart
+
+before_script:
+  - psql -c 'create database graphile_worker_test' -U postgres
+
+script:
+  - yarn test
