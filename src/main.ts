@@ -1,5 +1,5 @@
 import { Pool, PoolClient } from "pg";
-import { TaskList, Worker, Job, WorkerPool } from "./interfaces";
+import { TaskList, Worker, Job, WorkerPool, WorkerOptions } from "./interfaces";
 import debug from "./debug";
 import deferred from "./deferred";
 import SIGNALS from "./signals";
@@ -62,8 +62,11 @@ function registerSignalHandlers() {
 export function start(
   tasks: TaskList,
   pgPool: Pool,
-  workerCount = 1
+  workerOptions: WorkerOptions
 ): WorkerPool {
+
+  debug(`Worker options are %O`, workerOptions);
+
   // Clean up when certain signals occur
   registerSignalHandlers();
 
@@ -188,8 +191,8 @@ export function start(
 
   // Spawn our workers; they can share clients from the pool.
   const withPgClient = makeWithPgClientFromPool(pgPool);
-  for (let i = 0; i < workerCount; i++) {
-    workers.push(makeNewWorker(tasks, withPgClient));
+  for (let i = 0; i < workerOptions.workerCount; i++) {
+    workers.push(makeNewWorker(tasks, withPgClient, workerOptions));
   }
 
   // TODO: handle when a worker shuts down (spawn a new one)
@@ -197,5 +200,5 @@ export function start(
   return workerPool;
 }
 
-export const runAllJobs = (tasks: TaskList, client: PoolClient) =>
-  makeNewWorker(tasks, makeWithPgClientFromClient(client), false).promise;
+export const runAllJobs = (tasks: TaskList, client: PoolClient, workerOptions: WorkerOptions) =>
+  makeNewWorker(tasks, makeWithPgClientFromClient(client), workerOptions, false).promise;

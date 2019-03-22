@@ -62,3 +62,8 @@ export interface TaskOptions {
   runAt?: Date;
   maxAttempts?: number;
 }
+
+export interface WorkerOptions {
+  idleDelay: number,
+  workerCount: number
+}

@@ -2,8 +2,10 @@
 import { Pool, PoolClient } from "pg";
 import { migrate } from "./migrate";
 import getTasks from "./getTasks";
+import { WorkerOptions } from "./interfaces";
 import { start, runAllJobs } from "./main";
 import * as yargs from "yargs";
+import { IDLE_DELAY, CONCURRENT_JOBS } from "./config";
 
 const argv = yargs
   .option("connection", {
@@ -28,9 +30,13 @@ const argv = yargs
   .option("jobs", {
     description: "number of jobs to run concurrently",
     alias: "j",
-    default: 1
+    default: CONCURRENT_JOBS
   })
-  .number("jobs").argv;
+  .option("idle-delay", {
+    description: "how long to wait between polling for jobs in milliseconds",
+    default: IDLE_DELAY
+  })
+  .number("idle-delay").argv;
 
 const isInteger = (n: number): boolean => {
   return isFinite(n) && Math.round(n) === n;
@@ -39,7 +45,13 @@ const isInteger = (n: number): boolean => {
 const DATABASE_URL = argv.connection || process.env.DATABASE_URL || undefined;
 const ONCE = argv.once;
 const WATCH = argv.watch;
-const JOBS = isInteger(argv.jobs) ? argv.jobs : 1;
+const JOBS = isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS;
+const IDLE = isInteger(argv["idle-delay"]) ? argv["idle-delay"] : IDLE_DELAY;
+
+const workerOptions: WorkerOptions = {
+  idleDelay: IDLE,
+  workerCount: JOBS
+};
 
 if (WATCH && ONCE) {
   throw new Error("Cannot specify both --watch and --once");
@@ -76,11 +88,11 @@ async function main() {
     if (ONCE) {
       // Just run all jobs then exit
       await withPgClient(pgPool, client =>
-        runAllJobs(watchedTasks.tasks, client)
+        runAllJobs(watchedTasks.tasks, client, workerOptions)
       );
     } else {
       // Watch for new jobs
-      const { promise } = start(watchedTasks.tasks, pgPool, JOBS);
+      const { promise } = start(watchedTasks.tasks, pgPool, workerOptions);
       // Continue forever(ish)
       await promise;
     }

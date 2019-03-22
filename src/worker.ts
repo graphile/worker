@@ -1,6 +1,6 @@
-import { TaskList, Worker, Job, WithPgClient } from "./interfaces";
+import { TaskList, Worker, Job, WithPgClient, WorkerOptions } from "./interfaces";
 import globalDebug from "./debug";
-import { IDLE_DELAY, MAX_CONTIGUOUS_ERRORS } from "./config";
+import { MAX_CONTIGUOUS_ERRORS } from "./config";
 import * as assert from "assert";
 import deferred from "./deferred";
 import { makeHelpers } from "./helpers";
@@ -8,6 +8,7 @@ import { makeHelpers } from "./helpers";
 export function makeNewWorker(
   tasks: TaskList,
   withPgClient: WithPgClient,
+  workerOptions: WorkerOptions,
   continuous = true,
   workerId = `worker-${Math.random()}`
 ): Worker {
@@ -87,7 +88,7 @@ export function makeNewWorker(
         } else {
           if (active) {
             // Error occurred fetching a job; try again...
-            doNextTimer = setTimeout(() => doNext(), IDLE_DELAY);
+            doNextTimer = setTimeout(() => doNext(), workerOptions.idleDelay);
           } else {
             promise.reject(err);
           }
@@ -112,7 +113,7 @@ export function makeNewWorker(
             // moment.
             doNext();
           } else {
-            doNextTimer = setTimeout(() => doNext(), IDLE_DELAY);
+            doNextTimer = setTimeout(() => doNext(), workerOptions.idleDelay);
           }
         } else {
           promise.resolve();
