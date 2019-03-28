@@ -9,6 +9,7 @@ export interface Helpers {
   job: Job;
   debug: IDebugger;
   withPgClient: WithPgClient;
+  addJob(identifier: string, payload?: any, options?: TaskOptions): Promise<Job>;
 }
 
 export type Task = (payload: unknown, helpers: Helpers) => void | Promise<void>;
@@ -54,4 +55,10 @@ export interface WorkerPool {
   release: () => Promise<void>;
   gracefulShutdown: (message: string) => Promise<void>;
   promise: Promise<void>;
+}
+
+export interface TaskOptions {
+  queueName?: string;
+  runAt?: Date;
+  maxAttempts?: number;
 }
