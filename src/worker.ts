@@ -6,11 +6,10 @@ import {
   WorkerOptions
 } from "./interfaces";
 import globalDebug from "./debug";
-import { MAX_CONTIGUOUS_ERRORS } from "./config";
+import { IDLE_DELAY, MAX_CONTIGUOUS_ERRORS } from "./config";
 import * as assert from "assert";
 import deferred from "./deferred";
 import { makeHelpers } from "./helpers";
-import { IDLE_DELAY } from "./config";
 
 export function makeNewWorker(
   tasks: TaskList,
@@ -20,7 +19,8 @@ export function makeNewWorker(
 ): Worker {
   const {
     idleDelay = IDLE_DELAY,
-    workerId = `worker-${Math.random()}`
+    // The `||0.1` is to eliminate the vanishingly-small possibility of Math.random() returning 0. Math.random() can never return 1.
+    workerId = `worker-${String(Math.random() || 0.1).substr(2)}`
   } = options;
   const promise = deferred();
   let activeJob: Job | null = null;
