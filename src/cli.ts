@@ -5,7 +5,7 @@ import getTasks from "./getTasks";
 import { WorkerOptions, WorkerPoolOptions } from "./interfaces";
 import { start, runAllJobs } from "./main";
 import * as yargs from "yargs";
-import { IDLE_DELAY, CONCURRENT_JOBS } from "./config";
+import { POLL_INTERVAL, CONCURRENT_JOBS } from "./config";
 
 const argv = yargs
   .option("connection", {
@@ -32,11 +32,11 @@ const argv = yargs
     alias: "j",
     default: CONCURRENT_JOBS
   })
-  .option("idle-delay", {
-    description: "how long to wait between polling for jobs in milliseconds",
-    default: IDLE_DELAY
+  .option("poll-interval", {
+    description: "how long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)",
+    default: POLL_INTERVAL
   })
-  .number("idle-delay").argv;
+  .number("poll-interval").argv;
 
 const isInteger = (n: number): boolean => {
   return isFinite(n) && Math.round(n) === n;
@@ -45,15 +45,13 @@ const isInteger = (n: number): boolean => {
 const DATABASE_URL = argv.connection || process.env.DATABASE_URL || undefined;
 const ONCE = argv.once;
 const WATCH = argv.watch;
-const JOBS = isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS;
-const IDLE = isInteger(argv["idle-delay"]) ? argv["idle-delay"] : IDLE_DELAY;
 
 const workerOptions: WorkerOptions = {
-  idleDelay: IDLE,
+  pollInterval: isInteger(argv["poll-interval"]) ? argv["poll-interval"] : POLL_INTERVAL,
 };
 
 const workerPoolOptions: WorkerPoolOptions = {
-  workerCount: JOBS,
+  workerCount: isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS,
   ...workerOptions
 }
 
