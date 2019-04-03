@@ -81,7 +81,6 @@ export interface WorkerOptions {
   workerId?: string;
 }
 
-export interface WorkerPoolOptions {
+export interface WorkerPoolOptions extends WorkerOptions {
   workerCount?: number;
-  workerOptions?: WorkerOptions;
 }

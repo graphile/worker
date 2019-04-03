@@ -54,7 +54,7 @@ const workerOptions: WorkerOptions = {
 
 const workerPoolOptions: WorkerPoolOptions = {
   workerCount: JOBS,
-  workerOptions
+  ...workerOptions
 }
 
 if (WATCH && ONCE) {

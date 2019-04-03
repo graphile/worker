@@ -68,8 +68,8 @@ export function start(
 
   debug(`Worker pool options are %O`, options);
   const {
-    workerOptions = {},
-    workerCount = CONCURRENT_JOBS
+    workerCount = CONCURRENT_JOBS,
+    ...workerOptions
   } = options;
 
   // Clean up when certain signals occur
