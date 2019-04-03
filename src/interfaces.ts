@@ -77,7 +77,7 @@ export interface TaskOptions {
 }
 
 export interface WorkerOptions {
-  idleDelay?: number;
+  pollInterval?: number;
   workerId?: string;
 }
 

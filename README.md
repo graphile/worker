@@ -124,7 +124,8 @@ Options:
                     reloading the task code without restarting worker
                                                       [boolean] [default: false]
   --jobs, -j        number of jobs to run concurrently              [default: 1]
-  --idle-delay      how long to wait between polling for jobs in milliseconds
+  --poll-interval   how long to wait between polling for jobs in milliseconds
+                    (for jobs scheduled in the future/retries)
                                                         [number] [default: 2000]
 ```
 
