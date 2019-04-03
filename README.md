@@ -6,7 +6,11 @@
 [![MIT license](https://img.shields.io/npm/l/graphile-worker.svg)](LICENSE.md)
 [![Follow](https://img.shields.io/badge/twitter-@GraphileHQ-blue.svg)](https://twitter.com/GraphileHQ)
 
-Job queue for PostgreSQL running on Node.js - allows you to run jobs (e.g. sending emails, performing calculations, generating PDFs, etc) "in the background" so that your HTTP response is not held up. Can be used with any PostgreSQL-backed application. Pairs beautifully with [PostGraphile](https://www.graphile.org/postgraphile/).
+Job queue for PostgreSQL running on Node.js - allows you to run jobs (e.g.
+sending emails, performing calculations, generating PDFs, etc) "in the
+background" so that your HTTP response/application code is not held up. Can be
+used with any PostgreSQL-backed application. Pairs beautifully with
+[PostGraphile](https://www.graphile.org/postgraphile/).
 
 ## Quickstart
 
@@ -16,11 +20,12 @@ In your existing Node.js project:
 
 ```
 yarn add graphile-worker
+# or: npm install --save graphile-worker
 ```
 
 ### Create tasks:
 
-Create a `tasks` folder, and place in it JS files containing your task specs.
+Create a `tasks/` folder, and place in it JS files containing your task specs.
 The names of these files will be the task identifiers, e.g. `hello` below:
 
 ```js
@@ -32,14 +37,14 @@ module.exports = async ({ name }) => {
 
 ### Run the worker
 
-(Make sure you're in the folder that contains the `tasks` folder.)
+(Make sure you're in the folder that contains the `tasks/` folder.)
 
 ```
 npx graphile-worker -c "my_db"
 # or, if you have a remote database, something like:
-# npx graphile-worker -c "postgres://user:pass@host:port/db?ssl=1"
+#   npx graphile-worker -c "postgres://user:pass@host:port/db?ssl=1"
 # or, if you prefer envvars
-# DATABASE_URL="..." npx graphile-worker
+#   DATABASE_URL="..." npx graphile-worker
 ```
 
 (Note: `npx` runs the local copy of an npm module if it is installed, when
@@ -57,12 +62,21 @@ SELECT graphile_worker.add_job('hello', json_build_object('name', 'Bobby Tables'
 
 You should see the worker output `Hello, Bobby Tables`. Gosh, that was fast!
 
+## Crowd-funded open-source software
+
+If you are using this software in your business, please support it [via
+sponsorship](https://graphile.org/sponsor/). With your support we can improve
+performance, usability and documentation at a greater rate, leading to reduced
+running and engineering costs for your business, leading to a net ROI.
+
+Support contracts are also available; for more information see: https://www.graphile.org/support/
+
 ## Features
 
 - Standalone and embedded modes
 - Easy to test with (including `runAllJobs` util)
 - Low latency (~2ms from task schedule to execution, uses `LISTEN`/`NOTIFY` to be informed of jobs as they're inserted)
-- High performance (~700 jobs per second, uses `SKIP LOCKED` to find jobs to execute, resulting in faster fetches)
+- High performance (~700 jobs per second on a single node, uses `SKIP LOCKED` to find jobs to execute, resulting in faster fetches)
 - Small tasks (uses explicit task names / payloads resulting in minimal serialisation/deserialisation overhead)
 - Parallel by default
 - Adding jobs to same named queue runs them in series
@@ -73,13 +87,6 @@ You should see the worker output `Hello, Bobby Tables`. Gosh, that was fast!
 - Modern JS with async/await
 - Watch mode for development (experimental - iterate your jobs without restarting worker)
 
-## Crowd-funded open-source software
-
-In exchange for the incredible freedom we give in how this software can be
-used (thanks to the permissive MIT license) we ask the individuals and
-businesses that use it to sponsor ongoing maintenance and development [via
-sponsorship](https://graphile.org/sponsor/).
-
 ## Status
 
 Seems stable and has good test suite, but needs real-world testing before it
@@ -88,14 +95,19 @@ you'd like to help with this: http://discord.gg/graphile
 
 ## Requirements
 
-PostgreSQL 10+ and Node 10+.
+PostgreSQL 10+\* and Node 10+\*.
 
-If your database doesn't already include the `pgcrypto` and `uuid-ossp` extensions we'll automatically install them into the public schema for you. If you have them installed in a different schema (unlikely) you may face issues.
+If your database doesn't already include the `pgcrypto` and `uuid-ossp`
+extensions we'll automatically install them into the public schema for you. If
+you have them installed in a different schema (unlikely) you may face issues.
+
+\* Might work with older versions, but has not been tested.
 
 ## Installation
 
 ```
 yarn add graphile-worker
+# or: npm install --save graphile-worker
 ```
 
 ## Running
@@ -135,10 +147,10 @@ A task executor is a simple async JS function which receives as input the job
 payload and a collection of helpers. It does the work and then returns. If it
 returns then the job is deemed a success and is deleted from the queue. If it
 throws an error then the job is deemed a failure and the task is rescheduled
-using an exponential backoff algorithm.
+using an exponential-backoff algorithm.
 
 **IMPORTANT**: your jobs should wait for all asynchronous work to be completed
-\*before returning, otherwise we might mistakenly think they were successful.
+before returning, otherwise we might mistakenly think they were successful.
 
 **IMPORTANT**: we automatically retry the job if it fails, so it's often
 sensible to split large jobs into smaller jobs, this also allows them to run
@@ -183,13 +195,36 @@ Each task function is passed two arguments:
   - `debug` - a helpful [`debug`](https://www.npmjs.com/package/debug) instance scoped to the name of the task (use the `DEBUG` envvar to expose)
   - `job` - the whole job (including `uuid`, `attempts`, etc) - you shouldn't need this
   - `withPgClient` - a helper to use to get a database client
+  - `addJob` - a helper to schedule a job
 
-withPgClient example:
+#### `withPgClient(callback)`
+
+`withPgClient` gets a `pgClient` from the pool, calls `await callback(pgClient)`, and finally releases the client and returns the result of
+`callback`. This workflow makes testing your tasks easier.
+
+Example:
 
 ```js
 const {
   rows: [row]
 } = await withPgClient(pgClient => pgClient.query("select 1 as one"));
+```
+
+#### `addJob(identifier, payload?, options?)`
+
+Schedules a job; arguments:
+
+- `identifier`: the name of the task to be executed
+- `payload`: an optional JSON-compatible object to give the task more context on what it is doing
+- `options`: an optional object specifying:
+  - `queueName`: the queue to run this task under
+  - `runAt`: a Date to schedule this task to run in the future
+  - `maxAttempts`: how many retries should this task get? (Default: 25)
+
+Example:
+
+```js
+await addJob("task_2", { foo: "bar" });
 ```
 
 ## Scheduling jobs
@@ -222,6 +257,65 @@ You can skip parameters you don't need by using PostgreSQL's named parameter sup
 
 ```sql
 SELECT graphile_worker.add_job('reminder', run_at := NOW() + INTERVAL '2 days');
+```
+
+### Example: scheduling job from trigger
+
+This snippet creates a trigger function which adds a job to execute
+`task_identifier_here` when a new row is inserted into `my_table`.
+
+```sql
+CREATE FUNCTION my_table_created() RETURNS trigger AS $$
+BEGIN
+  PERFORM graphile_worker.add_job('task_identifier_here', json_build_object('id', NEW.id));
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+CREATE TRIGGER trigger_name AFTER INSERT ON my_table FOR EACH ROW EXECUTE PROCEDURE my_table_created();
+```
+
+### Example: one trigger function to rule them all
+
+If your tables are all defined with a single primary key named `id` then you
+can define a more convenient dynamic trigger function which can be called from
+multiple triggers for multiple tables to quickly schedule jobs.
+
+```sql
+CREATE FUNCTION trigger_job() RETURNS trigger AS $$
+BEGIN
+  PERFORM graphile_worker.add_job(TG_ARGV[0], json_build_object(
+    'schema', TG_TABLE_SCHEMA,
+    'table', TG_TABLE_NAME,
+    'op', TG_OP,
+    'id', (CASE WHEN TG_OP = 'DELETE' THEN OLD.id ELSE NEW.id END)
+  ));
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+```
+
+You might use this trigger like this:
+
+```sql
+CREATE TRIGGER send_verification_email
+  AFTER INSERT ON user_emails
+  FOR EACH ROW
+  WHEN (NEW.verified is false)
+  EXECUTE PROCEDURE trigger_job('send_verification_email');
+CREATE TRIGGER user_changed
+  AFTER INSERT OR UPDATE OR DELETE ON users
+  FOR EACH ROW
+  EXECUTE PROCEDURE trigger_job('user_changed');
+CREATE TRIGGER generate_pdf
+  AFTER INSERT ON pdfs
+  FOR EACH ROW
+  EXECUTE PROCEDURE trigger_job('generate_pdf');
+CREATE TRIGGER generate_pdf_update
+  AFTER UPDATE ON pdfs
+  FOR EACH ROW
+  WHEN (NEW.title IS DISTINCT FROM OLD.title)
+  EXECUTE PROCEDURE trigger_job('generate_pdf');
 ```
 
 ## Uninstallation
@@ -259,7 +353,7 @@ are also measured, from before the call to queue the job is fired until when
 the job is actually executed. These latencies ranged from 1.39ms to 19.66ms
 with an average of 1.90ms.
 
-## Exponential backoff
+## Exponential-backoff
 
 We currently use the formula `exp(least(10, attempt))` to determine the
 delays between attempts (the job must fail before the next attempt is
