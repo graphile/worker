@@ -32,7 +32,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
     };
 
     // Run the worker
-    const workerPool = start(tasks, pgPool, 3);
+    const workerPool = start(tasks, pgPool, { workerCount: 3 });
     let finished = false;
     workerPool.promise.then(() => {
       finished = true;

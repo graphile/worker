@@ -1,6 +1,19 @@
 import { PoolClient } from "pg";
 import { IDebugger } from "./debug";
 
+/*
+ * Terminology:
+ *
+ * - job: an entry in the `jobs` table, representing work to be done
+ * - queue: an entry in the `job_queues` table, representing a list of jobs to be executed sequentially
+ * - task_identifier: the name of the task to be executed to complete the job
+ * - task: a function representing code to be executed for a particular job (identified by the task_identifier); i.e. a file in the `tasks/` folder
+ * - task list: an object collection of named tasks
+ * - watched task list: an abstraction for a task list that can be updated when the tasks on the disk change
+ * - worker: the thing that checks out a job from the database, executes the relevant task, and then returns the job to the database with either success or failure
+ * - worker pool: a collection of workers to enable processing multiple jobs in parallel
+ */
+
 export type WithPgClient = <T = void>(
   callback: (pgClient: PoolClient) => Promise<T>
 ) => Promise<T>;
@@ -61,4 +74,13 @@ export interface TaskOptions {
   queueName?: string;
   runAt?: Date;
   maxAttempts?: number;
+}
+
+export interface WorkerOptions {
+  idleDelay?: number;
+  workerId?: string;
+}
+
+export interface WorkerPoolOptions extends WorkerOptions {
+  workerCount?: number;
 }

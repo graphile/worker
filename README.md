@@ -98,9 +98,9 @@ If your database doesn't already include the `pgcrypto` and `uuid-ossp` extensio
 yarn add graphile-worker
 ```
 
-## Running:
+## Running
 
-`graphile-worker` manages it's own database schema (`graphile_worker`) just
+`graphile-worker` manages it's own database schema (`graphile_worker`). Just
 point graphile-worker at your database and we handle our own migrations:
 
 ```
@@ -109,6 +109,24 @@ npx graphile-worker -c "postgres://localhost/mydb"
 
 (`npx` looks for the `graphile-worker` binary locally; it's often better to
 use the `"scripts"` entry in `package.json` instead.)
+
+The following CLI options are available:
+
+```
+Options:
+  --help            Show help                                          [boolean]
+  --version         Show version number                                [boolean]
+  --connection, -c  Database connection string, defaults to the 'DATABASE_URL'
+                    envvar                                              [string]
+  --once, -1        Run until there are no runnable jobs left, then exit
+                                                      [boolean] [default: false]
+  --watch, -w       [EXPERIMENTAL] Watch task files for changes, automatically
+                    reloading the task code without restarting worker
+                                                      [boolean] [default: false]
+  --jobs, -j        number of jobs to run concurrently              [default: 1]
+  --idle-delay      how long to wait between polling for jobs in milliseconds
+                                                        [number] [default: 2000]
+```
 
 ## Creating task executors
 
