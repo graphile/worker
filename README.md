@@ -110,19 +110,22 @@ npx graphile-worker -c "postgres://localhost/mydb"
 (`npx` looks for the `graphile-worker` binary locally; it's often better to
 use the `"scripts"` entry in `package.json` instead.)
 
-The following cli options are available:
+The following CLI options are available:
 
 ```
+Options:
+  --help            Show help                                          [boolean]
+  --version         Show version number                                [boolean]
   --connection, -c  Database connection string, defaults to the 'DATABASE_URL'
-                    envvar                                         
+                    envvar                                              [string]
   --once, -1        Run until there are no runnable jobs left, then exit
-  
+                                                      [boolean] [default: false]
   --watch, -w       [EXPERIMENTAL] Watch task files for changes, automatically
                     reloading the task code without restarting worker
-                      
-  --jobs, -j        number of jobs to run concurrently 
-
+                                                      [boolean] [default: false]
+  --jobs, -j        number of jobs to run concurrently              [default: 1]
   --idle-delay      how long to wait between polling for jobs in milliseconds
+                                                        [number] [default: 2000]
 ```
 
 ## Creating task executors
