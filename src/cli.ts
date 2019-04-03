@@ -2,7 +2,7 @@
 import { Pool, PoolClient } from "pg";
 import { migrate } from "./migrate";
 import getTasks from "./getTasks";
-import { WorkerOptions } from "./interfaces";
+import { WorkerOptions, WorkerPoolOptions } from "./interfaces";
 import { start, runAllJobs } from "./main";
 import * as yargs from "yargs";
 import { IDLE_DELAY, CONCURRENT_JOBS } from "./config";
@@ -50,8 +50,12 @@ const IDLE = isInteger(argv["idle-delay"]) ? argv["idle-delay"] : IDLE_DELAY;
 
 const workerOptions: WorkerOptions = {
   idleDelay: IDLE,
-  workerCount: JOBS
 };
+
+const workerPoolOptions: WorkerPoolOptions = {
+  workerCount: JOBS,
+  workerOptions
+}
 
 if (WATCH && ONCE) {
   throw new Error("Cannot specify both --watch and --once");
@@ -92,7 +96,7 @@ async function main() {
       );
     } else {
       // Watch for new jobs
-      const { promise } = start(watchedTasks.tasks, pgPool, workerOptions);
+      const { promise } = start(watchedTasks.tasks, pgPool, workerPoolOptions);
       // Continue forever(ish)
       await promise;
     }
