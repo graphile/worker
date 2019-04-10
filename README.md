@@ -12,7 +12,7 @@ background" so that your HTTP response/application code is not held up. Can be
 used with any PostgreSQL-backed application. Pairs beautifully with
 [PostGraphile](https://www.graphile.org/postgraphile/).
 
-## Quickstart
+## Quickstart with the CLI
 
 In your existing Node.js project:
 
@@ -61,6 +61,32 @@ SELECT graphile_worker.add_job('hello', json_build_object('name', 'Bobby Tables'
 ### Success!
 
 You should see the worker output `Hello, Bobby Tables`. Gosh, that was fast!
+
+## Quickstart: programmatic
+
+You can use graphile-worker directly in your code:
+
+```js
+import { initWorker } from "graphile-worker";
+
+const worker = await initWorker("postgres:///");
+worker.start();
+```
+
+You can then add jobs with the `addJob` method:
+
+```js
+worker.addJob('test', {
+  thisIsThePayload: true
+}, {
+  maxAttempts: 5,
+  queueName: 'user42',
+  runAt: new Date('2019-12-12')
+});
+```
+
+And stop the worker with `worker.stop()`.
+
 
 ## Crowd-funded open-source software
 
