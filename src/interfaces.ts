@@ -1,4 +1,4 @@
-import { PoolClient } from "pg";
+import { PoolClient, Pool } from "pg";
 import { IDebugger } from "./debug";
 
 /*
@@ -71,8 +71,17 @@ export interface WorkerPool {
 }
 
 export interface TaskOptions {
+  /**
+   * the queue to run this task under
+   */
   queueName?: string;
+  /**
+   * a Date to schedule this task to run in the future
+   */
   runAt?: Date;
+  /**
+   * how many retries should this task get? (Default: 25)
+   */
   maxAttempts?: number;
 }
 
@@ -84,3 +93,48 @@ export interface WorkerOptions {
 export interface WorkerPoolOptions extends WorkerOptions {
   workerCount?: number;
 }
+
+export interface initWorkerOptions {
+  /**
+   * number of jobs to run concurrently
+   */
+  jobs?: number;
+  /**
+   * how long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)
+   */
+  pollInterval?: number;
+  /**
+   * task names and handler
+   */
+  taskList?: TaskList;
+  /**
+   * each file in this directory will be used as a task handler
+   */
+  taskDirectory?: string;
+}
+
+export interface WorkerConstructorOptions {
+  jobs: number;
+  pollInterval: number;
+  taskList: TaskList;
+  pgPool: Pool;
+}
+
+/**
+ * A narrower type than `any` that won’t swallow errors from assumptions about
+ * code.
+ *
+ * For example `(x as any).anything()` is ok. That function then returns `any`
+ * as well so the problem compounds into `(x as any).anything().else()` and the
+ * problem just goes from there. `any` is a type black hole that swallows any
+ * useful type information and shouldn’t be used unless you know what you’re
+ * doing.
+ *
+ * With `mixed` you must *prove* the type is what you want to use.
+ *
+ * The `mixed` type is identical to the `mixed` type in Flow.
+ *
+ * @see https://github.com/Microsoft/TypeScript/issues/9999
+ * @see https://flowtype.org/docs/builtins.html#mixed
+ */
+export type mixed = {} | string | number | boolean | undefined | null;
