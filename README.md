@@ -67,16 +67,28 @@ You should see the worker output `Hello, Bobby Tables`. Gosh, that was fast!
 You can use graphile-worker directly in your code:
 
 ```js
+import { resolve } from "path";
 import { initWorker } from "graphile-worker";
 
-const worker = await initWorker("postgres:///");
+const worker = await initWorker("postgres:///", {
+  jobs: 5,
+  pollInterval: 1000,
+  // you can set the taskDirectory or taskList but not both
+  taskDirectory: resolve(__dirname, './tasks'),
+  // or
+  taskList: {
+    testTask: async (payload, helpers) => {
+      console.log('working on task...');
+    }
+  }
+});
 worker.start();
 ```
 
 You can then add jobs with the `addJob` method:
 
 ```js
-worker.addJob('test', {
+worker.addJob('testTask', {
   thisIsThePayload: true
 }, {
   maxAttempts: 5,
