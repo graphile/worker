@@ -12,7 +12,7 @@ background" so that your HTTP response/application code is not held up. Can be
 used with any PostgreSQL-backed application. Pairs beautifully with
 [PostGraphile](https://www.graphile.org/postgraphile/).
 
-## Quickstart with the CLI
+## Quickstart: CLI
 
 In your existing Node.js project:
 
@@ -62,33 +62,32 @@ SELECT graphile_worker.add_job('hello', json_build_object('name', 'Bobby Tables'
 
 You should see the worker output `Hello, Bobby Tables`. Gosh, that was fast!
 
-## Quickstart: programmatic
+## Quickstart: library
 
-You can use graphile-worker directly in your code:
+Instead of running `graphile-worker` via the CLI, you may use it directly in your Node.js code:
 
 ```js
-import { resolve } from "path";
-import { initWorker } from "graphile-worker";
+import { run } from "graphile-worker";
 
-const worker = await initWorker("postgres:///", {
-  jobs: 5,
+const runner = await run({
+  connectionString: "postgres:///",
+  concurrency: 5,
   pollInterval: 1000,
-  // you can set the taskDirectory or taskList but not both
-  taskDirectory: resolve(__dirname, "./tasks"),
-  // or
+  // you can set the taskList or taskDirectory but not both
   taskList: {
     testTask: async (payload, helpers) => {
       console.log("working on task...");
     },
   },
+  // or:
+  //   taskDirectory: `${__dirname}/tasks`,
 });
-worker.start();
 ```
 
 You can then add jobs with the `addJob` method:
 
 ```js
-worker.addJob(
+await runner.addJob(
   "testTask",
   {
     thisIsThePayload: true,
@@ -96,12 +95,12 @@ worker.addJob(
   {
     maxAttempts: 5,
     queueName: "user42",
-    runAt: new Date("2019-12-12"),
+    runAt: new Date(Date.now() + 5000),
   }
 );
 ```
 
-And stop the worker with `worker.stop()`.
+And stop the job runner with `runner.stop()`.
 
 ## Crowd-funded open-source software
 
