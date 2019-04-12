@@ -85,41 +85,47 @@ export interface Runner {
 
 export interface TaskOptions {
   /**
-   * the queue to run this task under
+   * The queue to run this task under
    */
   queueName?: string;
   /**
-   * a Date to schedule this task to run in the future
+   * A Date to schedule this task to run in the future
    */
   runAt?: Date;
   /**
-   * how many retries should this task get? (Default: 25)
+   * How many retries should this task get? (Default: 25)
    */
   maxAttempts?: number;
 }
 
-export interface WorkerOptions {
+export interface WorkerSharedOptions {
   /**
-   * how long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)
+   * How long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)
    */
   pollInterval?: number;
+}
+
+export interface WorkerOptions extends WorkerSharedOptions {
+  /**
+   * An identifier for this specific worker; if unset then a random ID will be assigned. Do not assign multiple workers the same worker ID!
+   */
   workerId?: string;
 }
 
-export interface WorkerPoolOptions extends WorkerOptions {
+export interface WorkerPoolOptions extends WorkerSharedOptions {
   /**
-   * number of jobs to run concurrently
+   * Number of jobs to run concurrently
    */
   concurrency?: number;
 }
 
 export interface RunnerOptions extends WorkerPoolOptions {
   /**
-   * task names and handler, e.g. from `getTasks` (use this if you need watch mode)
+   * Task names and handler, e.g. from `getTasks` (use this if you need watch mode)
    */
   taskList?: TaskList;
   /**
-   * each file in this directory will be used as a task handler
+   * Each file in this directory will be used as a task handler
    */
   taskDirectory?: string;
   /**
