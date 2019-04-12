@@ -11,30 +11,31 @@ const argv = yargs
   .option("connection", {
     description:
       "Database connection string, defaults to the 'DATABASE_URL' envvar",
-    alias: "c"
+    alias: "c",
   })
   .string("connection")
   .option("once", {
     description: "Run until there are no runnable jobs left, then exit",
     alias: "1",
-    default: false
+    default: false,
   })
   .boolean("once")
   .option("watch", {
     description:
       "[EXPERIMENTAL] Watch task files for changes, automatically reloading the task code without restarting worker",
     alias: "w",
-    default: false
+    default: false,
   })
   .boolean("watch")
   .option("jobs", {
     description: "number of jobs to run concurrently",
     alias: "j",
-    default: CONCURRENT_JOBS
+    default: CONCURRENT_JOBS,
   })
   .option("poll-interval", {
-    description: "how long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)",
-    default: POLL_INTERVAL
+    description:
+      "how long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)",
+    default: POLL_INTERVAL,
   })
   .number("poll-interval").argv;
 
@@ -47,13 +48,15 @@ const ONCE = argv.once;
 const WATCH = argv.watch;
 
 const workerOptions: WorkerOptions = {
-  pollInterval: isInteger(argv["poll-interval"]) ? argv["poll-interval"] : POLL_INTERVAL,
+  pollInterval: isInteger(argv["poll-interval"])
+    ? argv["poll-interval"]
+    : POLL_INTERVAL,
 };
 
 const workerPoolOptions: WorkerPoolOptions = {
   workerCount: isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS,
-  ...workerOptions
-}
+  ...workerOptions,
+};
 
 if (WATCH && ONCE) {
   throw new Error("Cannot specify both --watch and --once");
@@ -80,7 +83,7 @@ async function main() {
   const watchedTasks = await getTasks(`${process.cwd()}/tasks`, WATCH);
 
   const pgPool = new Pool({
-    connectionString: DATABASE_URL
+    connectionString: DATABASE_URL,
   });
 
   try {
@@ -104,6 +107,6 @@ async function main() {
 }
 
 main().catch(e => {
-  console.error(e); // tslint:disable-line no-console
+  console.error(e); // eslint-disable-line no-console
   process.exit(1);
 });

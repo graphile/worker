@@ -12,9 +12,7 @@ export function makeHelpers(
     withPgClient,
     addJob(identifier: string, payload: any = {}, options: TaskOptions = {}) {
       return withPgClient(async pgClient => {
-        const {
-          rows
-        } = await pgClient.query(
+        const { rows } = await pgClient.query(
           `
           select * from graphile_worker.add_job(
             identifier => $1::text,
@@ -29,13 +27,13 @@ export function makeHelpers(
             JSON.stringify(payload),
             options.queueName || null,
             options.runAt ? options.runAt.toISOString() : null,
-            options.maxAttempts || null
+            options.maxAttempts || null,
           ]
         );
         const job: Job = rows[0];
         return job;
       });
-    }
+    },
     // TODO: add an API for giving workers more helpers
   };
 }

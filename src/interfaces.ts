@@ -22,7 +22,11 @@ export interface Helpers {
   job: Job;
   debug: IDebugger;
   withPgClient: WithPgClient;
-  addJob(identifier: string, payload?: any, options?: TaskOptions): Promise<Job>;
+  addJob(
+    identifier: string,
+    payload?: any,
+    options?: TaskOptions
+  ): Promise<Job>;
 }
 
 export type Task = (payload: unknown, helpers: Helpers) => void | Promise<void>;

@@ -3,7 +3,7 @@ import {
   Worker,
   Job,
   WithPgClient,
-  WorkerOptions
+  WorkerOptions,
 } from "./interfaces";
 import globalDebug from "./debug";
 import { POLL_INTERVAL, MAX_CONTIGUOUS_ERRORS } from "./config";
@@ -20,7 +20,7 @@ export function makeNewWorker(
   const {
     pollInterval = POLL_INTERVAL,
     // The `||0.1` is to eliminate the vanishingly-small possibility of Math.random() returning 0. Math.random() can never return 1.
-    workerId = `worker-${String(Math.random() || 0.1).substr(2)}`
+    workerId = `worker-${String(Math.random() || 0.1).substr(2)}`,
   } = options;
   const promise = deferred();
   let activeJob: Job | null = null;
@@ -69,11 +69,11 @@ export function makeNewWorker(
       assert(supportedTaskNames.length, "No runnable tasks!");
 
       const {
-        rows: [jobRow]
+        rows: [jobRow],
       } = await withPgClient(client =>
         client.query("SELECT * FROM graphile_worker.get_job($1, $2);", [
           workerId,
-          supportedTaskNames
+          supportedTaskNames,
         ])
       );
       activeJob = jobRow && jobRow.id ? jobRow : null;
@@ -116,7 +116,7 @@ export function makeNewWorker(
     if (!activeJob) {
       if (continuous) {
         if (active) {
-          // tslint:disable-next-line prefer-conditional-expression
+          // eslint-disable-next-line prefer-conditional-expression
           if (again) {
             // This could be a synchronisation issue where we were notified of
             // the job but it's not visible yet, lets try again in just a
@@ -159,7 +159,7 @@ export function makeNewWorker(
       const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
       if (err) {
         const { message, stack } = err;
-        // tslint:disable-next-line no-console
+        // eslint-disable-next-line no-console
         console.error(
           `Failed task ${job.id} (${job.task_identifier}) with error ${
             err.message
@@ -176,12 +176,12 @@ export function makeNewWorker(
           client.query("SELECT * FROM graphile_worker.fail_job($1, $2, $3);", [
             workerId,
             job.id,
-            message
+            message,
           ])
         );
       } else {
         if (!process.env.NO_LOG_SUCCESS) {
-          // tslint:disable-next-line no-console
+          // eslint-disable-next-line no-console
           console.log(
             `Completed task ${job.id} (${
               job.task_identifier
@@ -192,13 +192,13 @@ export function makeNewWorker(
         await withPgClient(client =>
           client.query("SELECT * FROM graphile_worker.complete_job($1, $2);", [
             workerId,
-            job.id
+            job.id,
           ])
         );
       }
     } catch (fatalError) {
       const when = err ? `after failure '${err.message}'` : "after success";
-      // tslint:disable-next-line no-console
+      // eslint-disable-next-line no-console
       console.error(
         `Failed to release job '${job.id}' ${when}; committing seppuku\n${
           fatalError.message
@@ -238,7 +238,7 @@ export function makeNewWorker(
     workerId,
     release,
     promise,
-    getActiveJob: () => activeJob
+    getActiveJob: () => activeJob,
   };
 
   // For tests

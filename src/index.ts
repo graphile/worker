@@ -1,2 +1,2 @@
-export * from './interfaces';
+export * from "./interfaces";
 export { start, runAllJobs } from "./main";

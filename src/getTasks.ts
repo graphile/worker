@@ -12,7 +12,7 @@ function validTasks(obj: any): TaskList {
     if (isValidTask(task)) {
       tasks[taskName] = task;
     } else {
-      // tslint:disable-next-line no-console
+      // eslint-disable-next-line no-console
       console.warn(
         `Not a valid task '${taskName}' - expected function, received ${
           task ? typeof task : String(task)
@@ -93,7 +93,7 @@ export default async function getTasks(
           loadFileIntoTasks(tasks, taskPath, null, watch)
             .then(debugSupported)
             .catch(e => {
-              // tslint:disable-next-line no-console
+              // eslint-disable-next-line no-console
               console.error(`Error in ${taskPath}: ${e.message}`);
             });
         })
@@ -106,7 +106,7 @@ export default async function getTasks(
       watchers.push(
         chokidar
           .watch(`${taskPath}/*.js`, {
-            ignoreInitial: true
+            ignoreInitial: true,
           })
           .on("all", (event, eventFilePath) => {
             const taskName = basename(eventFilePath, ".js");
@@ -117,7 +117,7 @@ export default async function getTasks(
               loadFileIntoTasks(tasks, eventFilePath, taskName, watch)
                 .then(debugSupported)
                 .catch(e => {
-                  // tslint:disable-next-line no-console
+                  // eslint-disable-next-line no-console
                   console.error(`Error in ${eventFilePath}: ${e.message}`);
                 });
             }
@@ -142,7 +142,7 @@ export default async function getTasks(
             e.message
           }`;
           if (watch) {
-            console.error(message); // tslint:disable-line no-console
+            console.error(message); // eslint-disable-line no-console
           } else {
             throw new Error(message);
           }
@@ -156,6 +156,6 @@ export default async function getTasks(
     tasks,
     release: () => {
       watchers.forEach(watcher => watcher.close());
-    }
+    },
   };
 }
