@@ -96,10 +96,10 @@ And stop the job runner with `runner.stop()`.
 
 ## Crowd-funded open-source software
 
-If you are using this software in your business, please support it [via
+Please support development of this project [via
 sponsorship](https://graphile.org/sponsor/). With your support we can improve
 performance, usability and documentation at a greater rate, leading to reduced
-running and engineering costs for your business, leading to a net ROI.
+running and engineering costs for your organisation, leading to a net ROI.
 
 Support contracts are also available; for more information see: https://www.graphile.org/support/
 
@@ -121,9 +121,11 @@ Support contracts are also available; for more information see: https://www.grap
 
 ## Status
 
-Seems stable and has good test suite, but needs real-world testing before it
-can be deemed production ready. Reach out on GitHub issues or Discord chat if
-you'd like to help with this: http://discord.gg/graphile
+Solid test suite testing internals, but external interfaces need tests to
+prevent regressions (get in touch if you'd like to help with this!). This
+specific codebase is young, but it's based on years of implementing similar job
+queues for Postgres. To give feedback please raise an issue or reach out on
+discord: http://discord.gg/graphile
 
 ## Requirements
 
