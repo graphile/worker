@@ -74,13 +74,13 @@ const worker = await initWorker("postgres:///", {
   jobs: 5,
   pollInterval: 1000,
   // you can set the taskDirectory or taskList but not both
-  taskDirectory: resolve(__dirname, './tasks'),
+  taskDirectory: resolve(__dirname, "./tasks"),
   // or
   taskList: {
     testTask: async (payload, helpers) => {
-      console.log('working on task...');
-    }
-  }
+      console.log("working on task...");
+    },
+  },
 });
 worker.start();
 ```
@@ -88,17 +88,20 @@ worker.start();
 You can then add jobs with the `addJob` method:
 
 ```js
-worker.addJob('testTask', {
-  thisIsThePayload: true
-}, {
-  maxAttempts: 5,
-  queueName: 'user42',
-  runAt: new Date('2019-12-12')
-});
+worker.addJob(
+  "testTask",
+  {
+    thisIsThePayload: true,
+  },
+  {
+    maxAttempts: 5,
+    queueName: "user42",
+    runAt: new Date("2019-12-12"),
+  }
+);
 ```
 
 And stop the worker with `worker.stop()`.
-
 
 ## Crowd-funded open-source software
 
@@ -112,7 +115,7 @@ Support contracts are also available; for more information see: https://www.grap
 ## Features
 
 - Standalone and embedded modes
-- Easy to test with (including `runAllJobs` util)
+- Easy to test with (including `runTaskListOnce` util)
 - Low latency (~2ms from task schedule to execution, uses `LISTEN`/`NOTIFY` to be informed of jobs as they're inserted)
 - High performance (~700 jobs per second on a single node, uses `SKIP LOCKED` to find jobs to execute, resulting in faster fetches)
 - Small tasks (uses explicit task names / payloads resulting in minimal serialisation/deserialisation overhead)
@@ -244,7 +247,7 @@ Example:
 
 ```js
 const {
-  rows: [row]
+  rows: [row],
 } = await withPgClient(pgClient => pgClient.query("select 1 as one"));
 ```
 

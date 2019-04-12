@@ -208,7 +208,7 @@ export function runTaskList(
   return workerPool;
 }
 
-export const runAllJobs = (
+export const runTaskListOnce = (
   tasks: TaskList,
   client: PoolClient,
   options: WorkerOptions = {}

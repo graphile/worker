@@ -2,7 +2,7 @@ import * as assert from "assert";
 import { Pool } from "pg";
 import getTasks from "./getTasks";
 import { Runner, RunnerOptions, TaskList } from "./interfaces";
-import { runTaskList, runAllJobs } from "./main";
+import { runTaskList, runTaskListOnce } from "./main";
 import { makeWithPgClientFromPool, makeAddJob } from "./helpers";
 import { migrate } from "./migrate";
 
@@ -61,7 +61,7 @@ const processOptions = async (options: RunnerOptions) => {
 
 export const runOnce = async (options: RunnerOptions): Promise<void> => {
   const { taskList, withPgClient, release } = await processOptions(options);
-  await withPgClient(client => runAllJobs(taskList, client, options));
+  await withPgClient(client => runTaskListOnce(taskList, client, options));
   await release();
 };
 

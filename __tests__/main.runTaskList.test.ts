@@ -1,4 +1,4 @@
-// See also main.runAllJobs.test.ts
+// See also main.runTaskListOnce.test.ts
 import { reset, withPgPool, sleepUntil, sleep, jobCount } from "./helpers";
 import { TaskList, Task } from "../src/interfaces";
 import { runTaskList } from "../src/main";
