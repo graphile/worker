@@ -1,4 +1,4 @@
-export * from './interfaces';
+export * from "./interfaces";
 
-export {start, runAllJobs} from './main';
-export {initWorker, Worker} from './programmatic';
+export { start, runAllJobs } from "./main";
+export { initWorker, Worker } from "./programmatic";

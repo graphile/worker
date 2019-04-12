@@ -5,9 +5,7 @@ import { Pool, PoolClient } from "pg";
 export function makeAddJob(withPgClient: WithPgClient) {
   return (identifier: string, payload: any = {}, options: TaskOptions = {}) => {
     return withPgClient(async pgClient => {
-      const {
-        rows
-      } = await pgClient.query(
+      const { rows } = await pgClient.query(
         `
         select * from graphile_worker.add_job(
           identifier => $1::text,
@@ -22,13 +20,13 @@ export function makeAddJob(withPgClient: WithPgClient) {
           JSON.stringify(payload),
           options.queueName || null,
           options.runAt ? options.runAt.toISOString() : null,
-          options.maxAttempts || null
+          options.maxAttempts || null,
         ]
       );
       const job: Job = rows[0];
       return job;
     });
-  }
+  };
 }
 
 export function makeHelpers(
