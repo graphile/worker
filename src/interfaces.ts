@@ -12,21 +12,24 @@ import { IDebugger } from "./debug";
  * - watched task list: an abstraction for a task list that can be updated when the tasks on the disk change
  * - worker: the thing that checks out a job from the database, executes the relevant task, and then returns the job to the database with either success or failure
  * - worker pool: a collection of workers to enable processing multiple jobs in parallel
+ * - runner: the class responsible for building a task list and running a worker pool for said list
  */
 
 export type WithPgClient = <T = void>(
   callback: (pgClient: PoolClient) => Promise<T>
 ) => Promise<T>;
 
+export type AddJobFunction = (
+  identifier: string,
+  payload?: any,
+  options?: TaskOptions
+) => Promise<Job>;
+
 export interface Helpers {
   job: Job;
   debug: IDebugger;
   withPgClient: WithPgClient;
-  addJob(
-    identifier: string,
-    payload?: any,
-    options?: TaskOptions
-  ): Promise<Job>;
+  addJob: AddJobFunction;
 }
 
 export type Task = (payload: unknown, helpers: Helpers) => void | Promise<void>;
@@ -74,6 +77,12 @@ export interface WorkerPool {
   promise: Promise<void>;
 }
 
+export interface Runner {
+  stop: () => Promise<void>;
+  addJob: AddJobFunction;
+  promise: Promise<void>;
+}
+
 export interface TaskOptions {
   /**
    * the queue to run this task under
@@ -90,55 +99,35 @@ export interface TaskOptions {
 }
 
 export interface WorkerOptions {
+  /**
+   * how long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)
+   */
   pollInterval?: number;
   workerId?: string;
 }
 
 export interface WorkerPoolOptions extends WorkerOptions {
-  workerCount?: number;
-}
-
-export interface initWorkerOptions {
   /**
    * number of jobs to run concurrently
    */
-  jobs?: number;
+  workerCount?: number;
+}
+
+export interface RunnerOptions extends WorkerPoolOptions {
   /**
-   * how long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)
-   */
-  pollInterval?: number;
-  /**
-   * task names and handler
+   * task names and handler, e.g. from `getTasks` (use this if you need watch mode)
    */
   taskList?: TaskList;
   /**
    * each file in this directory will be used as a task handler
    */
   taskDirectory?: string;
+  /**
+   * A PostgreSQL connection string to the database containing the job queue
+   */
+  connectionString?: string;
+  /**
+   * A pg.Pool instance to use instead of the `connectionString`
+   */
+  pgPool?: Pool;
 }
-
-export interface WorkerConstructorOptions {
-  jobs: number;
-  pollInterval: number;
-  taskList: TaskList;
-  pgPool: Pool;
-}
-
-/**
- * A narrower type than `any` that won’t swallow errors from assumptions about
- * code.
- *
- * For example `(x as any).anything()` is ok. That function then returns `any`
- * as well so the problem compounds into `(x as any).anything().else()` and the
- * problem just goes from there. `any` is a type black hole that swallows any
- * useful type information and shouldn’t be used unless you know what you’re
- * doing.
- *
- * With `mixed` you must *prove* the type is what you want to use.
- *
- * The `mixed` type is identical to the `mixed` type in Flow.
- *
- * @see https://github.com/Microsoft/TypeScript/issues/9999
- * @see https://flowtype.org/docs/builtins.html#mixed
- */
-export type mixed = {} | string | number | boolean | undefined | null;
