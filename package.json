@@ -6,6 +6,7 @@
   "scripts": {
     "prepack": "rm -Rf dist && tsc && chmod +x dist/cli.js",
     "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && tsc --watch",
+    "lint": "eslint 'src/**/*'",
     "test": "psql -Xv ON_ERROR_STOP=1 -f __tests__/reset-db.sql graphile_worker_test && jest -i",
     "perfTest": "cd perfTest && ./run.sh"
   },
@@ -47,6 +48,13 @@
   },
   "devDependencies": {
     "@types/jest": "^24.0.11",
+    "@typescript-eslint/eslint-plugin": "^1.6.0",
+    "@typescript-eslint/parser": "^1.6.0",
+    "eslint": "^5.16.0",
+    "eslint-config-prettier": "^4.1.0",
+    "eslint-plugin-jest": "^22.4.1",
+    "eslint-plugin-prettier": "^3.0.1",
+    "eslint_d": "^7.3.0",
     "jest": "^24.5.0",
     "prettier": "^1.16.4",
     "ts-jest": "^24.0.0",
@@ -54,10 +62,7 @@
     "tslint-config-prettier": "^1.18.0",
     "typescript": "^3.3.3333"
   },
-  "files": [
-    "dist",
-    "sql"
-  ],
+  "files": ["dist", "sql"],
   "engines": {
     "node": ">=10.0.0"
   }
