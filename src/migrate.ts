@@ -20,11 +20,11 @@ async function runMigration(
 ) {
   const text = await readFile(`${__dirname}/../sql/${migrationFile}`, "utf8");
   await client.query({
-    text
+    text,
   });
   await client.query({
     text: `insert into graphile_worker.migrations (id) values ($1)`,
-    values: [migrationNumber]
+    values: [migrationNumber],
   });
 }
 
@@ -32,7 +32,7 @@ export async function migrate(client: PoolClient) {
   let latestMigration: number | null = null;
   try {
     const {
-      rows: [row]
+      rows: [row],
     } = await client.query(
       "select id from graphile_worker.migrations order by id desc limit 1;"
     );

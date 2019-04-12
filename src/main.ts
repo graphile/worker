@@ -1,14 +1,21 @@
 import { Pool, PoolClient } from "pg";
-import { TaskList, Worker, Job, WorkerPool, WorkerOptions, WorkerPoolOptions } from "./interfaces";
+import {
+  TaskList,
+  Worker,
+  Job,
+  WorkerPool,
+  WorkerOptions,
+  WorkerPoolOptions,
+} from "./interfaces";
 import debug from "./debug";
 import deferred from "./deferred";
 import SIGNALS from "./signals";
 import { makeNewWorker } from "./worker";
 import {
   makeWithPgClientFromPool,
-  makeWithPgClientFromClient
+  makeWithPgClientFromClient,
 } from "./helpers";
-import { CONCURRENT_JOBS } from "./config"
+import { CONCURRENT_JOBS } from "./config";
 
 const allWorkerPools: Array<WorkerPool> = [];
 
@@ -36,7 +43,7 @@ function registerSignalHandlers() {
       process.removeListener(signal, handler);
     };
     const handler = function() {
-      // tslint:disable-next-line no-console
+      // eslint-disable-next-line no-console
       console.error(`Received '${signal}'; attempting graceful shutdown...`);
       setTimeout(removeHandler, 5000);
       if (_shuttingDown) {
@@ -49,7 +56,7 @@ function registerSignalHandlers() {
         )
       ).finally(() => {
         removeHandler();
-        // tslint:disable-next-line no-console
+        // eslint-disable-next-line no-console
         console.error(
           `Graceful shutdown attempted; killing self via ${signal}`
         );
@@ -65,12 +72,8 @@ export function runTaskList(
   pgPool: Pool,
   options: WorkerPoolOptions = {}
 ): WorkerPool {
-
   debug(`Worker pool options are %O`, options);
-  const {
-    workerCount = CONCURRENT_JOBS,
-    ...workerOptions
-  } = options;
+  const { workerCount = CONCURRENT_JOBS, ...workerOptions } = options;
 
   // Clean up when certain signals occur
   registerSignalHandlers();
@@ -100,7 +103,7 @@ export function runTaskList(
     release: () => void
   ) => {
     if (err) {
-      // tslint:disable-next-line no-console
+      // eslint-disable-next-line no-console
       console.error(
         `Error connecting with notify listener (trying again in 5 seconds): ${
           err.message
@@ -125,20 +128,20 @@ export function runTaskList(
 
     // On error, release this client and try again
     client.on("error", (e: Error) => {
-      // tslint:disable-next-line no-console
+      // eslint-disable-next-line no-console
       console.error("Error with database notify listener", e.message);
       listenForChangesClient = null;
       try {
         release();
       } catch (e) {
-        // tslint:disable-next-line no-console
+        // eslint-disable-next-line no-console
         console.error("Error occurred releasing client: " + e.stack);
       }
       pgPool.connect(listenForChanges);
     });
 
     const supportedTaskNames = Object.keys(tasks);
-    // tslint:disable-next-line no-console
+    // eslint-disable-next-line no-console
     console.log(
       `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
         "', '"
@@ -182,13 +185,13 @@ export function runTaskList(
         debug(cancelledJobs);
         debug("JOBS RELEASED");
       } catch (e) {
-        console.error(e.message); // tslint:disable-line no-console
+        console.error(e.message); // eslint-disable-line no-console
       }
       // Remove ourself from the list of worker pools
       this.release();
     },
 
-    promise
+    promise,
   };
 
   // Ensure that during a forced shutdown we get cleaned up too
@@ -205,5 +208,10 @@ export function runTaskList(
   return workerPool;
 }
 
-export const runAllJobs = (tasks: TaskList, client: PoolClient, options: WorkerOptions = {}) =>
-  makeNewWorker(tasks, makeWithPgClientFromClient(client), options, false).promise;
+export const runAllJobs = (
+  tasks: TaskList,
+  client: PoolClient,
+  options: WorkerOptions = {}
+) =>
+  makeNewWorker(tasks, makeWithPgClientFromClient(client), options, false)
+    .promise;
