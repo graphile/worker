@@ -32,7 +32,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
     };
 
     // Run the worker
-    const workerPool = runTaskList(tasks, pgPool, { workerCount: 3 });
+    const workerPool = runTaskList(tasks, pgPool, { concurrency: 3 });
     let finished = false;
     workerPool.promise.then(() => {
       finished = true;

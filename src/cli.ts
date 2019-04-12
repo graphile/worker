@@ -53,7 +53,7 @@ async function main() {
   };
 
   const workerPoolOptions: WorkerPoolOptions = {
-    workerCount: isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS,
+    concurrency: isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS,
     ...workerOptions,
   };
 

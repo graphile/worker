@@ -110,7 +110,7 @@ export interface WorkerPoolOptions extends WorkerOptions {
   /**
    * number of jobs to run concurrently
    */
-  workerCount?: number;
+  concurrency?: number;
 }
 
 export interface RunnerOptions extends WorkerPoolOptions {
