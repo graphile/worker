@@ -1,7 +1,7 @@
 // See also main.runAllJobs.test.ts
 import { reset, withPgPool, sleepUntil, sleep, jobCount } from "./helpers";
 import { TaskList, Task } from "../src/interfaces";
-import { start } from "../src/main";
+import { runTaskList } from "../src/main";
 import deferred, { Deferred } from "../src/deferred";
 import { Pool } from "pg";
 
@@ -32,7 +32,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
     };
 
     // Run the worker
-    const workerPool = start(tasks, pgPool, { workerCount: 3 });
+    const workerPool = runTaskList(tasks, pgPool, { workerCount: 3 });
     let finished = false;
     workerPool.promise.then(() => {
       finished = true;

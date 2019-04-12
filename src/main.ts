@@ -60,7 +60,7 @@ function registerSignalHandlers() {
   });
 }
 
-export function start(
+export function runTaskList(
   tasks: TaskList,
   pgPool: Pool,
   options: WorkerPoolOptions = {}

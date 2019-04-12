@@ -1,6 +1,6 @@
 const assert = require("assert");
 const { Pool } = require("pg");
-const { start } = require("../dist/main");
+const { runTaskList } = require("../dist/main");
 const { default: deferred } = require("../dist/deferred");
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -16,7 +16,7 @@ async function main() {
       if (deferreds[id]) deferreds[id].resolve();
     }
   };
-  const workerPool = start(tasks, pgPool, 1);
+  const workerPool = runTaskList(tasks, pgPool, 1);
 
   // Warm up
   await pgPool.query(

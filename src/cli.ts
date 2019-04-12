@@ -3,7 +3,7 @@ import { Pool, PoolClient } from "pg";
 import { migrate } from "./migrate";
 import getTasks from "./getTasks";
 import { WorkerOptions, WorkerPoolOptions } from "./interfaces";
-import { start, runAllJobs } from "./main";
+import { runTaskList, runAllJobs } from "./main";
 import * as yargs from "yargs";
 import { POLL_INTERVAL, CONCURRENT_JOBS } from "./config";
 
@@ -94,7 +94,7 @@ async function main() {
       );
     } else {
       // Watch for new jobs
-      const { promise } = start(watchedTasks.tasks, pgPool, workerPoolOptions);
+      const { promise } = runTaskList(watchedTasks.tasks, pgPool, workerPoolOptions);
       // Continue forever(ish)
       await promise;
     }

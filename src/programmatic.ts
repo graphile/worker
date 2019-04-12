@@ -4,7 +4,7 @@ import { Pool, PoolConfig } from 'pg';
 import getTasks from "./getTasks";
 import { WorkerConstructorOptions, TaskList, initWorkerOptions, WorkerPool, WithPgClient, TaskOptions, Job } from './interfaces';
 import { POLL_INTERVAL, CONCURRENT_JOBS } from './config';
-import { start } from './main';
+import { runTaskList } from './main';
 import { makeWithPgClientFromPool, makeAddJob } from './helpers';
 import { migrate } from './migrate';
 import toPgPool from './toPgPool';
@@ -73,7 +73,7 @@ export class Worker {
     if (this.workerPool) {
       throw new Error('Worker was already started');
     }
-    this.workerPool = start(this.taskList, this.pgPool, {
+    this.workerPool = runTaskList(this.taskList, this.pgPool, {
       workerCount: this.jobs,
       pollInterval: this.pollInterval,
     });
