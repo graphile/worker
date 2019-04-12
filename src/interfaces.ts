@@ -12,7 +12,7 @@ import { IDebugger } from "./debug";
  * - watched task list: an abstraction for a task list that can be updated when the tasks on the disk change
  * - worker: the thing that checks out a job from the database, executes the relevant task, and then returns the job to the database with either success or failure
  * - worker pool: a collection of workers to enable processing multiple jobs in parallel
- * - runner: the class responsible for building a task list and running a worker pool for said list
+ * - runner: the thing responsible for building a task list and running a worker pool for said list
  */
 
 export type WithPgClient = <T = void>(
