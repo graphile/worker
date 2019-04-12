@@ -67,13 +67,13 @@ function registerSignalHandlers() {
   });
 }
 
-export function start(
+export function runTaskList(
   tasks: TaskList,
   pgPool: Pool,
   options: WorkerPoolOptions = {}
 ): WorkerPool {
   debug(`Worker pool options are %O`, options);
-  const { workerCount = CONCURRENT_JOBS, ...workerOptions } = options;
+  const { concurrency = CONCURRENT_JOBS, ...workerOptions } = options;
 
   // Clean up when certain signals occur
   registerSignalHandlers();
@@ -199,7 +199,7 @@ export function start(
 
   // Spawn our workers; they can share clients from the pool.
   const withPgClient = makeWithPgClientFromPool(pgPool);
-  for (let i = 0; i < workerCount; i++) {
+  for (let i = 0; i < concurrency; i++) {
     workers.push(makeNewWorker(tasks, withPgClient, workerOptions));
   }
 
@@ -208,7 +208,7 @@ export function start(
   return workerPool;
 }
 
-export const runAllJobs = (
+export const runTaskListOnce = (
   tasks: TaskList,
   client: PoolClient,
   options: WorkerOptions = {}

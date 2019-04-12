@@ -2,6 +2,33 @@ import { debugFactory } from "./debug";
 import { WithPgClient, Job, Helpers, TaskOptions } from "./interfaces";
 import { Pool, PoolClient } from "pg";
 
+export function makeAddJob(withPgClient: WithPgClient) {
+  return (identifier: string, payload: any = {}, options: TaskOptions = {}) => {
+    return withPgClient(async pgClient => {
+      const { rows } = await pgClient.query(
+        `
+        select * from graphile_worker.add_job(
+          identifier => $1::text,
+          payload => $2::json,
+          queue_name => coalesce($3::text, public.gen_random_uuid()::text),
+          run_at => coalesce($4::timestamptz, now()),
+          max_attempts => coalesce($5::int, 25)
+        );
+        `,
+        [
+          identifier,
+          JSON.stringify(payload),
+          options.queueName || null,
+          options.runAt ? options.runAt.toISOString() : null,
+          options.maxAttempts || null,
+        ]
+      );
+      const job: Job = rows[0];
+      return job;
+    });
+  };
+}
+
 export function makeHelpers(
   job: Job,
   { withPgClient }: { withPgClient: WithPgClient }
@@ -10,30 +37,7 @@ export function makeHelpers(
     job,
     debug: debugFactory(`${job.task_identifier}`),
     withPgClient,
-    addJob(identifier: string, payload: any = {}, options: TaskOptions = {}) {
-      return withPgClient(async pgClient => {
-        const { rows } = await pgClient.query(
-          `
-          select * from graphile_worker.add_job(
-            identifier => $1::text,
-            payload => $2::json,
-            queue_name => coalesce($3::text, public.gen_random_uuid()::text),
-            run_at => coalesce($4::timestamptz, now()),
-            max_attempts => coalesce($5::int, 25)
-          );
-          `,
-          [
-            identifier,
-            JSON.stringify(payload),
-            options.queueName || null,
-            options.runAt ? options.runAt.toISOString() : null,
-            options.maxAttempts || null,
-          ]
-        );
-        const job: Job = rows[0];
-        return job;
-      });
-    },
+    addJob: makeAddJob(withPgClient),
     // TODO: add an API for giving workers more helpers
   };
 }

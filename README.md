@@ -12,7 +12,7 @@ background" so that your HTTP response/application code is not held up. Can be
 used with any PostgreSQL-backed application. Pairs beautifully with
 [PostGraphile](https://www.graphile.org/postgraphile/).
 
-## Quickstart
+## Quickstart: CLI
 
 In your existing Node.js project:
 
@@ -62,6 +62,38 @@ SELECT graphile_worker.add_job('hello', json_build_object('name', 'Bobby Tables'
 
 You should see the worker output `Hello, Bobby Tables`. Gosh, that was fast!
 
+## Quickstart: library
+
+Instead of running `graphile-worker` via the CLI, you may use it directly in your Node.js code:
+
+```js
+import { run } from "graphile-worker";
+
+const runner = await run({
+  connectionString: "postgres:///",
+  concurrency: 5,
+  pollInterval: 1000,
+  // you can set the taskList or taskDirectory but not both
+  taskList: {
+    testTask: async (payload, helpers) => {
+      console.log("working on task...");
+    },
+  },
+  // or:
+  //   taskDirectory: `${__dirname}/tasks`,
+});
+```
+
+You can then add jobs with the `addJob` method:
+
+```js
+await runner.addJob("testTask", {
+  thisIsThePayload: true,
+});
+```
+
+And stop the job runner with `runner.stop()`.
+
 ## Crowd-funded open-source software
 
 If you are using this software in your business, please support it [via
@@ -74,7 +106,7 @@ Support contracts are also available; for more information see: https://www.grap
 ## Features
 
 - Standalone and embedded modes
-- Easy to test with (including `runAllJobs` util)
+- Easy to test with (including `runTaskListOnce` util)
 - Low latency (~2ms from task schedule to execution, uses `LISTEN`/`NOTIFY` to be informed of jobs as they're inserted)
 - High performance (~700 jobs per second on a single node, uses `SKIP LOCKED` to find jobs to execute, resulting in faster fetches)
 - Small tasks (uses explicit task names / payloads resulting in minimal serialisation/deserialisation overhead)
@@ -206,7 +238,7 @@ Example:
 
 ```js
 const {
-  rows: [row]
+  rows: [row],
 } = await withPgClient(pgClient => pgClient.query("select 1 as one"));
 ```
 

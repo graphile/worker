@@ -1,9 +1,7 @@
 #!/usr/bin/env node
-import { Pool, PoolClient } from "pg";
-import { migrate } from "./migrate";
 import getTasks from "./getTasks";
-import { WorkerOptions, WorkerPoolOptions } from "./interfaces";
-import { start, runAllJobs } from "./main";
+import { RunnerOptions } from "./interfaces";
+import { run, runOnce } from "./index";
 import * as yargs from "yargs";
 import { POLL_INTERVAL, CONCURRENT_JOBS } from "./config";
 
@@ -43,38 +41,15 @@ const isInteger = (n: number): boolean => {
   return isFinite(n) && Math.round(n) === n;
 };
 
-const DATABASE_URL = argv.connection || process.env.DATABASE_URL || undefined;
-const ONCE = argv.once;
-const WATCH = argv.watch;
-
-const workerOptions: WorkerOptions = {
-  pollInterval: isInteger(argv["poll-interval"])
-    ? argv["poll-interval"]
-    : POLL_INTERVAL,
-};
-
-const workerPoolOptions: WorkerPoolOptions = {
-  workerCount: isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS,
-  ...workerOptions,
-};
-
-if (WATCH && ONCE) {
-  throw new Error("Cannot specify both --watch and --once");
-}
-
-async function withPgClient<T = any>(
-  pgPool: Pool,
-  cb: (pgClient: PoolClient) => Promise<T>
-): Promise<T> {
-  const pgClient = await pgPool.connect();
-  try {
-    return await cb(pgClient);
-  } finally {
-    pgClient.release();
-  }
-}
-
 async function main() {
+  const DATABASE_URL = argv.connection || process.env.DATABASE_URL || undefined;
+  const ONCE = argv.once;
+  const WATCH = argv.watch;
+
+  if (WATCH && ONCE) {
+    throw new Error("Cannot specify both --watch and --once");
+  }
+
   if (!DATABASE_URL) {
     throw new Error(
       "Please use `--connection` flag or set `DATABASE_URL` envvar to indicate the PostgreSQL connection string."
@@ -82,27 +57,21 @@ async function main() {
   }
   const watchedTasks = await getTasks(`${process.cwd()}/tasks`, WATCH);
 
-  const pgPool = new Pool({
+  const options: RunnerOptions = {
+    concurrency: isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS,
+    pollInterval: isInteger(argv["poll-interval"])
+      ? argv["poll-interval"]
+      : POLL_INTERVAL,
     connectionString: DATABASE_URL,
-  });
+    taskList: watchedTasks.tasks,
+  };
 
-  try {
-    // Migrate
-    await withPgClient(pgPool, client => migrate(client));
-
-    if (ONCE) {
-      // Just run all jobs then exit
-      await withPgClient(pgPool, client =>
-        runAllJobs(watchedTasks.tasks, client, workerOptions)
-      );
-    } else {
-      // Watch for new jobs
-      const { promise } = start(watchedTasks.tasks, pgPool, workerPoolOptions);
-      // Continue forever(ish)
-      await promise;
-    }
-  } finally {
-    await pgPool.end();
+  if (ONCE) {
+    await runOnce(options);
+  } else {
+    const { promise } = await run(options);
+    // Continue forever(ish)
+    await promise;
   }
 }
 

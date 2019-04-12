@@ -1,4 +1,4 @@
-import { PoolClient } from "pg";
+import { PoolClient, Pool } from "pg";
 import { IDebugger } from "./debug";
 
 /*
@@ -12,21 +12,24 @@ import { IDebugger } from "./debug";
  * - watched task list: an abstraction for a task list that can be updated when the tasks on the disk change
  * - worker: the thing that checks out a job from the database, executes the relevant task, and then returns the job to the database with either success or failure
  * - worker pool: a collection of workers to enable processing multiple jobs in parallel
+ * - runner: the thing responsible for building a task list and running a worker pool for said list
  */
 
 export type WithPgClient = <T = void>(
   callback: (pgClient: PoolClient) => Promise<T>
 ) => Promise<T>;
 
+export type AddJobFunction = (
+  identifier: string,
+  payload?: any,
+  options?: TaskOptions
+) => Promise<Job>;
+
 export interface Helpers {
   job: Job;
   debug: IDebugger;
   withPgClient: WithPgClient;
-  addJob(
-    identifier: string,
-    payload?: any,
-    options?: TaskOptions
-  ): Promise<Job>;
+  addJob: AddJobFunction;
 }
 
 export type Task = (payload: unknown, helpers: Helpers) => void | Promise<void>;
@@ -74,17 +77,63 @@ export interface WorkerPool {
   promise: Promise<void>;
 }
 
+export interface Runner {
+  stop: () => Promise<void>;
+  addJob: AddJobFunction;
+  promise: Promise<void>;
+}
+
 export interface TaskOptions {
+  /**
+   * The queue to run this task under
+   */
   queueName?: string;
+  /**
+   * A Date to schedule this task to run in the future
+   */
   runAt?: Date;
+  /**
+   * How many retries should this task get? (Default: 25)
+   */
   maxAttempts?: number;
 }
 
-export interface WorkerOptions {
+export interface WorkerSharedOptions {
+  /**
+   * How long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)
+   */
   pollInterval?: number;
+}
+
+export interface WorkerOptions extends WorkerSharedOptions {
+  /**
+   * An identifier for this specific worker; if unset then a random ID will be assigned. Do not assign multiple workers the same worker ID!
+   */
   workerId?: string;
 }
 
-export interface WorkerPoolOptions extends WorkerOptions {
-  workerCount?: number;
+export interface WorkerPoolOptions extends WorkerSharedOptions {
+  /**
+   * Number of jobs to run concurrently
+   */
+  concurrency?: number;
+}
+
+export interface RunnerOptions extends WorkerPoolOptions {
+  /**
+   * Task names and handler, e.g. from `getTasks` (use this if you need watch mode)
+   */
+  taskList?: TaskList;
+  /**
+   * Each file in this directory will be used as a task handler
+   */
+  taskDirectory?: string;
+  /**
+   * A PostgreSQL connection string to the database containing the job queue
+   */
+  connectionString?: string;
+  /**
+   * A pg.Pool instance to use instead of the `connectionString`
+   */
+  pgPool?: Pool;
 }
