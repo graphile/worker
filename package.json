@@ -58,11 +58,12 @@
     "jest": "^24.5.0",
     "prettier": "^1.16.4",
     "ts-jest": "^24.0.0",
-    "tslint": "^5.13.1",
-    "tslint-config-prettier": "^1.18.0",
     "typescript": "^3.3.3333"
   },
-  "files": ["dist", "sql"],
+  "files": [
+    "dist",
+    "sql"
+  ],
   "engines": {
     "node": ">=10.0.0"
   }
