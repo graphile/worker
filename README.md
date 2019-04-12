@@ -87,17 +87,9 @@ const runner = await run({
 You can then add jobs with the `addJob` method:
 
 ```js
-await runner.addJob(
-  "testTask",
-  {
-    thisIsThePayload: true,
-  },
-  {
-    maxAttempts: 5,
-    queueName: "user42",
-    runAt: new Date(Date.now() + 5000),
-  }
-);
+await runner.addJob("testTask", {
+  thisIsThePayload: true,
+});
 ```
 
 And stop the job runner with `runner.stop()`.
