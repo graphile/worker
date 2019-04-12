@@ -26,4 +26,5 @@ before_script:
   - psql -c 'create database graphile_worker_test' -U postgres
 
 script:
+  - yarn lint
   - yarn test
