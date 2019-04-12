@@ -1,4 +1,4 @@
 export * from "./interfaces";
 
-export { start, runAllJobs } from "./main";
+export { runTaskList, runAllJobs } from "./main";
 export { initWorker, Worker } from "./programmatic";
