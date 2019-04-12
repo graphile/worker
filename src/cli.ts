@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import getTasks from "./getTasks";
-import { WorkerOptions, WorkerPoolOptions } from "./interfaces";
+import { RunnerOptions } from "./interfaces";
 import { run, runOnce } from "./index";
 import * as yargs from "yargs";
 import { POLL_INTERVAL, CONCURRENT_JOBS } from "./config";
@@ -46,17 +46,6 @@ async function main() {
   const ONCE = argv.once;
   const WATCH = argv.watch;
 
-  const workerOptions: WorkerOptions = {
-    pollInterval: isInteger(argv["poll-interval"])
-      ? argv["poll-interval"]
-      : POLL_INTERVAL,
-  };
-
-  const workerPoolOptions: WorkerPoolOptions = {
-    concurrency: isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS,
-    ...workerOptions,
-  };
-
   if (WATCH && ONCE) {
     throw new Error("Cannot specify both --watch and --once");
   }
@@ -68,21 +57,19 @@ async function main() {
   }
   const watchedTasks = await getTasks(`${process.cwd()}/tasks`, WATCH);
 
-  const options = {
+  const options: RunnerOptions = {
+    concurrency: isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS,
+    pollInterval: isInteger(argv["poll-interval"])
+      ? argv["poll-interval"]
+      : POLL_INTERVAL,
     connectionString: DATABASE_URL,
     taskList: watchedTasks.tasks,
-    ...workerPoolOptions,
   };
 
   if (ONCE) {
-    // Just run all jobs then exit
     await runOnce(options);
   } else {
-    // Watch for new jobs
-    const { promise } = await run({
-      taskList: watchedTasks.tasks,
-      ...workerPoolOptions,
-    });
+    const { promise } = await run(options);
     // Continue forever(ish)
     await promise;
   }

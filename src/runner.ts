@@ -12,7 +12,7 @@ const processOptions = async (options: RunnerOptions) => {
 
   try {
     assert(
-      !!options.taskDirectory === !!options.taskList,
+      !!options.taskDirectory !== !!options.taskList,
       "Exactly one of either taskDirectory or taskList should be set"
     );
     let taskList: TaskList;
@@ -29,7 +29,7 @@ const processOptions = async (options: RunnerOptions) => {
     }
 
     assert(
-      !!options.pgPool === !!options.connectionString,
+      !!options.pgPool !== !!options.connectionString,
       "Exactly one of either pgPool or connectionString should be set"
     );
     let pgPool: Pool;
