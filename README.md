@@ -175,6 +175,55 @@ Options:
                                                         [number] [default: 2000]
 ```
 
+When using `graphile-worker` as a library it is possible to use either `run(options)` or `runOnce(options)`.
+
+`run(options)` will run until either stopped by a signal event like `SIGINT` or by calling the `stop()` function on the object returned by `run()`.
+
+`runOnce(options)` is the equivalent of running the cli with the `--once` option. The function will run until there are no runnable jobs left.
+
+The following options for both methods are available.
+
+* `concurrency`: The equivalent of the cli `--jobs` option with the same default value.
+* `pollInterval`: The equivalent of the cli `--poll-interval` option with the same default value.
+* `connectionString`: A PostgreSQL connection string to the database containing the job queue.
+* `pgPool`: A `pg.Pool` instance to use instead of the `connectionString`.
+* `taskList`: An object with the task names as keys and a corresponding task handler function.
+* `taskDirectory`: A path string to a directory containing the task handlers. 
+
+Exactly one of either `taskDirectory` or `taskList` must be provided. The same applies to `connectionString` and `pgPool`.
+
+**Example**
+
+```js
+const { Pool } = require("pg");
+const { run } = require("graphile-worker");
+
+const pool = new Pool({
+  user: "postgres",
+  host: "localhost",
+  database: "postgres",
+  password: "postgres",
+  port: 5432,
+});
+
+(async () => {
+  const runner = await run({
+    pgPool: pool,
+    // connectionString: process.env.DATABASE_URL,
+    concurrency: 1,
+    pollInterval: 2000,
+    taskList: {
+      testTask: async (payload, { debug }) => {
+        debug(`Received ${JSON.stringify(payload)}`);
+      },
+    },
+    // taskDirectory: `${__dirname}/tasks`,
+  });
+})().catch(err => {
+  console.error(err);
+});
+```
+
 ## Creating task executors
 
 A task executor is a simple async JS function which receives as input the job
