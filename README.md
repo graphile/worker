@@ -175,7 +175,9 @@ Options:
                                                         [number] [default: 2000]
 ```
 
-When using `graphile-worker` as a library it is possible to use either `run(options)` or `runOnce(options)`.
+## Library usage
+
+`graphile-worker` can be used as a library inside your Node.js application. It exposes the `run(options)` and `runOnce(options)` functions.
 
 `run(options)` will run until either stopped by a signal event like `SIGINT` or by calling the `stop()` function on the object returned by `run()`.
 
@@ -185,10 +187,12 @@ The following options for both methods are available.
 
 * `concurrency`: The equivalent of the cli `--jobs` option with the same default value.
 * `pollInterval`: The equivalent of the cli `--poll-interval` option with the same default value.
-* `connectionString`: A PostgreSQL connection string to the database containing the job queue.
-* `pgPool`: A `pg.Pool` instance to use instead of the `connectionString`.
-* `taskList`: An object with the task names as keys and a corresponding task handler function.
-* `taskDirectory`: A path string to a directory containing the task handlers. 
+* the database is identified through one of these options:
+  * `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
+  * `pgPool`: A `pg.Pool` instance to use
+* the tasks to execute are identified through one of these options:
+  * `taskDirectory`: A path string to a directory containing the task handlers. 
+  * `taskList`: An object with the task names as keys and a corresponding task handler functions as values
 
 Exactly one of either `taskDirectory` or `taskList` must be provided. The same applies to `connectionString` and `pgPool`.
 
@@ -198,29 +202,31 @@ Exactly one of either `taskDirectory` or `taskList` must be provided. The same a
 const { Pool } = require("pg");
 const { run } = require("graphile-worker");
 
-const pool = new Pool({
-  user: "postgres",
-  host: "localhost",
-  database: "postgres",
-  password: "postgres",
-  port: 5432,
+const pgPool = new Pool({
+  connectionString: "postgres://postgres:postgres@localhost:5432/postgres",
 });
 
-(async () => {
+async function main() {
   const runner = await run({
-    pgPool: pool,
-    // connectionString: process.env.DATABASE_URL,
+    pgPool,
+    // or: connectionString: process.env.DATABASE_URL,
+    
     concurrency: 1,
     pollInterval: 2000,
+    
     taskList: {
       testTask: async (payload, { debug }) => {
         debug(`Received ${JSON.stringify(payload)}`);
       },
     },
-    // taskDirectory: `${__dirname}/tasks`,
+    // or: taskDirectory: `${__dirname}/tasks`,
   });
-})().catch(err => {
+  // to clean up: runner.stop()
+}
+
+main().catch(err => {
   console.error(err);
+  process.exit(1);
 });
 ```
 
