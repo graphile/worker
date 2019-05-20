@@ -175,6 +175,61 @@ Options:
                                                         [number] [default: 2000]
 ```
 
+## Library usage
+
+`graphile-worker` can be used as a library inside your Node.js application. It exposes the `run(options)` and `runOnce(options)` functions.
+
+`run(options)` will run until either stopped by a signal event like `SIGINT` or by calling the `stop()` function on the object returned by `run()`.
+
+`runOnce(options)` is the equivalent of running the cli with the `--once` option. The function will run until there are no runnable jobs left.
+
+The following options for both methods are available.
+
+* `concurrency`: The equivalent of the cli `--jobs` option with the same default value.
+* `pollInterval`: The equivalent of the cli `--poll-interval` option with the same default value.
+* the database is identified through one of these options:
+  * `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
+  * `pgPool`: A `pg.Pool` instance to use
+* the tasks to execute are identified through one of these options:
+  * `taskDirectory`: A path string to a directory containing the task handlers. 
+  * `taskList`: An object with the task names as keys and a corresponding task handler functions as values
+
+Exactly one of either `taskDirectory` or `taskList` must be provided. The same applies to `connectionString` and `pgPool`.
+
+**Example**
+
+```js
+const { Pool } = require("pg");
+const { run } = require("graphile-worker");
+
+const pgPool = new Pool({
+  connectionString: "postgres://postgres:postgres@localhost:5432/postgres",
+});
+
+async function main() {
+  const runner = await run({
+    pgPool,
+    // or: connectionString: process.env.DATABASE_URL,
+    
+    concurrency: 1,
+    pollInterval: 2000,
+    
+    taskList: {
+      testTask: async (payload, { debug }) => {
+        debug(`Received ${JSON.stringify(payload)}`);
+      },
+    },
+    // or: taskDirectory: `${__dirname}/tasks`,
+  });
+  // to clean up: runner.stop()
+}
+
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});
+```
+
 ## Creating task executors
 
 A task executor is a simple async JS function which receives as input the job
