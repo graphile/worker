@@ -1,30 +1,58 @@
 language: node_js
+dist: xenial
+sudo: required
 
-services:
-  - postgresql
-
-addons:
-  postgresql: "10"
-  apt:
-    packages:
-    - postgresql-10
-    - postgresql-client-10
-
-node_js:
-  - "10"
-
-env:
-  DATABASE_URL: postgresql://localhost:5433/graphile_worker_test
-  global:
-    - PGPORT=5433
+matrix:
+  include:
+    - name: Postgresql 9.6 - Node.JS 10
+      node_js: "10"
+      addons:
+        postgresql: "9.6"
+    - name: Postgresql 10 - Node.JS 10
+      node_js: "10"
+      addons:
+        postgresql: "10"
+    - name: Postgresql 11 - Node.JS 10
+      node_js: "10"
+      env:
+        - INSTALL_11=true
+      addons:
+        postgresql: "11"
+    - name: Postgresql 9.6 - Node.JS 12
+      node_js: "12"
+      addons:
+        postgresql: "9.6"
+    - name: Postgresql 10 - Node.JS 12
+      node_js: "12"
+      addons:
+        postgresql: "10"
+    - name: Postgresql 11 - Node.JS 12
+      node_js: "12"
+      env:
+        - INSTALL_11=true
+      addons:
+        postgresql: "11"
 
 before_install:
-  - sudo cp /etc/postgresql/{9.6,10}/main/pg_hba.conf
-  - sudo /etc/init.d/postgresql restart
+  - | 
+    if [[ "$INSTALL_11" == "true" ]]; then
+      sudo apt-get update
+      sudo apt-get --yes remove postgresql\*
+      sudo apt-get install -y postgresql-11 postgresql-client-11
+      sudo cp /etc/postgresql/{9.6,11}/main/pg_hba.conf
+      sudo service postgresql restart 11  
+    fi
+
+env:
+  global:
+    - PGUSER=postgres
+    - PGPASSWORD=postgres
+    - PGPORT=5432
 
 before_script:
   - psql -c 'create database graphile_worker_test' -U postgres
 
 script:
+  - psql -c "SELECT version();"
   - yarn lint
   - yarn test
