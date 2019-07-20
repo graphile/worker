@@ -200,14 +200,14 @@ Options:
 
 The following options for both methods are available.
 
-* `concurrency`: The equivalent of the cli `--jobs` option with the same default value.
-* `pollInterval`: The equivalent of the cli `--poll-interval` option with the same default value.
-* the database is identified through one of these options:
-  * `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
-  * `pgPool`: A `pg.Pool` instance to use
-* the tasks to execute are identified through one of these options:
-  * `taskDirectory`: A path string to a directory containing the task handlers. 
-  * `taskList`: An object with the task names as keys and a corresponding task handler functions as values
+- `concurrency`: The equivalent of the cli `--jobs` option with the same default value.
+- `pollInterval`: The equivalent of the cli `--poll-interval` option with the same default value.
+- the database is identified through one of these options:
+  - `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
+  - `pgPool`: A `pg.Pool` instance to use
+- the tasks to execute are identified through one of these options:
+  - `taskDirectory`: A path string to a directory containing the task handlers.
+  - `taskList`: An object with the task names as keys and a corresponding task handler functions as values
 
 Exactly one of either `taskDirectory` or `taskList` must be provided. The same applies to `connectionString` and `pgPool`.
 
@@ -225,10 +225,10 @@ async function main() {
   const runner = await run({
     pgPool,
     // or: connectionString: process.env.DATABASE_URL,
-    
+
     concurrency: 1,
     pollInterval: 2000,
-    
+
     taskList: {
       testTask: async (payload, { debug }) => {
         debug(`Received ${JSON.stringify(payload)}`);
