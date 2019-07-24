@@ -29,7 +29,7 @@ const processOptions = async (options: RunnerOptions) => {
     }
 
     assert(
-      !!options.pgPool !== !!options.connectionString,
+      !(!!options.pgPool && !!options.connectionString),
       "Exactly one of either pgPool or connectionString should be set"
     );
     let pgPool: Pool;
