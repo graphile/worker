@@ -105,7 +105,7 @@ export default async function getTasks(
     if (watch) {
       watchers.push(
         chokidar
-          .watch(`${taskPath}/*.js`, {
+          .watch(`${taskPath}/*.{j,t}s`, {
             ignoreInitial: true,
           })
           .on("all", (event, eventFilePath) => {
@@ -128,7 +128,7 @@ export default async function getTasks(
     // Try and require its contents
     const files = await readdir(taskPath);
     for (const file of files) {
-      if (file.endsWith(".js")) {
+      if (file.endsWith(".js") || file.endsWith(".ts")) {
         const taskName = file.substr(0, file.length - 3);
         try {
           await loadFileIntoTasks(
