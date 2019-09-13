@@ -47,6 +47,19 @@ const processOptions = async (options: RunnerOptions) => {
       );
     }
 
+    pgPool.on("error", err => {
+      /*
+       * This handler is required so that client connection errors don't bring
+       * the server down (via `unhandledError`).
+       *
+       * `pg` will automatically terminate the client and remove it from the
+       * pool, so we don't actually need to take any action here, just ensure
+       * that the event listener is registered.
+       */
+      // eslint-disable-next-line no-console
+      console.error("PostgreSQL client generated error: ", err.message);
+    });
+
     const withPgClient = makeWithPgClientFromPool(pgPool);
 
     // Migrate
