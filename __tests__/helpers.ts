@@ -2,11 +2,13 @@ import * as pg from "pg";
 import { Job } from "../src/interfaces";
 import { migrate } from "../src/migrate";
 
+export const TEST_CONNECTION_STRING = "graphile_worker_test";
+
 export async function withPgPool<T = any>(
   cb: (pool: pg.Pool) => Promise<T>
 ): Promise<T> {
   const pool = new pg.Pool({
-    connectionString: "graphile_worker_test"
+    connectionString: TEST_CONNECTION_STRING,
   });
   try {
     return await cb(pool);
