@@ -44,6 +44,7 @@
     "pg": ">=6.5 <8",
     "pg-connection-string": "^2.0.0",
     "tslib": "^1.9.3",
+    "winston": "^3.2.1",
     "yargs": "^13.2.2"
   },
   "devDependencies": {

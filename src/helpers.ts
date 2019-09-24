@@ -1,6 +1,7 @@
 import { debugFactory } from "./debug";
 import { WithPgClient, Job, Helpers, TaskOptions } from "./interfaces";
 import { Pool, PoolClient } from "pg";
+import { loggerFactory } from './logger';
 
 export function makeAddJob(withPgClient: WithPgClient) {
   return (identifier: string, payload: any = {}, options: TaskOptions = {}) => {
@@ -38,6 +39,7 @@ export function makeHelpers(
     debug: debugFactory(`${job.task_identifier}`),
     withPgClient,
     addJob: makeAddJob(withPgClient),
+    logger: loggerFactory(`${job.task_identifier}`),
     // TODO: add an API for giving workers more helpers
   };
 }

@@ -10,6 +10,7 @@ import { POLL_INTERVAL, MAX_CONTIGUOUS_ERRORS } from "./config";
 import * as assert from "assert";
 import deferred from "./deferred";
 import { makeHelpers } from "./helpers";
+import { logger } from './logger';
 
 export function makeNewWorker(
   tasks: TaskList,
@@ -180,9 +181,8 @@ export function makeNewWorker(
           ])
         );
       } else {
-        if (!process.env.NO_LOG_SUCCESS) {
-          // eslint-disable-next-line no-console
-          console.log(
+        if (!process.env.NO_LOG_SUCCESS) {          
+          logger.info(
             `Completed task ${job.id} (${
               job.task_identifier
             }) with success (${duration.toFixed(2)}ms)`

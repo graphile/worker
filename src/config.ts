@@ -18,3 +18,8 @@ export const MAX_CONTIGUOUS_ERRORS = 10;
  * Number of jobs to run concurrently
  */
 export const CONCURRENT_JOBS = 1;
+/**
+ * Logging level for logger, could be set as per environment
+ * https://github.com/winstonjs/winston/blob/master/README.md#logging-levels
+ */
+export const LOGGER_LEVEL = "debug";
