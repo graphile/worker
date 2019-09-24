@@ -11,7 +11,7 @@ import debug from "./debug";
 import deferred from "./deferred";
 import SIGNALS from "./signals";
 import { makeNewWorker } from "./worker";
-import {logger} from './logger';
+import { logger } from "./logger";
 
 import {
   makeWithPgClientFromPool,
@@ -130,22 +130,23 @@ export function runTaskList(
 
     // On error, release this client and try again
     client.on("error", (e: Error) => {
-      
-      console.error("Error with database notify listener", e.message);
+      logger.error("Error with database notify listener", e.message);
       listenForChangesClient = null;
       try {
         release();
-      } catch (e) {      
+      } catch (e) {
         logger.error("Error occurred releasing client: " + e.stack);
       }
       pgPool.connect(listenForChanges);
     });
 
     const supportedTaskNames = Object.keys(tasks);
-    
+
     logger.info(
-      `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join("', '")}')`
-      );
+      `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
+        "', '"
+      )}')`
+    );
   };
 
   // Create a client dedicated to listening for new jobs.

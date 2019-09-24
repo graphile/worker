@@ -1,6 +1,6 @@
 import { PoolClient, Pool } from "pg";
 import { IDebugger } from "./debug";
-import { Logger } from './logger';
+import { Logger } from "./logger";
 
 /*
  * Terminology:
@@ -31,7 +31,7 @@ export interface Helpers {
   debug: IDebugger;
   logger: Logger;
   withPgClient: WithPgClient;
-  addJob: AddJobFunction;  
+  addJob: AddJobFunction;
 }
 
 export type Task = (payload: unknown, helpers: Helpers) => void | Promise<void>;

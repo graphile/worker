@@ -1,7 +1,7 @@
 import { debugFactory } from "./debug";
 import { WithPgClient, Job, Helpers, TaskOptions } from "./interfaces";
 import { Pool, PoolClient } from "pg";
-import { loggerFactory } from './logger';
+import { loggerFactory } from "./logger";
 
 export function makeAddJob(withPgClient: WithPgClient) {
   return (identifier: string, payload: any = {}, options: TaskOptions = {}) => {
