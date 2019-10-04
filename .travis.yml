@@ -15,7 +15,13 @@ matrix:
     - name: Postgresql 11 - Node.JS 10
       node_js: "10"
       env:
-        - INSTALL_11=true
+        - INSTALL_PG_11=true
+      addons:
+        postgresql: "11"
+    - name: Postgresql 12 - Node.JS 10
+      node_js: "10"
+      env:
+        - INSTALL_PG_12=true
       addons:
         postgresql: "11"
     - name: Postgresql 9.6 - Node.JS 12
@@ -29,18 +35,31 @@ matrix:
     - name: Postgresql 11 - Node.JS 12
       node_js: "12"
       env:
-        - INSTALL_11=true
+        - INSTALL_PG_11=true
       addons:
         postgresql: "11"
+    - name: Postgresql 12 - Node.JS 12
+      node_js: "12"
+      env:
+        - INSTALL_PG_12=true
+      addons:
+        postgresql: "12"
 
 before_install:
   - | 
-    if [[ "$INSTALL_11" == "true" ]]; then
+    if [[ "$INSTALL_PG_11" == "true" ]]; then
       sudo apt-get update
       sudo apt-get --yes remove postgresql\*
       sudo apt-get install -y postgresql-11 postgresql-client-11
       sudo cp /etc/postgresql/{9.6,11}/main/pg_hba.conf
       sudo service postgresql restart 11  
+    fi
+    if [[ "$INSTALL_PG_12" == "true" ]]; then
+      sudo apt-get update
+      sudo apt-get --yes remove postgresql\*
+      sudo apt-get install -y postgresql-12 postgresql-client-12
+      sudo cp /etc/postgresql/{9.6,12}/main/pg_hba.conf
+      sudo service postgresql restart 12  
     fi
 
 env:
