@@ -107,9 +107,7 @@ export function runTaskList(
     if (err) {
       // eslint-disable-next-line no-console
       console.error(
-        `Error connecting with notify listener (trying again in 5 seconds): ${
-          err.message
-        }`
+        `Error connecting with notify listener (trying again in 5 seconds): ${err.message}`
       );
       // Try again in 5 seconds
       setTimeout(() => {

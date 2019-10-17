@@ -138,9 +138,7 @@ export default async function getTasks(
             watch
           );
         } catch (e) {
-          const message = `Error processing '${taskPath}/${file}': ${
-            e.message
-          }`;
+          const message = `Error processing '${taskPath}/${file}': ${e.message}`;
           if (watch) {
             console.error(message); // eslint-disable-line no-console
           } else {
