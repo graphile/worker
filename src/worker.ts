@@ -10,7 +10,7 @@ import { POLL_INTERVAL, MAX_CONTIGUOUS_ERRORS } from "./config";
 import * as assert from "assert";
 import deferred from "./deferred";
 import { makeHelpers } from "./helpers";
-import { logger } from "./logger";
+import { defaultLogger as logger } from "./logger";
 
 export function makeNewWorker(
   tasks: TaskList,

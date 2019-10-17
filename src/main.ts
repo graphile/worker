@@ -11,7 +11,7 @@ import debug from "./debug";
 import deferred from "./deferred";
 import SIGNALS from "./signals";
 import { makeNewWorker } from "./worker";
-import { logger } from "./logger";
+import { defaultLogger as logger } from "./logger";
 
 import {
   makeWithPgClientFromPool,

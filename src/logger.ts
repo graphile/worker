@@ -1,31 +1,32 @@
-import * as winston from "winston";
-import { Logger } from "winston";
-import { LOGGER_LEVEL } from "./config";
+export class Logger {
+  defaultMeta: any;
+  constructor(meta: any) {
+    this.defaultMeta = meta;
+  }
+  info(message: string, meta?: any) {
+    // eslint-disable-next-line no-console
+    console.log(`${this.defaultMeta.workerId} ${message}`, meta);
+  }
+  error(message: string, meta?: any) {
+    // eslint-disable-next-line no-console
+    console.error(`${this.defaultMeta.workerId} ${message}`, meta);
+  }
+  degug(message: string, meta?: any) {
+    // eslint-disable-next-line no-console
+    console.debug(`${this.defaultMeta.workerId} ${message}`, meta);
+  }
+}
 
-const container = new winston.Container();
+const loggers: {
+  [identifier: string]: Logger;
+} = {};
 
-const winstonOptions = {
-  level: LOGGER_LEVEL,
-  format: winston.format.json(),
-  defaultMeta: { "worker-id": "graphile-worker" },
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.simple(),
-    }),
-  ],
-};
-
-export const logger: Logger = container.add("default", winstonOptions);
-
-export { Logger };
+export const defaultLogger = new Logger({ workerId: "graphile-worker" });
 
 export const loggerFactory = (identifier: string): Logger => {
-  if (container.has(identifier)) {
-    return container.get(identifier);
+  if (loggers[identifier]) {
+    return loggers[identifier];
   } else {
-    return container.add(identifier, {
-      ...winstonOptions,
-      defaultMeta: { "worker-id": identifier },
-    });
+    return (loggers[identifier] = new Logger({ workerId: identifier }));
   }
 };
