@@ -35,7 +35,15 @@ const argv = yargs
       "how long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)",
     default: POLL_INTERVAL,
   })
-  .number("poll-interval").argv;
+  .number("poll-interval")
+  .strict(true).argv;
+
+if (argv._.length > 0) {
+  console.error(`Unrecognised additional arguments: '${argv._.join("', '")}'`);
+  console.error();
+  yargs.showHelp();
+  process.exit(1);
+}
 
 const isInteger = (n: number): boolean => {
   return isFinite(n) && Math.round(n) === n;

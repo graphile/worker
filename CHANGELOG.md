@@ -6,6 +6,7 @@ BREAKING CHANGES:
 
 - The `debug` task helper has been replaced with a `logger` helper which is a `Logger` instance (see README)
 - The `-1` shortcut for "run once" never worked; it has been removed
+- Unrecognised command-line arguments will now cause an error to be thrown
 
 New features:
 
