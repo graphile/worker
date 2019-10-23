@@ -6,7 +6,7 @@ test("migration installs schema; second migration does no harm", () =>
     await pgClient.query("drop schema if exists graphile_worker cascade;");
     // Assert DB is empty
     const {
-      rows: [graphileWorkerNamespaceBeforeMigration]
+      rows: [graphileWorkerNamespaceBeforeMigration],
     } = await pgClient.query(
       `select * from pg_catalog.pg_namespace where nspname = $1`,
       ["graphile_worker"]
