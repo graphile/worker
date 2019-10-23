@@ -5,8 +5,10 @@ import { Runner, RunnerOptions, TaskList } from "./interfaces";
 import { runTaskList, runTaskListOnce } from "./main";
 import { makeWithPgClientFromPool, makeAddJob } from "./helpers";
 import { migrate } from "./migrate";
+import { defaultLogger } from "./logger";
 
 const processOptions = async (options: RunnerOptions) => {
+  const { logger = defaultLogger } = options;
   const releasers: Array<() => void | Promise<void>> = [];
   const release = () => Promise.all(releasers.map(fn => fn()));
 
@@ -56,8 +58,9 @@ const processOptions = async (options: RunnerOptions) => {
        * pool, so we don't actually need to take any action here, just ensure
        * that the event listener is registered.
        */
-      // eslint-disable-next-line no-console
-      console.error("PostgreSQL client generated error: ", err.message);
+      logger.error(`PostgreSQL client generated error: ${err.message}`, {
+        error: err,
+      });
     });
 
     const withPgClient = makeWithPgClientFromPool(pgPool);
@@ -65,7 +68,7 @@ const processOptions = async (options: RunnerOptions) => {
     // Migrate
     await withPgClient(client => migrate(client));
 
-    return { taskList, pgPool, withPgClient, release };
+    return { taskList, pgPool, withPgClient, release, logger };
   } catch (e) {
     release();
     throw e;

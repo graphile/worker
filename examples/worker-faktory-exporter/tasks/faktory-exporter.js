@@ -1,6 +1,9 @@
 const faktory = require("faktory-worker");
 
-module.exports = async ({ param }) => {
+module.exports = async (payload, helpers) => {
+  const { param } = payload;
+  const { logger } = helpers;
+
   // https://github.com/contribsys/faktory/wiki/The-Job-Payload
   const payloadOptions = {
     jobType: "FaktoryJob",
@@ -11,7 +14,7 @@ module.exports = async ({ param }) => {
 
   const jid = await faktoryClient.push(payloadOptions);
 
-  console.log(`Received jid from Faktory: ${jid}. Thanks Faktory!`);
+  logger.info(`Received jid from Faktory: ${jid}. Thanks Faktory!`);
 
   await faktoryClient.close();
 };

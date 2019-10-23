@@ -1,6 +1,7 @@
 import getTasks from "../src/getTasks";
 import { makeMockJob, withPgClient } from "./helpers";
 import { makeHelpers, makeWithPgClientFromClient } from "../src/helpers";
+import { defaultLogger } from "../src/logger";
 
 test("gets tasks from folder", () =>
   withPgClient(async client => {
@@ -12,9 +13,13 @@ Array [
   "wouldyoulike_default",
 ]
 `);
-    const helpers = makeHelpers(makeMockJob("would you like"), {
-      withPgClient: makeWithPgClientFromClient(client)
-    });
+    const helpers = makeHelpers(
+      makeMockJob("would you like"),
+      {
+        withPgClient: makeWithPgClientFromClient(client),
+      },
+      defaultLogger
+    );
     expect(await tasks.wouldyoulike(helpers.job.payload, helpers)).toEqual(
       "some sausages"
     );
@@ -37,9 +42,13 @@ Array [
 ]
 `);
 
-    const helpers = makeHelpers(makeMockJob("task1"), {
-      withPgClient: makeWithPgClientFromClient(client)
-    });
+    const helpers = makeHelpers(
+      makeMockJob("task1"),
+      {
+        withPgClient: makeWithPgClientFromClient(client),
+      },
+      defaultLogger
+    );
     expect(await tasks.task1(helpers.job.payload, helpers)).toEqual("hi");
     expect(await tasks.task2(helpers.job.payload, helpers)).toEqual("hello");
 
@@ -59,9 +68,13 @@ Array [
 ]
 `);
 
-    const helpers = makeHelpers(makeMockJob("t1"), {
-      withPgClient: makeWithPgClientFromClient(client)
-    });
+    const helpers = makeHelpers(
+      makeMockJob("t1"),
+      {
+        withPgClient: makeWithPgClientFromClient(client),
+      },
+      defaultLogger
+    );
     expect(await tasks.t1(helpers.job.payload, helpers)).toEqual(
       "come with me"
     );

@@ -1,5 +1,15 @@
 # Changelog
 
+### v0.2.0 (unreleased)
+
+BREAKING CHANGES:
+
+- The `debug` task helper has been replaced with a `logger` helper which is a `Logger` instance (see README)
+
+New features:
+
+- It's now possible to override how logs are output by supplying a `logFactory` (see README)
+
 ### v0.1.0
 
 - Add database 'error' handler to avoid crashes (@madflow #26)

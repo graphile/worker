@@ -4,6 +4,7 @@ import { RunnerOptions } from "./interfaces";
 import { run, runOnce } from "./index";
 import * as yargs from "yargs";
 import { POLL_INTERVAL, CONCURRENT_JOBS } from "./config";
+import { defaultLogger } from "./logger";
 
 const argv = yargs
   .option("connection", {
@@ -55,7 +56,11 @@ async function main() {
       "Please use `--connection` flag or set `DATABASE_URL` envvar to indicate the PostgreSQL connection string."
     );
   }
-  const watchedTasks = await getTasks(`${process.cwd()}/tasks`, WATCH);
+
+  // TODO: allow overriding the logger
+  const logger = defaultLogger;
+
+  const watchedTasks = await getTasks(`${process.cwd()}/tasks`, WATCH, logger);
 
   const options: RunnerOptions = {
     concurrency: isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS,
@@ -64,6 +69,7 @@ async function main() {
       : POLL_INTERVAL,
     connectionString: DATABASE_URL,
     taskList: watchedTasks.tasks,
+    logger,
   };
 
   if (ONCE) {

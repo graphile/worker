@@ -1,5 +1,5 @@
 import { PoolClient, Pool } from "pg";
-import { IDebugger } from "./debug";
+import { Logger } from "./logger";
 
 /*
  * Terminology:
@@ -27,14 +27,14 @@ export type AddJobFunction = (
 
 export interface Helpers {
   job: Job;
-  debug: IDebugger;
+  logger: Logger;
   withPgClient: WithPgClient;
   addJob: AddJobFunction;
 }
 
 export type Task = (payload: unknown, helpers: Helpers) => void | Promise<void>;
 
-export function isValidTask(fn: any): fn is Task {
+export function isValidTask(fn: unknown): fn is Task {
   if (typeof fn === "function") {
     return true;
   }
@@ -103,6 +103,11 @@ export interface WorkerSharedOptions {
    * How long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)
    */
   pollInterval?: number;
+
+  /**
+   * How should messages be logged out? Defaults to using the console logger.
+   */
+  logger?: Logger;
 }
 
 export interface WorkerOptions extends WorkerSharedOptions {

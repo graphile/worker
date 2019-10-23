@@ -28,7 +28,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
       return jobPromise;
     });
     const tasks: TaskList = {
-      job1
+      job1,
     };
 
     // Run the worker

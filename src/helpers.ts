@@ -1,6 +1,6 @@
-import { debugFactory } from "./debug";
 import { WithPgClient, Job, Helpers, TaskOptions } from "./interfaces";
 import { Pool, PoolClient } from "pg";
+import { Logger } from "./logger";
 
 export function makeAddJob(withPgClient: WithPgClient) {
   return (identifier: string, payload: any = {}, options: TaskOptions = {}) => {
@@ -31,11 +31,17 @@ export function makeAddJob(withPgClient: WithPgClient) {
 
 export function makeHelpers(
   job: Job,
-  { withPgClient }: { withPgClient: WithPgClient }
+  { withPgClient }: { withPgClient: WithPgClient },
+  baseLogger: Logger
 ): Helpers {
+  const jobLogger = baseLogger.scope({
+    label: "job",
+    taskIdentifier: job.task_identifier,
+    jobId: job.id,
+  });
   return {
     job,
-    debug: debugFactory(`${job.task_identifier}`),
+    logger: jobLogger,
     withPgClient,
     addJob: makeAddJob(withPgClient),
     // TODO: add an API for giving workers more helpers

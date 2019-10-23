@@ -5,11 +5,11 @@ import {
   WithPgClient,
   WorkerOptions,
 } from "./interfaces";
-import globalDebug from "./debug";
 import { POLL_INTERVAL, MAX_CONTIGUOUS_ERRORS } from "./config";
 import * as assert from "assert";
 import deferred from "./deferred";
 import { makeHelpers } from "./helpers";
+import { defaultLogger } from "./logger";
 
 export function makeNewWorker(
   tasks: TaskList,
@@ -21,6 +21,7 @@ export function makeNewWorker(
     pollInterval = POLL_INTERVAL,
     // The `||0.1` is to eliminate the vanishingly-small possibility of Math.random() returning 0. Math.random() can never return 1.
     workerId = `worker-${String(Math.random() || 0.1).substr(2)}`,
+    logger: baseLogger = defaultLogger,
   } = options;
   const promise = deferred();
   let activeJob: Job | null = null;
@@ -36,9 +37,10 @@ export function makeNewWorker(
   };
   let active = true;
 
-  const debug = (msg: string) => {
-    globalDebug("[Worker %s] %s", workerId, msg);
-  };
+  const logger = baseLogger.scope({
+    label: "worker",
+    workerId,
+  });
 
   const release = () => {
     if (!active) {
@@ -52,7 +54,7 @@ export function makeNewWorker(
     return promise;
   };
 
-  debug(`Spawned`);
+  logger.debug(`Spawned`);
 
   let contiguousErrors = 0;
   let again = false;
@@ -83,7 +85,7 @@ export function makeNewWorker(
     } catch (err) {
       if (continuous) {
         contiguousErrors++;
-        debug(
+        logger.debug(
           `Failed to acquire job: ${err.message} (${contiguousErrors}/${MAX_CONTIGUOUS_ERRORS})`
         );
         if (contiguousErrors >= MAX_CONTIGUOUS_ERRORS) {
@@ -145,10 +147,10 @@ export function makeNewWorker(
        */
       const startTimestamp = process.hrtime();
       try {
-        debug(`Found task ${job.id} (${job.task_identifier})`);
+        logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
         assert(task, `Unsupported task '${job.task_identifier}'`);
-        const helpers = makeHelpers(job, { withPgClient });
+        const helpers = makeHelpers(job, { withPgClient }, logger);
         await task(job.payload, helpers);
       } catch (error) {
         err = error;
@@ -157,8 +159,7 @@ export function makeNewWorker(
       const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
       if (err) {
         const { message, stack } = err;
-        // eslint-disable-next-line no-console
-        console.error(
+        logger.error(
           `Failed task ${job.id} (${job.task_identifier}) with error ${
             err.message
           } (${duration.toFixed(2)}ms)${
@@ -167,7 +168,8 @@ export function makeNewWorker(
                   .replace(/\n/g, "\n  ")
                   .trim()}`
               : ""
-          }`
+          }`,
+          { failure: true, job, error: err, duration }
         );
         // TODO: retry logic, in case of server connection interruption
         await withPgClient(client =>
@@ -179,11 +181,11 @@ export function makeNewWorker(
         );
       } else {
         if (!process.env.NO_LOG_SUCCESS) {
-          // eslint-disable-next-line no-console
-          console.log(
+          logger.info(
             `Completed task ${job.id} (${
               job.task_identifier
-            }) with success (${duration.toFixed(2)}ms)`
+            }) with success (${duration.toFixed(2)}ms)`,
+            { job, duration, success: true }
           );
         }
         // TODO: retry logic, in case of server connection interruption
@@ -196,9 +198,9 @@ export function makeNewWorker(
       }
     } catch (fatalError) {
       const when = err ? `after failure '${err.message}'` : "after success";
-      // eslint-disable-next-line no-console
-      console.error(
-        `Failed to release job '${job.id}' ${when}; committing seppuku\n${fatalError.message}`
+      logger.error(
+        `Failed to release job '${job.id}' ${when}; committing seppuku\n${fatalError.message}`,
+        { fatalError, job }
       );
       promise.reject(fatalError);
       release();
