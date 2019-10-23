@@ -15,7 +15,6 @@ const argv = yargs
   .string("connection")
   .option("once", {
     description: "Run until there are no runnable jobs left, then exit",
-    alias: "1",
     default: false,
   })
   .boolean("once")
