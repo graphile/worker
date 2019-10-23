@@ -1,4 +1,3 @@
-BEGIN;
 -- Create the tables
 create table graphile_worker.job_queues (
   queue_name text not null primary key,
@@ -161,4 +160,3 @@ begin
 end;
 $$ language plpgsql;
 
-COMMIT;

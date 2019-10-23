@@ -19,13 +19,20 @@ async function runMigration(
   migrationNumber: number
 ) {
   const text = await readFile(`${__dirname}/../sql/${migrationFile}`, "utf8");
-  await client.query({
-    text,
-  });
-  await client.query({
-    text: `insert into graphile_worker.migrations (id) values ($1)`,
-    values: [migrationNumber],
-  });
+  await client.query("begin");
+  try {
+    await client.query({
+      text,
+    });
+    await client.query({
+      text: `insert into graphile_worker.migrations (id) values ($1)`,
+      values: [migrationNumber],
+    });
+    await client.query("commit");
+  } catch (e) {
+    await client.query("rollback");
+    throw e;
+  }
 }
 
 export async function migrate(client: PoolClient) {
