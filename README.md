@@ -240,8 +240,8 @@ async function main() {
     pollInterval: 2000,
 
     taskList: {
-      testTask: async (payload, { debug }) => {
-        debug(`Received ${JSON.stringify(payload)}`);
+      testTask: async (payload, helpers) => {
+        helpers.logger.debug(`Received ${JSON.stringify(payload)}`);
       },
     },
     // or: taskDirectory: `${__dirname}/tasks`,
@@ -338,9 +338,9 @@ module.exports = async payload => {
 
 ```js
 // tasks/task_2.js
-module.exports = async (payload, { debug }) => {
+module.exports = async (payload, helpers) => {
   // async is optional, but best practice
-  debug(`Received ${JSON.stringify(payload)}`);
+  helpers.logger.debug(`Received ${JSON.stringify(payload)}`);
 };
 ```
 
