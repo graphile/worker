@@ -5,6 +5,7 @@ import { run, runOnce } from "./index";
 import * as yargs from "yargs";
 import { POLL_INTERVAL, CONCURRENT_JOBS } from "./config";
 import { defaultLogger } from "./logger";
+import { runMigrations } from "./runner";
 
 const argv = yargs
   .option("connection", {
@@ -13,6 +14,11 @@ const argv = yargs
     alias: "c",
   })
   .string("connection")
+  .option("schema-only", {
+    description: "Just install (or update) the database schema, then exit",
+    default: false,
+  })
+  .boolean("schema-only")
   .option("once", {
     description: "Run until there are no runnable jobs left, then exit",
     default: false,
@@ -52,8 +58,15 @@ const isInteger = (n: number): boolean => {
 async function main() {
   const DATABASE_URL = argv.connection || process.env.DATABASE_URL || undefined;
   const ONCE = argv.once;
+  const SCHEMA_ONLY = argv["schema-only"];
   const WATCH = argv.watch;
 
+  if (SCHEMA_ONLY && WATCH) {
+    throw new Error("Cannot specify both --watch and --schema-only");
+  }
+  if (SCHEMA_ONLY && ONCE) {
+    throw new Error("Cannot specify both --once and --schema-only");
+  }
   if (WATCH && ONCE) {
     throw new Error("Cannot specify both --watch and --once");
   }
@@ -66,6 +79,15 @@ async function main() {
 
   // TODO: allow overriding the logger
   const logger = defaultLogger;
+
+  if (SCHEMA_ONLY) {
+    await runMigrations({
+      connectionString: DATABASE_URL,
+      logger,
+    });
+    console.log("Schema updated");
+    return;
+  }
 
   const watchedTasks = await getTasks(`${process.cwd()}/tasks`, WATCH, logger);
 

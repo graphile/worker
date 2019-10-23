@@ -1,9 +1,13 @@
 import { migrate } from "../src/migrate";
 import { withPgClient } from "./helpers";
 
-test("migration installs schema; second migration does no harm", () =>
-  withPgClient(async pgClient => {
+test("migration installs schema; second migration does no harm", async () => {
+  await withPgClient(async pgClient => {
     await pgClient.query("drop schema if exists graphile_worker cascade;");
+  });
+  // We need to use a fresh connection after dropping the schema because the SQL
+  // functions' plans get cached using the stale OIDs.
+  await withPgClient(async pgClient => {
     // Assert DB is empty
     const {
       rows: [graphileWorkerNamespaceBeforeMigration],
@@ -45,4 +49,5 @@ test("migration installs schema; second migration does no harm", () =>
       expect(jobsRows).toHaveLength(1);
       expect(jobsRows[0].task_identifier).toEqual("assert_jobs_work");
     }
-  }));
+  });
+});

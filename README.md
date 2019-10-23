@@ -188,7 +188,9 @@ Options:
   --version         Show version number                                [boolean]
   --connection, -c  Database connection string, defaults to the 'DATABASE_URL'
                     envvar                                              [string]
-  --once, -1        Run until there are no runnable jobs left, then exit
+  --schema-only     Just install (or update) the database schema, then exit
+                                                      [boolean] [default: false]
+  --once            Run until there are no runnable jobs left, then exit
                                                       [boolean] [default: false]
   --watch, -w       [EXPERIMENTAL] Watch task files for changes, automatically
                     reloading the task code without restarting worker
@@ -207,7 +209,9 @@ Options:
 
 `runOnce(options)` is the equivalent of running the cli with the `--once` option. The function will run until there are no runnable jobs left.
 
-The following options for both methods are available.
+`runMigrations(options)` is the equivalent of running the cli with the `--schema-only` option. Runs the migrations and then returns.
+
+The following options for these methods are available.
 
 - `concurrency`: The equivalent of the cli `--jobs` option with the same default value.
 - `pollInterval`: The equivalent of the cli `--poll-interval` option with the same default value.
@@ -219,7 +223,10 @@ The following options for both methods are available.
   - `taskDirectory`: A path string to a directory containing the task handlers.
   - `taskList`: An object with the task names as keys and a corresponding task handler functions as values
 
-Exactly one of either `taskDirectory` or `taskList` must be provided. The same applies to `connectionString` and `pgPool`.
+Exactly one of either `taskDirectory` or `taskList` must be provided (except for `runMigrations` which doesn't require a task list).
+
+Either `connectionString` or `pgPool` must be provided, or the `DATABASE_URL`
+envvar must be set.
 
 **Example**
 

@@ -10,6 +10,7 @@ BREAKING CHANGES:
 
 New features:
 
+- Added `--schema-only` CLI flag for installing/updating the schema (running migrations) only
 - It's now possible to override how logs are output by supplying a `logFactory` (see README)
 - `query` helper reduces boilerplate
 
