@@ -76,21 +76,20 @@ export function makeNewWorker(
           supportedTaskNames,
         ])
       );
+
+      // `doNext` cannot be executed concurrently, so we know this is safe.
+      // eslint-disable-next-line require-atomic-updates
       activeJob = jobRow && jobRow.id ? jobRow : null;
     } catch (err) {
       if (continuous) {
         contiguousErrors++;
         debug(
-          `Failed to acquire job: ${
-            err.message
-          } (${contiguousErrors}/${MAX_CONTIGUOUS_ERRORS})`
+          `Failed to acquire job: ${err.message} (${contiguousErrors}/${MAX_CONTIGUOUS_ERRORS})`
         );
         if (contiguousErrors >= MAX_CONTIGUOUS_ERRORS) {
           promise.reject(
             new Error(
-              `Failed ${contiguousErrors} times in a row to acquire job; latest error: ${
-                err.message
-              }`
+              `Failed ${contiguousErrors} times in a row to acquire job; latest error: ${err.message}`
             )
           );
           release();
@@ -116,7 +115,6 @@ export function makeNewWorker(
     if (!activeJob) {
       if (continuous) {
         if (active) {
-          // eslint-disable-next-line prefer-conditional-expression
           if (again) {
             // This could be a synchronisation issue where we were notified of
             // the job but it's not visible yet, lets try again in just a
@@ -200,14 +198,14 @@ export function makeNewWorker(
       const when = err ? `after failure '${err.message}'` : "after success";
       // eslint-disable-next-line no-console
       console.error(
-        `Failed to release job '${job.id}' ${when}; committing seppuku\n${
-          fatalError.message
-        }`
+        `Failed to release job '${job.id}' ${when}; committing seppuku\n${fatalError.message}`
       );
       promise.reject(fatalError);
       release();
       return;
     } finally {
+      // `doNext` cannot be executed concurrently, so we know this is safe.
+      // eslint-disable-next-line require-atomic-updates
       activeJob = null;
     }
     if (active) {
