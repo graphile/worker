@@ -1,5 +1,12 @@
 # Changelog
 
+### v0.1.0
+
+- Add database 'error' handler to avoid crashes (@madflow #26)
+- `DATABASE_URL` can now be used in place of `connectionString` (@madflow, @benjie ~~#20~~ #27)
+- Improve documentation (@madflow, @archlemon, @benjie #11 #18 #31 #33)
+- Improve testing (@madflow #19 #30)
+
 ### v0.1.0-alpha.0
 
 Now usable as a library as well as a CLI.
