@@ -43,6 +43,8 @@ export function makeHelpers(
     job,
     logger: jobLogger,
     withPgClient,
+    query: (queryText, values) =>
+      withPgClient(pgClient => pgClient.query(queryText, values)),
     addJob: makeAddJob(withPgClient),
     // TODO: add an API for giving workers more helpers
   };

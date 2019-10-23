@@ -9,6 +9,7 @@ BREAKING CHANGES:
 New features:
 
 - It's now possible to override how logs are output by supplying a `logFactory` (see README)
+- `query` helper reduces boilerplate
 
 ### v0.1.0
 

@@ -1,4 +1,4 @@
-import { PoolClient, Pool } from "pg";
+import { PoolClient, Pool, QueryResultRow, QueryResult } from "pg";
 import { Logger } from "./logger";
 
 /*
@@ -29,6 +29,10 @@ export interface Helpers {
   job: Job;
   logger: Logger;
   withPgClient: WithPgClient;
+  query<R extends QueryResultRow = any>(
+    queryText: string,
+    values?: any[]
+  ): Promise<QueryResult<R>>;
   addJob: AddJobFunction;
 }
 

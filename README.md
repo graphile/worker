@@ -351,6 +351,7 @@ Each task function is passed two arguments:
   - `logger` - a scoped Logger instance, to aid tracing/debugging
   - `job` - the whole job (including `uuid`, `attempts`, etc) - you shouldn't need this
   - `withPgClient` - a helper to use to get a database client
+  - `query(sql, values)` - a convenience wrapper for `withPgClient(pgClient => pgClient.query(sql, values))`
   - `addJob` - a helper to schedule a job
 
 ### helpers
