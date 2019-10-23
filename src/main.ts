@@ -1,4 +1,5 @@
 import { Pool, PoolClient } from "pg";
+import { inspect } from "util";
 import {
   TaskList,
   Worker,
@@ -7,28 +8,25 @@ import {
   WorkerOptions,
   WorkerPoolOptions,
 } from "./interfaces";
-import debug from "./debug";
 import deferred from "./deferred";
 import SIGNALS from "./signals";
 import { makeNewWorker } from "./worker";
-import { defaultLogger as logger } from "./logger";
 
 import {
   makeWithPgClientFromPool,
   makeWithPgClientFromClient,
 } from "./helpers";
 import { CONCURRENT_JOBS } from "./config";
+import { defaultLogger, Logger } from "./logger";
 
 const allWorkerPools: Array<WorkerPool> = [];
 
 // Exported for testing only
 export { allWorkerPools as _allWorkerPools };
 
-debug("Booting worker");
-
 let _registeredSignalHandlers = false;
 let _shuttingDown = false;
-function registerSignalHandlers() {
+function registerSignalHandlers(logger: Logger) {
   if (_shuttingDown) {
     throw new Error(
       "System has already gone into shutdown, should not be spawning new workers now!"
@@ -39,14 +37,17 @@ function registerSignalHandlers() {
   }
   _registeredSignalHandlers = true;
   SIGNALS.forEach(signal => {
-    debug("Registering signal handler for ", signal);
+    logger.debug(`Registering signal handler for ${signal}`, {
+      registeringSignalHandler: signal,
+    });
     const removeHandler = () => {
-      debug("Removing signal handler for ", signal);
+      logger.debug(`Removing signal handler for ${signal}`, {
+        unregisteringSignalHandler: signal,
+      });
       process.removeListener(signal, handler);
     };
     const handler = function() {
-      // eslint-disable-next-line no-console
-      console.error(`Received '${signal}'; attempting graceful shutdown...`);
+      logger.error(`Received '${signal}'; attempting graceful shutdown...`);
       setTimeout(removeHandler, 5000);
       if (_shuttingDown) {
         return;
@@ -58,10 +59,7 @@ function registerSignalHandlers() {
         )
       ).finally(() => {
         removeHandler();
-        // eslint-disable-next-line no-console
-        console.error(
-          `Graceful shutdown attempted; killing self via ${signal}`
-        );
+        logger.error(`Graceful shutdown attempted; killing self via ${signal}`);
         process.kill(process.pid, signal);
       });
     };
@@ -74,11 +72,12 @@ export function runTaskList(
   pgPool: Pool,
   options: WorkerPoolOptions = {}
 ): WorkerPool {
-  debug(`Worker pool options are %O`, options);
+  const { logger = defaultLogger } = options;
+  logger.debug(`Worker pool options are ${inspect(options)}`, { options });
   const { concurrency = CONCURRENT_JOBS, ...workerOptions } = options;
 
   // Clean up when certain signals occur
-  registerSignalHandlers();
+  registerSignalHandlers(logger);
 
   const promise = deferred();
   const workers: Array<Worker> = [];
@@ -105,9 +104,9 @@ export function runTaskList(
     release: () => void
   ) => {
     if (err) {
-      // eslint-disable-next-line no-console
-      console.error(
-        `Error connecting with notify listener (trying again in 5 seconds): ${err.message}`
+      logger.error(
+        `Error connecting with notify listener (trying again in 5 seconds): ${err.message}`,
+        { error: err }
       );
       // Try again in 5 seconds
       setTimeout(() => {
@@ -128,12 +127,16 @@ export function runTaskList(
 
     // On error, release this client and try again
     client.on("error", (e: Error) => {
-      logger.error("Error with database notify listener", e.message);
+      logger.error(`Error with database notify listener: ${e.message}`, {
+        error: e,
+      });
       listenForChangesClient = null;
       try {
         release();
       } catch (e) {
-        logger.error("Error occurred releasing client: " + e.stack);
+        logger.error(`Error occurred releasing client: ${e.stack}`, {
+          error: e,
+        });
       }
       pgPool.connect(listenForChanges);
     });
@@ -163,6 +166,7 @@ export function runTaskList(
     // Make sure we clean up after ourselves even if a signal is caught
     async gracefulShutdown(message: string) {
       try {
+        logger.debug(`Attempting graceful shutdown`);
         // Release all our workers' jobs
         const workerIds = workers.map(worker => worker.workerId);
         const jobsInProgress: Array<Job> = workers
@@ -170,7 +174,9 @@ export function runTaskList(
           .filter((job): job is Job => !!job);
         // Remove all the workers - we're shutting them down manually
         workers.splice(0, workers.length).map(worker => worker.release());
-        debug("RELEASING THE JOBS", workerIds);
+        logger.debug(`Releasing the jobs '${workerIds.join(", ")}'`, {
+          workerIds,
+        });
         const { rows: cancelledJobs } = await pgPool.query(
           `
           SELECT graphile_worker.fail_job(job_queues.locked_by, jobs.id, $2)
@@ -180,10 +186,14 @@ export function runTaskList(
         `,
           [workerIds, message, jobsInProgress.map(job => job.id)]
         );
-        debug(cancelledJobs);
-        debug("JOBS RELEASED");
+        logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
+          cancelledJobs,
+        });
+        logger.debug("Jobs released");
       } catch (e) {
-        console.error(e.message); // eslint-disable-line no-console
+        logger.error(`Error occurred during graceful shutdown: ${e.message}`, {
+          error: e,
+        });
       }
       // Remove ourself from the list of worker pools
       this.release();

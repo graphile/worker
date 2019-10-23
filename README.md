@@ -45,8 +45,9 @@ The names of these files will be the task identifiers, e.g. `hello` below:
 
 ```js
 // tasks/hello.js
-module.exports = async ({ name }) => {
-  console.log(`Hello, ${name}`);
+module.exports = async (payload, helpers) => {
+  const { name } = payload;
+  helpers.logger.info(`Hello, ${name}`);
 };
 ```
 
@@ -92,7 +93,7 @@ async function main() {
     // you can set the taskList or taskDirectory but not both
     taskList: {
       testTask: async (payload, helpers) => {
-        console.log("working on task...");
+        helpers.logger.debug("working on task...");
       },
     },
     // or:
@@ -210,6 +211,7 @@ The following options for both methods are available.
 
 - `concurrency`: The equivalent of the cli `--jobs` option with the same default value.
 - `pollInterval`: The equivalent of the cli `--poll-interval` option with the same default value.
+- `logger`: To change how log messages are output you may provide a custom logger; see `logger` below
 - the database is identified through one of these options:
   - `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
   - `pgPool`: A `pg.Pool` instance to use
@@ -252,6 +254,48 @@ main().catch(err => {
   process.exit(1);
 });
 ```
+
+### The logger option
+
+You may customise where log messages from graphile-worker (and your tasks) go by supplying a custom `Logger` instance using your own `logFactory`.
+
+```js
+const { Logger, run } = require("graphile-worker");
+
+/* Replace this function with your own implementation */
+function logFactory(scope) {
+  return (level, message, meta) => {
+    console.log(level, message, scope, meta);
+  };
+}
+
+const logger = new Logger(logFactory);
+
+// Pass the logger to the 'run' method as part of options:
+run({
+  logger,
+  /* pgPool, taskList, etc... */
+});
+```
+
+Your `logFactory` function will be passed a scope object which may contain the following keys (all optional):
+
+- `label` (string): a rough description of the type of action ('watch', 'worker' and 'job' are the currently used values).
+- `workerId` (string): the ID of the worker instance
+- `taskIdentifier` (string): the task name (identifier) of the running job
+- `jobId` (number): the id of the running job
+
+And it should return a logger function which will receive these three arguments:
+
+- `level` ('error', 'warning', 'info' or 'debug') - severity of the log message
+- `message` (string) - the log message itself
+- `meta` (optional object) - may contain other useful metadata, useful in structured logging systems
+
+The return result of the logger function is currently ignored; but we strongly recommend that for future compatibility you do not return anything from your logger function.
+
+See `consoleLogFactory` in [src/logger.ts](src/logger.ts) for an example logFactory.
+
+**NOTE**: you do not need to (and should not) customise, inherit or extend the `Logger` class at all.
 
 ## Creating task executors
 
@@ -304,12 +348,27 @@ Each task function is passed two arguments:
 
 - `payload` - the payload you passed when calling `add_job`
 - `helpers` - an object containing:
-  - `debug` - a helpful [`debug`](https://www.npmjs.com/package/debug) instance scoped to the name of the task (use the `DEBUG` envvar to expose)
+  - `logger` - a scoped Logger instance, to aid tracing/debugging
   - `job` - the whole job (including `uuid`, `attempts`, etc) - you shouldn't need this
   - `withPgClient` - a helper to use to get a database client
   - `addJob` - a helper to schedule a job
 
-#### `withPgClient(callback)`
+### helpers
+
+#### `helpers.logger`
+
+So that you may redirect logs to your preferred logging provider, we have
+enabled you to supply your own logging provider. Overriding this is currently
+only available in library mode. We then wrap this logging provider with a
+helper class to ease debugging; the helper class has the following methods:
+
+- `error(message, meta?)`: for logging errors, similar to `console.error`
+- `warn(message, meta?)`: for logging warnings, similar to `console.warn`
+- `info(message, meta?)`: for logging informational messages, similar to `console.info`
+- `debug(message, meta?)`: to aid with debugging, similar to `console.log`
+- `scope(additionalScope)`: returns a new `Logger` instance with additional scope information
+
+#### `helpers.withPgClient(callback)`
 
 `withPgClient` gets a `pgClient` from the pool, calls `await callback(pgClient)`, and finally releases the client and returns the result of
 `callback`. This workflow makes testing your tasks easier.
@@ -322,7 +381,7 @@ const {
 } = await withPgClient(pgClient => pgClient.query("select 1 as one"));
 ```
 
-#### `addJob(identifier, payload?, options?)`
+#### `helpers.addJob(identifier, payload?, options?)`
 
 Schedules a job; arguments:
 

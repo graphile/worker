@@ -2,21 +2,28 @@ import { basename } from "path";
 import * as chokidar from "chokidar";
 import { isValidTask, TaskList, WatchedTaskList } from "./interfaces";
 import { tryStat, readdir } from "./fs";
-import debug from "./debug";
 import { fauxRequire } from "./module";
+import { defaultLogger, Logger } from "./logger";
 
-function validTasks(obj: any): TaskList {
+function validTasks(
+  logger: Logger,
+  obj: { [taskName: string]: unknown }
+): TaskList {
   const tasks: TaskList = {};
   Object.keys(obj).forEach(taskName => {
     const task = obj[taskName];
     if (isValidTask(task)) {
       tasks[taskName] = task;
     } else {
-      // eslint-disable-next-line no-console
-      console.warn(
+      logger.warn(
         `Not a valid task '${taskName}' - expected function, received ${
           task ? typeof task : String(task)
-        }.`
+        }.`,
+        {
+          invalidTask: true,
+          task,
+          taskName,
+        }
       );
     }
   });
@@ -24,7 +31,8 @@ function validTasks(obj: any): TaskList {
 }
 
 async function loadFileIntoTasks(
-  tasks: any,
+  logger: Logger,
+  tasks: { [taskName: string]: unknown },
   filename: string,
   name: string | null = null,
   watch: boolean = false
@@ -56,16 +64,17 @@ async function loadFileIntoTasks(
       !replacementModule.default ||
       typeof replacementModule.default === "function"
     ) {
-      Object.assign(tasks, validTasks(replacementModule));
+      Object.assign(tasks, validTasks(logger, replacementModule));
     } else {
-      Object.assign(tasks, validTasks(replacementModule.default));
+      Object.assign(tasks, validTasks(logger, replacementModule.default));
     }
   }
 }
 
 export default async function getTasks(
   taskPath: string,
-  watch = false
+  watch = false,
+  logger = defaultLogger
 ): Promise<WatchedTaskList> {
   const pathStat = await tryStat(taskPath);
   if (!pathStat) {
@@ -78,29 +87,34 @@ export default async function getTasks(
   let taskNames: Array<string> = [];
   const tasks: TaskList = {};
 
-  const debugSupported = () => {
+  const debugSupported = (debugLogger = logger) => {
     const oldTaskNames = taskNames;
     taskNames = Object.keys(tasks).sort();
     if (oldTaskNames.join(",") !== taskNames.join(",")) {
-      debug(`Supported task names: '${taskNames.join("', '")}'`);
+      debugLogger.debug(`Supported task names: '${taskNames.join("', '")}'`, {
+        taskNames,
+      });
     }
   };
 
+  const watchLogger = logger.scope({ label: "watch" });
   if (pathStat.isFile()) {
     if (watch) {
       watchers.push(
         chokidar.watch(taskPath, { ignoreInitial: true }).on("all", () => {
-          loadFileIntoTasks(tasks, taskPath, null, watch)
-            .then(debugSupported)
-            .catch(e => {
-              // eslint-disable-next-line no-console
-              console.error(`Error in ${taskPath}: ${e.message}`);
+          loadFileIntoTasks(watchLogger, tasks, taskPath, null, watch)
+            .then(() => debugSupported(watchLogger))
+            .catch(error => {
+              watchLogger.error(`Error in ${taskPath}: ${error.message}`, {
+                taskPath,
+                error,
+              });
             });
         })
       );
     }
     // Try and require it
-    await loadFileIntoTasks(tasks, taskPath, null, watch);
+    await loadFileIntoTasks(logger, tasks, taskPath, null, watch);
   } else if (pathStat.isDirectory()) {
     if (watch) {
       watchers.push(
@@ -112,13 +126,21 @@ export default async function getTasks(
             const taskName = basename(eventFilePath, ".js");
             if (event === "unlink") {
               delete tasks[taskName];
-              debugSupported();
+              debugSupported(watchLogger);
             } else {
-              loadFileIntoTasks(tasks, eventFilePath, taskName, watch)
-                .then(debugSupported)
-                .catch(e => {
-                  // eslint-disable-next-line no-console
-                  console.error(`Error in ${eventFilePath}: ${e.message}`);
+              loadFileIntoTasks(
+                watchLogger,
+                tasks,
+                eventFilePath,
+                taskName,
+                watch
+              )
+                .then(() => debugSupported(watchLogger))
+                .catch(error => {
+                  watchLogger.error(
+                    `Error in ${eventFilePath}: ${error.message}`,
+                    { eventFilePath, error }
+                  );
                 });
             }
           })
@@ -132,15 +154,16 @@ export default async function getTasks(
         const taskName = file.substr(0, file.length - 3);
         try {
           await loadFileIntoTasks(
+            logger,
             tasks,
             `${taskPath}/${file}`,
             taskName,
             watch
           );
-        } catch (e) {
-          const message = `Error processing '${taskPath}/${file}': ${e.message}`;
+        } catch (error) {
+          const message = `Error processing '${taskPath}/${file}': ${error.message}`;
           if (watch) {
-            console.error(message); // eslint-disable-line no-console
+            watchLogger.error(message, { error });
           } else {
             throw new Error(message);
           }

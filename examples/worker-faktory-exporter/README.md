@@ -1,6 +1,6 @@
 # Graphile-Worker use case
 
-Use `graphile-worker` to export jobs to the [Faktory](https://github.com/contribsys/faktory) work server. With Faktory you can execute jobs with any language by clients using the Faktory API to fetch a job from a queue. 
+Use `graphile-worker` to export jobs to the [Faktory](https://github.com/contribsys/faktory) work server. With Faktory you can execute jobs with any language by clients using the Faktory API to fetch a job from a queue.
 
 # Tutorial
 
@@ -21,7 +21,10 @@ Use `graphile-worker` to export jobs to the [Faktory](https://github.com/contrib
 // tasks/faktory-export.js
 const faktory = require("faktory-worker");
 
-module.exports = async ({ param }) => {
+module.exports = async (payload, helpers) => {
+  const { param } = payload;
+  const { logger } = helpers;
+
   // https://github.com/contribsys/faktory/wiki/The-Job-Payload
   const payloadOptions = {
     jobType: "FaktoryJob",
@@ -32,7 +35,7 @@ module.exports = async ({ param }) => {
 
   const jid = await faktoryClient.push(payloadOptions);
 
-  console.log(`Received jid from Faktory: ${jid}. Thanks Faktory!`);
+  logger.info(`Received jid from Faktory: ${jid}. Thanks Faktory!`);
 
   await faktoryClient.close();
 };
@@ -40,19 +43,16 @@ module.exports = async ({ param }) => {
 
 ## Run the worker and add a job for Faktory
 
-1. Set required environment variables and start the worker 
+1. Set required environment variables and start the worker
 
 ```BASH
   export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
   export FAKTORY_URL=tcp://:faktorypass@localhost:7419
   $(yarn bin)/graphile-worker
 ```
+
 2. Add a job
 
 ```SQL
   SELECT graphile_worker.add_job('faktory-exporter', '{"param": "sth"}');
 ```
-
-
-
-
