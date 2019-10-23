@@ -82,20 +82,27 @@ You should see the worker output `Hello, Bobby Tables`. Gosh, that was fast!
 Instead of running `graphile-worker` via the CLI, you may use it directly in your Node.js code:
 
 ```js
-import { run } from "graphile-worker";
+const { run } = require("graphile-worker");
 
-const runner = await run({
-  connectionString: "postgres:///",
-  concurrency: 5,
-  pollInterval: 1000,
-  // you can set the taskList or taskDirectory but not both
-  taskList: {
-    testTask: async (payload, helpers) => {
-      console.log("working on task...");
+async function main() {
+  const runner = await run({
+    connectionString: "postgres:///",
+    concurrency: 5,
+    pollInterval: 1000,
+    // you can set the taskList or taskDirectory but not both
+    taskList: {
+      testTask: async (payload, helpers) => {
+        console.log("working on task...");
+      },
     },
-  },
-  // or:
-  //   taskDirectory: `${__dirname}/tasks`,
+    // or:
+    //   taskDirectory: `${__dirname}/tasks`,
+  });
+}
+
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
 });
 ```
 
@@ -149,6 +156,7 @@ PostgreSQL 10+\* and Node 10+\*.
 If your database doesn't already include the `pgcrypto` and `uuid-ossp`
 extensions we'll automatically install them into the public schema for you. If
 you have them installed in a different schema (unlikely) you may face issues.
+Making alias functions in the public schema, should solve this issue.
 
 \* Might work with older versions, but has not been tested.
 
