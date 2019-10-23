@@ -430,6 +430,12 @@ You can skip parameters you don't need by using PostgreSQL's named parameter sup
 SELECT graphile_worker.add_job('reminder', run_at := NOW() + INTERVAL '2 days');
 ```
 
+**NOTE:** `graphile_worker.add_job(...)` requires database owner privileges
+to execute. To allow lower-privileged users to call it, wrap it inside a
+PostgreSQL function marked as `SECURITY DEFINER` so that it will run
+with the same privileges as the more powerful user that defined it. (Be
+sure that this function performs any access checks that are necessary.)
+
 ### Example: scheduling job from trigger
 
 This snippet creates a trigger function which adds a job to execute
