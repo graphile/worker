@@ -39,15 +39,28 @@ export function makeHelpers(
     taskIdentifier: job.task_identifier,
     jobId: job.id,
   });
-  return {
+  const helpers: Helpers = {
     job,
     logger: jobLogger,
     withPgClient,
     query: (queryText, values) =>
       withPgClient(pgClient => pgClient.query(queryText, values)),
     addJob: makeAddJob(withPgClient),
+
     // TODO: add an API for giving workers more helpers
   };
+
+  // DEPRECATED METHODS
+  Object.assign(helpers, {
+    debug(format: string, ...parameters: any[]): void {
+      jobLogger.error(
+        "REMOVED: `helpers.debug` has been replaced with `helpers.logger.debug`; please do not use `helpers.debug`"
+      );
+      jobLogger.debug(format, { parameters });
+    },
+  } as any);
+
+  return helpers;
 }
 
 export function makeWithPgClientFromPool(pgPool: Pool) {
