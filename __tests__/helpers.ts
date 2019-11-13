@@ -2,6 +2,8 @@ import * as pg from "pg";
 import { Job } from "../src/interfaces";
 import { migrate } from "../src/migrate";
 
+process.env.GRAPHILE_WORKER_DEBUG = "1";
+
 export const TEST_CONNECTION_STRING = "graphile_worker_test";
 
 export async function withPgPool<T = any>(
@@ -66,7 +68,7 @@ export async function jobCount(
   pgPoolOrClient: pg.Pool | pg.PoolClient
 ): Promise<number> {
   const {
-    rows: [row]
+    rows: [row],
   } = await pgPoolOrClient.query(
     "select count(*)::int from graphile_worker.jobs"
   );
@@ -85,7 +87,7 @@ export function makeMockJob(taskIdentifier: string): Job {
     attempts: 0,
     last_error: null,
     created_at: createdAt,
-    updated_at: createdAt
+    updated_at: createdAt,
   };
 }
 
