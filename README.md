@@ -155,9 +155,9 @@ discord: http://discord.gg/graphile
 
 PostgreSQL 10+\* and Node 10+\*.
 
-If your database doesn't already include the `pgcrypto` and `uuid-ossp`
-extensions we'll automatically install them into the public schema for you. If
-you have them installed in a different schema (unlikely) you may face issues.
+If your database doesn't already include the `pgcrypto` extension
+we'll automatically install it into the public schema for you. If the
+extension is installed in a different schema (unlikely) you may face issues.
 Making alias functions in the public schema, should solve this issue (see issue [#43](https://github.com/graphile/worker/issues/43) for an example).
 
 \* Might work with older versions, but has not been tested.

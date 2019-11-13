@@ -4,7 +4,6 @@ import { readdir, readFile } from "./fs";
 async function installSchema(client: PoolClient) {
   await client.query(`
     create extension if not exists pgcrypto with schema public;
-    create extension if not exists "uuid-ossp" with schema public;
     create schema graphile_worker;
     create table graphile_worker.migrations(
       id int primary key,
