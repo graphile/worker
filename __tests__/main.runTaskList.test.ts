@@ -5,7 +5,7 @@ import { runTaskList } from "../src/main";
 import deferred, { Deferred } from "../src/deferred";
 import { Pool } from "pg";
 
-const addJob = (pgPool: Pool, id: string | number) =>
+const addJob = (pgPool: Pool, id?: string | number) =>
   pgPool.query(
     `select graphile_worker.add_job('job1', json_build_object('id', $1::text), 'serial')`,
     [String(id != null ? id : Math.random())]
@@ -58,4 +58,22 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
     expect(finished).toBeTruthy();
     await workerPool.promise;
     expect(await jobCount(pgPool)).toEqual(0);
+  }));
+
+test("doesn't bail on deprecated `debug` function", () =>
+  withPgPool(async pgPool => {
+    await reset(pgPool);
+    let jobPromise: Deferred<void> | null = null;
+    const tasks: TaskList = {
+      job1(payload, helpers) {
+        // @ts-ignore Not officially supported
+        helpers.debug("Hey %o", payload);
+        jobPromise = deferred();
+      },
+    };
+    const workerPool = runTaskList(tasks, pgPool, { concurrency: 3 });
+    await addJob(pgPool);
+    await sleepUntil(() => !!jobPromise);
+    jobPromise!.resolve();
+    await workerPool.release();
   }));
