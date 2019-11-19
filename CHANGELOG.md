@@ -1,6 +1,6 @@
 # Changelog
 
-### v0.2.0 (unreleased)
+### v0.2.0
 
 BREAKING CHANGES:
 
@@ -13,6 +13,10 @@ New features:
 - Added `--schema-only` CLI flag for installing/updating the schema (running migrations) only
 - It's now possible to override how logs are output by supplying a `logFactory` (see README)
 - `query` helper reduces boilerplate
+
+Fixes:
+
+- We never needed `uuid-ossp` so we've removed the requirement (you may want to remove the extension from your DB manually)
 
 ### v0.1.0
 
