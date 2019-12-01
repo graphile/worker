@@ -36,7 +36,7 @@ export interface Helpers {
   addJob: AddJobFunction;
 }
 
-export type Task = (payload: unknown, helpers: Helpers) => void | Promise<void>;
+export type Task = (payload: any, helpers: Helpers) => void | Promise<void>;
 
 export function isValidTask(fn: unknown): fn is Task {
   if (typeof fn === "function") {
