@@ -265,6 +265,17 @@ main().catch(err => {
 
 ### The logger option
 
+If you want to modify just the scope of the default logger, you can do so simply.  For example:
+
+```js
+const { defaultLogger, run } = require("graphile-worker");
+
+run({
+  logger: defaultLogger.scope({ workerId: 'Worker #1' }),
+  /* pgPool, taskList, etc... */
+});
+```
+
 You may customise where log messages from graphile-worker (and your tasks) go by supplying a custom `Logger` instance using your own `logFactory`.
 
 ```js
