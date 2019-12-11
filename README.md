@@ -217,6 +217,7 @@ The following options for these methods are available.
 - `concurrency`: The equivalent of the cli `--jobs` option with the same default value.
 - `pollInterval`: The equivalent of the cli `--poll-interval` option with the same default value.
 - `logger`: To change how log messages are output you may provide a custom logger; see `logger` below
+- `workerId`: Static worker ID used for created workers; should only be used with `concurrency: 1`
 - the database is identified through one of these options:
   - `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
   - `pgPool`: A `pg.Pool` instance to use

@@ -121,7 +121,7 @@ export interface WorkerOptions extends WorkerSharedOptions {
   workerId?: string;
 }
 
-export interface WorkerPoolOptions extends WorkerSharedOptions {
+export interface WorkerPoolOptions extends WorkerOptions {
   /**
    * Number of jobs to run concurrently
    */
