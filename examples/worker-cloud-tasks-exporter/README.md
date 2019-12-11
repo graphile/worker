@@ -29,7 +29,7 @@ or if you use npm
     npm i graphile-worker
 
 ## Start a Postgres instance
-Make sure your database is running. You can use a locally installed  database, run Postgres on Docker or use Cloud SQL through a proxy. How to set up your database is out of the scope of this tutorial
+Make sure your database is running. You can use a locally installed  database, run Postgres on Docker or use Cloud SQL through a proxy. How to set up your database is out of the scope of this tutorial.
 
 ## Create a task file
 
