@@ -13,7 +13,7 @@ There are several reasons you might want to delegate from Graphile Worker to Clo
 
 ## Pre-requisites
 
-- You will need a GCP project wit billing enabled
+- You will need a GCP project with billing enabled
 - Set up Cloud Tasks following the [official docs](https://googleapis.dev/nodejs/tasks/latest/index.html)
 
 
