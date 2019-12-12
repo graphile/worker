@@ -3,9 +3,9 @@ const { CloudTasksClient } = require('@google-cloud/tasks')
 const client = new CloudTasksClient()
 
 // TODO(developer) configure your queue
-const project = 'your-gcp-project'
-const location = 'your-app-engine-location'
-const queue = 'your-queue-name'
+const project = process.env.GOOGLE_CLOUD_TASKS_PROJECT
+const location = process.env.GOOGLE_CLOUD_TASKS_LOCATION
+const queue = process.env.GOOGLE_CLOUD_TASKS_QUEUE
 
 // Construct the fully qualified queue name.
 const parent = client.queuePath(project, location, queue)

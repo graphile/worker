@@ -41,9 +41,9 @@ const { CloudTasksClient } = require('@google-cloud/tasks')
 const client = new CloudTasksClient()
 
 // TODO(developer) configure your queue
-const project = 'your-gcp-project'
-const location = 'your-app-engine-location'
-const queue = 'your-queue-name'
+const project = process.env.GOOGLE_CLOUD_TASKS_PROJECT
+const location = process.env.GOOGLE_CLOUD_TASKS_LOCATION
+const queue = process.env.GOOGLE_CLOUD_TASKS_QUEUE
 
 // Construct the fully qualified queue name.
 const parent = client.queuePath(project, location, queue)
@@ -117,13 +117,16 @@ module.exports = async (payload, { logger }) => {
 
 1. Set required environment variables and start the worker
 
-```BASH
+```bash
+  export GOOGLE_CLOUD_TASKS_PROJECT=your-project
+  export GOOGLE_CLOUD_TASKS_LOCATION=your-location
+  export GOOGLE_CLOUD_TASKS_QUEUE=your-queue
   export DATABASE_URL=your-url
   $(yarn bin)/graphile-worker
 ```
 
 2. Add a job
 
-```SQL
+```sql
   SELECT graphile_worker.add_job('cloud-task-exporter', '{"foo": "bar"}');
 ```
