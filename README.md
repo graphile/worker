@@ -69,6 +69,32 @@ you're ready, switch to using the `package.json` `"scripts"` entry instead.)
 
 ### Schedule a job:
 
+There are two ways to schedule jobs:
+
+1. From Node with the `publisher` api.
+2. In the database directly with the `add_job` SQL function.
+
+#### The Publisher API
+
+Import `runPublisher` from `graphile_worker`, pass in your database configuration options (just like you would with `run` above.) and then pass a new job into `addJob` with a name and a payload!
+
+```js
+const { runPublisher } = require("graphile-worker");
+
+async function main() {
+  const publisher = await runPublisher({ connectionString: "postgres:///" });
+  await publisher.addJob("calculate-life-meaning", {value: 42});
+}
+
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});
+
+```
+
+#### The `add_job` SQL function
+
 Connect to your database and run the following SQL:
 
 ```sql
@@ -408,11 +434,11 @@ Example:
 await addJob("task_2", { foo: "bar" });
 ```
 
-## Scheduling jobs
+## More detail on scheduling jobs through SQL
 
 You can schedule jobs directly in the database, e.g. from a trigger or
 function, or by calling SQL from your application code. You do this using the
-`graphile_worker.add_job` function. (We'll add a JS helper for this soon...)
+`graphile_worker.add_job` function.
 
 `add_job` accepts the following parameters (in this order):
 

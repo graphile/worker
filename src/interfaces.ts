@@ -87,6 +87,10 @@ export interface Runner {
   promise: Promise<void>;
 }
 
+export interface Publisher {
+  addJob: AddJobFunction;
+}
+
 export interface TaskOptions {
   /**
    * The queue to run this task under
@@ -154,4 +158,20 @@ export interface RunnerOptions extends WorkerPoolOptions {
    * default (10).
    */
   maxPoolSize?: number;
+}
+
+export interface PublisherOptions {
+  /**
+   * A PostgreSQL connection string to the database containing the job queue
+   */
+  connectionString?: string;
+  /**
+   * A pg.Pool instance to use instead of the `connectionString`
+   */
+  pgPool?: Pool;
+
+  /**
+   * How should messages be logged out? Defaults to using the console logger.
+   */
+  logger?: Logger;
 }
