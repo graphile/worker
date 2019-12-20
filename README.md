@@ -76,7 +76,7 @@ There are two ways to schedule jobs:
 
 #### The Publisher API
 
-Import `runPublisher` from `graphile_worker`, pass in your database configuration options (just like you would with `run` above.) and then pass a new job into `addJob` with a name and a payload!
+Import `runPublisher` from `graphile_worker`, pass in your database configuration options (just like you would with `run` above) and then pass a new job into `addJob` with a name and a payload.
 
 ```js
 const { runPublisher } = require("graphile-worker");
