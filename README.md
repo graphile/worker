@@ -71,7 +71,7 @@ you're ready, switch to using the `package.json` `"scripts"` entry instead.)
 
 There are two ways to schedule jobs:
 
-1. From Node with the `publisher` api.
+1. From Node with the `publisher` API.
 2. In the database directly with the `add_job` SQL function.
 
 #### The Publisher API
