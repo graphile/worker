@@ -16,5 +16,6 @@ services:
       - ./__tests__:/app/__tests__
       - ./sql:/app/sql
       - ./src:/app/src
+      - ./perfTest:/app/perfTest
     environment:
       TEST_CONNECTION_STRING: postgres://postgres@db:5432/graphile_worker_test

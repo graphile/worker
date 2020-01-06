@@ -1,24 +1,30 @@
 #!/usr/bin/env bash
 set -e
 
+# run in this script's parent directory
+cd "${0%/*}"
+
 export NO_LOG_SUCCESS=1
 
-# Reset the database
-dropdb graphile_worker_perftest || true;
-createdb graphile_worker_perftest;
+export DATABASE_URL=$TEST_CONNECTION_STRING || "graphile_worker_perftest"
+
+if [ -x "$(command -v createdb)" ]; then
+    # Reset the database if running locally
+    dropdb graphile_worker_perftest || true
+    createdb graphile_worker_perftest
+fi
 
 # Install the schema
-DATABASE_URL="graphile_worker_perftest" node ../dist/cli.js --once
+node ../dist/cli.js --once
 
 # How long does it take to start up and shut down?
-DATABASE_URL="graphile_worker_perftest" time node ../dist/cli.js --once
+time node ../dist/cli.js --once
 
 # Schedule the jobs
-psql -f init.sql graphile_worker_perftest;
+node ./init.js
 
 # Finally time the job execution
-DATABASE_URL="graphile_worker_perftest" time node ../dist/cli.js --once
+time node ../dist/cli.js --once
 
 # And test latency
 node ./latencyTest.js
-
