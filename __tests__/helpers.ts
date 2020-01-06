@@ -4,7 +4,8 @@ import { migrate } from "../src/migrate";
 
 process.env.GRAPHILE_WORKER_DEBUG = "1";
 
-export const TEST_CONNECTION_STRING = "graphile_worker_test";
+export const TEST_CONNECTION_STRING =
+  process.env.TEST_CONNECTION_STRING || "graphile_worker_test";
 
 export async function withPgPool<T = any>(
   cb: (pool: pg.Pool) => Promise<T>
