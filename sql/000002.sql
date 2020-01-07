@@ -45,6 +45,8 @@ begin
       )
       on conflict (key) do update set
         -- update job details if provided, otherwise maintain existing value
+        -- note we can't use excluded here, or the value will always be updated,
+        -- due to the coalesce statements in values ( ... ) above
         task_identifier=coalesce(add_job.identifier, jobs.task_identifier),
         payload=coalesce(add_job.payload, jobs.payload),
         queue_name=coalesce(add_job.queue_name, jobs.queue_name),
