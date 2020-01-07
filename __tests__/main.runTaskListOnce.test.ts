@@ -471,7 +471,7 @@ test("job details do not change unless specified in update", () =>
     expect(jobs).toHaveLength(1);
     expect(jobs[0]).toMatchObject(original);
 
-    // update job, but don't provided any new details
+    // update job, but don't provide any new details
     await pgClient.query(
       `select graphile_worker.add_job(
         'job1',
