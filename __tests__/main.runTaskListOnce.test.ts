@@ -342,10 +342,10 @@ test("schedules a new job if existing is being processed", () =>
     );
 
     // check there are now two jobs scheduled
-    const { rows: jobs } = await pgClient.query(
-      `select * from graphile_worker.jobs`
-    );
-    expect(jobs).toHaveLength(2);
+
+    expect(
+      (await pgClient.query(`select * from graphile_worker.jobs`)).rows
+    ).toHaveLength(2);
 
     // wait for the original job to complete - note this picks up the new job,
     // because the worker checks again for pending jobs at the end of each run
@@ -520,9 +520,70 @@ test("job details do not change unless specified in update", () =>
     });
   }));
 
-test("pending jobs can be removed", () => {});
+test("pending jobs can be removed", () =>
+  withPgClient(async pgClient => {
+    await reset(pgClient);
 
-test("jobs in progress can not be removed", () => {});
+    const tasks: TaskList = {
+      job1: jest.fn(() => {}),
+    };
+
+    // Schedule a job
+    await pgClient.query(
+      `select graphile_worker.add_job('job1', '{"a": "1"}', job_key := 'abc')`
+    );
+
+    // Assert that it has an entry in jobs / job_queues
+    expect(
+      (await pgClient.query(`select * from graphile_worker.jobs`)).rows
+    ).toHaveLength(1);
+
+    // remove the job
+    await pgClient.query(`select graphile_worker.remove_job('abc')`);
+
+    // check no jobs run
+    await runTaskListOnce(tasks, pgClient);
+    expect(tasks.job1).not.toHaveBeenCalled();
+  }));
+
+test("jobs in progress cannot be removed", () =>
+  withPgClient(async pgClient => {
+    await reset(pgClient);
+
+    const tasks: TaskList = {
+      job1: jest.fn(async () => {
+        await sleep(50);
+      }),
+    };
+
+    // Schedule a job
+    await pgClient.query(
+      `select graphile_worker.add_job('job1', '{"a": 123}', job_key := 'abc')`
+    );
+
+    // check it was inserted
+    expect(
+      (await pgClient.query(`select * from graphile_worker.jobs`)).rows
+    ).toHaveLength(1);
+
+    const promise = runTaskListOnce(tasks, pgClient);
+    // wait for it to be picked up for processing
+    await sleep(20);
+    expect(tasks.job1).toHaveBeenCalledTimes(1);
+
+    // attempt to remove the job
+    await pgClient.query(`select graphile_worker.remove_job('abc')`);
+
+    // check it was not removed
+    expect(
+      (await pgClient.query(`select * from graphile_worker.jobs`)).rows
+    ).toHaveLength(1);
+
+    // wait for the original job to complete
+    await promise;
+    expect(tasks.job1).toHaveBeenCalledTimes(1);
+    expect(tasks.job1).toHaveBeenCalledWith({ a: 123 }, expect.any(Object));
+  }));
 
 test("runs jobs asynchronously", () =>
   withPgClient(async pgClient => {

@@ -97,6 +97,17 @@ end;
 $$ language plpgsql;
 
 
+--- implement new remove_job function
+
+create function graphile_worker.remove_job(
+  job_key text
+) returns graphile_worker.jobs as $$
+  delete from graphile_worker.jobs
+    where key = job_key
+    and locked_at is null
+  returning *;
+$$ language sql;
+
 
 -- Update other functions to handle locked_at denormalisation
 
