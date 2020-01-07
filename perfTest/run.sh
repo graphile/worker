@@ -6,7 +6,7 @@ cd "${0%/*}"
 
 export NO_LOG_SUCCESS=1
 
-export DATABASE_URL=$TEST_CONNECTION_STRING || "graphile_worker_perftest"
+export DATABASE_URL="${TEST_CONNECTION_STRING:-graphile_worker_perftest}"
 
 if [ -x "$(command -v createdb)" ]; then
     # Reset the database if running locally
