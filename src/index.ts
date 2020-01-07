@@ -3,7 +3,7 @@ export * from "./interfaces";
 
 export { runTaskList, runTaskListOnce } from "./main";
 export { run, runOnce, runMigrations } from "./runner";
-export { runPublisher } from "./publisher";
+export { WorkerUtils, addJob } from "./worker_utils";
 export { Logger, LogFunctionFactory, consoleLogFactory } from "./logger";
 
 export { getTasks };
