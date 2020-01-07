@@ -5,7 +5,12 @@ alter table graphile_worker.jobs add locked_at timestamptz;
 alter table graphile_worker.jobs add locked_by text;
 
 -- update add_job behaviour to meet new requirements
-drop function graphile_worker.add_job;
+drop function if exists graphile_worker.add_job(identifier text,
+  payload json,
+  queue_name text,
+  run_at timestamptz,
+  max_attempts int
+);
 create function graphile_worker.add_job(
   identifier text,
   payload json = null,
