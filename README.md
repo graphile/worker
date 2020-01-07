@@ -439,26 +439,17 @@ You can skip parameters you don't need by using PostgreSQL's named parameter sup
 SELECT graphile_worker.add_job('reminder', run_at := NOW() + INTERVAL '2 days');
 ```
 
-If you are using a parameterized query, you will need to use this sort of syntax for a delay interval:
-```javascript
-const addTaskSqlDelay = `SELECT graphile_worker.add_job(
+**TIP**: if you want to run a job after a variable number of seconds, you can use
+interval multiplication; see `run_at` in this example:
+
+```sql
+SELECT graphile_worker.add_job(
   $1, 
   payload := $2,
   queue_name := $3,
   max_attempts := $4,
-  run_at := NOW() + ($5 * interval '1 second')
-  );
-
-await doQuery(addTaskSqlDelay,[
-  name,
-  payload,
-  queueName,
-  maxAttempts,
-  delayIntervalSeconds
-])
-`
-
-
+  run_at := NOW() + ($5 * INTERVAL '1 second')
+);
 ```
 
 **NOTE:** `graphile_worker.add_job(...)` requires database owner privileges
