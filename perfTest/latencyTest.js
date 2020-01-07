@@ -6,7 +6,7 @@ const { default: deferred } = require("../dist/deferred");
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function main() {
-  const pgPool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const pgPool = new Pool({ connectionString: process.env.PERF_DATABASE_URL });
   const startTimes = {};
   let latencies = [];
   const deferreds = {};

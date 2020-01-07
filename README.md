@@ -615,7 +615,7 @@ docker-compose exec app yarn jest -i
 Reset the test db
 
 ```
-cat __tests__/reset-db.sql | docker exec -i worker_db psql -U postgres graphile_worker_test
+cat __tests__/reset-db.sql | docker exec -i graphile_worker_db psql -U postgres graphile_worker_test
 ```
 
 Run the perf tests

@@ -1,6 +1,6 @@
 const { Pool } = require("pg");
 
-const pgPool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pgPool = new Pool({ connectionString: process.env.PERF_DATABASE_URL });
 
 pgPool.query(
   `

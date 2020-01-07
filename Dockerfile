@@ -1,12 +1,11 @@
-# common base image for development and production
-FROM node:10.18.0-alpine AS base
+FROM node:12-alpine
 RUN apk add --no-cache bash
 WORKDIR /app
 
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile && yarn cache clean
 
-COPY . .
+COPY ./__tests__ ./sql ./src ./perfTest ./tsconfig.json ./
 
 RUN yarn prepack
 
