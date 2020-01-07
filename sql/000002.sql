@@ -63,9 +63,9 @@ begin
       returning *
       into v_job;
 
+    -- if the returned id is null, assume job is already locked for processing
+    -- and couldn't be updated
     if v_job.id is null then
-      -- assume job is already locked for processing
-
       -- remove existing key to allow a new one to be inserted, and prevent any
       -- subsequent retries by bumping attempts to the max allowed
       update graphile_worker.jobs set
