@@ -106,7 +106,9 @@ If you just want the fast and easy way to add a job, and you don't mind the cost
 const { addJob } = require("graphile-worker");
 
 async function main() {
-  await addJob("calculate-life-meaning", { value: 42 });
+  await addJob({ connectionString: "postgres:///" }, "calculate-life-meaning", {
+    value: 42,
+  });
 }
 
 main().catch(err => {
