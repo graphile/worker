@@ -71,26 +71,48 @@ you're ready, switch to using the `package.json` `"scripts"` entry instead.)
 
 There are two ways to schedule jobs:
 
-1. From Node with the `publisher` API.
+1. From Node with the `WorkerUtils` or `addJob` APIs.
 2. In the database directly with the `add_job` SQL function.
 
-#### The Publisher API
+#### The WorkerUtils API
 
-Import `runPublisher` from `graphile_worker`, pass in your database configuration options (just like you would with `run` above) and then pass a new job into `addJob` with a name and a payload.
+Import `WorkerUtils` from `graphile_worker`, and make a new instance by passing in your database configuration options (just like you would with `run` above). What you get back is an instance of a class with a function called `addJob`, and a function called `end`.
+
+The `addJob` function takes a name, and a payload, and returns a promise of a job that has been added to the queue. The `end` function closes the connection, don't forget to call it yourself if you're done adding jobs and don't want to keep the pool open anymore!
 
 ```js
-const { runPublisher } = require("graphile-worker");
+const { WorkerUtils } = require("graphile-worker");
 
 async function main() {
-  const publisher = await runPublisher({ connectionString: "postgres:///" });
-  await publisher.addJob("calculate-life-meaning", {value: 42});
+  const workerUtils = new WorkerUtils({ connectionString: "postgres:///" });
+  try {
+    await workerUtils.addJob("calculate-life-meaning", { value: 42 });
+  } finally {
+    workerUtils.end();
+  }
 }
 
 main().catch(err => {
   console.error(err);
   process.exit(1);
 });
+```
 
+##### The `addJob` standalone Javascript function
+
+If you just want the fast and easy way to add a job, and you don't mind the cost of opening a DB connection pool, and then cleaning it up right away _for every job added_, there's the `addJob` convenience function:
+
+```js
+const { addJob } = require("graphile-worker");
+
+async function main() {
+  await addJob("calculate-life-meaning", { value: 42 });
+}
+
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});
 ```
 
 #### The `add_job` SQL function
