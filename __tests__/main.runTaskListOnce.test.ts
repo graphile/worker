@@ -433,7 +433,6 @@ test("schedules a new job if the existing is pending retry", () =>
   }));
 
 test("job details do not change unless specified in update", () =>
-  // queue_name, payload, task_identifier,
   withPgClient(async pgClient => {
     await reset(pgClient);
 
