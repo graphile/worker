@@ -1,4 +1,3 @@
--- TODO evaluate perf re partial indexing instead of full unique
 alter table graphile_worker.jobs add column key text unique;
 
 alter table graphile_worker.jobs add locked_at timestamptz;
@@ -180,4 +179,3 @@ begin
   return v_row;
 end;
 $$ language plpgsql;
-
