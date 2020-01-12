@@ -268,7 +268,7 @@ test("allows update of pending jobs", () =>
     );
     expect(updatedJobs).toHaveLength(1);
     const updatedJob = updatedJobs[0];
-    expect(updateJob.id).toEqual(job.id);
+    expect(updatedJob.id).toEqual(job.id);
     expect(updatedJob.run_at).toEqual(now);
 
     // Run the task

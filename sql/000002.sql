@@ -1,7 +1,14 @@
-alter table graphile_worker.jobs add column key text unique;
+alter table graphile_worker.jobs add column key text unique check(length(key) > 0);
 
 alter table graphile_worker.jobs add locked_at timestamptz;
 alter table graphile_worker.jobs add locked_by text;
+
+-- update any in-flight jobs
+update graphile_worker.jobs
+  set locked_at = q.locked_at, locked_by = q.locked_by
+  from graphile_worker.job_queues q
+  where q.queue_name = jobs.queue_name
+  and q.locked_at is not null;
 
 -- update add_job behaviour to meet new requirements
 drop function if exists graphile_worker.add_job(identifier text,
@@ -12,10 +19,10 @@ drop function if exists graphile_worker.add_job(identifier text,
 );
 create function graphile_worker.add_job(
   identifier text,
-  payload json = null,
+  payload json = '{}',
   queue_name text = null,
-  run_at timestamptz = null,
-  max_attempts int = null,
+  run_at timestamptz = now(),
+  max_attempts int = 25,
   job_key text = null
 ) returns graphile_worker.jobs as $$
 declare
@@ -25,10 +32,10 @@ begin
     insert into graphile_worker.jobs(task_identifier, payload, queue_name, run_at, max_attempts)
       values(
         identifier,
-        coalesce(payload, '{}'),
+        payload,
         coalesce(queue_name, public.gen_random_uuid()::text),
-        coalesce(run_at, now()),
-        coalesce(max_attempts, 25)
+        run_at,
+        max_attempts
       )
       returning *
       into v_job;
@@ -36,31 +43,20 @@ begin
     insert into graphile_worker.jobs (task_identifier, payload, queue_name, run_at, max_attempts, key)
       values(
         identifier,
-        coalesce(payload, '{}'),
+        payload,
         coalesce(queue_name, public.gen_random_uuid()::text),
-        coalesce(run_at, now()),
-        coalesce(max_attempts, 25),
+        run_at,
+        max_attempts,
         job_key
       )
       on conflict (key) do update set
-        -- update job details if provided, otherwise maintain existing value
-        -- note we can't use excluded here, or the value will always be updated,
-        -- due to the coalesce statements in values ( ... ) above
-        task_identifier=coalesce(add_job.identifier, jobs.task_identifier),
-        payload=coalesce(add_job.payload, jobs.payload),
+        -- update all job details other than queue_name, which we want to keep
+        -- the same unless explicitly provided
+        task_identifier=identifier,
+        payload=payload,
         queue_name=coalesce(add_job.queue_name, jobs.queue_name),
-        max_attempts=coalesce(add_job.max_attempts, jobs.max_attempts),
-
-        -- update run_at if argument is provided. If not, and there has been an
-        -- error, assume run_at reflects the error retry backoff, so reset it.
-        -- If no errors, maintain existing value by default
-        run_at=coalesce(
-          add_job.run_at,
-          (case when jobs.attempts > 0
-            then now()
-            else jobs.run_at
-          end)
-        ),
+        max_attempts=max_attempts,
+        run_at=run_at,
 
         -- always reset error/retry state
         attempts=0,
@@ -83,10 +79,10 @@ begin
       insert into graphile_worker.jobs(task_identifier, payload, queue_name, run_at, max_attempts, key)
         values(
           identifier,
-          coalesce(payload, '{}'),
+          payload,
           coalesce(queue_name, public.gen_random_uuid()::text),
-          coalesce(run_at, now()),
-          coalesce(max_attempts, 25),
+          run_at,
+          max_attempts,
           job_key
         )
         returning *
