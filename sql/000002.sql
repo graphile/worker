@@ -112,7 +112,6 @@ create or replace function graphile_worker.get_job(worker_id text, task_identifi
 declare
   v_job_id bigint;
   v_queue_name text;
-  v_default_job_max_attempts text = '25';
   v_row graphile_worker.jobs;
   v_now timestamptz = now();
 begin
