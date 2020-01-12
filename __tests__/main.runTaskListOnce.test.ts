@@ -238,7 +238,7 @@ test("allows update of pending jobs", () =>
 
     // Schedule a future job - note incorrect payload
     const runAt = new Date();
-    runAt.setSeconds(runAt.getSeconds() + 3);
+    runAt.setSeconds(runAt.getSeconds() + 60);
 
     await pgClient.query(
       `select graphile_worker.add_job('job1', '{"a": "wrong"}', run_at := '${runAt.toISOString()}', job_key := 'abc')`
