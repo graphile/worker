@@ -11,4 +11,7 @@ async function main() {
   await pgPool.query(`create database ${config.database};`);
 }
 
-main();
+main().catch(e => {
+  console.error(e);
+  process.exit(1);
+});
