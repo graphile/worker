@@ -3,7 +3,7 @@ const { parse } = require("pg-connection-string");
 
 const config = parse(process.env.PERF_DATABASE_URL);
 // don't connect to the provided db, or we can't drop it
-const pgPool = new Pool({ ...config, database: undefined });
+const pgPool = new Pool({ ...config, database: "template1" });
 
 async function main() {
   console.log(`Recreating database ${config.database}`);
