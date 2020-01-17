@@ -16,7 +16,7 @@ node ./recreateDb.js
 DATABASE_URL="$PERF_DATABASE_URL" node ../dist/cli.js --once
 
 # How long does it take to start up and shut down?
-DATABASE_URL=$PERF_DATABASE_URL time node ../dist/cli.js --once
+DATABASE_URL="$PERF_DATABASE_URL" time node ../dist/cli.js --once
 
 # Schedule the jobs
 node ./init.js
