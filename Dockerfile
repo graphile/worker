@@ -10,6 +10,7 @@ COPY ./sql ./sql
 COPY ./src  ./src
 COPY ./perfTest  ./perfTest
 COPY ./tsconfig.json ./
+COPY ./jest.config.js ./
 
 
 RUN yarn prepack
