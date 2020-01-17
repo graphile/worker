@@ -22,7 +22,7 @@ DATABASE_URL=$PERF_DATABASE_URL time node ../dist/cli.js --once
 node ./init.js
 
 # Finally time the job execution
-DATABASE_URL=$PERF_DATABASE_URL time node ../dist/cli.js --once
+DATABASE_URL="$PERF_DATABASE_URL" time node ../dist/cli.js --once
 
 # And test latency
 node ./latencyTest.js
