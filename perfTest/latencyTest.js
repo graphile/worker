@@ -6,15 +6,17 @@ const { default: deferred } = require("../dist/deferred");
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function main() {
-  const pgPool = new Pool({ connectionString: "graphile_worker_perftest" });
+  const pgPool = new Pool({ connectionString: process.env.PERF_DATABASE_URL });
   const startTimes = {};
   let latencies = [];
   const deferreds = {};
   const tasks = {
     latency: ({ id }) => {
       latencies.push(process.hrtime(startTimes[id]));
-      if (deferreds[id]) deferreds[id].resolve();
-    }
+      if (deferreds[id]) {
+        deferreds[id].resolve();
+      }
+    },
   };
   const workerPool = runTaskList(tasks, pgPool, 1);
 
@@ -84,7 +86,7 @@ async function forEmptyQueue(pgPool) {
   let remaining;
   do {
     const {
-      rows: [row]
+      rows: [row],
     } = await pgPool.query(
       `select count(*) from graphile_worker.jobs where task_identifier = 'latency'`
     );
