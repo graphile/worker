@@ -8,7 +8,6 @@ services:
       - "${PORT_DB-5432}:5432"
     environment:
       POSTGRES_DB: graphile_worker_test
-    container_name: graphile_worker_db
 
   app:
     build:
@@ -19,5 +18,4 @@ services:
       - ./src:/app/src
       - ./perfTest:/app/perfTest
     environment:
-      TEST_CONNECTION_STRING: postgres://postgres@db:5432/graphile_worker_test
-    container_name: graphile_worker_app
+      TEST_CONNECTION_STRING: "postgres://postgres@db:5432/graphile_worker_test;select 1;"

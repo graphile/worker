@@ -8,15 +8,16 @@ if (!process.env.PERF_DATABASE_URL) {
 }
 const config = parse(process.env.PERF_DATABASE_URL);
 // don't connect to the provided db, or we can't drop it
-const pgPool = new Pool({ ...config, database: "postgres" });
+
+const pgPool = new Pool({ ...config, database: "template1" });
 
 async function main() {
+  const pgClient = await pgPool.connect();
+  const dbName = pgClient.escapeIdentifier(config.database);
   console.log(`Recreating database ${config.database}`);
 
-  const pgClient = await pgPool.connect();
   try {
-    await pgPool.query(`drop database if exists ${config.database};`);
-    await pgPool.query(`create database ${config.database};`);
+    await pgClient.query(`create database ${dbName};`);
   } finally {
     pgClient.release();
   }
