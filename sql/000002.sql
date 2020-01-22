@@ -28,18 +28,8 @@ create function graphile_worker.add_job(
 declare
   v_job graphile_worker.jobs;
 begin
-  if job_key is null then
-    insert into graphile_worker.jobs(task_identifier, payload, queue_name, run_at, max_attempts)
-      values(
-        identifier,
-        payload,
-        coalesce(queue_name, public.gen_random_uuid()::text),
-        run_at,
-        max_attempts
-      )
-      returning *
-      into v_job;
-  else
+  if job_key is not null then
+    -- Upsert job
     insert into graphile_worker.jobs (task_identifier, payload, queue_name, run_at, max_attempts, key)
       values(
         identifier,
@@ -64,35 +54,38 @@ begin
       where jobs.locked_at is null
       returning *
       into v_job;
+    
+    -- If upsert succeeded (insert or update), return early
+    if not (v_job is null) then
+      return v_job;
+    end if;
 
-    -- if the returned id is null, assume job is already locked for processing
-    -- and couldn't be updated
-    if v_job.id is null then
-      -- remove existing key to allow a new one to be inserted, and prevent any
-      -- subsequent retries by bumping attempts to the max allowed
-      update graphile_worker.jobs set
+    -- Upsert failed -> there must be an existing job that is locked. Remove
+    -- existing key to allow a new one to be inserted, and prevent any
+    -- subsequent retries by bumping attempts to the max allowed.
+    update graphile_worker.jobs
+      set
         key = null,
         attempts = jobs.max_attempts
       where key = job_key;
-
-      -- insert the new job. Assume no conflicts due to the update above
-      insert into graphile_worker.jobs(task_identifier, payload, queue_name, run_at, max_attempts, key)
-        values(
-          identifier,
-          payload,
-          coalesce(queue_name, public.gen_random_uuid()::text),
-          run_at,
-          max_attempts,
-          job_key
-        )
-        returning *
-        into v_job;
-    end if;
   end if;
+
+  -- insert the new job. Assume no conflicts due to the update above
+  insert into graphile_worker.jobs(task_identifier, payload, queue_name, run_at, max_attempts, key)
+    values(
+      identifier,
+      payload,
+      coalesce(queue_name, public.gen_random_uuid()::text),
+      run_at,
+      max_attempts,
+      job_key
+    )
+    returning *
+    into v_job;
+
   return v_job;
 end;
 $$ language plpgsql volatile;
-
 
 --- implement new remove_job function
 
@@ -104,7 +97,6 @@ create function graphile_worker.remove_job(
     and locked_at is null
   returning *;
 $$ language sql strict volatile;
-
 
 -- Update other functions to handle locked_at denormalisation
 
