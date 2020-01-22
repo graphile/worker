@@ -554,10 +554,6 @@ test("pending jobs can be removed", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
 
-    const tasks: TaskList = {
-      job1: jest.fn(() => {}),
-    };
-
     // Schedule a job
     await pgClient.query(
       `select * from graphile_worker.add_job('job1', '{"a": "1"}', job_key := 'abc')`
@@ -574,10 +570,10 @@ test("pending jobs can be removed", () =>
 
     // remove the job
     await pgClient.query(`select * from graphile_worker.remove_job('abc')`);
-
-    // check no jobs run
-    await runTaskListOnce(tasks, pgClient);
-    expect(tasks.job1).not.toHaveBeenCalled();
+    // check there are no jobs
+    expect(
+      (await pgClient.query(`select * from graphile_worker.jobs`)).rows
+    ).toHaveLength(0);
   }));
 
 test("jobs in progress cannot be removed", () =>
