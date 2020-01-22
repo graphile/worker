@@ -434,7 +434,7 @@ test("schedules a new job if the existing is pending retry", () =>
     );
   }));
 
-test("job details do not change unless specified in update", () =>
+test("job details are reset if not specified in update", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
 
@@ -480,12 +480,22 @@ test("job details do not change unless specified in update", () =>
       )`
     );
 
-    // check no details have changed
+    // check omitted details have reverted to the default values, bar queue name
+    // which should not change unless explicitly updated
     const { rows: jobs2 } = await pgClient.query(
       `select * from graphile_worker.jobs`
     );
     expect(jobs2).toHaveLength(1);
-    expect(jobs2[0]).toMatchObject(original);
+    expect(jobs2[0]).toMatchObject({
+      id: jobs[0].id,
+      attempts: 0,
+      key: "abc",
+      last_error: null,
+      max_attempts: 25,
+      payload: {},
+      task_identifier: "job1",
+      queue_name: "queue1",
+    });
 
     // update job with new details
     const runAt2 = new Date();
