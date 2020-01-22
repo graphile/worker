@@ -11,11 +11,13 @@ test("runs jobs", () =>
 
     // Schedule a job
     const start = new Date();
-    await pgClient.query(`select graphile_worker.add_job('job1', '{"a": 1}')`);
+    await pgClient.query(
+      `select * from graphile_worker.add_job('job1', '{"a": 1}')`
+    );
 
     // Assert that it has an entry in jobs / job_queues
     const { rows: jobs } = await pgClient.query(
-      `select * from graphile_worker.jobs`
+      `select * from graphile_worker.jobs order by id asc`
     );
     expect(jobs).toHaveLength(1);
     const job = jobs[0];
@@ -58,11 +60,13 @@ test("schedules errors for retry", () =>
 
     // Schedule a job
     const start = new Date();
-    await pgClient.query(`select graphile_worker.add_job('job1', '{"a": 1}')`);
+    await pgClient.query(
+      `select * from graphile_worker.add_job('job1', '{"a": 1}')`
+    );
 
     {
       const { rows: jobs } = await pgClient.query(
-        `select * from graphile_worker.jobs`
+        `select * from graphile_worker.jobs order by id asc`
       );
       expect(jobs).toHaveLength(1);
       const job = jobs[0];
@@ -95,7 +99,7 @@ test("schedules errors for retry", () =>
     // Check that it failed as expected
     {
       const { rows: jobs } = await pgClient.query(
-        `select * from graphile_worker.jobs`
+        `select * from graphile_worker.jobs order by id asc`
       );
       expect(jobs).toHaveLength(1);
       const job = jobs[0];
@@ -124,7 +128,9 @@ test("retries job", () =>
     await reset(pgClient);
 
     // Add the job
-    await pgClient.query(`select graphile_worker.add_job('job1', '{"a": 1}')`);
+    await pgClient.query(
+      `select * from graphile_worker.add_job('job1', '{"a": 1}')`
+    );
     let counter = 0;
     const job1: Task = jest.fn(() => {
       throw new Error(`TEST_ERROR ${++counter}`);
@@ -156,7 +162,7 @@ test("retries job", () =>
     // And it should have been rejected again
     {
       const { rows: jobs } = await pgClient.query(
-        `select * from graphile_worker.jobs`
+        `select * from graphile_worker.jobs order by id asc`
       );
       expect(jobs).toHaveLength(1);
       const job = jobs[0];
@@ -186,7 +192,7 @@ test("supports future-scheduled jobs", () =>
 
     // Add the job
     await pgClient.query(
-      `select graphile_worker.add_job('future', run_at := now() + interval '3 seconds')`
+      `select * from graphile_worker.add_job('future', run_at := now() + interval '3 seconds')`
     );
     const future: Task = jest.fn();
     const tasks: TaskList = {
@@ -215,7 +221,7 @@ test("supports future-scheduled jobs", () =>
     // It should be successful
     {
       const { rows: jobs } = await pgClient.query(
-        `select * from graphile_worker.jobs`
+        `select * from graphile_worker.jobs order by id asc`
       );
       expect(jobs).toHaveLength(0);
       const { rows: jobQueues } = await pgClient.query(
@@ -241,12 +247,12 @@ test("allows update of pending jobs", () =>
     runAt.setSeconds(runAt.getSeconds() + 60);
 
     await pgClient.query(
-      `select graphile_worker.add_job('job1', '{"a": "wrong"}', run_at := '${runAt.toISOString()}', job_key := 'abc')`
+      `select * from graphile_worker.add_job('job1', '{"a": "wrong"}', run_at := '${runAt.toISOString()}', job_key := 'abc')`
     );
 
     // Assert that it has an entry in jobs / job_queues
     const { rows: jobs } = await pgClient.query(
-      `select * from graphile_worker.jobs`
+      `select * from graphile_worker.jobs order by id asc`
     );
     expect(jobs).toHaveLength(1);
     const job = jobs[0];
@@ -259,12 +265,12 @@ test("allows update of pending jobs", () =>
     // update the job to run immediately with correct payload
     const now = new Date();
     await pgClient.query(
-      `select graphile_worker.add_job('job1', '{"a": "right"}', run_at := '${now.toISOString()}', job_key := 'abc')`
+      `select * from graphile_worker.add_job('job1', '{"a": "right"}', run_at := '${now.toISOString()}', job_key := 'abc')`
     );
 
     // Assert that it has updated the existing entry and not created a new one
     const { rows: updatedJobs } = await pgClient.query(
-      `select * from graphile_worker.jobs`
+      `select * from graphile_worker.jobs order by id asc`
     );
     expect(updatedJobs).toHaveLength(1);
     const updatedJob = updatedJobs[0];
@@ -286,7 +292,7 @@ test("schedules a new job if existing is completed", () =>
 
     // Schedule a job to run immediately
     await pgClient.query(
-      `select graphile_worker.add_job('job1', '{"a": "first"}', job_key := 'abc')`
+      `select * from graphile_worker.add_job('job1', '{"a": "first"}', job_key := 'abc')`
     );
 
     // run the job
@@ -295,7 +301,7 @@ test("schedules a new job if existing is completed", () =>
 
     // attempt to update the job - it should schedule a new one instead
     await pgClient.query(
-      `select graphile_worker.add_job('job1', '{"a": "second"}',  job_key := 'abc')`
+      `select * from graphile_worker.add_job('job1', '{"a": "second"}',  job_key := 'abc')`
     );
 
     // run again
@@ -331,7 +337,7 @@ test("schedules a new job if existing is being processed", () =>
 
     // Schedule a job to run immediately
     await pgClient.query(
-      `select graphile_worker.add_job('job1', '{"a": "first"}', job_key := 'abc')`
+      `select * from graphile_worker.add_job('job1', '{"a": "first"}', job_key := 'abc')`
     );
 
     // run the job
@@ -343,12 +349,16 @@ test("schedules a new job if existing is being processed", () =>
 
     // attempt to update the job - it should schedule a new one instead
     await pgClient.query(
-      `select graphile_worker.add_job('job1', '{"a": "second"}',  job_key := 'abc')`
+      `select * from graphile_worker.add_job('job1', '{"a": "second"}',  job_key := 'abc')`
     );
 
     // check there are now two jobs scheduled
     expect(
-      (await pgClient.query(`select * from graphile_worker.jobs`)).rows
+      (
+        await pgClient.query(
+          `select * from graphile_worker.jobs order by id asc`
+        )
+      ).rows
     ).toHaveLength(2);
 
     // wait for the original job to complete - note this picks up the new job,
@@ -377,8 +387,6 @@ test("schedules a new job if the existing is pending retry", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
 
-    const start = new Date();
-
     const tasks: TaskList = {
       job1: jest.fn(async (o: { succeed: boolean }) => {
         if (!o.succeed) {
@@ -388,8 +396,10 @@ test("schedules a new job if the existing is pending retry", () =>
     };
 
     // Schedule a job failure
-    await pgClient.query(
-      `select graphile_worker.add_job('job1', '{"succeed": false}', job_key := 'abc')`
+    const {
+      rows: [initialJob],
+    } = await pgClient.query(
+      `select * from graphile_worker.add_job('job1', '{"succeed": false}', job_key := 'abc')`
     );
 
     // run the job
@@ -398,12 +408,13 @@ test("schedules a new job if the existing is pending retry", () =>
 
     // Check that it failed as expected and retry has been scheduled
     const { rows: jobs } = await pgClient.query(
-      `select * from graphile_worker.jobs`
+      `select * from graphile_worker.jobs order by id asc`
     );
     expect(jobs).toHaveLength(1);
+    expect(jobs[0].id).toEqual(initialJob.id);
     expect(jobs[0].attempts).toEqual(1);
     expect(jobs[0].last_error).toEqual("TEST_ERROR");
-    expect(+jobs[0].run_at).toBeGreaterThanOrEqual(+start + 200);
+    expect(+jobs[0].run_at).toBeGreaterThanOrEqual(+initialJob.run_at + 200);
 
     // run again - nothing should happen
     await runTaskListOnce(tasks, pgClient);
@@ -411,14 +422,15 @@ test("schedules a new job if the existing is pending retry", () =>
 
     // update the job to succeed
     await pgClient.query(
-      `select graphile_worker.add_job('job1', '{"succeed": true}',  job_key := 'abc')`
+      `select * from graphile_worker.add_job('job1', '{"succeed": true}',  job_key := 'abc')`
     );
 
     // Assert that it has updated the existing entry and not created a new one
     const { rows: updatedJobs } = await pgClient.query(
-      `select * from graphile_worker.jobs`
+      `select * from graphile_worker.jobs order by id asc`
     );
     expect(updatedJobs).toHaveLength(1);
+    expect(updatedJobs[0].id).toEqual(initialJob.id);
     expect(updatedJobs[0].attempts).toEqual(0);
     expect(updatedJobs[0].last_error).toEqual(null);
 
@@ -446,8 +458,10 @@ test("job details are reset if not specified in update", () =>
     // Schedule a future job
     const runAt = new Date();
     runAt.setSeconds(runAt.getSeconds() + 3);
-    await pgClient.query(
-      `select graphile_worker.add_job(
+    const {
+      rows: [original],
+    } = await pgClient.query(
+      `select * from graphile_worker.add_job(
         'job1',
         '{"a": 1}',
         queue_name := 'queue1',
@@ -457,7 +471,7 @@ test("job details are reset if not specified in update", () =>
       )`
     );
 
-    const original = {
+    expect(original).toMatchObject({
       attempts: 0,
       key: "abc",
       last_error: null,
@@ -468,18 +482,18 @@ test("job details are reset if not specified in update", () =>
       queue_name: "queue1",
       run_at: runAt,
       task_identifier: "job1",
-    };
+    });
 
     // Assert that it has an entry in jobs
     const { rows: jobs } = await pgClient.query(
-      `select * from graphile_worker.jobs`
+      `select * from graphile_worker.jobs order by id asc`
     );
     expect(jobs).toHaveLength(1);
     expect(jobs[0]).toMatchObject(original);
 
     // update job, but don't provide any new details
     await pgClient.query(
-      `select graphile_worker.add_job(
+      `select * from graphile_worker.add_job(
         'job1',
         job_key := 'abc'
       )`
@@ -488,11 +502,11 @@ test("job details are reset if not specified in update", () =>
     // check omitted details have reverted to the default values, bar queue name
     // which should not change unless explicitly updated
     const { rows: jobs2 } = await pgClient.query(
-      `select * from graphile_worker.jobs`
+      `select * from graphile_worker.jobs order by id asc`
     );
     expect(jobs2).toHaveLength(1);
     expect(jobs2[0]).toMatchObject({
-      id: jobs[0].id,
+      id: original.id,
       attempts: 0,
       key: "abc",
       last_error: null,
@@ -506,7 +520,7 @@ test("job details are reset if not specified in update", () =>
     const runAt2 = new Date();
     runAt2.setSeconds(runAt.getSeconds() + 5);
     await pgClient.query(
-      `select graphile_worker.add_job(
+      `select * from graphile_worker.add_job(
         'job2',
         '{"a": 2}',
         queue_name := 'queue2',
@@ -518,11 +532,11 @@ test("job details are reset if not specified in update", () =>
 
     // check details have changed
     const { rows: jobs3 } = await pgClient.query(
-      `select * from graphile_worker.jobs`
+      `select * from graphile_worker.jobs order by id asc`
     );
     expect(jobs3).toHaveLength(1);
     expect(jobs3[0]).toMatchObject({
-      id: jobs[0].id, // same id as original job
+      id: original.id,
       attempts: 0,
       last_error: null,
       key: "abc",
@@ -546,16 +560,20 @@ test("pending jobs can be removed", () =>
 
     // Schedule a job
     await pgClient.query(
-      `select graphile_worker.add_job('job1', '{"a": "1"}', job_key := 'abc')`
+      `select * from graphile_worker.add_job('job1', '{"a": "1"}', job_key := 'abc')`
     );
 
     // Assert that it has an entry in jobs / job_queues
     expect(
-      (await pgClient.query(`select * from graphile_worker.jobs`)).rows
+      (
+        await pgClient.query(
+          `select * from graphile_worker.jobs order by id asc`
+        )
+      ).rows
     ).toHaveLength(1);
 
     // remove the job
-    await pgClient.query(`select graphile_worker.remove_job('abc')`);
+    await pgClient.query(`select * from graphile_worker.remove_job('abc')`);
 
     // check no jobs run
     await runTaskListOnce(tasks, pgClient);
@@ -577,12 +595,16 @@ test("jobs in progress cannot be removed", () =>
 
     // Schedule a job
     await pgClient.query(
-      `select graphile_worker.add_job('job1', '{"a": 123}', job_key := 'abc')`
+      `select * from graphile_worker.add_job('job1', '{"a": 123}', job_key := 'abc')`
     );
 
     // check it was inserted
     expect(
-      (await pgClient.query(`select * from graphile_worker.jobs`)).rows
+      (
+        await pgClient.query(
+          `select * from graphile_worker.jobs order by id asc`
+        )
+      ).rows
     ).toHaveLength(1);
 
     const promise = runTaskListOnce(tasks, pgClient);
@@ -591,11 +613,15 @@ test("jobs in progress cannot be removed", () =>
     expect(tasks.job1).toHaveBeenCalledTimes(1);
 
     // attempt to remove the job
-    await pgClient.query(`select graphile_worker.remove_job('abc')`);
+    await pgClient.query(`select * from graphile_worker.remove_job('abc')`);
 
     // check it was not removed
     expect(
-      (await pgClient.query(`select * from graphile_worker.jobs`)).rows
+      (
+        await pgClient.query(
+          `select * from graphile_worker.jobs order by id asc`
+        )
+      ).rows
     ).toHaveLength(1);
 
     // wait for the original job to complete
@@ -612,7 +638,9 @@ test("runs jobs asynchronously", () =>
 
     // Schedule a job
     const start = new Date();
-    await pgClient.query(`select graphile_worker.add_job('job1', '{"a": 1}')`);
+    await pgClient.query(
+      `select * from graphile_worker.add_job('job1', '{"a": 1}')`
+    );
 
     // Run the task
     let jobPromise: Deferred | null = null;
@@ -641,7 +669,7 @@ test("runs jobs asynchronously", () =>
 
     {
       const { rows: jobs } = await pgClient.query(
-        `select * from graphile_worker.jobs`
+        `select * from graphile_worker.jobs order by id asc`
       );
       expect(jobs).toHaveLength(1);
       const job = jobs[0];
@@ -714,7 +742,7 @@ test("runs jobs in parallel", () =>
 
     {
       const { rows: jobs } = await pgClient.query(
-        `select * from graphile_worker.jobs`
+        `select * from graphile_worker.jobs order by id asc`
       );
       expect(jobs).toHaveLength(5);
       jobs.forEach(job => {
