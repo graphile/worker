@@ -420,6 +420,7 @@ function, or by calling SQL from your application code. You do this using the
 - `queue_name` - if you want certain tasks to run one at a time, add them to the same named queue (defaults to a random value)
 - `run_at` - a timestamp after which to run the job; defaults to now.
 - `max_attempts` - if this task fails, how many times should we retry it? Default: 25.
+- `job_key` - unique identifier for the job, used to update or remove it later if needed (see [Updating and removing jobs](#updating-and-removing-jobs))
 
 Typically you'll want to set the `identifier` and `payload`:
 
@@ -516,6 +517,25 @@ CREATE TRIGGER generate_pdf_update
   WHEN (NEW.title IS DISTINCT FROM OLD.title)
   EXECUTE PROCEDURE trigger_job('generate_pdf');
 ```
+
+## Updating and removing jobs
+
+Jobs scheduled with a `job_key` parameter may be updated later, provided they are still pending, by calling `add_job` again with the same `job_key` value. This can be used for rescheduling jobs scheduled to run at a future date, or to ensure only one of a given job is scheduled at a time. When a job is updated, any omitted parameters are reset to their defaults, with the exception of `queue_name`. For example:
+
+```sql
+SELECT graphile_worker.add_job('send_email', '{"count": 1}', job_key := 'abc');
+SELECT graphile_worker.add_job('send_email', '{"count": 2}', job_key := 'abc');
+```
+
+The `send_email` job above will run only once, with the payload `'{"count": 2}'`.
+
+Pending jobs may also be removed using `job_key`:
+
+```sql
+SELECT graphile_worker.remove_job('abc');
+```
+
+**Note:** If a job is updated using `add_job` once it is already running or completed, the second job will be scheduled separately, meaning both will run. Likewise, calling `remove_job` for a running or completed job is a no-op.
 
 ## Uninstallation
 
