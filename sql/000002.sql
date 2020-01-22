@@ -52,11 +52,11 @@ begin
       on conflict (key) do update set
         -- update all job details other than queue_name, which we want to keep
         -- the same unless explicitly provided
-        task_identifier=identifier,
-        payload=payload,
+        task_identifier=excluded.task_identifier,
+        payload=excluded.payload,
         queue_name=coalesce(add_job.queue_name, jobs.queue_name),
-        max_attempts=max_attempts,
-        run_at=run_at,
+        max_attempts=excluded.max_attempts,
+        run_at=excluded.run_at,
 
         -- always reset error/retry state
         attempts=0,
@@ -91,7 +91,7 @@ begin
   end if;
   return v_job;
 end;
-$$ language plpgsql;
+$$ language plpgsql volatile;
 
 
 --- implement new remove_job function
@@ -103,7 +103,7 @@ create function graphile_worker.remove_job(
     where key = job_key
     and locked_at is null
   returning *;
-$$ language sql;
+$$ language sql strict volatile;
 
 
 -- Update other functions to handle locked_at denormalisation
@@ -151,7 +151,7 @@ begin
 
   return v_row;
 end;
-$$ language plpgsql;
+$$ language plpgsql volatile;
 
 -- I was unsuccessful, re-schedule the job please
 create or replace function graphile_worker.fail_job(worker_id text, job_id bigint, error_message text) returns graphile_worker.jobs as $$
@@ -173,4 +173,4 @@ begin
 
   return v_row;
 end;
-$$ language plpgsql;
+$$ language plpgsql volatile strict;
