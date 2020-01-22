@@ -335,11 +335,11 @@ test("schedules a new job if existing is being processed", () =>
     );
 
     // run the job
-    await sleep(20); // Give PostgreSQL connections a moment to synchronise
+    await sleep(20); // Give PostgreSQL connections a moment to synchronize
     const promise = runTaskListOnce(tasks, pgClient);
 
     // wait for it to be picked up for processing
-    await sleep(20);
+    await sleepUntil(() => defers.length > 0);
     expect(tasks.job1).toHaveBeenCalledTimes(1);
 
     // attempt to update the job - it should schedule a new one instead
@@ -355,7 +355,7 @@ test("schedules a new job if existing is being processed", () =>
     // wait for the original job to complete - note this picks up the new job,
     // because the worker checks again for pending jobs at the end of each run
     defers[0].resolve(); // complete first job
-    await sleep(20); // wait for second job to be picked up
+    await sleepUntil(() => defers.length > 1); // wait for second job to be picked up
     defers[1].resolve(); // complete second job
     await promise; // wait for all jobs to finish
 
@@ -567,9 +567,12 @@ test("jobs in progress cannot be removed", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
 
+    let deferred: Deferred | null = null;
+
     const tasks: TaskList = {
       job1: jest.fn(async () => {
-        await sleep(50);
+        deferred = defer();
+        return deferred;
       }),
     };
 
@@ -585,7 +588,7 @@ test("jobs in progress cannot be removed", () =>
 
     const promise = runTaskListOnce(tasks, pgClient);
     // wait for it to be picked up for processing
-    await sleep(20);
+    await sleepUntil(() => !!deferred);
     expect(tasks.job1).toHaveBeenCalledTimes(1);
 
     // attempt to remove the job
@@ -597,7 +600,9 @@ test("jobs in progress cannot be removed", () =>
     ).toHaveLength(1);
 
     // wait for the original job to complete
+    deferred!.resolve();
     await promise;
+
     expect(tasks.job1).toHaveBeenCalledTimes(1);
     expect(tasks.job1).toHaveBeenCalledWith({ a: 123 }, expect.any(Object));
   }));
@@ -827,7 +832,7 @@ test("jobs added to the same queue will be ran serially (even if multiple worker
 
     for (let i = 0; i < 5; i++) {
       // Give the other workers a chance to interfere (they shouldn't)
-      sleep(50);
+      await sleep(50);
 
       await sleepUntil(() => jobPromises.length >= i + 1);
       expect(jobPromises).toHaveLength(i + 1);
