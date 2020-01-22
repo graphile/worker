@@ -5,6 +5,20 @@ import deferred, { Deferred } from "../src/deferred";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+interface Defer {
+  promise: Promise<void>;
+  resolve: () => void;
+}
+
+const defer = (): Defer => {
+  let resolve: Defer["resolve"];
+  const promise = new Promise<void>(_resolve => {
+    resolve = _resolve;
+  });
+  // @ts-ignore error TS2454: Variable 'resolve' is used before being assigned.
+  return { resolve, promise };
+};
+
 test("runs jobs", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
@@ -319,9 +333,13 @@ test("schedules a new job if existing is being processed", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
 
+    const defers: Defer[] = [];
+
     const tasks: TaskList = {
       job1: jest.fn(async () => {
-        await sleep(50);
+        const deferred = defer();
+        defers.push(deferred);
+        return deferred.promise;
       }),
     };
 
@@ -344,15 +362,17 @@ test("schedules a new job if existing is being processed", () =>
     );
 
     // check there are now two jobs scheduled
-
     expect(
       (await pgClient.query(`select * from graphile_worker.jobs`)).rows
     ).toHaveLength(2);
 
     // wait for the original job to complete - note this picks up the new job,
     // because the worker checks again for pending jobs at the end of each run
-    expect(tasks.job1).toHaveBeenCalledTimes(1);
-    await promise;
+    defers[0].resolve(); // complete first job
+    await sleep(20); // wait for second job to be picked up
+    defers[1].resolve(); // complete second job
+    await promise; // wait for all jobs to finish
+
     expect(tasks.job1).toHaveBeenCalledTimes(2);
 
     // check jobs ran in the right order
