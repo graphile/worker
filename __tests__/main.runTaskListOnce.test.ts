@@ -1,23 +1,9 @@
 import { withPgClient, reset, sleepUntil, jobCount } from "./helpers";
 import { TaskList, Task, Worker } from "../src/interfaces";
 import { runTaskListOnce } from "../src/main";
-import deferred, { Deferred } from "../src/deferred";
+import defer, { Deferred } from "../src/deferred";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-interface Defer {
-  promise: Promise<void>;
-  resolve: () => void;
-}
-
-const defer = (): Defer => {
-  let resolve: Defer["resolve"];
-  const promise = new Promise<void>(_resolve => {
-    resolve = _resolve;
-  });
-  // @ts-ignore error TS2454: Variable 'resolve' is used before being assigned.
-  return { resolve, promise };
-};
 
 test("runs jobs", () =>
   withPgClient(async pgClient => {
@@ -333,13 +319,13 @@ test("schedules a new job if existing is being processed", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
 
-    const defers: Defer[] = [];
+    const defers: Deferred[] = [];
 
     const tasks: TaskList = {
       job1: jest.fn(async () => {
         const deferred = defer();
         defers.push(deferred);
-        return deferred.promise;
+        return deferred;
       }),
     };
 
@@ -625,9 +611,9 @@ test("runs jobs asynchronously", () =>
     await pgClient.query(`select graphile_worker.add_job('job1', '{"a": 1}')`);
 
     // Run the task
-    let jobPromise: Deferred<void> | null = null;
+    let jobPromise: Deferred | null = null;
     const job1: Task = jest.fn(() => {
-      jobPromise = deferred();
+      jobPromise = defer();
       return jobPromise;
     });
     const tasks: TaskList = {
@@ -693,9 +679,9 @@ test("runs jobs in parallel", () =>
     );
 
     // Run the task
-    const jobPromises: Array<Deferred<void>> = [];
+    const jobPromises: Array<Deferred> = [];
     const job1: Task = jest.fn(() => {
-      const jobPromise = deferred();
+      const jobPromise = defer();
       jobPromises.push(jobPromise);
       return jobPromise;
     });
@@ -772,9 +758,9 @@ test("single worker runs jobs in series, purges all before exit", () =>
     );
 
     // Run the task
-    const jobPromises: Array<Deferred<void>> = [];
+    const jobPromises: Array<Deferred> = [];
     const job1: Task = jest.fn(() => {
-      const jobPromise = deferred();
+      const jobPromise = defer();
       jobPromises.push(jobPromise);
       return jobPromise;
     });
@@ -820,9 +806,9 @@ test("jobs added to the same queue will be ran serially (even if multiple worker
     );
 
     // Run the task
-    const jobPromises: Array<Deferred<void>> = [];
+    const jobPromises: Array<Deferred> = [];
     const job1: Task = jest.fn(() => {
-      const jobPromise = deferred();
+      const jobPromise = defer();
       jobPromises.push(jobPromise);
       return jobPromise;
     });
