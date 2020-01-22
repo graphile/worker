@@ -18,4 +18,4 @@ services:
       - ./src:/app/src
       - ./perfTest:/app/perfTest
     environment:
-      TEST_CONNECTION_STRING: "postgres://postgres@db:5432/graphile_worker_test;select 1;"
+      TEST_CONNECTION_STRING: "postgres://postgres@db:5432/graphile_worker_test"
