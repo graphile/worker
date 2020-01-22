@@ -335,7 +335,6 @@ test("schedules a new job if existing is being processed", () =>
     );
 
     // run the job
-    await sleep(20); // Give PostgreSQL connections a moment to synchronize
     const promise = runTaskListOnce(tasks, pgClient);
 
     // wait for it to be picked up for processing
