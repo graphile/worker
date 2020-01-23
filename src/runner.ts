@@ -139,11 +139,11 @@ export const run = async (options: RunnerOptions): Promise<Runner> => {
   return {
     async stop() {
       if (running) {
-        throw new Error("Runner is already stopped");
-      } else {
         running = false;
         await workerPool.release();
         await release();
+      } else {
+        throw new Error("Runner is already stopped");
       }
     },
     addJob: makeAddJob(withPgClient),
