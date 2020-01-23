@@ -26,6 +26,6 @@ async function main() {
 main()
   .then(() => pgPool.end())
   .catch(e => {
-  console.error(e);
-  process.exit(1);
-});
+    console.error(e);
+    process.exit(1);
+  });
