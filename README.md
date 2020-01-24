@@ -434,18 +434,19 @@ SELECT graphile_worker.add_job(
 );
 ```
 
-You can skip parameters you don't need by using PostgreSQL's named parameter support:
+It's recommended that you use [PostgreSQL's named parameters](https://www.postgresql.org/docs/current/sql-syntax-calling-funcs.html#SQL-SYNTAX-CALLING-FUNCS-NAMED) for the other parameters so that you only need specify the arguments you're using:
 
 ```sql
 SELECT graphile_worker.add_job('reminder', run_at := NOW() + INTERVAL '2 days');
 ```
 
-**TIP**: if you want to run a job after a variable number of seconds, you can use
+**TIP**: if you want to run a job after a variable number of seconds according
+to the database time (rather than the application time), you can use
 interval multiplication; see `run_at` in this example:
 
 ```sql
 SELECT graphile_worker.add_job(
-  $1, 
+  $1,
   payload := $2,
   queue_name := $3,
   max_attempts := $4,
@@ -520,14 +521,14 @@ CREATE TRIGGER generate_pdf_update
 
 ## Updating and removing jobs
 
-Jobs scheduled with a `job_key` parameter may be updated later, provided they are still pending, by calling `add_job` again with the same `job_key` value. This can be used for rescheduling jobs scheduled to run at a future date, or to ensure only one of a given job is scheduled at a time. When a job is updated, any omitted parameters are reset to their defaults, with the exception of `queue_name`. For example:
+Jobs scheduled with a `job_key` parameter may be updated later, provided they are still pending, by calling `add_job` again with the same `job_key` value. This can be used for rescheduling jobs or to ensure only one of a given job is scheduled at a time. When a job is updated, any omitted parameters are reset to their defaults, with the exception of `queue_name` which persists unless overridden. For example after the below SQL transaction, the `send_email` job will run only once, with the payload `'{"count": 2}'`:
 
 ```sql
+BEGIN;
 SELECT graphile_worker.add_job('send_email', '{"count": 1}', job_key := 'abc');
 SELECT graphile_worker.add_job('send_email', '{"count": 2}', job_key := 'abc');
+COMMIT;
 ```
-
-The `send_email` job above will run only once, with the payload `'{"count": 2}'`.
 
 Pending jobs may also be removed using `job_key`:
 
