@@ -609,3 +609,37 @@ In another terminal:
 createdb graphile_worker_test
 yarn test
 ```
+
+### Using Docker
+
+Start the dev db and app in the background
+
+```
+docker-compose up -d
+```
+
+Run the tests
+
+```
+docker-compose exec app yarn jest -i
+
+```
+
+Reset the test db
+
+```
+cat __tests__/reset-db.sql | docker-compose exec -T db psql -U postgres graphile_worker_test
+```
+
+Run the perf tests
+
+```
+docker-compose exec app ./perfTest/run.sh
+```
+
+monitor the container logs
+
+```
+docker-compose logs -f db
+docker-compose logs -f app
+```
