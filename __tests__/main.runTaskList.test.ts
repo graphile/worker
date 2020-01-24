@@ -17,7 +17,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
 
     // Build the tasks
     const jobPromises: {
-      [id: string]: Deferred<void>;
+      [id: string]: Deferred;
     } = {};
     const job1: Task = jest.fn(({ id }: { id: string }) => {
       const jobPromise = deferred();
@@ -63,7 +63,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
 test("doesn't bail on deprecated `debug` function", () =>
   withPgPool(async pgPool => {
     await reset(pgPool);
-    let jobPromise: Deferred<void> | null = null;
+    let jobPromise: Deferred | null = null;
     const tasks: TaskList = {
       job1(payload, helpers) {
         // @ts-ignore Not officially supported
