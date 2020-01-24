@@ -156,7 +156,7 @@ begin
       run_at = greatest(now(), run_at) + (exp(least(attempts, 10))::text || ' seconds')::interval,
       locked_by = null,
       locked_at = null
-    where id = job_id
+    where id = job_id and locked_by = worker_id
     returning * into v_row;
 
   update graphile_worker.job_queues
