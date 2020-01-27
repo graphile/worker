@@ -138,7 +138,8 @@ Support contracts are also available; for more information see: https://www.grap
 - Adding jobs to same named queue runs them in series
 - Automatically re-attempts failed jobs with exponential back-off
 - Customisable retry count (default: 25 attempts over ~3 days)
-- Open source
+- Task de-duplication via unique `job_key`
+- Open source; liberal MIT license
 - Executes tasks written in Node.js (can call out to any other language or networked service)
 - Modern JS with async/await
 - Watch mode for development (experimental - iterate your jobs without restarting worker)
@@ -420,7 +421,7 @@ function, or by calling SQL from your application code. You do this using the
 - `queue_name` - if you want certain tasks to run one at a time, add them to the same named queue (defaults to a random value)
 - `run_at` - a timestamp after which to run the job; defaults to now.
 - `max_attempts` - if this task fails, how many times should we retry it? Default: 25.
-- `job_key` - unique identifier for the job, used to update or remove it later if needed (see [Updating and removing jobs](#updating-and-removing-jobs))
+- `job_key` - unique identifier for the job, used to update or remove it later if needed (see [Updating and removing jobs](#updating-and-removing-jobs)); can also be used for de-duplication
 
 Typically you'll want to set the `identifier` and `payload`:
 
