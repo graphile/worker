@@ -17,6 +17,7 @@ async function main() {
   console.log(`Recreating database ${config.database}`);
 
   try {
+    await pgClient.query(`drop database if exists ${dbName};`);
     await pgClient.query(`create database ${dbName};`);
   } finally {
     pgClient.release();
