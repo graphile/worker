@@ -73,10 +73,12 @@ export function makeNewWorker(
       const {
         rows: [jobRow],
       } = await withPgClient(client =>
-        client.query("SELECT * FROM graphile_worker.get_job($1, $2);", [
-          workerId,
-          supportedTaskNames,
-        ])
+        client.query({
+          text:
+            "SELECT id, queue_name, task_identifier, payload, priority, attempts, max_attempts, last_error FROM graphile_worker.get_job($1, $2);",
+          values: [workerId, supportedTaskNames],
+          name: "get_job",
+        })
       );
 
       // `doNext` cannot be executed concurrently, so we know this is safe.
@@ -173,11 +175,11 @@ export function makeNewWorker(
         );
         // TODO: retry logic, in case of server connection interruption
         await withPgClient(client =>
-          client.query("SELECT * FROM graphile_worker.fail_job($1, $2, $3);", [
-            workerId,
-            job.id,
-            message,
-          ])
+          client.query({
+            text: "SELECT FROM graphile_worker.fail_job($1, $2, $3);",
+            values: [workerId, job.id, message],
+            name: "fail_job",
+          })
         );
       } else {
         if (!process.env.NO_LOG_SUCCESS) {
@@ -190,10 +192,11 @@ export function makeNewWorker(
         }
         // TODO: retry logic, in case of server connection interruption
         await withPgClient(client =>
-          client.query("SELECT * FROM graphile_worker.complete_job($1, $2);", [
-            workerId,
-            job.id,
-          ])
+          client.query({
+            text: "SELECT FROM graphile_worker.complete_job($1, $2);",
+            values: [workerId, job.id],
+            name: "complete_job",
+          })
         );
       }
     } catch (fatalError) {
