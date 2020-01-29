@@ -7,7 +7,7 @@ cd "${0%/*}"
 export NO_LOG_SUCCESS=1
 
 # if connection string not provided, assume postgres is available locally
-export PERF_DATABASE_URL=${TEST_CONNECTION_STRING-graphile_worker_perftest}
+export PERF_DATABASE_URL=${TEST_CONNECTION_STRING}-graphile_worker_perftest
 
 # drop and recreate the test database
 node ./recreateDb.js
