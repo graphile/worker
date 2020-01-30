@@ -2,7 +2,7 @@ export interface LogScope {
   label?: string;
   workerId?: string;
   taskIdentifier?: string;
-  jobId?: number;
+  jobId?: string;
 }
 
 export interface LogMeta {

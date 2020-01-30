@@ -79,7 +79,7 @@ export async function jobCount(
 export function makeMockJob(taskIdentifier: string): Job {
   const createdAt = new Date(Date.now() - 12345678);
   return {
-    id: Math.floor(Math.random() * 4294967296),
+    id: String(Math.floor(Math.random() * 4294967296)),
     queue_name: "3ED1F485-5D29-4C53-9F47-40925AA81D3B",
     task_identifier: taskIdentifier,
     payload: {},

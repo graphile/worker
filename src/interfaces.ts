@@ -55,7 +55,7 @@ export interface WatchedTaskList {
 }
 
 export interface Job {
-  id: number;
+  id: string;
   queue_name: string;
   task_identifier: string;
   payload: unknown;
