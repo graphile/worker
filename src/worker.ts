@@ -11,10 +11,24 @@ import deferred from "./deferred";
 import { makeHelpers } from "./helpers";
 import { defaultLogger } from "./logger";
 
+export type FailJobFn = (
+  workerId: string,
+  jobId: string,
+  message: string
+) => Promise<any>;
+
+export type CompleteJobFn = (workerId: string, jobId: string) => Promise<any>;
+
+export interface WorkerCommon {
+  failJob: FailJobFn;
+  completeJob: CompleteJobFn;
+}
+
 export function makeNewWorker(
   tasks: TaskList,
   withPgClient: WithPgClient,
   options: WorkerOptions = {},
+  { completeJob, failJob }: WorkerCommon,
   continuous = true
 ): Worker {
   const {
@@ -176,13 +190,7 @@ export function makeNewWorker(
           { failure: true, job, error: err, duration }
         );
         // TODO: retry logic, in case of server connection interruption
-        await withPgClient(client =>
-          client.query({
-            text: "SELECT FROM graphile_worker.fail_job($1, $2, $3);",
-            values: [workerId, job.id, message],
-            name: "fail_job",
-          })
-        );
+        failJob(workerId, job.id, message);
       } else {
         if (!process.env.NO_LOG_SUCCESS) {
           logger.info(
@@ -193,13 +201,7 @@ export function makeNewWorker(
           );
         }
         // TODO: retry logic, in case of server connection interruption
-        await withPgClient(client =>
-          client.query({
-            text: "SELECT FROM graphile_worker.complete_job($1, $2);",
-            values: [workerId, job.id],
-            name: "complete_job",
-          })
-        );
+        completeJob(workerId, job.id);
       }
     } catch (fatalError) {
       const when = err ? `after failure '${err.message}'` : "after success";
