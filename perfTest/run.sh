@@ -13,7 +13,7 @@ export PERF_DATABASE_URL=${TEST_CONNECTION_STRING-graphile_worker_perftest}
 node ./recreateDb.js
 
 # Install the schema
-DATABASE_URL="$PERF_DATABASE_URL" node ../dist/cli.js --once
+DATABASE_URL="$PERF_DATABASE_URL" node ../dist/cli.js --schema-only
 
 # How long does it take to start up and shut down?
 DATABASE_URL="$PERF_DATABASE_URL" time node ../dist/cli.js --once
