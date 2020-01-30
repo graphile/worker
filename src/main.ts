@@ -10,7 +10,12 @@ import {
 } from "./interfaces";
 import deferred from "./deferred";
 import SIGNALS from "./signals";
-import { makeNewWorker } from "./worker";
+import {
+  makeNewWorker,
+  FailJobFn,
+  CompleteJobFn,
+  WorkerCommon,
+} from "./worker";
 
 import {
   makeWithPgClientFromPool,
@@ -205,10 +210,31 @@ export function runTaskList(
   // Ensure that during a forced shutdown we get cleaned up too
   allWorkerPools.push(workerPool);
 
+  const failJob: FailJobFn = (workerId, jobId, message) =>
+    failJobWithClient(listenForChangesClient!, workerId, jobId, message).catch(
+      e => {
+        console.error(e);
+        // TODO: retry!
+      }
+    );
+
+  const completeJob: CompleteJobFn = (workerId, jobId) =>
+    completeJobWithClient(listenForChangesClient!, workerId, jobId).catch(e => {
+      console.error(e);
+      // TODO: retry!
+    });
+
+  const workerCommon: WorkerCommon = {
+    failJob,
+    completeJob,
+  };
+
   // Spawn our workers; they can share clients from the pool.
   const withPgClient = makeWithPgClientFromPool(pgPool);
   for (let i = 0; i < concurrency; i++) {
-    workers.push(makeNewWorker(tasks, withPgClient, workerOptions));
+    workers.push(
+      makeNewWorker(tasks, withPgClient, workerOptions, workerCommon)
+    );
   }
 
   // TODO: handle when a worker shuts down (spawn a new one)
@@ -216,10 +242,45 @@ export function runTaskList(
   return workerPool;
 }
 
+function failJobWithClient(
+  client: PoolClient,
+  workerId: string,
+  jobId: string,
+  message: string
+) {
+  return client.query({
+    text: "SELECT FROM graphile_worker.fail_job($1, $2, $3);",
+    values: [workerId, jobId, message],
+    name: "fail_job",
+  });
+}
+
+function completeJobWithClient(
+  client: PoolClient,
+  workerId: string,
+  jobId: string
+) {
+  return client.query({
+    text: "SELECT FROM graphile_worker.complete_job($1, $2);",
+    values: [workerId, jobId],
+    name: "complete_job",
+  });
+}
+
 export const runTaskListOnce = (
   tasks: TaskList,
   client: PoolClient,
   options: WorkerOptions = {}
 ) =>
-  makeNewWorker(tasks, makeWithPgClientFromClient(client), options, false)
-    .promise;
+  makeNewWorker(
+    tasks,
+    makeWithPgClientFromClient(client),
+    options,
+    {
+      failJob: (workerId, jobId, message) =>
+        failJobWithClient(client, workerId, jobId, message),
+      completeJob: (workerId, jobId) =>
+        completeJobWithClient(client, workerId, jobId),
+    },
+    false
+  ).promise;
