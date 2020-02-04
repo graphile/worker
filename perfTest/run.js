@@ -66,7 +66,17 @@ async function main() {
         )
       );
     }
-    await Promise.all(promises);
+    (await Promise.all(promises)).map(({ error, stdout, stderr }) => {
+      if (error) {
+        throw error;
+      }
+      if (stdout) {
+        console.log(stdout);
+      }
+      if (stderr) {
+        console.error(stderr);
+      }
+    });
   });
   console.log(
     `Jobs per second: ${((1000 * JOB_COUNT) / (dur - startupTime)).toFixed(2)}`
