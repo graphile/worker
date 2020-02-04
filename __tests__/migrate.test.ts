@@ -24,7 +24,7 @@ test("migration installs schema; second migration does no harm", async () => {
     const { rows: migrationRows } = await pgClient.query(
       `select * from graphile_worker.migrations`
     );
-    expect(migrationRows).toHaveLength(2);
+    expect(migrationRows).toHaveLength(3);
     const migration = migrationRows[0];
     expect(migration.id).toEqual(1);
 
