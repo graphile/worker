@@ -76,9 +76,18 @@ There are two ways to schedule jobs:
 
 #### The WorkerUtils API
 
-Import `WorkerUtils` from `graphile_worker`, and make a new instance by passing in your database configuration options (just like you would with `run` above). What you get back is an instance of a class with a function called `addJob`, and a function called `end`.
+Import `WorkerUtils` from `graphile-worker`, and make a new instance by passing in your configuration:
 
-The `addJob` function takes a name, and a payload, and returns a promise of a job that has been added to the queue. The `end` function closes the connection, don't forget to call it yourself if you're done adding jobs and don't want to keep the pool open anymore!
+- one of these to determine how to connect to the database:
+  - `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
+  - `pgPool`: A `pg.Pool` instance to use
+ 
+A `WorkerUtils` instance has the following methods:
+
+- `end` - call this to release the `WorkerUtils` instance. It's typically best to use `WorkerUtils` as a singleton, so you often won't need this, but it's useful for tests or processes where you want Node to exit cleanly when it's done.
+- `addJob(name: string, payload: JSON, options: TaskOptions)` - a method you can call to enqueue a job, it returns a promise that resolves to the job. `options` accepts the following parameters:
+  - `run_at`?
+
 
 ```js
 const { WorkerUtils } = require("graphile-worker");
@@ -98,9 +107,9 @@ main().catch(err => {
 });
 ```
 
-##### The `addJob` standalone Javascript function
+##### The `addJob` standalone JavaScript function
 
-If you just want the fast and easy way to add a job, and you don't mind the cost of opening a DB connection pool, and then cleaning it up right away _for every job added_, there's the `addJob` convenience function:
+If you just want the fast and easy way to add a job, and you don't mind the cost of opening a DB connection pool, and then cleaning it up right away _for every job added_, there's the `addJob` convenience function. It takes the `WorkerUtils` configuration as the first argument, and then the remaining `WorkerUtils#addJob` arguments afterwards:
 
 ```js
 const { addJob } = require("graphile-worker");

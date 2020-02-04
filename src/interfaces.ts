@@ -161,6 +161,7 @@ export interface WorkerUtilsOptions {
    * A PostgreSQL connection string to the database containing the job queue
    */
   connectionString?: string;
+
   /**
    * A pg.Pool instance to use instead of the `connectionString`
    */

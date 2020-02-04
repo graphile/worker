@@ -7,7 +7,7 @@ import { withReleasers, assertPool } from "./runner";
 
 const processPublisherOptions = async (options: WorkerUtilsOptions) => {
   const { logger = defaultLogger } = options;
-  return withReleasers(async (releasers, _) => {
+  return withReleasers(async (releasers, release) => {
     const pgPool: Pool = await assertPool(options, releasers, logger);
 
     const withPgClient = makeWithPgClientFromPool(pgPool);
@@ -15,7 +15,7 @@ const processPublisherOptions = async (options: WorkerUtilsOptions) => {
     // Migrate
     await withPgClient(client => migrate(client));
 
-    return { pgPool, withPgClient };
+    return { pgPool, withPgClient, release };
   });
 };
 
@@ -25,6 +25,7 @@ export class WorkerUtils {
       callback: (pgClient: PoolClient) => Promise<T>
     ) => Promise<T>;
     pgPool: Pool;
+    release: Release;
   }>;
 
   constructor(options: WorkerUtilsOptions) {
@@ -43,7 +44,7 @@ export class WorkerUtils {
 
   async end(): Promise<void> {
     const { pgPool } = await this.dbTools;
-    await pgPool.end();
+    (await this.dbTools).release();
   }
 }
 
