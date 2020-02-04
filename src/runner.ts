@@ -138,8 +138,15 @@ export const runMigrations = async (options: RunnerOptions): Promise<void> => {
 };
 
 export const runOnce = async (options: RunnerOptions): Promise<void> => {
+  const { concurrency = 1 } = options;
   const { taskList, withPgClient, release } = await processOptions(options);
-  await withPgClient(client => runTaskListOnce(taskList, client, options));
+  const promises: Promise<void>[] = [];
+  for (let i = 0; i < concurrency; i++) {
+    promises.push(
+      withPgClient(client => runTaskListOnce(taskList, client, options))
+    );
+  }
+  await Promise.all(promises);
   await release();
 };
 
