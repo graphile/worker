@@ -152,6 +152,7 @@ export const runOnce = async (options: RunnerOptions): Promise<void> => {
     );
   }
   await Promise.all(promises);
+  await workerCommon.release();
   await release();
 };
 
