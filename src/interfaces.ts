@@ -145,4 +145,9 @@ export interface RunnerOptions extends WorkerPoolOptions {
    * A pg.Pool instance to use instead of the `connectionString`
    */
   pgPool?: Pool;
+  /**
+   * The maximum size of the PostgreSQL pool. Defaults to the node-postgres
+   * default (10).
+   */
+  maxPoolSize?: number;
 }

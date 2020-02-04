@@ -36,6 +36,13 @@ const argv = yargs
     alias: "j",
     default: CONCURRENT_JOBS,
   })
+  .number("jobs")
+  .option("max-pool-size", {
+    description: "maximum size of the PostgreSQL pool",
+    alias: "m",
+    default: 10,
+  })
+  .number("max-pool-size")
   .option("poll-interval", {
     description:
       "how long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)",
@@ -93,6 +100,7 @@ async function main() {
 
   const options: RunnerOptions = {
     concurrency: isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS,
+    maxPoolSize: isInteger(argv["max-pool-size"]) ? argv["max-pool-size"] : 10,
     pollInterval: isInteger(argv["poll-interval"])
       ? argv["poll-interval"]
       : POLL_INTERVAL,
