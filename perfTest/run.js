@@ -62,10 +62,7 @@ async function main() {
       promises.push(
         exec(
           `node ../dist/cli.js --once -j ${CONCURRENCY} -m ${CONCURRENCY + 1}`,
-          {
-            ...execOptions,
-            stdio: "inherit",
-          }
+          execOptions
         )
       );
     }
