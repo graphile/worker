@@ -2,7 +2,7 @@ import * as assert from "assert";
 import { Pool } from "pg";
 import getTasks from "./getTasks";
 import { Runner, RunnerOptions, TaskList } from "./interfaces";
-import { runTaskList, runTaskListOnce } from "./main";
+import { runTaskList, runTaskListOnce, createWorkerCommon } from "./main";
 import { makeWithPgClientFromPool, makeAddJob } from "./helpers";
 import { migrate } from "./migrate";
 import { defaultLogger, Logger } from "./logger";
@@ -139,11 +139,16 @@ export const runMigrations = async (options: RunnerOptions): Promise<void> => {
 
 export const runOnce = async (options: RunnerOptions): Promise<void> => {
   const { concurrency = 1 } = options;
-  const { taskList, withPgClient, release } = await processOptions(options);
+  const { taskList, withPgClient, release, pgPool } = await processOptions(
+    options
+  );
   const promises: Promise<void>[] = [];
+  const workerCommon = createWorkerCommon(pgPool);
   for (let i = 0; i < concurrency; i++) {
     promises.push(
-      withPgClient(client => runTaskListOnce(taskList, client, options))
+      withPgClient(client =>
+        runTaskListOnce(taskList, client, options, workerCommon)
+      )
     );
   }
   await Promise.all(promises);

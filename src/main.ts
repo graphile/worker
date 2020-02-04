@@ -34,9 +34,10 @@ export { allWorkerPools as _allWorkerPools };
 class SQLQueue<DataType> {
   pending: DataType[] = [];
   timer: NodeJS.Timer | null = null;
+  released: boolean = false;
 
   constructor(
-    private getClient: () => PoolClient | null,
+    private getClient: () => Pool | PoolClient | null,
     private query: string,
     private queryName: string
   ) {}
@@ -47,6 +48,9 @@ class SQLQueue<DataType> {
   }
 
   schedule() {
+    if (this.released) {
+      return Promise.reject(new Error("Queue is released"));
+    }
     if (!this.timer) {
       this.timer = setTimeout(this.execute, CLEANUP_INTERVAL);
     }
@@ -55,6 +59,9 @@ class SQLQueue<DataType> {
   }
 
   execute = async () => {
+    if (this.released) {
+      return;
+    }
     this.timer = null;
     const client = this.getClient();
     if (!client) {
@@ -64,11 +71,7 @@ class SQLQueue<DataType> {
     }
     const toRun = this.pending.splice(0, this.pending.length);
     try {
-      await client.query({
-        text: this.query,
-        name: this.queryName,
-        values: [JSON.stringify(toRun)],
-      });
+      await this.runJobs(client, toRun);
     } catch (e) {
       console.error(e);
       // Try again later
@@ -76,6 +79,27 @@ class SQLQueue<DataType> {
       this.schedule();
     }
   };
+
+  runJobs(client: Pool | PoolClient, toRun: DataType[]) {
+    return client.query({
+      text: this.query,
+      name: this.queryName,
+      values: [JSON.stringify(toRun)],
+    });
+  }
+
+  release() {
+    this.released = true;
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    const client = this.getClient();
+    if (!client) {
+      throw new Error("There's no client... shutdown was not clean!");
+    }
+    this.runJobs(client, this.pending);
+  }
 }
 
 let _registeredSignalHandlers = false;
@@ -121,6 +145,53 @@ function registerSignalHandlers(logger: Logger) {
   });
 }
 
+export function createWorkerCommon(
+  pool: Pool,
+  getClient: (() => Pool | PoolClient | null) | null = null
+): WorkerCommon {
+  const actuallyGetClient = getClient || (() => pool);
+
+  const failQueue = new SQLQueue<[string, string, string]>(
+    actuallyGetClient,
+    `select graphile_worker.fail_jobs($1::json)`,
+    "fail_jobs"
+  );
+  const failJob: FailJobFn = (workerId, job, message) => {
+    // TODO: retry logic, in case of server connection interruption
+    if (job.queue_name) {
+      return failJobWithClient(pool, workerId, job.id, message);
+    } else {
+      return failQueue.push([workerId, job.id, message]);
+    }
+  };
+
+  const completeQueue = new SQLQueue<[string, string]>(
+    actuallyGetClient,
+    `select graphile_worker.complete_jobs($1::json)`,
+    "complete_jobs"
+  );
+  const completeJob: CompleteJobFn = (workerId, job) => {
+    // TODO: retry logic, in case of server connection interruption
+    if (job.queue_name) {
+      return completeJobWithClient(pool, workerId, job.id).catch(e => {
+        console.error(e);
+        // TODO: retry!
+      });
+    } else {
+      return completeQueue.push([workerId, job.id]);
+    }
+  };
+
+  const release = () =>
+    Promise.all([failQueue.release(), completeQueue.release()]).then(() => {});
+
+  return {
+    failJob,
+    completeJob,
+    release,
+  };
+}
+
 export function runTaskList(
   tasks: TaskList,
   pgPool: Pool,
@@ -140,15 +211,12 @@ export function runTaskList(
 
   const unlistenForChanges = async () => {
     if (listenForChangesClient) {
-      const client = listenForChangesClient;
-      listenForChangesClient = null;
       // Subscribe to jobs:insert message
       try {
-        await client.query('UNLISTEN "jobs:insert"');
+        await listenForChangesClient.query('UNLISTEN "jobs:insert"');
       } catch (e) {
         // Ignore
       }
-      await client.release();
     }
   };
 
@@ -211,6 +279,12 @@ export function runTaskList(
   const workerPool = {
     release: async () => {
       unlistenForChanges();
+      await workerCommon.release();
+      if (listenForChangesClient) {
+        const client = listenForChangesClient;
+        listenForChangesClient = null;
+        await client.release();
+      }
       promise.resolve();
       await Promise.all(workers.map(worker => worker.release()));
       const idx = allWorkerPools.indexOf(workerPool);
@@ -258,49 +332,10 @@ export function runTaskList(
 
   // Ensure that during a forced shutdown we get cleaned up too
   allWorkerPools.push(workerPool);
-
-  const failQueue = new SQLQueue<[string, string, string]>(
-    () => listenForChangesClient,
-    `select graphile_worker.fail_jobs($1::json)`,
-    "fail_jobs"
+  const workerCommon: WorkerCommon = createWorkerCommon(
+    pgPool,
+    () => listenForChangesClient
   );
-  const failJob: FailJobFn = (workerId, job, message) => {
-    if (job.queue_name) {
-      return failJobWithClient(
-        listenForChangesClient!,
-        workerId,
-        job.id,
-        message
-      );
-    } else {
-      return failQueue.push([workerId, job.id, message]);
-    }
-  };
-
-  const completeQueue = new SQLQueue<[string, string]>(
-    () => listenForChangesClient,
-    `select graphile_worker.complete_jobs($1::json)`,
-    "complete_jobs"
-  );
-  const completeJob: CompleteJobFn = (workerId, job) => {
-    if (job.queue_name) {
-      return completeJobWithClient(
-        listenForChangesClient!,
-        workerId,
-        job.id
-      ).catch(e => {
-        console.error(e);
-        // TODO: retry!
-      });
-    } else {
-      return completeQueue.push([workerId, job.id]);
-    }
-  };
-
-  const workerCommon: WorkerCommon = {
-    failJob,
-    completeJob,
-  };
 
   // Spawn our workers; they can share clients from the pool.
   const withPgClient = makeWithPgClientFromPool(pgPool);
@@ -316,7 +351,7 @@ export function runTaskList(
 }
 
 function failJobWithClient(
-  client: PoolClient,
+  client: Pool | PoolClient,
   workerId: string,
   jobId: string,
   message: string
@@ -329,7 +364,7 @@ function failJobWithClient(
 }
 
 function completeJobWithClient(
-  client: PoolClient,
+  client: Pool | PoolClient,
   workerId: string,
   jobId: string
 ) {
@@ -343,17 +378,19 @@ function completeJobWithClient(
 export const runTaskListOnce = (
   tasks: TaskList,
   client: PoolClient,
-  options: WorkerOptions = {}
+  options: WorkerOptions = {},
+  workerCommon: WorkerCommon = {
+    failJob: (workerId, job, message) =>
+      failJobWithClient(client, workerId, job.id, message),
+    completeJob: (workerId, job) =>
+      completeJobWithClient(client, workerId, job.id),
+    release: () => Promise.resolve(),
+  }
 ) =>
   makeNewWorker(
     tasks,
     makeWithPgClientFromClient(client),
     options,
-    {
-      failJob: (workerId, job, message) =>
-        failJobWithClient(client, workerId, job.id, message),
-      completeJob: (workerId, job) =>
-        completeJobWithClient(client, workerId, job.id),
-    },
+    workerCommon,
     false
   ).promise;

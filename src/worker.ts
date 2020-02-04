@@ -22,6 +22,7 @@ export type CompleteJobFn = (workerId: string, job: Job) => Promise<any>;
 export interface WorkerCommon {
   failJob: FailJobFn;
   completeJob: CompleteJobFn;
+  release: () => Promise<void>;
 }
 
 export function makeNewWorker(
@@ -189,8 +190,7 @@ export function makeNewWorker(
           }`,
           { failure: true, job, error: err, duration }
         );
-        // TODO: retry logic, in case of server connection interruption
-        failJob(workerId, job, message);
+        await failJob(workerId, job, message);
       } else {
         if (!process.env.NO_LOG_SUCCESS) {
           logger.info(
@@ -200,8 +200,7 @@ export function makeNewWorker(
             { job, duration, success: true }
           );
         }
-        // TODO: retry logic, in case of server connection interruption
-        completeJob(workerId, job);
+        await completeJob(workerId, job);
       }
     } catch (fatalError) {
       const when = err ? `after failure '${err.message}'` : "after success";
