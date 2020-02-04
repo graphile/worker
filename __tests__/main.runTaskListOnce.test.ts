@@ -12,7 +12,7 @@ test("runs jobs", () =>
     // Schedule a job
     const start = new Date();
     await pgClient.query(
-      `select * from graphile_worker.add_job('job1', '{"a": 1}')`
+      `select * from graphile_worker.add_job('job1', '{"a": 1}', queue_name := 'myqueue')`
     );
 
     // Assert that it has an entry in jobs / job_queues
@@ -61,7 +61,7 @@ test("schedules errors for retry", () =>
     // Schedule a job
     const start = new Date();
     await pgClient.query(
-      `select * from graphile_worker.add_job('job1', '{"a": 1}')`
+      `select * from graphile_worker.add_job('job1', '{"a": 1}', queue_name := 'myqueue')`
     );
 
     {
@@ -129,7 +129,7 @@ test("retries job", () =>
 
     // Add the job
     await pgClient.query(
-      `select * from graphile_worker.add_job('job1', '{"a": 1}')`
+      `select * from graphile_worker.add_job('job1', '{"a": 1}', queue_name := 'myqueue')`
     );
     let counter = 0;
     const job1: Task = jest.fn(() => {
@@ -354,11 +354,9 @@ test("schedules a new job if existing is being processed", () =>
 
     // check there are now two jobs scheduled
     expect(
-      (
-        await pgClient.query(
-          `select * from graphile_worker.jobs order by id asc`
-        )
-      ).rows
+      (await pgClient.query(
+        `select * from graphile_worker.jobs order by id asc`
+      )).rows
     ).toHaveLength(2);
 
     // wait for the original job to complete - note this picks up the new job,
@@ -513,7 +511,7 @@ test("job details are reset if not specified in update", () =>
       max_attempts: 25,
       payload: {},
       task_identifier: "job1",
-      queue_name: "queue1",
+      queue_name: null,
     });
 
     // update job with new details
@@ -561,11 +559,9 @@ test("pending jobs can be removed", () =>
 
     // Assert that it has an entry in jobs / job_queues
     expect(
-      (
-        await pgClient.query(
-          `select * from graphile_worker.jobs order by id asc`
-        )
-      ).rows
+      (await pgClient.query(
+        `select * from graphile_worker.jobs order by id asc`
+      )).rows
     ).toHaveLength(1);
 
     // remove the job
@@ -596,11 +592,9 @@ test("jobs in progress cannot be removed", () =>
 
     // check it was inserted
     expect(
-      (
-        await pgClient.query(
-          `select * from graphile_worker.jobs order by id asc`
-        )
-      ).rows
+      (await pgClient.query(
+        `select * from graphile_worker.jobs order by id asc`
+      )).rows
     ).toHaveLength(1);
 
     const promise = runTaskListOnce(tasks, pgClient);
@@ -613,11 +607,9 @@ test("jobs in progress cannot be removed", () =>
 
     // check it was not removed
     expect(
-      (
-        await pgClient.query(
-          `select * from graphile_worker.jobs order by id asc`
-        )
-      ).rows
+      (await pgClient.query(
+        `select * from graphile_worker.jobs order by id asc`
+      )).rows
     ).toHaveLength(1);
 
     // wait for the original job to complete
@@ -635,7 +627,7 @@ test("runs jobs asynchronously", () =>
     // Schedule a job
     const start = new Date();
     await pgClient.query(
-      `select * from graphile_worker.add_job('job1', '{"a": 1}')`
+      `select * from graphile_worker.add_job('job1', '{"a": 1}', queue_name := 'myqueue')`
     );
 
     // Run the task
@@ -703,7 +695,7 @@ test("runs jobs in parallel", () =>
     // Schedule 5 jobs
     const start = new Date();
     await pgClient.query(
-      `select graphile_worker.add_job('job1', '{"a": 1}') from generate_series(1, 5)`
+      `select graphile_worker.add_job('job1', '{"a": 1}', queue_name := 'queue_' || s::text) from generate_series(1, 5) s`
     );
 
     // Run the task

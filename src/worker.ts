@@ -13,11 +13,11 @@ import { defaultLogger } from "./logger";
 
 export type FailJobFn = (
   workerId: string,
-  jobId: string,
+  job: Job,
   message: string
 ) => Promise<any>;
 
-export type CompleteJobFn = (workerId: string, jobId: string) => Promise<any>;
+export type CompleteJobFn = (workerId: string, job: Job) => Promise<any>;
 
 export interface WorkerCommon {
   failJob: FailJobFn;
@@ -190,7 +190,7 @@ export function makeNewWorker(
           { failure: true, job, error: err, duration }
         );
         // TODO: retry logic, in case of server connection interruption
-        failJob(workerId, job.id, message);
+        failJob(workerId, job, message);
       } else {
         if (!process.env.NO_LOG_SUCCESS) {
           logger.info(
@@ -201,7 +201,7 @@ export function makeNewWorker(
           );
         }
         // TODO: retry logic, in case of server connection interruption
-        completeJob(workerId, job.id);
+        completeJob(workerId, job);
       }
     } catch (fatalError) {
       const when = err ? `after failure '${err.message}'` : "after success";
