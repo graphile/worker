@@ -354,11 +354,9 @@ test("schedules a new job if existing is being processed", () =>
 
     // check there are now two jobs scheduled
     expect(
-      (
-        await pgClient.query(
-          `select * from graphile_worker.jobs order by id asc`
-        )
-      ).rows
+      (await pgClient.query(
+        `select * from graphile_worker.jobs order by id asc`
+      )).rows
     ).toHaveLength(2);
 
     // wait for the original job to complete - note this picks up the new job,
@@ -561,11 +559,9 @@ test("pending jobs can be removed", () =>
 
     // Assert that it has an entry in jobs / job_queues
     expect(
-      (
-        await pgClient.query(
-          `select * from graphile_worker.jobs order by id asc`
-        )
-      ).rows
+      (await pgClient.query(
+        `select * from graphile_worker.jobs order by id asc`
+      )).rows
     ).toHaveLength(1);
 
     // remove the job
@@ -596,11 +592,9 @@ test("jobs in progress cannot be removed", () =>
 
     // check it was inserted
     expect(
-      (
-        await pgClient.query(
-          `select * from graphile_worker.jobs order by id asc`
-        )
-      ).rows
+      (await pgClient.query(
+        `select * from graphile_worker.jobs order by id asc`
+      )).rows
     ).toHaveLength(1);
 
     const promise = runTaskListOnce(tasks, pgClient);
@@ -613,11 +607,9 @@ test("jobs in progress cannot be removed", () =>
 
     // check it was not removed
     expect(
-      (
-        await pgClient.query(
-          `select * from graphile_worker.jobs order by id asc`
-        )
-      ).rows
+      (await pgClient.query(
+        `select * from graphile_worker.jobs order by id asc`
+      )).rows
     ).toHaveLength(1);
 
     // wait for the original job to complete

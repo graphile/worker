@@ -24,10 +24,59 @@ import {
 import { CONCURRENT_JOBS } from "./config";
 import { defaultLogger, Logger } from "./logger";
 
+const CLEANUP_INTERVAL = 2000;
+
 const allWorkerPools: Array<WorkerPool> = [];
 
 // Exported for testing only
 export { allWorkerPools as _allWorkerPools };
+
+class SQLQueue<DataType> {
+  pending: DataType[] = [];
+  timer: NodeJS.Timer | null = null;
+
+  constructor(
+    private getClient: () => PoolClient | null,
+    private query: string,
+    private queryName: string
+  ) {}
+
+  push(record: DataType) {
+    this.pending.push(record);
+    return this.schedule();
+  }
+
+  schedule() {
+    if (!this.timer) {
+      this.timer = setTimeout(this.execute, CLEANUP_INTERVAL);
+    }
+    // TODO: is this okay?
+    return Promise.resolve();
+  }
+
+  execute = async () => {
+    this.timer = null;
+    const client = this.getClient();
+    if (!client) {
+      console.log("There's no client... trying again shortly");
+      this.schedule();
+      return;
+    }
+    const toRun = this.pending.splice(0, this.pending.length);
+    try {
+      await client.query({
+        text: this.query,
+        name: this.queryName,
+        values: [JSON.stringify(toRun)],
+      });
+    } catch (e) {
+      console.error(e);
+      // Try again later
+      this.pending.push(...toRun);
+      this.schedule();
+    }
+  };
+}
 
 let _registeredSignalHandlers = false;
 let _shuttingDown = false;
@@ -210,19 +259,43 @@ export function runTaskList(
   // Ensure that during a forced shutdown we get cleaned up too
   allWorkerPools.push(workerPool);
 
-  const failJob: FailJobFn = (workerId, jobId, message) =>
-    failJobWithClient(listenForChangesClient!, workerId, jobId, message).catch(
-      e => {
+  const failQueue = new SQLQueue<[string, string, string]>(
+    () => listenForChangesClient,
+    `select graphile_worker.fail_jobs($1::json)`,
+    "fail_jobs"
+  );
+  const failJob: FailJobFn = (workerId, job, message) => {
+    if (job.queue_name) {
+      return failJobWithClient(
+        listenForChangesClient!,
+        workerId,
+        job.id,
+        message
+      );
+    } else {
+      return failQueue.push([workerId, job.id, message]);
+    }
+  };
+
+  const completeQueue = new SQLQueue<[string, string]>(
+    () => listenForChangesClient,
+    `select graphile_worker.complete_jobs($1::json)`,
+    "complete_jobs"
+  );
+  const completeJob: CompleteJobFn = (workerId, job) => {
+    if (job.queue_name) {
+      return completeJobWithClient(
+        listenForChangesClient!,
+        workerId,
+        job.id
+      ).catch(e => {
         console.error(e);
         // TODO: retry!
-      }
-    );
-
-  const completeJob: CompleteJobFn = (workerId, jobId) =>
-    completeJobWithClient(listenForChangesClient!, workerId, jobId).catch(e => {
-      console.error(e);
-      // TODO: retry!
-    });
+      });
+    } else {
+      return completeQueue.push([workerId, job.id]);
+    }
+  };
 
   const workerCommon: WorkerCommon = {
     failJob,
@@ -277,10 +350,10 @@ export const runTaskListOnce = (
     makeWithPgClientFromClient(client),
     options,
     {
-      failJob: (workerId, jobId, message) =>
-        failJobWithClient(client, workerId, jobId, message),
-      completeJob: (workerId, jobId) =>
-        completeJobWithClient(client, workerId, jobId),
+      failJob: (workerId, job, message) =>
+        failJobWithClient(client, workerId, job.id, message),
+      completeJob: (workerId, job) =>
+        completeJobWithClient(client, workerId, job.id),
     },
     false
   ).promise;
