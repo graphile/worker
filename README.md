@@ -656,7 +656,7 @@ cat __tests__/reset-db.sql | docker-compose exec -T db psql -U postgres graphile
 Run the perf tests
 
 ```
-docker-compose exec app ./perfTest/run.sh
+docker-compose exec app node ./perfTest/run.js
 ```
 
 monitor the container logs

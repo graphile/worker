@@ -6,6 +6,7 @@ import { runTaskList, runTaskListOnce } from "./main";
 import { makeWithPgClientFromPool, makeAddJob } from "./helpers";
 import { migrate } from "./migrate";
 import { defaultLogger, Logger } from "./logger";
+import { CONCURRENT_JOBS } from "./config";
 
 type Releasers = Array<() => void | Promise<void>>;
 
@@ -45,10 +46,16 @@ async function assertPool(
   if (options.pgPool) {
     pgPool = options.pgPool;
   } else if (options.connectionString) {
-    pgPool = new Pool({ connectionString: options.connectionString });
+    pgPool = new Pool({
+      connectionString: options.connectionString,
+      max: options.maxPoolSize,
+    });
     releasers.push(() => pgPool.end());
   } else if (process.env.DATABASE_URL) {
-    pgPool = new Pool({ connectionString: process.env.DATABASE_URL });
+    pgPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: options.maxPoolSize,
+    });
     releasers.push(() => pgPool.end());
   } else {
     throw new Error(
@@ -94,10 +101,17 @@ async function withReleasers<T>(
 }
 
 const processOptions = async (options: RunnerOptions) => {
-  const { logger = defaultLogger } = options;
+  const { logger = defaultLogger, concurrency = CONCURRENT_JOBS } = options;
   return withReleasers(async (releasers, release) => {
     const taskList = await assertTaskList(options, releasers);
     const pgPool: Pool = await assertPool(options, releasers, logger);
+    // @ts-ignore
+    const max = pgPool?.options?.max || 10;
+    if (max < concurrency) {
+      console.warn(
+        `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`
+      );
+    }
 
     const withPgClient = makeWithPgClientFromPool(pgPool);
 
@@ -124,8 +138,15 @@ export const runMigrations = async (options: RunnerOptions): Promise<void> => {
 };
 
 export const runOnce = async (options: RunnerOptions): Promise<void> => {
+  const { concurrency = 1 } = options;
   const { taskList, withPgClient, release } = await processOptions(options);
-  await withPgClient(client => runTaskListOnce(taskList, client, options));
+  const promises: Promise<void>[] = [];
+  for (let i = 0; i < concurrency; i++) {
+    promises.push(
+      withPgClient(client => runTaskListOnce(taskList, client, options))
+    );
+  }
+  await Promise.all(promises);
   await release();
 };
 
