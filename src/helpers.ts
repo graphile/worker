@@ -1,4 +1,10 @@
-import { WithPgClient, Job, Helpers, TaskOptions } from "./interfaces";
+import {
+  WithPgClient,
+  Job,
+  Helpers,
+  TaskOptions,
+  JobHelpers,
+} from "./interfaces";
 import { Pool, PoolClient } from "pg";
 import { Logger } from "./logger";
 
@@ -31,17 +37,17 @@ export function makeAddJob(withPgClient: WithPgClient) {
   };
 }
 
-export function makeHelpers(
+export function makeJobHelpers(
   job: Job,
   { withPgClient }: { withPgClient: WithPgClient },
   baseLogger: Logger
-): Helpers {
+): JobHelpers {
   const jobLogger = baseLogger.scope({
     label: "job",
     taskIdentifier: job.task_identifier,
     jobId: job.id,
   });
-  const helpers: Helpers = {
+  const helpers: JobHelpers = {
     job,
     logger: jobLogger,
     withPgClient,

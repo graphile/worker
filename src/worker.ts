@@ -8,7 +8,7 @@ import {
 import { POLL_INTERVAL, MAX_CONTIGUOUS_ERRORS } from "./config";
 import * as assert from "assert";
 import deferred from "./deferred";
-import { makeHelpers } from "./helpers";
+import { makeJobHelpers } from "./helpers";
 import { defaultLogger } from "./logger";
 
 export function makeNewWorker(
@@ -154,7 +154,7 @@ export function makeNewWorker(
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
         assert(task, `Unsupported task '${job.task_identifier}'`);
-        const helpers = makeHelpers(job, { withPgClient }, logger);
+        const helpers = makeJobHelpers(job, { withPgClient }, logger);
         await task(job.payload, helpers);
       } catch (error) {
         err = error;

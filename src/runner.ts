@@ -79,7 +79,7 @@ export async function assertPool(
   return pgPool;
 }
 
-type Release = () => Promise<void>;
+export type Release = () => Promise<void>;
 
 export async function withReleasers<T>(
   callback: (releasers: Releasers, release: Release) => Promise<T>

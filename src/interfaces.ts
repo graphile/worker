@@ -1,5 +1,6 @@
 import { PoolClient, Pool, QueryResultRow, QueryResult } from "pg";
 import { Logger } from "./logger";
+import { Release } from "./runner";
 
 /*
  * Terminology:
@@ -26,14 +27,21 @@ export type AddJobFunction = (
 ) => Promise<Job>;
 
 export interface Helpers {
-  job: Job;
   logger: Logger;
   withPgClient: WithPgClient;
+  addJob: AddJobFunction;
+}
+
+export interface JobHelpers extends Helpers {
+  job: Job;
   query<R extends QueryResultRow = any>(
     queryText: string,
     values?: any[]
   ): Promise<QueryResult<R>>;
-  addJob: AddJobFunction;
+}
+
+export interface WorkerUtilsHelpers extends Helpers {
+  release: Release;
 }
 
 export type Task = (payload: unknown, helpers: Helpers) => void | Promise<void>;
