@@ -1,8 +1,8 @@
 import { WorkerUtilsOptions, TaskSpec, WorkerUtils } from "./interfaces";
 import { makeWithPgClientFromPool, makeAddJob } from "./helpers";
-import { migrate } from "./migrate";
 import { defaultLogger } from "./logger";
 import { withReleasers, assertPool } from "./runner";
+import { migrate } from "./migrate";
 
 /**
  * Construct (asynchronously) a new WorkerUtils instance.
@@ -25,13 +25,12 @@ export async function makeWorkerUtils(
   const withPgClient = makeWithPgClientFromPool(pgPool);
   const addJob = makeAddJob(withPgClient);
 
-  await withPgClient(client => migrate(client));
-
   return {
     withPgClient,
     logger,
     release,
     addJob,
+    migrate: () => withPgClient(migrate),
   };
 }
 

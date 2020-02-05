@@ -198,7 +198,7 @@ yarn add graphile-worker
 point graphile-worker at your database and we handle our own migrations:
 
 ```
-npx graphile-worker -c "postgres://localhost/mydb"
+npx graphile-worker -c "postgres:///my_db"
 ```
 
 (`npx` looks for the `graphile-worker` binary locally; it's often better to
@@ -276,7 +276,22 @@ envvar must be set.
 ## Library usage: queueing jobs
 
 You can also use the `graphile-worker` library to queue jobs using one of the
-following APIs:
+following APIs.
+
+NOTE: although running the worker will automatically install its schema, the
+same is not true for queuing jobs. You must ensure that the worker database
+schema is installed before you attempt to enqueue a job; you can install the
+database schema into your database with the following command:
+
+```
+yarn graphile-worker -c "postgres:///my_db" --schema-only
+```
+
+Alternatively you can use the `WorkerUtils` migrate method:
+
+```
+await workerUtils.migrate();
+```
 
 ### `makeWorkerUtils(options: WorkerUtilsOptions): Promise<WorkerUtils>`
 
@@ -292,6 +307,8 @@ async function main() {
     connectionString: "postgres:///my_db",
   });
   try {
+    await workerUtils.migrate();
+
     await workerUtils.addJob(
       // Task identifier
       "calculate-life-meaning",
@@ -331,7 +348,8 @@ singleton throughout your code.
 A `WorkerUtils` instance has the following methods:
 
 - `addJob(name: string, payload: JSON, spec: TaskSpec)` - a method you can call to enqueue a job, see [addJob](#addjob).
-- `release` - call this to release the `WorkerUtils` instance. It's typically best to use `WorkerUtils` as a singleton, so you often won't need this, but it's useful for tests or processes where you want Node to exit cleanly when it's done.
+- `migrate()` - a method you can call to update the graphile-worker database schema; returns a promise.
+- `release()` - call this to release the `WorkerUtils` instance. It's typically best to use `WorkerUtils` as a singleton, so you often won't need this, but it's useful for tests or processes where you want Node to exit cleanly when it's done.
 
 ### `quickAddJob(options: WorkerUtilsOptions, ...addJobArgs): Promise<Job>`
 

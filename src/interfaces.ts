@@ -80,8 +80,8 @@ export interface JobHelpers extends Helpers {
 }
 
 /**
- * Utilities for working with Graphile Worker. Primarily useful for adding
- * jobs.
+ * Utilities for working with Graphile Worker. Primarily useful for migrating
+ * the jobs database and queueing jobs.
  */
 export interface WorkerUtils extends Helpers {
   /**
@@ -94,6 +94,11 @@ export interface WorkerUtils extends Helpers {
    * Particularly useful in tests, or in short-running scripts.
    */
   release: Release;
+
+  /**
+   * Migrate the database schema to the latest version.
+   */
+  migrate: () => Promise<void>;
 }
 
 export type Task = (
