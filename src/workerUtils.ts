@@ -40,7 +40,7 @@ export async function makeWorkerUtils(
  * this more than once in your process you should instead create a WorkerUtils
  * instance for efficiency and performance sake.
  */
-export async function addJob(
+export async function quickAddJob(
   options: WorkerUtilsOptions,
   identifier: string,
   payload: any = {},

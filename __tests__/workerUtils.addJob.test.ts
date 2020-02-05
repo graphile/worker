@@ -1,5 +1,10 @@
 import { withPgClient, reset, TEST_CONNECTION_STRING } from "./helpers";
-import { makeWorkerUtils, addJob, runTaskListOnce, Task } from "../src/index";
+import {
+  makeWorkerUtils,
+  quickAddJob,
+  runTaskListOnce,
+  Task,
+} from "../src/index";
 
 test("runs a job added through the worker utils", () =>
   withPgClient(async pgClient => {
@@ -28,7 +33,7 @@ test("runs a job added through the addJob shortcut function", () =>
     await reset(pgClient);
 
     // Schedule a job
-    await addJob({ connectionString: TEST_CONNECTION_STRING }, "job1", {
+    await quickAddJob({ connectionString: TEST_CONNECTION_STRING }, "job1", {
       a: 1,
     });
 

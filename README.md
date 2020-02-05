@@ -56,7 +56,7 @@ module.exports = async (payload, helpers) => {
 
 (Make sure you're in the folder that contains the `tasks/` folder.)
 
-```
+```bash
 npx graphile-worker -c "my_db"
 # or, if you have a remote database, something like:
 #   npx graphile-worker -c "postgres://user:pass@host:port/db?ssl=1"
@@ -67,70 +67,7 @@ npx graphile-worker -c "my_db"
 (Note: `npx` runs the local copy of an npm module if it is installed, when
 you're ready, switch to using the `package.json` `"scripts"` entry instead.)
 
-### Schedule a job:
-
-There are two ways to schedule jobs:
-
-1. From Node with the `WorkerUtils` or `addJob` APIs.
-2. In the database directly with the `add_job` SQL function.
-
-#### The WorkerUtils API
-
-Example:
-
-```js
-const { makeWorkerUtils } = require("graphile-worker");
-
-async function main() {
-  const workerUtils = await makeWorkerUtils({
-    connectionString: "postgres:///my_db",
-  });
-  try {
-    await workerUtils.addJob("calculate-life-meaning", { value: 42 });
-  } finally {
-    workerUtils.end();
-  }
-}
-
-main().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
-```
-
-Import `WorkerUtils` from `graphile-worker`, and make a new instance by passing your configuration:
-
-- exactly one of these keys must be present to determine how to connect to the database:
-  - `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
-  - `pgPool`: A `pg.Pool` instance to use
-- there are currently no other options
-
-A `WorkerUtils` instance has the following methods:
-
-- `addJob(name: string, payload: JSON, spec: TaskSpec)` - a method you can call to enqueue a job, it returns a promise that resolves to the job. `spec` accepts the following parameters:
-  - `run_at`?
-- `release` - call this to release the `WorkerUtils` instance. It's typically best to use `WorkerUtils` as a singleton, so you often won't need this, but it's useful for tests or processes where you want Node to exit cleanly when it's done.
-
-##### The `addJob` standalone JavaScript function
-
-If you just want the fast and easy way to add a job, and you don't mind the cost of opening a DB connection pool, and then cleaning it up right away _for every job added_, there's the `addJob` convenience function. It takes the `WorkerUtils` configuration as the first argument, and then the remaining `WorkerUtils#addJob` arguments afterwards:
-
-```js
-const { addJob } = require("graphile-worker");
-
-async function main() {
-  await addJob({ connectionString: "postgres:///" }, "calculate-life-meaning", {
-    value: 42,
-  });
-}
-
-main().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
-```
-
-#### The `add_job` SQL function
+### Schedule a job via SQL
 
 Connect to your database and run the following SQL:
 
@@ -144,25 +81,40 @@ You should see the worker output `Hello, Bobby Tables`. Gosh, that was fast!
 
 ## Quickstart: library
 
-Instead of running `graphile-worker` via the CLI, you may use it directly in your Node.js code:
+Instead of running `graphile-worker` via the CLI, you may use it directly in
+your Node.js code. The following is equivalent to the CLI example above:
 
 ```js
-const { run } = require("graphile-worker");
+const { run, quickAddJob } = require("graphile-worker");
 
 async function main() {
+  // Run a worker to execute jobs:
   const runner = await run({
-    connectionString: "postgres:///",
+    connectionString: "postgres:///my_db",
     concurrency: 5,
     pollInterval: 1000,
     // you can set the taskList or taskDirectory but not both
     taskList: {
-      testTask: async (payload, helpers) => {
-        helpers.logger.debug("working on task...");
+      hello: async (payload, helpers) => {
+        const { name } = payload;
+        helpers.logger.info(`Hello, ${name}`);
       },
     },
     // or:
     //   taskDirectory: `${__dirname}/tasks`,
   });
+
+  // Or add a job to be executed:
+  await quickAddJob(
+    // makeWorkerUtils options
+    { connectionString: "postgres:///my_db" },
+
+    // Task identifier
+    "hello",
+
+    // Payload
+    { name: "Bobby Tables" }
+  );
 }
 
 main().catch(err => {
@@ -171,15 +123,13 @@ main().catch(err => {
 });
 ```
 
-You can then add jobs with the `addJob` method:
+Running this example should output something like:
 
-```js
-await runner.addJob("testTask", {
-  thisIsThePayload: true,
-});
 ```
-
-And stop the job runner with `runner.stop()`.
+[core] INFO: Worker connected and looking for jobs... (task names: 'hello')
+[job(worker-7327280603017288: hello{1})] INFO: Hello, Bobby Tables
+[worker(worker-7327280603017288)] INFO: Completed task 1 (hello) with success (0.16ms)
+```
 
 ## Crowd-funded open-source software
 
@@ -193,9 +143,10 @@ Support contracts are also available; for more information see: https://www.grap
 ## Features
 
 - Standalone and embedded modes
-- Easy to test with (including `runTaskListOnce` util)
-- Low latency (~2ms from task schedule to execution, uses `LISTEN`/`NOTIFY` to be informed of jobs as they're inserted)
-- High performance (~700 jobs per second on a single node, uses `SKIP LOCKED` to find jobs to execute, resulting in faster fetches)
+- Designed to be used both from JavaScript or directly in the database
+- Easy to test (recommended: `runTaskListOnce` util)
+- Low latency (under 2ms from task schedule to execution, uses `LISTEN`/`NOTIFY` to be informed of jobs as they're inserted)
+- High performance (uses `SKIP LOCKED` to find jobs to execute, resulting in faster fetches)
 - Small tasks (uses explicit task names / payloads resulting in minimal serialisation/deserialisation overhead)
 - Parallel by default
 - Adding jobs to same named queue runs them in series
@@ -203,17 +154,25 @@ Support contracts are also available; for more information see: https://www.grap
 - Customisable retry count (default: 25 attempts over ~3 days)
 - Task de-duplication via unique `job_key`
 - Open source; liberal MIT license
-- Executes tasks written in Node.js (can call out to any other language or networked service)
-- Modern JS with async/await
+- Executes tasks written in Node.js (these can call out to any other language or networked service)
+- Modern JS with 100% async/await API (no callbacks)
+- Written natively in TypeScript
 - Watch mode for development (experimental - iterate your jobs without restarting worker)
 
 ## Status
 
-Solid test suite testing internals, but external interfaces need tests to
-prevent regressions (get in touch if you'd like to help with this!). This
-specific codebase is young, but it's based on years of implementing similar job
-queues for Postgres. To give feedback please raise an issue or reach out on
-discord: http://discord.gg/graphile
+Production ready (and used in production).
+
+We're still enhancing/iterating the library rapidly, hence the 0.x numbering;
+updating to a new "minor" version (0.y) may require some small code
+modifications, particularly to TypeScript type names; these are documented in
+the changelog.
+
+This specific codebase is fairly young, but it's based on years of
+implementing similar job queues for Postgres.
+
+To give feedback please raise an issue or reach out on discord:
+http://discord.gg/graphile
 
 ## Requirements
 
@@ -249,38 +208,59 @@ The following CLI options are available:
 
 ```
 Options:
-  --help            Show help                                          [boolean]
-  --version         Show version number                                [boolean]
-  --connection, -c  Database connection string, defaults to the 'DATABASE_URL'
-                    envvar                                              [string]
-  --schema-only     Just install (or update) the database schema, then exit
+  --help               Show help                                       [boolean]
+  --version            Show version number                             [boolean]
+  --connection, -c     Database connection string, defaults to the
+                       'DATABASE_URL' envvar                            [string]
+  --schema-only        Just install (or update) the database schema, then exit
                                                       [boolean] [default: false]
-  --once            Run until there are no runnable jobs left, then exit
+  --once               Run until there are no runnable jobs left, then exit
                                                       [boolean] [default: false]
-  --watch, -w       [EXPERIMENTAL] Watch task files for changes, automatically
-                    reloading the task code without restarting worker
-                                                      [boolean] [default: false]
-  --jobs, -j        number of jobs to run concurrently              [default: 1]
-  --poll-interval   how long to wait between polling for jobs in milliseconds
-                    (for jobs scheduled in the future/retries)
+  --watch, -w          [EXPERIMENTAL] Watch task files for changes,
+                       automatically reloading the task code without restarting
+                       worker                         [boolean] [default: false]
+  --jobs, -j           number of jobs to run concurrently  [number] [default: 1]
+  --max-pool-size, -m  maximum size of the PostgreSQL pool[number] [default: 10]
+  --poll-interval      how long to wait between polling for jobs in milliseconds
+                       (for jobs scheduled in the future/retries)
                                                         [number] [default: 2000]
 ```
 
-## Library usage
+## Library usage: running jobs
 
-`graphile-worker` can be used as a library inside your Node.js application. It exposes the `run(options)` and `runOnce(options)` functions.
+`graphile-worker` can be used as a library inside your Node.js application.
+There are two main use cases for this: running jobs, and queueing jobs. Here
+are the APIs for running jobs.
 
-`run(options)` will run until either stopped by a signal event like `SIGINT` or by calling the `stop()` function on the object returned by `run()`.
+### `run(options: RunnerOptions): Promise<Runner>`
 
-`runOnce(options)` is the equivalent of running the cli with the `--once` option. The function will run until there are no runnable jobs left.
+Runs until either stopped by a signal event like `SIGINT` or by calling the `stop()` function on the Runner object `run()` resolves to.
 
-`runMigrations(options)` is the equivalent of running the cli with the `--schema-only` option. Runs the migrations and then returns.
+The Runner object also contains a `addJob` method (see [`addJob`](#addjob))
+that can be used to enqueue jobs:
+
+```js
+await runner.addJob("testTask", {
+  thisIsThePayload: true,
+});
+```
+
+### `runOnce(options: RunnerOptions): Promise<void>`
+
+Equivalent to running the CLI with the `--once` flag. The function will run until there are no runnable jobs left, and then resolve.
+
+### `runMigrations(options: RunnerOptions): Promise<void>`
+
+Equivalent to running the CLI with the `--schema-only` option. Runs the
+migrations and then resolves.
+
+### RunnerOptions
 
 The following options for these methods are available.
 
 - `concurrency`: The equivalent of the cli `--jobs` option with the same default value.
 - `pollInterval`: The equivalent of the cli `--poll-interval` option with the same default value.
-- `logger`: To change how log messages are output you may provide a custom logger; see `logger` below
+- `logger`: To change how log messages are output you may provide a custom logger; see [`Logger`](#logger) below
 - the database is identified through one of these options:
   - `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
   - `pgPool`: A `pg.Pool` instance to use
@@ -293,32 +273,41 @@ Exactly one of either `taskDirectory` or `taskList` must be provided (except for
 Either `connectionString` or `pgPool` must be provided, or the `DATABASE_URL`
 envvar must be set.
 
-**Example**
+## Library usage: queueing jobs
+
+You can also use the `graphile-worker` library to queue jobs using one of the
+following APIs:
+
+### `makeWorkerUtils(options: WorkerUtilsOptions): Promise<WorkerUtils>`
+
+Useful for adding jobs from within JavaScript in an efficient way.
+
+Runnable example:
 
 ```js
-const { Pool } = require("pg");
-const { run } = require("graphile-worker");
-
-const pgPool = new Pool({
-  connectionString: "postgres://postgres:postgres@localhost:5432/postgres",
-});
+const { makeWorkerUtils } = require("graphile-worker");
 
 async function main() {
-  const runner = await run({
-    pgPool,
-    // or: connectionString: process.env.DATABASE_URL,
-
-    concurrency: 1,
-    pollInterval: 2000,
-
-    taskList: {
-      testTask: async (payload, helpers) => {
-        helpers.logger.debug(`Received ${JSON.stringify(payload)}`);
-      },
-    },
-    // or: taskDirectory: `${__dirname}/tasks`,
+  const workerUtils = await makeWorkerUtils({
+    connectionString: "postgres:///my_db",
   });
-  // to clean up: runner.stop()
+  try {
+    await workerUtils.addJob(
+      // Task identifier
+      "calculate-life-meaning",
+
+      // Payload
+      { value: 42 }
+
+      // Optionally, add further task spec details here
+    );
+
+    // await workerUtils.addJob(...);
+    // await workerUtils.addJob(...);
+    // await workerUtils.addJob(...);
+  } finally {
+    await workerUtils.release();
+  }
 }
 
 main().catch(err => {
@@ -327,9 +316,134 @@ main().catch(err => {
 });
 ```
 
-### The logger option
+We recommend building one instance of WorkerUtils and sharing it as a
+singleton throughout your code.
 
-You may customise where log messages from graphile-worker (and your tasks) go by supplying a custom `Logger` instance using your own `logFactory`.
+### WorkerUtilsOptions
+
+- exactly one of these keys must be present to determine how to connect to the database:
+  - `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
+  - `pgPool`: A `pg.Pool` instance to use
+- there are currently no other options
+
+### WorkerUtils
+
+A `WorkerUtils` instance has the following methods:
+
+- `addJob(name: string, payload: JSON, spec: TaskSpec)` - a method you can call to enqueue a job, see [addJob](#addjob).
+- `release` - call this to release the `WorkerUtils` instance. It's typically best to use `WorkerUtils` as a singleton, so you often won't need this, but it's useful for tests or processes where you want Node to exit cleanly when it's done.
+
+### `quickAddJob(options: WorkerUtilsOptions, ...addJobArgs): Promise<Job>`
+
+If you want to quickly add a job and you don't mind the cost of opening a DB
+connection pool and then cleaning it up right away _for every job added_,
+there's the `quickAddJob` convenience function. It takes the same options as
+`makeWorkerUtils` as the first argument; the remaining arguments are for
+[`addJob`](#addjob).
+
+NOTE: you are recommended to use `makeWorkerUtils` instead where possible, but in
+one-off scripts this convenience method may be enough.
+
+Runnable example:
+
+```js
+const { quickAddJob } = require("graphile-worker");
+
+async function main() {
+  await quickAddJob(
+    // makeWorkerUtils options
+    { connectionString: "postgres:///my_db" },
+
+    // Task identifier
+    "calculate-life-meaning",
+
+    // Payload
+    { value: 42 }
+
+    // Optionally, add further task spec details here
+  );
+}
+
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});
+```
+
+## addJob
+
+The `addJob` API exists in many places in graphile-worker, but all the
+instances have exactly the same call signature. The API is used to add a job
+to the queue for immediate or delayed execution. With `jobKey` it can also be
+used to replace existing jobs.
+
+NOTE: `quickAddJob` is similar to `addJob`, but accepts an additional initial
+parameter describing how to connect to the database).
+
+The `addJob` arguments are as follows:
+
+- `identifier`: the name of the task to be executed
+- `payload`: an optional JSON-compatible object to give the task more context on what it is doing
+- `options`: an optional object specifying:
+  - `queueName`: the queue to run this task under
+  - `runAt`: a Date to schedule this task to run in the future
+  - `maxAttempts`: how many retries should this task get? (Default: 25)
+  - `jobKey`: unique identifier for the job, used to update or remove it later if needed (see [Updating and removing jobs](#updating-and-removing-jobs)); can also be used for de-duplication
+
+Example:
+
+```js
+await addJob("task_2", { foo: "bar" });
+```
+
+Definitions:
+
+```ts
+export type AddJobFunction = (
+  /**
+   * The name of the task that will be executed for this job.
+   */
+  identifier: string,
+
+  /**
+   * The payload (typically a JSON object) that will be passed to the task executor.
+   */
+  payload?: any,
+
+  /**
+   * Additional details about how the job should be handled.
+   */
+  spec?: TaskSpec
+) => Promise<Job>;
+
+export interface TaskSpec {
+  /**
+   * The queue to run this task under (specify if you want the job to run
+   * serially).
+   */
+  queueName?: string;
+
+  /**
+   * A Date to schedule this task to run in the future
+   */
+  runAt?: Date;
+
+  /**
+   * How many retries should this task get? (Default: 25)
+   */
+  maxAttempts?: number;
+
+  /**
+   * Unique identifier for the job, can be used to update or remove it later if needed
+   */
+  jobKey?: string;
+}
+```
+
+## Logger
+
+You may customise where log messages from `graphile-worker` (and your tasks)
+go by supplying a custom `Logger` instance using your own `logFactory`.
 
 ```js
 const { Logger, run } = require("graphile-worker");
@@ -456,26 +570,16 @@ const {
 
 #### `helpers.addJob(identifier, payload?, options?)`
 
-Schedules a job; arguments:
-
-- `identifier`: the name of the task to be executed
-- `payload`: an optional JSON-compatible object to give the task more context on what it is doing
-- `options`: an optional object specifying:
-  - `queueName`: the queue to run this task under
-  - `runAt`: a Date to schedule this task to run in the future
-  - `maxAttempts`: how many retries should this task get? (Default: 25)
-
-Example:
-
-```js
-await addJob("task_2", { foo: "bar" });
-```
+See [`addJob`](#addjob)
 
 ## More detail on scheduling jobs through SQL
 
 You can schedule jobs directly in the database, e.g. from a trigger or
 function, or by calling SQL from your application code. You do this using the
 `graphile_worker.add_job` function.
+
+NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
+`add_job` SQL function.
 
 `add_job` accepts the following parameters (in this order):
 
@@ -728,3 +832,8 @@ monitor the container logs
 docker-compose logs -f db
 docker-compose logs -f app
 ```
+
+## Thanks for reading!
+
+If this project helps you out, please [sponsor ongoing
+development](https://www.graphile.org/sponsor/).

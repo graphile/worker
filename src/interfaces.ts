@@ -20,9 +20,24 @@ export type WithPgClient = <T = void>(
   callback: (pgClient: PoolClient) => Promise<T>
 ) => Promise<T>;
 
+/**
+ * The `addJob` interface is implemented in many places in the library, all
+ * conforming to this.
+ */
 export type AddJobFunction = (
+  /**
+   * The name of the task that will be executed for this job.
+   */
   identifier: string,
+
+  /**
+   * The payload (typically a JSON object) that will be passed to the task executor.
+   */
   payload?: any,
+
+  /**
+   * Additional details about how the job should be handled.
+   */
   spec?: TaskSpec
 ) => Promise<Job>;
 
@@ -140,14 +155,17 @@ export interface TaskSpec {
    * The queue to run this task under
    */
   queueName?: string;
+
   /**
    * A Date to schedule this task to run in the future
    */
   runAt?: Date;
+
   /**
    * How many retries should this task get? (Default: 25)
    */
   maxAttempts?: number;
+
   /**
    * Unique identifier for the job, can be used to update or remove it later if needed
    */
