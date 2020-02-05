@@ -40,7 +40,7 @@
     "@types/debug": "^4.1.2",
     "@types/pg": "^7.14.1",
     "chokidar": "^3.3.1",
-    "pg": "^7.18.1",
+    "pg": ">=6.5 <8",
     "pg-connection-string": "^2.0.0",
     "tslib": "^1.9.3",
     "yargs": "^15.1.0"
