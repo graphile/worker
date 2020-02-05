@@ -100,6 +100,10 @@ export interface TaskOptions {
    * How many retries should this task get? (Default: 25)
    */
   maxAttempts?: number;
+  /**
+   * Unique identifier for the job, can be used to update or remove it later if needed
+   */
+  jobKey?: string;
 }
 
 export interface WorkerSharedOptions {
