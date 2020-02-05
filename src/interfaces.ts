@@ -27,20 +27,57 @@ export type AddJobFunction = (
 ) => Promise<Job>;
 
 export interface Helpers {
+  /**
+   * A Logger instance.
+   */
   logger: Logger;
+
+  /**
+   * Grabs a PostgreSQL client from the pool, awaits your callback, then
+   * releases the client back to the pool.
+   */
   withPgClient: WithPgClient;
+
+  /**
+   * Adds a job into our queue.
+   */
   addJob: AddJobFunction;
 }
 
 export interface JobHelpers extends Helpers {
+  /**
+   * A Logger instance, scoped to this job.
+   */
+  logger: Logger;
+
+  /**
+   * The currently executing job.
+   */
   job: Job;
+
+  /**
+   * A shorthand for running an SQL query within the job.
+   */
   query<R extends QueryResultRow = any>(
     queryText: string,
     values?: any[]
   ): Promise<QueryResult<R>>;
 }
 
-export interface WorkerUtilsHelpers extends Helpers {
+/**
+ * Utilities for working with Graphile Worker. Primarily useful for adding
+ * jobs.
+ */
+export interface WorkerUtils extends Helpers {
+  /**
+   * A Logger instance, scoped to label: 'WorkerUtils'
+   */
+  logger: Logger;
+
+  /**
+   * Use this to release the WorkerUtils when you no longer need it.
+   * Particularly useful in tests, or in short-running scripts.
+   */
   release: Release;
 }
 

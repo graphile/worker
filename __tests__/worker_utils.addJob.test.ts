@@ -1,12 +1,12 @@
 import { withPgClient, reset, TEST_CONNECTION_STRING } from "./helpers";
-import { WorkerUtils, addJob, runTaskListOnce, Task } from "../src/index";
+import { makeWorkerUtils, addJob, runTaskListOnce, Task } from "../src/index";
 
 test("runs a job added through the worker utils", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
 
     // Schedule a job
-    const utils = await WorkerUtils.new({
+    const utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
     await utils.addJob("job1", { a: 1 });
