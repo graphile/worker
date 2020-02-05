@@ -12,7 +12,8 @@ export function makeAddJob(withPgClient: WithPgClient) {
           payload => $2::json,
           queue_name => coalesce($3::text, public.gen_random_uuid()::text),
           run_at => coalesce($4::timestamptz, now()),
-          max_attempts => coalesce($5::int, 25)
+          max_attempts => coalesce($5::int, 25),
+          job_key => $6::text
         );
         `,
         [
@@ -21,6 +22,7 @@ export function makeAddJob(withPgClient: WithPgClient) {
           options.queueName || null,
           options.runAt ? options.runAt.toISOString() : null,
           options.maxAttempts || null,
+          options.jobKey || null,
         ]
       );
       const job: Job = rows[0];
