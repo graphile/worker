@@ -25,7 +25,6 @@ And please give some love to our featured sponsors 🤩:
 <table><tr>
 <td align="center"><a href="http://chads.website/"><img src="https://www.graphile.org/images/sponsors/chadf.png" width="90" height="90" alt="Chad Furman" /><br />Chad Furman</a></td>
 <td align="center"><a href="https://storyscript.io/?utm_source=postgraphile"><img src="https://www.graphile.org/images/sponsors/storyscript.png" width="90" height="90" alt="Storyscript" /><br />Storyscript</a></td>
-<td align="center"><a href="http://p72.vc/"><img src="https://www.graphile.org/images/sponsors/p72.png" width="90" height="90" alt="Point72 Ventures" /><br />Point72 Ventures</a></td>
 </tr></table>
 
 ## Quickstart: CLI
@@ -131,14 +130,17 @@ Running this example should output something like:
 [worker(worker-7327280603017288)] INFO: Completed task 1 (hello) with success (0.16ms)
 ```
 
-## Crowd-funded open-source software
+## Support
+
+You can ask for help on Discord at http://discord.gg/graphile
 
 Please support development of this project [via
 sponsorship](https://graphile.org/sponsor/). With your support we can improve
 performance, usability and documentation at a greater rate, leading to reduced
 running and engineering costs for your organisation, leading to a net ROI.
 
-Support contracts are also available; for more information see: https://www.graphile.org/support/
+Professional support contracts are also available; for more information see:
+https://graphile.org/support/
 
 ## Features
 
