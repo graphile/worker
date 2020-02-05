@@ -1,5 +1,6 @@
 import { PoolClient, Pool, QueryResultRow, QueryResult } from "pg";
 import { Logger } from "./logger";
+import { Release } from "./runner";
 
 /*
  * Terminology:
@@ -19,24 +20,91 @@ export type WithPgClient = <T = void>(
   callback: (pgClient: PoolClient) => Promise<T>
 ) => Promise<T>;
 
+/**
+ * The `addJob` interface is implemented in many places in the library, all
+ * conforming to this.
+ */
 export type AddJobFunction = (
+  /**
+   * The name of the task that will be executed for this job.
+   */
   identifier: string,
+
+  /**
+   * The payload (typically a JSON object) that will be passed to the task executor.
+   */
   payload?: any,
-  options?: TaskOptions
+
+  /**
+   * Additional details about how the job should be handled.
+   */
+  spec?: TaskSpec
 ) => Promise<Job>;
 
 export interface Helpers {
-  job: Job;
+  /**
+   * A Logger instance.
+   */
   logger: Logger;
+
+  /**
+   * Grabs a PostgreSQL client from the pool, awaits your callback, then
+   * releases the client back to the pool.
+   */
   withPgClient: WithPgClient;
+
+  /**
+   * Adds a job into our queue.
+   */
+  addJob: AddJobFunction;
+}
+
+export interface JobHelpers extends Helpers {
+  /**
+   * A Logger instance, scoped to this job.
+   */
+  logger: Logger;
+
+  /**
+   * The currently executing job.
+   */
+  job: Job;
+
+  /**
+   * A shorthand for running an SQL query within the job.
+   */
   query<R extends QueryResultRow = any>(
     queryText: string,
     values?: any[]
   ): Promise<QueryResult<R>>;
-  addJob: AddJobFunction;
 }
 
-export type Task = (payload: unknown, helpers: Helpers) => void | Promise<void>;
+/**
+ * Utilities for working with Graphile Worker. Primarily useful for migrating
+ * the jobs database and queueing jobs.
+ */
+export interface WorkerUtils extends Helpers {
+  /**
+   * A Logger instance, scoped to label: 'WorkerUtils'
+   */
+  logger: Logger;
+
+  /**
+   * Use this to release the WorkerUtils when you no longer need it.
+   * Particularly useful in tests, or in short-running scripts.
+   */
+  release: Release;
+
+  /**
+   * Migrate the database schema to the latest version.
+   */
+  migrate: () => Promise<void>;
+}
+
+export type Task = (
+  payload: unknown,
+  helpers: JobHelpers
+) => void | Promise<void>;
 
 export function isValidTask(fn: unknown): fn is Task {
   if (typeof fn === "function") {
@@ -87,19 +155,22 @@ export interface Runner {
   promise: Promise<void>;
 }
 
-export interface TaskOptions {
+export interface TaskSpec {
   /**
    * The queue to run this task under
    */
   queueName?: string;
+
   /**
    * A Date to schedule this task to run in the future
    */
   runAt?: Date;
+
   /**
    * How many retries should this task get? (Default: 25)
    */
   maxAttempts?: number;
+
   /**
    * Unique identifier for the job, can be used to update or remove it later if needed
    */
@@ -154,4 +225,21 @@ export interface RunnerOptions extends WorkerPoolOptions {
    * default (10).
    */
   maxPoolSize?: number;
+}
+
+export interface WorkerUtilsOptions {
+  /**
+   * A PostgreSQL connection string to the database containing the job queue
+   */
+  connectionString?: string;
+
+  /**
+   * A pg.Pool instance to use instead of the `connectionString`
+   */
+  pgPool?: Pool;
+
+  /**
+   * How should messages be logged out? Defaults to using the console logger.
+   */
+  logger?: Logger;
 }

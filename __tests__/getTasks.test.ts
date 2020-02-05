@@ -1,6 +1,6 @@
 import getTasks from "../src/getTasks";
 import { makeMockJob, withPgClient } from "./helpers";
-import { makeHelpers, makeWithPgClientFromClient } from "../src/helpers";
+import { makeJobHelpers, makeWithPgClientFromClient } from "../src/helpers";
 import { defaultLogger } from "../src/logger";
 
 test("gets tasks from folder", () =>
@@ -13,7 +13,7 @@ Array [
   "wouldyoulike_default",
 ]
 `);
-    const helpers = makeHelpers(
+    const helpers = makeJobHelpers(
       makeMockJob("would you like"),
       {
         withPgClient: makeWithPgClientFromClient(client),
@@ -42,7 +42,7 @@ Array [
 ]
 `);
 
-    const helpers = makeHelpers(
+    const helpers = makeJobHelpers(
       makeMockJob("task1"),
       {
         withPgClient: makeWithPgClientFromClient(client),
@@ -68,7 +68,7 @@ Array [
 ]
 `);
 
-    const helpers = makeHelpers(
+    const helpers = makeJobHelpers(
       makeMockJob("t1"),
       {
         withPgClient: makeWithPgClientFromClient(client),

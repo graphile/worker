@@ -1,9 +1,9 @@
-import { WithPgClient, Job, Helpers, TaskOptions } from "./interfaces";
+import { WithPgClient, Job, TaskSpec, JobHelpers } from "./interfaces";
 import { Pool, PoolClient } from "pg";
 import { Logger } from "./logger";
 
 export function makeAddJob(withPgClient: WithPgClient) {
-  return (identifier: string, payload: any = {}, options: TaskOptions = {}) => {
+  return (identifier: string, payload: any = {}, spec: TaskSpec = {}) => {
     return withPgClient(async pgClient => {
       const { rows } = await pgClient.query(
         `
@@ -19,10 +19,10 @@ export function makeAddJob(withPgClient: WithPgClient) {
         [
           identifier,
           JSON.stringify(payload),
-          options.queueName || null,
-          options.runAt ? options.runAt.toISOString() : null,
-          options.maxAttempts || null,
-          options.jobKey || null,
+          spec.queueName || null,
+          spec.runAt ? spec.runAt.toISOString() : null,
+          spec.maxAttempts || null,
+          spec.jobKey || null,
         ]
       );
       const job: Job = rows[0];
@@ -31,17 +31,17 @@ export function makeAddJob(withPgClient: WithPgClient) {
   };
 }
 
-export function makeHelpers(
+export function makeJobHelpers(
   job: Job,
   { withPgClient }: { withPgClient: WithPgClient },
   baseLogger: Logger
-): Helpers {
+): JobHelpers {
   const jobLogger = baseLogger.scope({
     label: "job",
     taskIdentifier: job.task_identifier,
     jobId: job.id,
   });
-  const helpers: Helpers = {
+  const helpers: JobHelpers = {
     job,
     logger: jobLogger,
     withPgClient,
