@@ -145,7 +145,7 @@ Support contracts are also available; for more information see: https://www.grap
 - Standalone and embedded modes
 - Designed to be used both from JavaScript or directly in the database
 - Easy to test (recommended: `runTaskListOnce` util)
-- Low latency (under 2ms from task schedule to execution, uses `LISTEN`/`NOTIFY` to be informed of jobs as they're inserted)
+- Low latency (typically under 3ms from task schedule to execution, uses `LISTEN`/`NOTIFY` to be informed of jobs as they're inserted)
 - High performance (uses `SKIP LOCKED` to find jobs to execute, resulting in faster fetches)
 - Small tasks (uses explicit task names / payloads resulting in minimal serialisation/deserialisation overhead)
 - Parallel by default
@@ -735,11 +735,11 @@ DROP SCHEMA graphile_worker CASCADE;
 ## Performance
 
 `graphile-worker` is not intended to replace extremely high performance
-dedicated job queues, it's intended to be a very easy way to get a job queue
-up and running with Node.js and PostgreSQL. But this doesn't mean it's a
-slouch by any means - it achieves an average latency from triggering a job in
-one process to executing it in another of just 2ms, and each worker can
-handle up to 731 jobs per second on modest hardware (2011 iMac).
+dedicated job queues, it's intended to be a very easy way to get a reasonably
+performant job queue up and running with Node.js and PostgreSQL. But this
+doesn't mean it's a slouch by any means - it achieves an average latency from
+triggering a job in one process to executing it in another of under 3ms, and
+a 12-core database server can process around 10,000 jobs per second.
 
 `graphile-worker` is horizontally scalable. Each instance has a customisable
 worker pool, this pool defaults to size 1 (only one job at a time on this
@@ -750,14 +750,54 @@ set it higher and then using Node's `child_process` (or Node v11's
 `worker_threads`) to share the compute load over multiple cores without
 significantly impacting the main worker's runloop.
 
-To test performance you can run `yarn perfTest`. This reveals that on a 2011
-iMac running both the worker and the database (and a bunch of other stuff)
-starting the command, checking for jobs, and exiting takes about 0.40s and
-running 20,000 [trivial](perfTest/tasks/log_if_999.js) queued jobs across a
-single worker pool of size 1 takes 27.35s (~731 jobs per second). Latencies
-are also measured, from before the call to queue the job is fired until when
-the job is actually executed. These latencies ranged from 1.39ms to 19.66ms
-with an average of 1.90ms.
+To test performance, you can run `yarn perfTest`. This runs three tests:
+
+1. a startup/shutdown test to see how fast the worker can startup and exit if
+   there's no jobs queued (this includes connecting to the database and ensuring
+   the migrations are up to date)
+2. a load test - by default this will run
+   20,000 [trivial](perfTest/tasks/log_if_999.js) jobs with a parallelism of 4
+   (i.e. 4 node processes) and a concurrency of 10 (i.e. 10 concurrent jobs
+   running on each node process), but you can configure this in
+   `perfTest/run.js`. (These settings were optimised for a 12-core hyperthreading
+   machine.)
+3. a latency test - determining how long between issuing an `add_job` command
+   and the task itself being executed.
+
+### perfTest results:
+
+The test was ran on a 12-core AMD Ryzen 3900 with an M.2 SSD, running both
+the workers and the database (and a tonne of Chrome tabs, electron apps, and
+what not). Jobs=20000, parallelism=4, concurrency=10.
+
+Conclusion:
+
+- Startup/shutdown: 66ms
+- Jobs per second: 10,299
+- Average latency: 2.62ms (min: 2.43ms, max: 11.90ms)
+
+```
+Timing startup/shutdown time...
+... it took 66ms
+
+Scheduling 20000 jobs
+
+
+Timing 20000 job execution...
+Found 999!
+
+... it took 2008ms
+Jobs per second: 10298.81
+
+
+Testing latency...
+[core] INFO: Worker connected and looking for jobs... (task names: 'latency')
+Beginning latency test
+Latencies - min: 2.43ms, max: 11.90ms, avg: 2.62ms
+```
+
+TODO: post perfTest results in a more reasonable configuration, e.g. using an
+RDS PostgreSQL server and a worker running on EC2.
 
 ## Exponential-backoff
 
