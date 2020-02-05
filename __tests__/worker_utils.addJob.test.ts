@@ -6,9 +6,11 @@ test("runs a job added through the worker utils", () =>
     await reset(pgClient);
 
     // Schedule a job
-    const utils = new WorkerUtils({ connectionString: TEST_CONNECTION_STRING });
+    const utils = await WorkerUtils.new({
+      connectionString: TEST_CONNECTION_STRING,
+    });
     await utils.addJob("job1", { a: 1 });
-    await utils.end();
+    await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
     const { rows: jobs } = await pgClient.query(

@@ -76,24 +76,15 @@ There are two ways to schedule jobs:
 
 #### The WorkerUtils API
 
-Import `WorkerUtils` from `graphile-worker`, and make a new instance by passing in your configuration:
-
-- one of these to determine how to connect to the database:
-  - `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
-  - `pgPool`: A `pg.Pool` instance to use
- 
-A `WorkerUtils` instance has the following methods:
-
-- `end` - call this to release the `WorkerUtils` instance. It's typically best to use `WorkerUtils` as a singleton, so you often won't need this, but it's useful for tests or processes where you want Node to exit cleanly when it's done.
-- `addJob(name: string, payload: JSON, options: TaskOptions)` - a method you can call to enqueue a job, it returns a promise that resolves to the job. `options` accepts the following parameters:
-  - `run_at`?
-
+Example:
 
 ```js
-const { WorkerUtils } = require("graphile-worker");
+const { makeWorkerUtils } = require("graphile-worker");
 
 async function main() {
-  const workerUtils = new WorkerUtils({ connectionString: "postgres:///" });
+  const workerUtils = await makeWorkerUtils({
+    connectionString: "postgres:///my_db",
+  });
   try {
     await workerUtils.addJob("calculate-life-meaning", { value: 42 });
   } finally {
@@ -106,6 +97,19 @@ main().catch(err => {
   process.exit(1);
 });
 ```
+
+Import `WorkerUtils` from `graphile-worker`, and make a new instance by passing your configuration:
+
+- exactly one of these keys must be present to determine how to connect to the database:
+  - `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
+  - `pgPool`: A `pg.Pool` instance to use
+- there are currently no other options
+
+A `WorkerUtils` instance has the following methods:
+
+- `addJob(name: string, payload: JSON, spec: TaskSpec)` - a method you can call to enqueue a job, it returns a promise that resolves to the job. `spec` accepts the following parameters:
+  - `run_at`?
+- `release` - call this to release the `WorkerUtils` instance. It's typically best to use `WorkerUtils` as a singleton, so you often won't need this, but it's useful for tests or processes where you want Node to exit cleanly when it's done.
 
 ##### The `addJob` standalone JavaScript function
 

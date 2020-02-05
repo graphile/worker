@@ -23,7 +23,7 @@ export type WithPgClient = <T = void>(
 export type AddJobFunction = (
   identifier: string,
   payload?: any,
-  options?: TaskOptions
+  spec?: TaskSpec
 ) => Promise<Job>;
 
 export interface Helpers {
@@ -44,7 +44,10 @@ export interface WorkerUtilsHelpers extends Helpers {
   release: Release;
 }
 
-export type Task = (payload: unknown, helpers: Helpers) => void | Promise<void>;
+export type Task = (
+  payload: unknown,
+  helpers: JobHelpers
+) => void | Promise<void>;
 
 export function isValidTask(fn: unknown): fn is Task {
   if (typeof fn === "function") {
@@ -95,7 +98,7 @@ export interface Runner {
   promise: Promise<void>;
 }
 
-export interface TaskOptions {
+export interface TaskSpec {
   /**
    * The queue to run this task under
    */

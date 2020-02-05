@@ -1,70 +1,83 @@
-import {
-  WorkerUtilsOptions,
-  TaskOptions,
-  WorkerUtilsHelpers,
-} from "./interfaces";
+import { WorkerUtilsOptions, TaskSpec, WorkerUtilsHelpers } from "./interfaces";
 import { makeWithPgClientFromPool, makeAddJob } from "./helpers";
 import { migrate } from "./migrate";
 import { defaultLogger } from "./logger";
 import { withReleasers, assertPool } from "./runner";
 
-const processWorkerUtilsOptions = async (
+async function makeWorkerUtilsHelpers(
   options: WorkerUtilsOptions
-): Promise<WorkerUtilsHelpers> => {
-  const { logger = defaultLogger } = options;
-  return withReleasers(async (releasers, release) => {
-    const pgPool = await assertPool(options, releasers, logger);
-    const withPgClient = makeWithPgClientFromPool(pgPool);
-
-    await withPgClient(client => migrate(client));
-
-    return { withPgClient, logger, release, addJob: makeAddJob(withPgClient) };
+): Promise<WorkerUtilsHelpers> {
+  const { logger: baseLogger = defaultLogger } = options;
+  const logger = baseLogger.scope({
+    label: "WorkerUtils",
   });
-};
 
-/**
- * Because our class has an asynchronous startup, we add placeholder methods
- * which, if called before the class is ready, will wait for the class to be
- * ready and will then call their own replacements.
- */
-function waitUntilReady(propertyName: string) {
-  return async function(this: WorkerUtils, ...args: any[]): Promise<any> {
-    // We're not ready; wait until we are
-    await this.readyPromise;
+  const { pgPool, release } = await withReleasers(
+    async (releasers, release) => ({
+      pgPool: await assertPool(options, releasers, logger),
+      release,
+    })
+  );
 
-    // Once ready; we have been replaced, so call our replacement:
-    return this[propertyName](...args);
+  const withPgClient = makeWithPgClientFromPool(pgPool);
+  const addJob = makeAddJob(withPgClient);
+
+  await withPgClient(client => migrate(client));
+
+  return {
+    withPgClient,
+    logger,
+    release,
+    addJob,
   };
 }
 
 /**
- * Utilities for working with Graphile Worker; currently only contains the
- * ability to add jobs.
+ * Construct (asynchronously) a new WorkerUtils instance.
  */
-export class WorkerUtils {
-  protected readyPromise: Promise<void>;
+export async function makeWorkerUtils(
+  options: WorkerUtilsOptions
+): Promise<WorkerUtils> {
+  const helpers = await makeWorkerUtilsHelpers(options);
+  return new PrivateWorkerUtils(helpers) as WorkerUtils;
+}
 
-  constructor(options: WorkerUtilsOptions) {
-    this.readyPromise = processWorkerUtilsOptions(options).then(
-      ({ addJob, release }) => {
-        // Replace our placeholder methods with the real ones:
-        this.addJob = addJob;
-        this.end = release;
-      }
-    );
+/**
+ * Utilities for working with Graphile Worker. Primarily useful for adding
+ * jobs.
+ */
+class PrivateWorkerUtils implements WorkerUtilsHelpers {
+  /**
+   * Do not construct this class directly, use `await makeWorkerUtils(options)`
+   */
+  constructor(helpers: WorkerUtilsHelpers) {
+    Object.assign(this, helpers);
   }
+
+  /**
+   * A Logger instance, scoped to label: 'WorkerUtils'
+   */
+  public logger: WorkerUtilsHelpers["logger"];
+
+  /**
+   * Grabs a PostgreSQL client from the pool, awaits your callback, then
+   * releases the client back to the pool.
+   */
+  public withPgClient: WorkerUtilsHelpers["withPgClient"];
 
   /**
    * Adds a job into our queue.
    */
-  public addJob: ReturnType<typeof makeAddJob> = waitUntilReady("addJob");
+  public addJob: WorkerUtilsHelpers["addJob"];
 
   /**
    * Use this to release the WorkerUtils when you no longer need it.
    * Particularly useful in tests, or in short-running scripts.
    */
-  public end: () => Promise<void> = waitUntilReady("end");
+  public release: WorkerUtilsHelpers["release"];
 }
+
+export type WorkerUtils = InstanceType<typeof PrivateWorkerUtils>;
 
 /**
  * This function can be used to quickly add a job; however if you need to call
@@ -72,15 +85,15 @@ export class WorkerUtils {
  * instance for efficiency and performance sake.
  */
 export async function addJob(
-  config: WorkerUtilsOptions,
+  options: WorkerUtilsOptions,
   identifier: string,
   payload: any = {},
-  options: TaskOptions = {}
+  spec: TaskSpec = {}
 ) {
-  const utils = new WorkerUtils(config);
+  const utils = await makeWorkerUtils(options);
   try {
-    return await utils.addJob(identifier, payload, options);
+    return await utils.addJob(identifier, payload, spec);
   } finally {
-    await utils.end();
+    await utils.release();
   }
 }

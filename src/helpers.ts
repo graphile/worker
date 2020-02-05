@@ -1,15 +1,9 @@
-import {
-  WithPgClient,
-  Job,
-  Helpers,
-  TaskOptions,
-  JobHelpers,
-} from "./interfaces";
+import { WithPgClient, Job, TaskSpec, JobHelpers } from "./interfaces";
 import { Pool, PoolClient } from "pg";
 import { Logger } from "./logger";
 
 export function makeAddJob(withPgClient: WithPgClient) {
-  return (identifier: string, payload: any = {}, options: TaskOptions = {}) => {
+  return (identifier: string, payload: any = {}, spec: TaskSpec = {}) => {
     return withPgClient(async pgClient => {
       const { rows } = await pgClient.query(
         `
@@ -25,10 +19,10 @@ export function makeAddJob(withPgClient: WithPgClient) {
         [
           identifier,
           JSON.stringify(payload),
-          options.queueName || null,
-          options.runAt ? options.runAt.toISOString() : null,
-          options.maxAttempts || null,
-          options.jobKey || null,
+          spec.queueName || null,
+          spec.runAt ? spec.runAt.toISOString() : null,
+          spec.maxAttempts || null,
+          spec.jobKey || null,
         ]
       );
       const job: Job = rows[0];
