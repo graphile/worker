@@ -677,7 +677,9 @@ BEGIN
     'schema', TG_TABLE_SCHEMA,
     'table', TG_TABLE_NAME,
     'op', TG_OP,
-    'id', (CASE WHEN TG_OP = 'DELETE' THEN OLD.id ELSE NEW.id END)
+    'id', (CASE WHEN TG_OP = 'DELETE' THEN OLD.id ELSE NEW.id END),
+    'new_data', to_json(NEW),
+    'old_data', to_json(OLD)
   ));
   RETURN NEW;
 END;
