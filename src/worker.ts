@@ -20,7 +20,7 @@ export function makeNewWorker(
 ): Worker {
   const {
     pollInterval = POLL_INTERVAL,
-    workerId = `worker-${randomBytes(9).toString("base64")}`,
+    workerId = `worker-${randomBytes(9).toString("hex")}`,
     logger: baseLogger = defaultLogger,
   } = options;
   const promise = deferred();
