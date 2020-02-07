@@ -7,6 +7,7 @@ import {
 } from "./interfaces";
 import { POLL_INTERVAL, MAX_CONTIGUOUS_ERRORS } from "./config";
 import * as assert from "assert";
+import { randomBytes } from "crypto";
 import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import { defaultLogger } from "./logger";
@@ -19,8 +20,7 @@ export function makeNewWorker(
 ): Worker {
   const {
     pollInterval = POLL_INTERVAL,
-    // The `||0.1` is to eliminate the vanishingly-small possibility of Math.random() returning 0. Math.random() can never return 1.
-    workerId = `worker-${String(Math.random() || 0.1).substr(2)}`,
+    workerId = `worker-${randomBytes(9).toString("base64")}`,
     logger: baseLogger = defaultLogger,
   } = options;
   const promise = deferred();
