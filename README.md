@@ -10,7 +10,7 @@ Job queue for PostgreSQL running on Node.js - allows you to run jobs (e.g.
 sending emails, performing calculations, generating PDFs, etc) "in the
 background" so that your HTTP response/application code is not held up. Can be
 used with any PostgreSQL-backed application. Pairs beautifully with
-[PostGraphile](https://www.graphile.org/postgraphile/).
+[PostGraphile](https://www.graphile.org/postgraphile/) or [PostgREST](http://postgrest.org/).
 
 ## Crowd-funded open-source software
 
@@ -160,6 +160,8 @@ https://graphile.org/support/
 - Modern JS with 100% async/await API (no callbacks)
 - Written natively in TypeScript
 - Watch mode for development (experimental - iterate your jobs without restarting worker)
+- If you're running really lean, you can run Graphile Worker in the same Node
+  process as your server to keep costs and devops complexity down.
 
 ## Status
 
@@ -844,6 +846,25 @@ from generate_series(1, 24) as attempt;
       23 | 06:07:06.465795 | 89:13:07.829180
       24 | 06:07:06.465795 | 95:20:14.294975
 ```
+
+## What if something goes wrong?
+
+If a job throws an error, the job is failed and scheduled for retries with
+exponential back-off. We use async/await so assuming you write your task code
+well all errors should be cascaded down automatically.
+
+If the worker is terminated (`SIGTERM`, `SIGINT`, etc), it [triggers a
+graceful
+shutdown](https://github.com/graphile/worker/blob/3540df5ab4eb73f846d54959fdfad07897b616f0/src/main.ts#L39-L66) -
+i.e. it stops accepting new jobs, waits for the existing jobs to complete,
+and then exits. If you need to restart your worker, you should do so using
+this graceful process.
+
+If the worker completely dies unexpectedly (e.g. `process.exit()`, segfault,
+`SIGKILL`) then those jobs remain locked for 4 hours, after which point
+they're available to be processed again automatically. You can free them up
+earlier than this by clearing the `locked_at` and `locked_by` columns on the
+relevant tables.
 
 ## Development
 
