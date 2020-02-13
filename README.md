@@ -340,6 +340,7 @@ main().catch(err => {
 We recommend building one instance of WorkerUtils and sharing it as a
 singleton throughout your code.
 
+
 ### WorkerUtilsOptions
 
 - exactly one of these keys must be present to determine how to connect to the database:
@@ -352,6 +353,8 @@ singleton throughout your code.
 A `WorkerUtils` instance has the following methods:
 
 - `addJob(name: string, payload: JSON, spec: TaskSpec)` - a method you can call to enqueue a job, see [addJob](#addjob).
+- `completeJob(workerId: string, jobId: number)` - complete a job immediately.
+- `failJob(workerId: string, jobId: number, errorMessage: string)` - fail a job with errorMessage
 - `migrate()` - a method you can call to update the graphile-worker database schema; returns a promise.
 - `release()` - call this to release the `WorkerUtils` instance. It's typically best to use `WorkerUtils` as a singleton, so you often won't need this, but it's useful for tests or processes where you want Node to exit cleanly when it's done.
 

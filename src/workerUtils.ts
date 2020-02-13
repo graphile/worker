@@ -1,5 +1,10 @@
 import { WorkerUtilsOptions, TaskSpec, WorkerUtils } from "./interfaces";
-import { makeWithPgClientFromPool, makeAddJob, makeCompleteJob, makeFailJob } from "./helpers";
+import {
+  makeWithPgClientFromPool,
+  makeAddJob,
+  makeCompleteJob,
+  makeFailJob,
+} from "./helpers";
 import { defaultLogger } from "./logger";
 import { withReleasers, assertPool } from "./runner";
 import { migrate } from "./migrate";

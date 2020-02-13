@@ -41,10 +41,7 @@ export function makeCompleteJob(withPgClient: WithPgClient) {
           job_id => $2::number
         );
         `,
-        [
-          workerId,
-          jobId
-        ]
+        [workerId, jobId]
       );
       const job: Job = rows[0];
       return job;
@@ -63,11 +60,7 @@ export function makeFailJob(withPgClient: WithPgClient) {
           error_message => $2::text
         );
         `,
-        [
-          workerId,
-          jobId,
-          errorMessage
-        ]
+        [workerId, jobId, errorMessage]
       );
       const job: Job = rows[0];
       return job;
@@ -91,9 +84,9 @@ export function makeJobHelpers(
     withPgClient,
     query: (queryText, values) =>
       withPgClient(pgClient => pgClient.query(queryText, values)),
-      addJob: makeAddJob(withPgClient),
-      completeJob: makeCompleteJob(withPgClient),
-      failJob: makeFailJob(withPgClient),
+    addJob: makeAddJob(withPgClient),
+    completeJob: makeCompleteJob(withPgClient),
+    failJob: makeFailJob(withPgClient),
 
     // TODO: add an API for giving workers more helpers
   };
