@@ -1,5 +1,5 @@
 import { WorkerUtilsOptions, TaskSpec, WorkerUtils } from "./interfaces";
-import { makeWithPgClientFromPool, makeAddJob } from "./helpers";
+import { makeWithPgClientFromPool, makeAddJob, makeCompleteJob, makeFailJob } from "./helpers";
 import { defaultLogger } from "./logger";
 import { withReleasers, assertPool } from "./runner";
 import { migrate } from "./migrate";
@@ -24,12 +24,16 @@ export async function makeWorkerUtils(
 
   const withPgClient = makeWithPgClientFromPool(pgPool);
   const addJob = makeAddJob(withPgClient);
+  const completeJob = makeCompleteJob(withPgClient);
+  const failJob = makeFailJob(withPgClient);
 
   return {
     withPgClient,
     logger,
     release,
     addJob,
+    completeJob,
+    failJob,
     migrate: () => withPgClient(migrate),
   };
 }

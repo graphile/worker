@@ -41,6 +41,45 @@ export type AddJobFunction = (
   spec?: TaskSpec
 ) => Promise<Job>;
 
+/**
+ * The `completeJob` interface is implemented in many places in the library, all
+ * conforming to this.
+ */
+export type CompleteJobFunction = (
+  /**
+   * The id of the worker that has locked this job.
+   */
+  workerId: string,
+
+  /**
+   * The id of the job to complete.
+   */
+  jobId: number,
+
+) => Promise<Job>;
+
+/**
+ * The `completeJob` interface is implemented in many places in the library, all
+ * conforming to this.
+ */
+export type FailJobFunction = (
+  /**
+   * The id of the worker that has locked this job.
+   */
+  workerId: string,
+
+  /**
+   * The id of the job to complete.
+   */
+  jobId: number,
+
+  /**
+   * The error message explaining why this job failed.
+   */
+  errorMessage: string,
+
+) => Promise<Job>;
+
 export interface Helpers {
   /**
    * A Logger instance.
@@ -57,6 +96,16 @@ export interface Helpers {
    * Adds a job into our queue.
    */
   addJob: AddJobFunction;
+
+  /**
+   * Completes a job on our queue.
+   */
+  completeJob: CompleteJobFunction;
+
+  /**
+   * Fails a job on our queue.
+   */
+  failJob: FailJobFunction;
 }
 
 export interface JobHelpers extends Helpers {

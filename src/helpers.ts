@@ -31,6 +31,50 @@ export function makeAddJob(withPgClient: WithPgClient) {
   };
 }
 
+export function makeCompleteJob(withPgClient: WithPgClient) {
+  return (workerId: string, jobId: number) => {
+    return withPgClient(async pgClient => {
+      const { rows } = await pgClient.query(
+        `
+        select * from graphile_worker.complete_job(
+          worker_id => $1::text,
+          job_id => $2::number
+        );
+        `,
+        [
+          workerId,
+          jobId
+        ]
+      );
+      const job: Job = rows[0];
+      return job;
+    });
+  };
+}
+
+export function makeFailJob(withPgClient: WithPgClient) {
+  return (workerId: string, jobId: number, errorMessage: string) => {
+    return withPgClient(async pgClient => {
+      const { rows } = await pgClient.query(
+        `
+        select * from graphile_worker.fail_job(
+          worker_id => $1::text,
+          job_id => $2::number,
+          error_message => $2::text
+        );
+        `,
+        [
+          workerId,
+          jobId,
+          errorMessage
+        ]
+      );
+      const job: Job = rows[0];
+      return job;
+    });
+  };
+}
+
 export function makeJobHelpers(
   job: Job,
   { withPgClient }: { withPgClient: WithPgClient },
@@ -47,7 +91,9 @@ export function makeJobHelpers(
     withPgClient,
     query: (queryText, values) =>
       withPgClient(pgClient => pgClient.query(queryText, values)),
-    addJob: makeAddJob(withPgClient),
+      addJob: makeAddJob(withPgClient),
+      completeJob: makeCompleteJob(withPgClient),
+      failJob: makeFailJob(withPgClient),
 
     // TODO: add an API for giving workers more helpers
   };
