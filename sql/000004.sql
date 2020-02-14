@@ -101,3 +101,52 @@ begin
   return v_job;
 end;
 $$ language plpgsql volatile;
+
+create function graphile_worker.complete_jobs(
+  job_ids bigint[]
+) returns void as $$
+  delete from graphile_worker.jobs
+    where id = any(job_ids)
+    and (
+      locked_by is null
+    or
+      locked_at < NOW() - interval '4 hours'
+    );
+$$ language sql volatile;
+
+create function graphile_worker.permanently_fail_jobs(
+  job_ids bigint[],
+  error_message text = null
+) returns void as $$
+  update graphile_worker.jobs
+    set
+      last_error = coalesce(error_message, 'Manually marked as failed'),
+      attempts = max_attempts
+    where id = any(job_ids)
+    and (
+      locked_by is null
+    or
+      locked_at < NOW() - interval '4 hours'
+    );
+$$ language sql volatile;
+
+create function graphile_worker.reschedule_jobs(
+  job_ids bigint[],
+  run_at timestamptz = null,
+  priority int = null,
+  attempts int = null,
+  max_attempts int = null
+) returns void as $$
+  update graphile_worker.jobs
+    set
+      run_at = coalesce(reschedule_jobs.run_at, jobs.run_at),
+      priority = coalesce(reschedule_jobs.priority, jobs.priority),
+      attempts = coalesce(reschedule_jobs.attempts, jobs.attempts),
+      max_attempts = coalesce(reschedule_jobs.max_attempts, jobs.max_attempts)
+    where id = any(job_ids)
+    and (
+      locked_by is null
+    or
+      locked_at < NOW() - interval '4 hours'
+    );
+$$ language sql volatile;

@@ -99,6 +99,38 @@ export interface WorkerUtils extends Helpers {
    * Migrate the database schema to the latest version.
    */
   migrate: () => Promise<void>;
+
+  /**
+   * Marks the specified jobs (by their ids) as if they were completed,
+   * assuming they are not locked. Note that completing a job deletes it. You
+   * may mark failed and permanently failed jobs as completed if you wish.
+   */
+  completeJobs: (ids: string[]) => Promise<void>;
+
+  /**
+   * Marks the specified jobs (by their ids) as failed permanently, assuming
+   * they are not locked. This means setting their `attempts` equal to their
+   * `max_attempts`.
+   */
+  permanentlyFailJobs: (ids: string[], reason?: string) => Promise<void>;
+
+  /**
+   * Updates the specified scheduling properties of the jobs (assuming they are
+   * not locked). All of the specified options are optional, omitted or null
+   * values will left unmodified.
+   *
+   * This method can be used to postpone or advance job execution, or to
+   * schedule a previously failed or permanently failed job for execution.
+   */
+  rescheduleJobs: (
+    ids: string[],
+    options: {
+      runAt?: string | Date;
+      priority?: number;
+      attempts?: number;
+      maxAttempts?: number;
+    }
+  ) => Promise<void>;
 }
 
 export type Task = (

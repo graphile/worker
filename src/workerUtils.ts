@@ -31,6 +31,42 @@ export async function makeWorkerUtils(
     release,
     addJob,
     migrate: () => withPgClient(migrate),
+
+    async completeJobs(ids) {
+      await withPgClient(client =>
+        client.query("select graphile_worker.complete_jobs($1)", [ids])
+      );
+    },
+
+    async permanentlyFailJobs(ids, reason) {
+      await withPgClient(client =>
+        client.query("select graphile_worker.permanently_fail_jobs($1, $2)", [
+          ids,
+          reason || null,
+        ])
+      );
+    },
+
+    async rescheduleJobs(ids, options) {
+      await withPgClient(client =>
+        client.query(
+          `select graphile_worker.rescheduleJobs(
+            $1,
+            run_at := $2,
+            priority := $3,
+            attempts := $4,
+            max_attempts := $5,
+           )`,
+          [
+            ids,
+            options.runAt || null,
+            options.priority || null,
+            options.attempts || null,
+            options.maxAttempts || null,
+          ]
+        )
+      );
+    },
   };
 }
 
