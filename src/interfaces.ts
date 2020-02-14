@@ -157,14 +157,20 @@ export interface Runner {
 
 export interface TaskSpec {
   /**
-   * The queue to run this task under
+   * The queue to run this task under. (Default: null)
    */
   queueName?: string;
 
   /**
-   * A Date to schedule this task to run in the future
+   * A Date to schedule this task to run in the future. (Default: now)
    */
   runAt?: Date;
+
+  /**
+   * Higher (numerically larger) priority places job ahead of jobs with lower
+   * priority. (Default: 0)
+   */
+  priority?: number;
 
   /**
    * How many retries should this task get? (Default: 25)
@@ -172,7 +178,7 @@ export interface TaskSpec {
   maxAttempts?: number;
 
   /**
-   * Unique identifier for the job, can be used to update or remove it later if needed
+   * Unique identifier for the job, can be used to update or remove it later if needed. (Default: null)
    */
   jobKey?: string;
 }

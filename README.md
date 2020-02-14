@@ -728,6 +728,15 @@ SELECT graphile_worker.remove_job('abc');
 
 **Note:** If a job is updated using `add_job` once it is already running or completed, the second job will be scheduled separately, meaning both will run. Likewise, calling `remove_job` for a running or completed job is a no-op.
 
+## Rationality checks
+
+We recommend that you limit `queue_name`, `task_identifier` and `job_key` to
+printable ASCII characters.
+
+- `queue_name` can be at most 128 characters long
+- `task_identifier` can be at most 128 characters long
+- `job_key` can be at most 512 characters long
+
 ## Uninstallation
 
 To delete the worker code and all the tasks from your database, just run this one SQL statement:
