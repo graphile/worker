@@ -91,6 +91,8 @@ async function main() {
   const runner = await run({
     connectionString: "postgres:///my_db",
     concurrency: 5,
+    // Install signal handlers for graceful shutdown on SIGINT, SIGTERM, etc
+    noHandleSignals: false,
     pollInterval: 1000,
     // you can set the taskList or taskDirectory but not both
     taskList: {
@@ -263,6 +265,7 @@ migrations and then resolves.
 The following options for these methods are available.
 
 - `concurrency`: The equivalent of the cli `--jobs` option with the same default value.
+- `nohandleSignals`: If set true, we won't install signal handlers and it'll be up to you to handle graceful shutdown of the worker if the process receives a signal.
 - `pollInterval`: The equivalent of the cli `--poll-interval` option with the same default value.
 - `logger`: To change how log messages are output you may provide a custom logger; see [`Logger`](#logger) below
 - the database is identified through one of these options:
