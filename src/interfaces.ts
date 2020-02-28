@@ -103,16 +103,19 @@ export interface WorkerUtils extends Helpers {
   /**
    * Marks the specified jobs (by their ids) as if they were completed,
    * assuming they are not locked. Note that completing a job deletes it. You
-   * may mark failed and permanently failed jobs as completed if you wish.
+   * may mark failed and permanently failed jobs as completed if you wish. The
+   * deleted jobs will be returned (note that this may be fewer jobs than you
+   * requested).
    */
-  completeJobs: (ids: string[]) => Promise<void>;
+  completeJobs: (ids: string[]) => Promise<Job[]>;
 
   /**
    * Marks the specified jobs (by their ids) as failed permanently, assuming
    * they are not locked. This means setting their `attempts` equal to their
-   * `max_attempts`.
+   * `max_attempts`. The updated jobs will be returned (note that this may be
+   * fewer jobs than you requested).
    */
-  permanentlyFailJobs: (ids: string[], reason?: string) => Promise<void>;
+  permanentlyFailJobs: (ids: string[], reason?: string) => Promise<Job[]>;
 
   /**
    * Updates the specified scheduling properties of the jobs (assuming they are
@@ -120,7 +123,9 @@ export interface WorkerUtils extends Helpers {
    * values will left unmodified.
    *
    * This method can be used to postpone or advance job execution, or to
-   * schedule a previously failed or permanently failed job for execution.
+   * schedule a previously failed or permanently failed job for execution. The
+   * updated jobs will be returned (note that this may be fewer jobs than you
+   * requested).
    */
   rescheduleJobs: (
     ids: string[],
@@ -130,7 +135,7 @@ export interface WorkerUtils extends Helpers {
       attempts?: number;
       maxAttempts?: number;
     }
-  ) => Promise<void>;
+  ) => Promise<Job[]>;
 }
 
 export type Task = (

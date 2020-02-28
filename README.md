@@ -743,30 +743,32 @@ changes.
 
 ### Complete jobs
 
-SQL: `SELECT graphile_worker.complete_jobs(ARRAY[7, 99, 38674, ...])`;
+SQL: `SELECT * FROM graphile_worker.complete_jobs(ARRAY[7, 99, 38674, ...])`;
 
-JS: `await workerUtils.completeJobs([7, 99, 38674, ...]);`
+JS: `const deletedJobs = await workerUtils.completeJobs([7, 99, 38674, ...]);`
 
 Marks the specified jobs (by their ids) as if they were completed, assuming
 they are not locked. Note that completing a job deletes it. You may mark
-failed and permanently failed jobs as completed if you wish.
+failed and permanently failed jobs as completed if you wish. The deleted
+jobs will be returned (note that this may be fewer jobs than you requested).
 
 ### Permanently fail jobs
 
-SQL: `SELECT graphile_worker.permanently_fail_jobs(ARRAY[7, 99, 38674, ...], 'Enter reason here')`;
+SQL: `SELECT * FROM graphile_worker.permanently_fail_jobs(ARRAY[7, 99, 38674, ...], 'Enter reason here')`;
 
-JS: `await workerUtils.permanentlyFailJobs([7, 99, 38674, ...], 'Enter reason here');`
+JS: `const updatedJobs = await workerUtils.permanentlyFailJobs([7, 99, 38674, ...], 'Enter reason here');`
 
 Marks the specified jobs (by their ids) as failed permanently, assuming they
 are not locked. This means setting their `attempts` equal to their
-`max_attempts`.
+`max_attempts`. The updated jobs will be returned (note that this may be fewer
+jobs than you requested).
 
 ### Rescheduling jobs
 
 SQL:
 
 ```sql
-SELECT graphile_worker.reschedule_jobs(
+SELECT * FROM graphile_worker.reschedule_jobs(
   ARRAY[7, 99, 38674, ...],
   run_at := NOW() + interval '5 minutes',
   priority := 5,
@@ -778,7 +780,7 @@ SELECT graphile_worker.reschedule_jobs(
 JS:
 
 ```js
-await workerUtils.rescheduleJobs(
+const updatedJobs = await workerUtils.rescheduleJobs(
   [7, 99, 38674, ...],
   {
     runAt: '2020-02-02T02:02:02Z',
@@ -794,7 +796,8 @@ not locked). All of the specified options are optional, omitted or null
 values will left unmodified.
 
 This method can be used to postpone or advance job execution, or to schedule
-a previously failed or permanently failed job for execution.
+a previously failed or permanently failed job for execution. The updated jobs
+will be returned (note that this may be fewer jobs than you requested).
 
 ## Rationality checks
 
