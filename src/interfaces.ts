@@ -248,6 +248,12 @@ export interface WorkerPoolOptions extends WorkerSharedOptions {
    * Number of jobs to run concurrently
    */
   concurrency?: number;
+
+  /**
+   * If set true, we won't install signal handlers and it'll be up to you to
+   * handle graceful shutdown of the worker if the process receives a signal.
+   */
+  noHandleSignals?: boolean;
 }
 
 export interface RunnerOptions extends WorkerPoolOptions {

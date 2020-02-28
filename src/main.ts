@@ -74,10 +74,16 @@ export function runTaskList(
 ): WorkerPool {
   const { logger = defaultLogger } = options;
   logger.debug(`Worker pool options are ${inspect(options)}`, { options });
-  const { concurrency = CONCURRENT_JOBS, ...workerOptions } = options;
+  const {
+    concurrency = CONCURRENT_JOBS,
+    noHandleSignals,
+    ...workerOptions
+  } = options;
 
-  // Clean up when certain signals occur
-  registerSignalHandlers(logger);
+  if (!noHandleSignals) {
+    // Clean up when certain signals occur
+    registerSignalHandlers(logger);
+  }
 
   const promise = deferred();
   const workers: Array<Worker> = [];
