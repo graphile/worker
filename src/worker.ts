@@ -10,8 +10,7 @@ import * as assert from "assert";
 import { randomBytes } from "crypto";
 import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
-import { defaultLogger } from "./logger";
-import { Client } from "pg";
+import { processSharedOptions } from "./lib";
 
 export function makeNewWorker(
   tasks: TaskList,
@@ -19,12 +18,14 @@ export function makeNewWorker(
   options: WorkerOptions = {},
   continuous = true
 ): Worker {
-  const { schema: workerSchema = "graphile_worker" } = options;
-  const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
+  const {
+    workerSchema,
+    escapedWorkerSchema,
+    logger: baseLogger,
+  } = processSharedOptions(options);
   const {
     pollInterval = POLL_INTERVAL,
     workerId = `worker-${randomBytes(9).toString("hex")}`,
-    logger: baseLogger = defaultLogger,
   } = options;
   const promise = deferred();
   let activeJob: Job | null = null;

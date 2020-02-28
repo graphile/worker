@@ -5,15 +5,15 @@ import {
   JobHelpers,
   WorkerSharedOptions,
 } from "./interfaces";
-import { Pool, PoolClient, Client } from "pg";
+import { Pool, PoolClient } from "pg";
 import { defaultLogger } from "./logger";
+import { processSharedOptions } from "./lib";
 
 export function makeAddJob(
   withPgClient: WithPgClient,
   options: WorkerSharedOptions
 ) {
-  const { schema: workerSchema = "graphile_worker" } = options;
-  const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
+  const { escapedWorkerSchema } = processSharedOptions(options);
   return (identifier: string, payload: any = {}, spec: TaskSpec = {}) => {
     return withPgClient(async pgClient => {
       const { rows } = await pgClient.query(

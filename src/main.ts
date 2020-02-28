@@ -1,4 +1,4 @@
-import { Pool, PoolClient, Client } from "pg";
+import { Pool, PoolClient } from "pg";
 import { inspect } from "util";
 import {
   TaskList,
@@ -17,7 +17,8 @@ import {
   makeWithPgClientFromClient,
 } from "./helpers";
 import { CONCURRENT_JOBS } from "./config";
-import { defaultLogger, Logger } from "./logger";
+import { Logger } from "./logger";
+import { processSharedOptions } from "./lib";
 
 const allWorkerPools: Array<WorkerPool> = [];
 
@@ -72,16 +73,13 @@ export function runTaskList(
   pgPool: Pool,
   options: WorkerPoolOptions = {}
 ): WorkerPool {
-  const { logger = defaultLogger } = options;
+  const { logger, escapedWorkerSchema } = processSharedOptions(options);
   logger.debug(`Worker pool options are ${inspect(options)}`, { options });
   const {
     concurrency = CONCURRENT_JOBS,
     noHandleSignals,
     ...workerOptions
   } = options;
-
-  const { schema: workerSchema = "graphile_worker" } = workerOptions;
-  const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
 
   if (!noHandleSignals) {
     // Clean up when certain signals occur

@@ -1,9 +1,8 @@
 import { WorkerUtilsOptions, TaskSpec, WorkerUtils, Job } from "./interfaces";
 import { makeWithPgClientFromPool, makeAddJob } from "./helpers";
-import { defaultLogger } from "./logger";
 import { withReleasers, assertPool } from "./runner";
 import { migrate } from "./migrate";
-import { Client } from "pg";
+import { processSharedOptions } from "./lib";
 
 /**
  * Construct (asynchronously) a new WorkerUtils instance.
@@ -11,13 +10,12 @@ import { Client } from "pg";
 export async function makeWorkerUtils(
   options: WorkerUtilsOptions
 ): Promise<WorkerUtils> {
-  const { logger: baseLogger = defaultLogger } = options;
+  const { logger: baseLogger, escapedWorkerSchema } = processSharedOptions(
+    options
+  );
   const logger = baseLogger.scope({
     label: "WorkerUtils",
   });
-
-  const { schema: workerSchema = "graphile_worker" } = options;
-  const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
 
   const { pgPool, release } = await withReleasers(
     async (releasers, release) => ({

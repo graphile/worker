@@ -1,10 +1,10 @@
-import { PoolClient, Client } from "pg";
+import { PoolClient } from "pg";
 import { readdir, readFile } from "./fs";
 import { WorkerSharedOptions } from "./interfaces";
+import { processSharedOptions } from "./lib";
 
 async function installSchema(client: PoolClient, options: WorkerSharedOptions) {
-  const { schema: workerSchema = "graphile_worker" } = options;
-  const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
+  const { escapedWorkerSchema } = processSharedOptions(options);
   await client.query(`
     create extension if not exists pgcrypto with schema public;
     create schema ${escapedWorkerSchema};
@@ -21,8 +21,7 @@ async function runMigration(
   migrationNumber: number,
   options: WorkerSharedOptions
 ) {
-  const { schema: workerSchema = "graphile_worker" } = options;
-  const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
+  const { escapedWorkerSchema } = processSharedOptions(options);
   const rawText = await readFile(
     `${__dirname}/../sql/${migrationFile}`,
     "utf8"
@@ -48,8 +47,7 @@ export async function migrate(
   client: PoolClient,
   options: WorkerSharedOptions
 ) {
-  const { schema: workerSchema = "graphile_worker" } = options;
-  const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
+  const { escapedWorkerSchema } = processSharedOptions(options);
   let latestMigration: number | null = null;
   try {
     const {
