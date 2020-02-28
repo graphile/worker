@@ -5,7 +5,6 @@ import {
   WithPgClient,
   WorkerOptions,
 } from "./interfaces";
-import { POLL_INTERVAL, MAX_CONTIGUOUS_ERRORS } from "./config";
 import * as assert from "assert";
 import { randomBytes } from "crypto";
 import deferred from "./deferred";
@@ -18,15 +17,19 @@ export function makeNewWorker(
   options: WorkerOptions = {},
   continuous = true
 ): Worker {
+  const { workerId = `worker-${randomBytes(9).toString("hex")}` } = options;
   const {
     workerSchema,
     escapedWorkerSchema,
-    logger: baseLogger,
-  } = processSharedOptions(options);
-  const {
-    pollInterval = POLL_INTERVAL,
-    workerId = `worker-${randomBytes(9).toString("hex")}`,
-  } = options;
+    logger,
+    pollInterval,
+    maxContiguousErrors,
+  } = processSharedOptions(options, {
+    scope: {
+      label: "worker",
+      workerId,
+    },
+  });
   const promise = deferred();
   let activeJob: Job | null = null;
 
@@ -40,11 +43,6 @@ export function makeNewWorker(
     return false;
   };
   let active = true;
-
-  const logger = baseLogger.scope({
-    label: "worker",
-    workerId,
-  });
 
   const release = () => {
     if (!active) {
@@ -94,9 +92,9 @@ export function makeNewWorker(
       if (continuous) {
         contiguousErrors++;
         logger.debug(
-          `Failed to acquire job: ${err.message} (${contiguousErrors}/${MAX_CONTIGUOUS_ERRORS})`
+          `Failed to acquire job: ${err.message} (${contiguousErrors}/${maxContiguousErrors})`
         );
-        if (contiguousErrors >= MAX_CONTIGUOUS_ERRORS) {
+        if (contiguousErrors >= maxContiguousErrors) {
           promise.reject(
             new Error(
               `Failed ${contiguousErrors} times in a row to acquire job; latest error: ${err.message}`

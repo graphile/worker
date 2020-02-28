@@ -10,11 +10,10 @@ import { processSharedOptions } from "./lib";
 export async function makeWorkerUtils(
   options: WorkerUtilsOptions
 ): Promise<WorkerUtils> {
-  const { logger: baseLogger, escapedWorkerSchema } = processSharedOptions(
-    options
-  );
-  const logger = baseLogger.scope({
-    label: "WorkerUtils",
+  const { logger, escapedWorkerSchema } = processSharedOptions(options, {
+    scope: {
+      label: "WorkerUtils",
+    },
   });
 
   const { pgPool, release } = await withReleasers(

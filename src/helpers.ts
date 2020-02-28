@@ -6,7 +6,6 @@ import {
   WorkerSharedOptions,
 } from "./interfaces";
 import { Pool, PoolClient } from "pg";
-import { defaultLogger } from "./logger";
 import { processSharedOptions } from "./lib";
 
 export function makeAddJob(
@@ -49,15 +48,16 @@ export function makeJobHelpers(
   { withPgClient }: { withPgClient: WithPgClient },
   options: WorkerSharedOptions
 ): JobHelpers {
-  const { logger: baseLogger = defaultLogger } = options;
-  const jobLogger = baseLogger.scope({
-    label: "job",
-    taskIdentifier: job.task_identifier,
-    jobId: job.id,
+  const { logger } = processSharedOptions(options, {
+    scope: {
+      label: "job",
+      taskIdentifier: job.task_identifier,
+      jobId: job.id,
+    },
   });
   const helpers: JobHelpers = {
     job,
-    logger: jobLogger,
+    logger,
     withPgClient,
     query: (queryText, values) =>
       withPgClient(pgClient => pgClient.query(queryText, values)),
@@ -69,10 +69,10 @@ export function makeJobHelpers(
   // DEPRECATED METHODS
   Object.assign(helpers, {
     debug(format: string, ...parameters: any[]): void {
-      jobLogger.error(
+      logger.error(
         "REMOVED: `helpers.debug` has been replaced with `helpers.logger.debug`; please do not use `helpers.debug`"
       );
-      jobLogger.debug(format, { parameters });
+      logger.debug(format, { parameters });
     },
   } as any);
 
