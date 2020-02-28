@@ -104,20 +104,21 @@ $$ language plpgsql volatile;
 
 create function graphile_worker.complete_jobs(
   job_ids bigint[]
-) returns void as $$
+) returns setof graphile_worker.jobs as $$
   delete from graphile_worker.jobs
     where id = any(job_ids)
     and (
       locked_by is null
     or
       locked_at < NOW() - interval '4 hours'
-    );
+    )
+    returning *;
 $$ language sql volatile;
 
 create function graphile_worker.permanently_fail_jobs(
   job_ids bigint[],
   error_message text = null
-) returns void as $$
+) returns setof graphile_worker.jobs as $$
   update graphile_worker.jobs
     set
       last_error = coalesce(error_message, 'Manually marked as failed'),
@@ -127,7 +128,8 @@ create function graphile_worker.permanently_fail_jobs(
       locked_by is null
     or
       locked_at < NOW() - interval '4 hours'
-    );
+    )
+    returning *;
 $$ language sql volatile;
 
 create function graphile_worker.reschedule_jobs(
@@ -136,7 +138,7 @@ create function graphile_worker.reschedule_jobs(
   priority int = null,
   attempts int = null,
   max_attempts int = null
-) returns void as $$
+) returns setof graphile_worker.jobs as $$
   update graphile_worker.jobs
     set
       run_at = coalesce(reschedule_jobs.run_at, jobs.run_at),
@@ -148,5 +150,6 @@ create function graphile_worker.reschedule_jobs(
       locked_by is null
     or
       locked_at < NOW() - interval '4 hours'
-    );
+    )
+    returning *;
 $$ language sql volatile;
