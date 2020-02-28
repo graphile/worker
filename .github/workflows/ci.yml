@@ -4,6 +4,10 @@ on: [push, pull_request]
 
 env:
   CI: true
+  PGUSER: postgres
+  PGPASSWORD: postgres
+  PGHOST: "127.0.0.1"
+  PGPORT: 5432
 
 jobs:
   test:
@@ -37,7 +41,7 @@ jobs:
       - name: Install pg_dump
         run: sudo apt-get install postgresql-client-${{ matrix.postgres-version }}
       - name: Create test DB
-        run: psql -c 'create database graphile_worker_test' -U postgres
+        run: psql -c 'create database graphile_worker_test' postgres
       - run: yarn --frozen-lockfile
       - run: yarn lint
       - run: yarn test
