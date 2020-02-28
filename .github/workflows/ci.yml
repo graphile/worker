@@ -11,7 +11,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     strategy:
       matrix:
@@ -24,7 +24,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
+          POSTGRES_DB: graphile_worker_test
         ports:
           - "0.0.0.0:5432:5432"
         # needed because the postgres container does not provide a healthcheck
@@ -38,10 +38,6 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Install pg_dump
-        run: sudo apt-get install postgresql-client-${{ matrix.postgres-version }}
-      - name: Create test DB
-        run: psql -c 'create database graphile_worker_test' postgres
       - run: yarn --frozen-lockfile
       - run: yarn lint
-      - run: yarn test
+      - run: yarn jest -i
