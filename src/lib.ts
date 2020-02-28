@@ -25,7 +25,8 @@ export function processSharedOptions(
   if (!compiled) {
     const {
       logger = defaultLogger,
-      schema: workerSchema = "graphile_worker",
+      schema: workerSchema = process.env.GRAPHILE_WORKER_SCHEMA ||
+        "graphile_worker",
       pollInterval = POLL_INTERVAL,
     } = options;
     const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
