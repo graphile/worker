@@ -5,7 +5,7 @@ import {
   sleepUntil,
   sleep,
   jobCount,
-  ESCAPED_WORKER_SCHEMA,
+  ESCAPED_GRAPHILE_WORKER_SCHEMA,
 } from "./helpers";
 import { TaskList, Task, WorkerSharedOptions } from "../src/interfaces";
 import { runTaskList } from "../src/main";
@@ -14,7 +14,7 @@ import { Pool } from "pg";
 
 const addJob = (pgPool: Pool, id?: string | number) =>
   pgPool.query(
-    `select ${ESCAPED_WORKER_SCHEMA}.add_job('job1', json_build_object('id', $1::text), 'serial')`,
+    `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', json_build_object('id', $1::text), 'serial')`,
     [String(id != null ? id : Math.random())]
   );
 

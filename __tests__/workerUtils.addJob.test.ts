@@ -2,7 +2,7 @@ import {
   withPgClient,
   reset,
   TEST_CONNECTION_STRING,
-  ESCAPED_WORKER_SCHEMA,
+  ESCAPED_GRAPHILE_WORKER_SCHEMA,
 } from "./helpers";
 import {
   makeWorkerUtils,
@@ -27,7 +27,7 @@ test("runs a job added through the worker utils", () =>
 
     // Assert that it has an entry in jobs / job_queues
     const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_WORKER_SCHEMA}.jobs`
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`
     );
     expect(jobs).toHaveLength(1);
 
@@ -51,7 +51,7 @@ test("supports the jobKey API", () =>
 
     // Assert that it has an entry in jobs / job_queues
     const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_WORKER_SCHEMA}.jobs`
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`
     );
     expect(jobs).toHaveLength(1);
 
@@ -71,7 +71,7 @@ test("runs a job added through the addJob shortcut function", () =>
 
     // Assert that it has an entry in jobs / job_queues
     const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_WORKER_SCHEMA}.jobs`
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`
     );
     expect(jobs).toHaveLength(1);
 

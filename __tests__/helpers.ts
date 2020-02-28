@@ -7,9 +7,10 @@ process.env.GRAPHILE_WORKER_DEBUG = "1";
 export const TEST_CONNECTION_STRING =
   process.env.TEST_CONNECTION_STRING || "graphile_worker_test";
 
-export const WORKER_SCHEMA = process.env.WORKER_SCHEMA || "graphile_worker";
-export const ESCAPED_WORKER_SCHEMA = pg.Client.prototype.escapeIdentifier(
-  WORKER_SCHEMA
+export const GRAPHILE_WORKER_SCHEMA =
+  process.env.GRAPHILE_WORKER_SCHEMA || "graphile_worker";
+export const ESCAPED_GRAPHILE_WORKER_SCHEMA = pg.Client.prototype.escapeIdentifier(
+  GRAPHILE_WORKER_SCHEMA
 );
 
 export async function withPgPool<T = any>(
@@ -61,7 +62,7 @@ export async function reset(
   options: WorkerPoolOptions
 ) {
   await pgPoolOrClient.query(
-    `drop schema if exists ${ESCAPED_WORKER_SCHEMA} cascade;`
+    `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`
   );
   if (isPoolClient(pgPoolOrClient)) {
     await migrate(pgPoolOrClient, options);
@@ -81,7 +82,7 @@ export async function jobCount(
   const {
     rows: [row],
   } = await pgPoolOrClient.query(
-    `select count(*)::int from ${ESCAPED_WORKER_SCHEMA}.jobs`
+    `select count(*)::int from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`
   );
   return row ? row.count || 0 : 0;
 }
@@ -135,13 +136,13 @@ export async function makeSelectionOfJobs(
   ({
     rows: [lockedJob],
   } = await pgClient.query<Job>(
-    `update ${ESCAPED_WORKER_SCHEMA}.jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
+    `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
     [lockedJob.id]
   ));
   ({
     rows: [failedJob],
   } = await pgClient.query<Job>(
-    `update ${ESCAPED_WORKER_SCHEMA}.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
+    `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
     [failedJob.id]
   ));
 

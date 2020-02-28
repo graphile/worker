@@ -1,6 +1,6 @@
-drop function :WORKER_SCHEMA.add_job(text, json, text, timestamptz, int, text);
+drop function :GRAPHILE_WORKER_SCHEMA.add_job(text, json, text, timestamptz, int, text);
 
-create function :WORKER_SCHEMA.add_job(
+create function :GRAPHILE_WORKER_SCHEMA.add_job(
   identifier text,
   payload json = null,
   queue_name text = null,
@@ -8,9 +8,9 @@ create function :WORKER_SCHEMA.add_job(
   max_attempts int = null,
   job_key text = null,
   priority int = null
-) returns :WORKER_SCHEMA.jobs as $$
+) returns :GRAPHILE_WORKER_SCHEMA.jobs as $$
 declare
-  v_job :WORKER_SCHEMA.jobs;
+  v_job :GRAPHILE_WORKER_SCHEMA.jobs;
 begin
   -- Apply rationality checks
   if length(identifier) > 128 then
@@ -28,7 +28,7 @@ begin
 
   if job_key is not null then
     -- Upsert job
-    insert into :WORKER_SCHEMA.jobs (
+    insert into :GRAPHILE_WORKER_SCHEMA.jobs (
       task_identifier,
       payload,
       queue_name,
@@ -69,7 +69,7 @@ begin
     -- Upsert failed -> there must be an existing job that is locked. Remove
     -- existing key to allow a new one to be inserted, and prevent any
     -- subsequent retries by bumping attempts to the max allowed.
-    update :WORKER_SCHEMA.jobs
+    update :GRAPHILE_WORKER_SCHEMA.jobs
       set
         key = null,
         attempts = jobs.max_attempts
@@ -77,7 +77,7 @@ begin
   end if;
 
   -- insert the new job. Assume no conflicts due to the update above
-  insert into :WORKER_SCHEMA.jobs(
+  insert into :GRAPHILE_WORKER_SCHEMA.jobs(
     task_identifier,
     payload,
     queue_name,
@@ -102,10 +102,10 @@ begin
 end;
 $$ language plpgsql volatile;
 
-create function :WORKER_SCHEMA.complete_jobs(
+create function :GRAPHILE_WORKER_SCHEMA.complete_jobs(
   job_ids bigint[]
-) returns setof :WORKER_SCHEMA.jobs as $$
-  delete from :WORKER_SCHEMA.jobs
+) returns setof :GRAPHILE_WORKER_SCHEMA.jobs as $$
+  delete from :GRAPHILE_WORKER_SCHEMA.jobs
     where id = any(job_ids)
     and (
       locked_by is null
@@ -115,11 +115,11 @@ create function :WORKER_SCHEMA.complete_jobs(
     returning *;
 $$ language sql volatile;
 
-create function :WORKER_SCHEMA.permanently_fail_jobs(
+create function :GRAPHILE_WORKER_SCHEMA.permanently_fail_jobs(
   job_ids bigint[],
   error_message text = null
-) returns setof :WORKER_SCHEMA.jobs as $$
-  update :WORKER_SCHEMA.jobs
+) returns setof :GRAPHILE_WORKER_SCHEMA.jobs as $$
+  update :GRAPHILE_WORKER_SCHEMA.jobs
     set
       last_error = coalesce(error_message, 'Manually marked as failed'),
       attempts = max_attempts
@@ -132,14 +132,14 @@ create function :WORKER_SCHEMA.permanently_fail_jobs(
     returning *;
 $$ language sql volatile;
 
-create function :WORKER_SCHEMA.reschedule_jobs(
+create function :GRAPHILE_WORKER_SCHEMA.reschedule_jobs(
   job_ids bigint[],
   run_at timestamptz = null,
   priority int = null,
   attempts int = null,
   max_attempts int = null
-) returns setof :WORKER_SCHEMA.jobs as $$
-  update :WORKER_SCHEMA.jobs
+) returns setof :GRAPHILE_WORKER_SCHEMA.jobs as $$
+  update :GRAPHILE_WORKER_SCHEMA.jobs
     set
       run_at = coalesce(reschedule_jobs.run_at, jobs.run_at),
       priority = coalesce(reschedule_jobs.priority, jobs.priority),

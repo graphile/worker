@@ -26,7 +26,10 @@ async function runMigration(
     `${__dirname}/../sql/${migrationFile}`,
     "utf8"
   );
-  const text = rawText.replace(/:WORKER_SCHEMA\b/g, escapedWorkerSchema);
+  const text = rawText.replace(
+    /:GRAPHILE_WORKER_SCHEMA\b/g,
+    escapedWorkerSchema
+  );
   await client.query("begin");
   try {
     await client.query({

@@ -3,7 +3,7 @@ import {
   reset,
   TEST_CONNECTION_STRING,
   makeSelectionOfJobs,
-  ESCAPED_WORKER_SCHEMA,
+  ESCAPED_GRAPHILE_WORKER_SCHEMA,
 } from "./helpers";
 import { makeWorkerUtils, Job, WorkerSharedOptions } from "../src/index";
 
@@ -51,7 +51,7 @@ test("completes the jobs, leaves others unaffected", () =>
     }
 
     const { rows: remaining } = await pgClient.query<Job>(
-      `select * from ${ESCAPED_WORKER_SCHEMA}.jobs where not (id = any($1)) order by id asc`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs where not (id = any($1)) order by id asc`,
       [rescheduledJobIds]
     );
     expect(remaining).toHaveLength(2);
