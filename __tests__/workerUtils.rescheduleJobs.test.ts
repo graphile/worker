@@ -54,4 +54,6 @@ test("completes the jobs, leaves others unaffected", () =>
     expect(remaining).toHaveLength(2);
     expect(remaining[0]).toMatchObject(lockedJob);
     expect(remaining[1]).toMatchObject(untouchedJob);
+
+    await utils.release();
   }));
