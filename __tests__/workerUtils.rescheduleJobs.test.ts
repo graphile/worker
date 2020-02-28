@@ -15,7 +15,6 @@ test("completes the jobs, leaves others unaffected", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
 
-    // Schedule a job
     const utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
@@ -48,7 +47,6 @@ test("completes the jobs, leaves others unaffected", () =>
       expect(+j.run_at).toBeCloseTo(+nowish);
     }
 
-    // Assert that it has an entry in jobs / job_queues
     const { rows: remaining } = await pgClient.query<Job>(
       `select * from graphile_worker.jobs where not (id = any($1)) order by id asc`,
       [rescheduledJobIds]

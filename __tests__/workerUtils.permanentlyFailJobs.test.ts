@@ -1,4 +1,9 @@
-import { withPgClient, reset, TEST_CONNECTION_STRING } from "./helpers";
+import {
+  withPgClient,
+  reset,
+  TEST_CONNECTION_STRING,
+  makeSelectionOfJobs,
+} from "./helpers";
 import { makeWorkerUtils } from "../src/index";
 
 /** For sorting arrays of numbers or numeric strings */
@@ -10,27 +15,21 @@ test("completes the jobs, leaves others unaffected", () =>
   withPgClient(async pgClient => {
     await reset(pgClient);
 
-    // Schedule a job
     const utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
-    const future = new Date(Date.now() + 60 * 60 * 1000);
-    const failedJob = await utils.addJob("job1", { a: 1, runAt: future });
-    const regularJob1 = await utils.addJob("job1", { a: 2, runAt: future });
-    const lockedJob = await utils.addJob("job1", { a: 3, runAt: future });
-    const regularJob2 = await utils.addJob("job1", { a: 4, runAt: future });
-    const untouchedJob = await utils.addJob("job1", { a: 5, runAt: future });
-    await pgClient.query(
-      `update graphile_worker.jobs set locked_by = 'test', locked_at = now() where id = $1`,
-      [lockedJob.id]
-    );
-    await pgClient.query(
-      `update graphile_worker.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1`,
-      [failedJob.id]
-    );
+
+    const {
+      failedJob,
+      regularJob1,
+      lockedJob,
+      regularJob2,
+      untouchedJob,
+    } = await makeSelectionOfJobs(utils, pgClient);
 
     const jobs = [failedJob, regularJob1, lockedJob, regularJob2];
     const jobIds = jobs.map(j => j.id).sort(numerically);
+
     const failedJobs = await utils.permanentlyFailJobs(jobIds, "TESTING!");
     const failedJobIds = failedJobs.map(j => j.id).sort(numerically);
     expect(failedJobIds).toEqual(
@@ -42,16 +41,13 @@ test("completes the jobs, leaves others unaffected", () =>
       expect(j.attempts).toBeGreaterThan(0);
     }
 
-    // Assert that it has an entry in jobs / job_queues
     const {
       rows: remaining,
     } = await pgClient.query(
-      `select * from graphile_worker.jobs where not (id = any($1))`,
+      `select * from graphile_worker.jobs where not (id = any($1)) order by id asc`,
       [failedJobIds]
     );
     expect(remaining).toHaveLength(2);
-    expect(remaining.map(r => r.id).sort(numerically)).toEqual([
-      lockedJob.id,
-      untouchedJob.id,
-    ]);
+    expect(remaining[0]).toMatchObject(lockedJob);
+    expect(remaining[1]).toMatchObject(untouchedJob);
   }));
