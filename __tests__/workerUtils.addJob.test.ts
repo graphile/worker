@@ -1,14 +1,22 @@
-import { withPgClient, reset, TEST_CONNECTION_STRING } from "./helpers";
+import {
+  withPgClient,
+  reset,
+  TEST_CONNECTION_STRING,
+  ESCAPED_WORKER_SCHEMA,
+} from "./helpers";
 import {
   makeWorkerUtils,
   quickAddJob,
   runTaskListOnce,
   Task,
+  WorkerSharedOptions,
 } from "../src/index";
+
+const options: WorkerSharedOptions = {};
 
 test("runs a job added through the worker utils", () =>
   withPgClient(async pgClient => {
-    await reset(pgClient);
+    await reset(pgClient, options);
 
     // Schedule a job
     const utils = await makeWorkerUtils({
@@ -19,7 +27,7 @@ test("runs a job added through the worker utils", () =>
 
     // Assert that it has an entry in jobs / job_queues
     const { rows: jobs } = await pgClient.query(
-      `select * from graphile_worker.jobs`
+      `select * from ${ESCAPED_WORKER_SCHEMA}.jobs`
     );
     expect(jobs).toHaveLength(1);
 
@@ -30,7 +38,7 @@ test("runs a job added through the worker utils", () =>
 
 test("supports the jobKey API", () =>
   withPgClient(async pgClient => {
-    await reset(pgClient);
+    await reset(pgClient, options);
 
     // Schedule a job
     const utils = await makeWorkerUtils({
@@ -43,7 +51,7 @@ test("supports the jobKey API", () =>
 
     // Assert that it has an entry in jobs / job_queues
     const { rows: jobs } = await pgClient.query(
-      `select * from graphile_worker.jobs`
+      `select * from ${ESCAPED_WORKER_SCHEMA}.jobs`
     );
     expect(jobs).toHaveLength(1);
 
@@ -54,7 +62,7 @@ test("supports the jobKey API", () =>
 
 test("runs a job added through the addJob shortcut function", () =>
   withPgClient(async pgClient => {
-    await reset(pgClient);
+    await reset(pgClient, options);
 
     // Schedule a job
     await quickAddJob({ connectionString: TEST_CONNECTION_STRING }, "job1", {
@@ -63,7 +71,7 @@ test("runs a job added through the addJob shortcut function", () =>
 
     // Assert that it has an entry in jobs / job_queues
     const { rows: jobs } = await pgClient.query(
-      `select * from graphile_worker.jobs`
+      `select * from ${ESCAPED_WORKER_SCHEMA}.jobs`
     );
     expect(jobs).toHaveLength(1);
 

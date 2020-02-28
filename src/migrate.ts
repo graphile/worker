@@ -1,11 +1,14 @@
-import { PoolClient } from "pg";
+import { PoolClient, Client } from "pg";
 import { readdir, readFile } from "./fs";
+import { WorkerSharedOptions } from "./interfaces";
 
-async function installSchema(client: PoolClient) {
+async function installSchema(client: PoolClient, options: WorkerSharedOptions) {
+  const { schema: workerSchema = "graphile_worker" } = options;
+  const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
   await client.query(`
     create extension if not exists pgcrypto with schema public;
-    create schema graphile_worker;
-    create table graphile_worker.migrations(
+    create schema ${escapedWorkerSchema};
+    create table ${escapedWorkerSchema}.migrations(
       id int primary key,
       ts timestamptz default now() not null
     );
@@ -15,16 +18,23 @@ async function installSchema(client: PoolClient) {
 async function runMigration(
   client: PoolClient,
   migrationFile: string,
-  migrationNumber: number
+  migrationNumber: number,
+  options: WorkerSharedOptions
 ) {
-  const text = await readFile(`${__dirname}/../sql/${migrationFile}`, "utf8");
+  const { schema: workerSchema = "graphile_worker" } = options;
+  const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
+  const rawText = await readFile(
+    `${__dirname}/../sql/${migrationFile}`,
+    "utf8"
+  );
+  const text = rawText.replace(/:WORKER_SCHEMA\b/g, escapedWorkerSchema);
   await client.query("begin");
   try {
     await client.query({
       text,
     });
     await client.query({
-      text: `insert into graphile_worker.migrations (id) values ($1)`,
+      text: `insert into ${escapedWorkerSchema}.migrations (id) values ($1)`,
       values: [migrationNumber],
     });
     await client.query("commit");
@@ -34,20 +44,25 @@ async function runMigration(
   }
 }
 
-export async function migrate(client: PoolClient) {
+export async function migrate(
+  client: PoolClient,
+  options: WorkerSharedOptions
+) {
+  const { schema: workerSchema = "graphile_worker" } = options;
+  const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
   let latestMigration: number | null = null;
   try {
     const {
       rows: [row],
     } = await client.query(
-      "select id from graphile_worker.migrations order by id desc limit 1;"
+      `select id from ${escapedWorkerSchema}.migrations order by id desc limit 1;`
     );
     if (row) {
       latestMigration = row.id;
     }
   } catch (e) {
     if (e.code === "42P01") {
-      await installSchema(client);
+      await installSchema(client, options);
     } else {
       throw e;
     }
@@ -58,7 +73,7 @@ export async function migrate(client: PoolClient) {
   for (const migrationFile of migrationFiles) {
     const migrationNumber = parseInt(migrationFile.substr(0, 6), 10);
     if (latestMigration == null || migrationNumber > latestMigration) {
-      await runMigration(client, migrationFile, migrationNumber);
+      await runMigration(client, migrationFile, migrationNumber, options);
     }
   }
 }

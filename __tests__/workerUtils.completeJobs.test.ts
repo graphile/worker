@@ -3,17 +3,20 @@ import {
   reset,
   TEST_CONNECTION_STRING,
   makeSelectionOfJobs,
+  ESCAPED_WORKER_SCHEMA,
 } from "./helpers";
-import { makeWorkerUtils } from "../src/index";
+import { makeWorkerUtils, WorkerSharedOptions } from "../src/index";
 
 /** For sorting arrays of numbers or numeric strings */
 function numerically(a: string | number, b: string | number) {
   return parseFloat(String(a)) - parseFloat(String(b));
 }
 
+const options: WorkerSharedOptions = {};
+
 test("completes the jobs, leaves others unaffected", () =>
   withPgClient(async pgClient => {
-    await reset(pgClient);
+    await reset(pgClient, options);
 
     const utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
@@ -37,7 +40,7 @@ test("completes the jobs, leaves others unaffected", () =>
     );
 
     const { rows: remaining } = await pgClient.query(
-      `select * from graphile_worker.jobs order by id asc`
+      `select * from ${ESCAPED_WORKER_SCHEMA}.jobs order by id asc`
     );
     expect(remaining).toHaveLength(2);
     expect(remaining[0]).toMatchObject(lockedJob);

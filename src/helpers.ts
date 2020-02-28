@@ -1,13 +1,24 @@
-import { WithPgClient, Job, TaskSpec, JobHelpers } from "./interfaces";
-import { Pool, PoolClient } from "pg";
-import { Logger } from "./logger";
+import {
+  WithPgClient,
+  Job,
+  TaskSpec,
+  JobHelpers,
+  WorkerSharedOptions,
+} from "./interfaces";
+import { Pool, PoolClient, Client } from "pg";
+import { defaultLogger } from "./logger";
 
-export function makeAddJob(withPgClient: WithPgClient) {
+export function makeAddJob(
+  withPgClient: WithPgClient,
+  options: WorkerSharedOptions
+) {
+  const { schema: workerSchema = "graphile_worker" } = options;
+  const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
   return (identifier: string, payload: any = {}, spec: TaskSpec = {}) => {
     return withPgClient(async pgClient => {
       const { rows } = await pgClient.query(
         `
-        select * from graphile_worker.add_job(
+        select * from ${escapedWorkerSchema}.add_job(
           identifier => $1::text,
           payload => $2::json,
           queue_name => $3::text,
@@ -36,8 +47,9 @@ export function makeAddJob(withPgClient: WithPgClient) {
 export function makeJobHelpers(
   job: Job,
   { withPgClient }: { withPgClient: WithPgClient },
-  baseLogger: Logger
+  options: WorkerSharedOptions
 ): JobHelpers {
+  const { logger: baseLogger = defaultLogger } = options;
   const jobLogger = baseLogger.scope({
     label: "job",
     taskIdentifier: job.task_identifier,
@@ -49,7 +61,7 @@ export function makeJobHelpers(
     withPgClient,
     query: (queryText, values) =>
       withPgClient(pgClient => pgClient.query(queryText, values)),
-    addJob: makeAddJob(withPgClient),
+    addJob: makeAddJob(withPgClient, options),
 
     // TODO: add an API for giving workers more helpers
   };

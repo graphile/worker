@@ -1,4 +1,4 @@
-import { Pool, PoolClient } from "pg";
+import { Pool, PoolClient, Client } from "pg";
 import { inspect } from "util";
 import {
   TaskList,
@@ -79,6 +79,9 @@ export function runTaskList(
     noHandleSignals,
     ...workerOptions
   } = options;
+
+  const { schema: workerSchema = "graphile_worker" } = workerOptions;
+  const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
 
   if (!noHandleSignals) {
     // Clean up when certain signals occur
@@ -185,9 +188,9 @@ export function runTaskList(
         });
         const { rows: cancelledJobs } = await pgPool.query(
           `
-          SELECT graphile_worker.fail_job(job_queues.locked_by, jobs.id, $2)
-          FROM graphile_worker.jobs
-          INNER JOIN graphile_worker.job_queues ON (job_queues.queue_name = jobs.queue_name)
+          SELECT ${escapedWorkerSchema}.fail_job(job_queues.locked_by, jobs.id, $2)
+          FROM ${escapedWorkerSchema}.jobs
+          INNER JOIN ${escapedWorkerSchema}.job_queues ON (job_queues.queue_name = jobs.queue_name)
           WHERE job_queues.locked_by = ANY($1::text[]) AND jobs.id = ANY($3::int[]);
         `,
           [workerIds, message, jobsInProgress.map(job => job.id)]

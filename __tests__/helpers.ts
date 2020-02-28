@@ -1,11 +1,16 @@
 import * as pg from "pg";
-import { Job, WorkerUtils } from "../src/interfaces";
+import { Job, WorkerUtils, WorkerPoolOptions } from "../src/interfaces";
 import { migrate } from "../src/migrate";
 
 process.env.GRAPHILE_WORKER_DEBUG = "1";
 
 export const TEST_CONNECTION_STRING =
   process.env.TEST_CONNECTION_STRING || "graphile_worker_test";
+
+export const WORKER_SCHEMA = process.env.WORKER_SCHEMA || "graphile_worker";
+export const ESCAPED_WORKER_SCHEMA = pg.Client.prototype.escapeIdentifier(
+  WORKER_SCHEMA
+);
 
 export async function withPgPool<T = any>(
   cb: (pool: pg.Pool) => Promise<T>
@@ -51,14 +56,19 @@ function isPoolClient(o: any): o is pg.PoolClient {
   return o && typeof o.release === "function";
 }
 
-export async function reset(pgPoolOrClient: pg.Pool | pg.PoolClient) {
-  await pgPoolOrClient.query("drop schema if exists graphile_worker cascade;");
+export async function reset(
+  pgPoolOrClient: pg.Pool | pg.PoolClient,
+  options: WorkerPoolOptions
+) {
+  await pgPoolOrClient.query(
+    `drop schema if exists ${ESCAPED_WORKER_SCHEMA} cascade;`
+  );
   if (isPoolClient(pgPoolOrClient)) {
-    await migrate(pgPoolOrClient);
+    await migrate(pgPoolOrClient, options);
   } else {
     const client = await pgPoolOrClient.connect();
     try {
-      await migrate(client);
+      await migrate(client, options);
     } finally {
       await client.release();
     }
@@ -71,7 +81,7 @@ export async function jobCount(
   const {
     rows: [row],
   } = await pgPoolOrClient.query(
-    "select count(*)::int from graphile_worker.jobs"
+    `select count(*)::int from ${ESCAPED_WORKER_SCHEMA}.jobs`
   );
   return row ? row.count || 0 : 0;
 }
@@ -125,13 +135,13 @@ export async function makeSelectionOfJobs(
   ({
     rows: [lockedJob],
   } = await pgClient.query<Job>(
-    `update graphile_worker.jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
+    `update ${ESCAPED_WORKER_SCHEMA}.jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
     [lockedJob.id]
   ));
   ({
     rows: [failedJob],
   } = await pgClient.query<Job>(
-    `update graphile_worker.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
+    `update ${ESCAPED_WORKER_SCHEMA}.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
     [failedJob.id]
   ));
 

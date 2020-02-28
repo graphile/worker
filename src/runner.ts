@@ -116,7 +116,7 @@ const processOptions = async (options: RunnerOptions) => {
     const withPgClient = makeWithPgClientFromPool(pgPool);
 
     // Migrate
-    await withPgClient(client => migrate(client));
+    await withPgClient(client => migrate(client, options));
 
     return { taskList, pgPool, withPgClient, release, logger };
   });
@@ -129,7 +129,7 @@ export const runMigrations = async (options: RunnerOptions): Promise<void> => {
     const withPgClient = makeWithPgClientFromPool(pgPool);
 
     // Migrate
-    await withPgClient(client => migrate(client));
+    await withPgClient(client => migrate(client, options));
 
     await release();
 
@@ -167,7 +167,7 @@ export const run = async (options: RunnerOptions): Promise<Runner> => {
         throw new Error("Runner is already stopped");
       }
     },
-    addJob: makeAddJob(withPgClient),
+    addJob: makeAddJob(withPgClient, options),
     promise: workerPool.promise,
   };
 };

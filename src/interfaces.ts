@@ -224,6 +224,9 @@ export interface TaskSpec {
   jobKey?: string;
 }
 
+/**
+ * These options are common Graphile Worker pools, workers, and utils.
+ */
 export interface WorkerSharedOptions {
   /**
    * How long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)
@@ -234,6 +237,11 @@ export interface WorkerSharedOptions {
    * How should messages be logged out? Defaults to using the console logger.
    */
   logger?: Logger;
+
+  /**
+   * Which PostgreSQL schema should Graphile Worker use? Defaults to 'graphile_worker'.
+   */
+  schema?: string;
 }
 
 export interface WorkerOptions extends WorkerSharedOptions {
@@ -280,7 +288,7 @@ export interface RunnerOptions extends WorkerPoolOptions {
   maxPoolSize?: number;
 }
 
-export interface WorkerUtilsOptions {
+export interface WorkerUtilsOptions extends WorkerSharedOptions {
   /**
    * A PostgreSQL connection string to the database containing the job queue
    */
@@ -290,9 +298,4 @@ export interface WorkerUtilsOptions {
    * A pg.Pool instance to use instead of the `connectionString`
    */
   pgPool?: Pool;
-
-  /**
-   * How should messages be logged out? Defaults to using the console logger.
-   */
-  logger?: Logger;
 }

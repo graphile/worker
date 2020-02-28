@@ -1,7 +1,9 @@
 import getTasks from "../src/getTasks";
 import { makeMockJob, withPgClient } from "./helpers";
 import { makeJobHelpers, makeWithPgClientFromClient } from "../src/helpers";
-import { defaultLogger } from "../src/logger";
+import { WorkerSharedOptions } from "../src";
+
+const options: WorkerSharedOptions = {};
 
 test("gets tasks from folder", () =>
   withPgClient(async client => {
@@ -18,7 +20,7 @@ Array [
       {
         withPgClient: makeWithPgClientFromClient(client),
       },
-      defaultLogger
+      options
     );
     expect(await tasks.wouldyoulike(helpers.job.payload, helpers)).toEqual(
       "some sausages"
@@ -47,7 +49,7 @@ Array [
       {
         withPgClient: makeWithPgClientFromClient(client),
       },
-      defaultLogger
+      options
     );
     expect(await tasks.task1(helpers.job.payload, helpers)).toEqual("hi");
     expect(await tasks.task2(helpers.job.payload, helpers)).toEqual("hello");
@@ -73,7 +75,7 @@ Array [
       {
         withPgClient: makeWithPgClientFromClient(client),
       },
-      defaultLogger
+      options
     );
     expect(await tasks.t1(helpers.job.payload, helpers)).toEqual(
       "come with me"

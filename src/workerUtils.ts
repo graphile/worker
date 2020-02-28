@@ -3,6 +3,7 @@ import { makeWithPgClientFromPool, makeAddJob } from "./helpers";
 import { defaultLogger } from "./logger";
 import { withReleasers, assertPool } from "./runner";
 import { migrate } from "./migrate";
+import { Client } from "pg";
 
 /**
  * Construct (asynchronously) a new WorkerUtils instance.
@@ -15,6 +16,9 @@ export async function makeWorkerUtils(
     label: "WorkerUtils",
   });
 
+  const { schema: workerSchema = "graphile_worker" } = options;
+  const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
+
   const { pgPool, release } = await withReleasers(
     async (releasers, release) => ({
       pgPool: await assertPool(options, releasers, logger),
@@ -23,20 +27,21 @@ export async function makeWorkerUtils(
   );
 
   const withPgClient = makeWithPgClientFromPool(pgPool);
-  const addJob = makeAddJob(withPgClient);
+  const addJob = makeAddJob(withPgClient, options);
 
   return {
     withPgClient,
     logger,
     release,
     addJob,
-    migrate: () => withPgClient(migrate),
+    migrate: () => withPgClient(pgClient => migrate(pgClient, options)),
 
     async completeJobs(ids) {
       const { rows } = await withPgClient(client =>
-        client.query<Job>("select * from graphile_worker.complete_jobs($1)", [
-          ids,
-        ])
+        client.query<Job>(
+          `select * from ${escapedWorkerSchema}.complete_jobs($1)`,
+          [ids]
+        )
       );
       return rows;
     },
@@ -44,7 +49,7 @@ export async function makeWorkerUtils(
     async permanentlyFailJobs(ids, reason) {
       const { rows } = await withPgClient(client =>
         client.query<Job>(
-          "select * from graphile_worker.permanently_fail_jobs($1, $2)",
+          `select * from ${escapedWorkerSchema}.permanently_fail_jobs($1, $2)`,
           [ids, reason || null]
         )
       );
@@ -54,7 +59,7 @@ export async function makeWorkerUtils(
     async rescheduleJobs(ids, options) {
       const { rows } = await withPgClient(client =>
         client.query<Job>(
-          `select * from graphile_worker.reschedule_jobs(
+          `select * from ${escapedWorkerSchema}.reschedule_jobs(
             $1,
             run_at := $2,
             priority := $3,
