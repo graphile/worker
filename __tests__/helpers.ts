@@ -1,5 +1,5 @@
 import * as pg from "pg";
-import { Job } from "../src/interfaces";
+import { Job, WorkerUtils } from "../src/interfaces";
 import { migrate } from "../src/migrate";
 
 process.env.GRAPHILE_WORKER_DEBUG = "1";
@@ -80,15 +80,19 @@ export function makeMockJob(taskIdentifier: string): Job {
   const createdAt = new Date(Date.now() - 12345678);
   return {
     id: String(Math.floor(Math.random() * 4294967296)),
-    queue_name: "3ED1F485-5D29-4C53-9F47-40925AA81D3B",
+    queue_name: null,
     task_identifier: taskIdentifier,
     payload: {},
     priority: 0,
     run_at: new Date(Date.now() - Math.random() * 2000),
     attempts: 0,
+    max_attempts: 25,
     last_error: null,
     created_at: createdAt,
     updated_at: createdAt,
+    locked_at: null,
+    locked_by: null,
+    key: null,
   };
 }
 
@@ -106,4 +110,36 @@ export async function sleepUntil(condition: () => boolean, maxDuration = 2000) {
       `Slept for ${Date.now() - start}ms but condition never passed`
     );
   }
+}
+
+export async function makeSelectionOfJobs(
+  utils: WorkerUtils,
+  pgClient: pg.PoolClient
+) {
+  const future = new Date(Date.now() + 60 * 60 * 1000);
+  let failedJob = await utils.addJob("job1", { a: 1, runAt: future });
+  const regularJob1 = await utils.addJob("job1", { a: 2, runAt: future });
+  let lockedJob = await utils.addJob("job1", { a: 3, runAt: future });
+  const regularJob2 = await utils.addJob("job1", { a: 4, runAt: future });
+  const untouchedJob = await utils.addJob("job1", { a: 5, runAt: future });
+  ({
+    rows: [lockedJob],
+  } = await pgClient.query<Job>(
+    `update graphile_worker.jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
+    [lockedJob.id]
+  ));
+  ({
+    rows: [failedJob],
+  } = await pgClient.query<Job>(
+    `update graphile_worker.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
+    [failedJob.id]
+  ));
+
+  return {
+    failedJob,
+    regularJob1,
+    lockedJob,
+    regularJob2,
+    untouchedJob,
+  };
 }

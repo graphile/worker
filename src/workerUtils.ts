@@ -1,4 +1,4 @@
-import { WorkerUtilsOptions, TaskSpec, WorkerUtils } from "./interfaces";
+import { WorkerUtilsOptions, TaskSpec, WorkerUtils, Job } from "./interfaces";
 import { makeWithPgClientFromPool, makeAddJob } from "./helpers";
 import { defaultLogger } from "./logger";
 import { withReleasers, assertPool } from "./runner";
@@ -31,6 +31,47 @@ export async function makeWorkerUtils(
     release,
     addJob,
     migrate: () => withPgClient(migrate),
+
+    async completeJobs(ids) {
+      const { rows } = await withPgClient(client =>
+        client.query<Job>("select * from graphile_worker.complete_jobs($1)", [
+          ids,
+        ])
+      );
+      return rows;
+    },
+
+    async permanentlyFailJobs(ids, reason) {
+      const { rows } = await withPgClient(client =>
+        client.query<Job>(
+          "select * from graphile_worker.permanently_fail_jobs($1, $2)",
+          [ids, reason || null]
+        )
+      );
+      return rows;
+    },
+
+    async rescheduleJobs(ids, options) {
+      const { rows } = await withPgClient(client =>
+        client.query<Job>(
+          `select * from graphile_worker.reschedule_jobs(
+            $1,
+            run_at := $2,
+            priority := $3,
+            attempts := $4,
+            max_attempts := $5
+          )`,
+          [
+            ids,
+            options.runAt || null,
+            options.priority || null,
+            options.attempts || null,
+            options.maxAttempts || null,
+          ]
+        )
+      );
+      return rows;
+    },
   };
 }
 

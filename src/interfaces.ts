@@ -99,6 +99,43 @@ export interface WorkerUtils extends Helpers {
    * Migrate the database schema to the latest version.
    */
   migrate: () => Promise<void>;
+
+  /**
+   * Marks the specified jobs (by their ids) as if they were completed,
+   * assuming they are not locked. Note that completing a job deletes it. You
+   * may mark failed and permanently failed jobs as completed if you wish. The
+   * deleted jobs will be returned (note that this may be fewer jobs than you
+   * requested).
+   */
+  completeJobs: (ids: string[]) => Promise<Job[]>;
+
+  /**
+   * Marks the specified jobs (by their ids) as failed permanently, assuming
+   * they are not locked. This means setting their `attempts` equal to their
+   * `max_attempts`. The updated jobs will be returned (note that this may be
+   * fewer jobs than you requested).
+   */
+  permanentlyFailJobs: (ids: string[], reason?: string) => Promise<Job[]>;
+
+  /**
+   * Updates the specified scheduling properties of the jobs (assuming they are
+   * not locked). All of the specified options are optional, omitted or null
+   * values will left unmodified.
+   *
+   * This method can be used to postpone or advance job execution, or to
+   * schedule a previously failed or permanently failed job for execution. The
+   * updated jobs will be returned (note that this may be fewer jobs than you
+   * requested).
+   */
+  rescheduleJobs: (
+    ids: string[],
+    options: {
+      runAt?: string | Date;
+      priority?: number;
+      attempts?: number;
+      maxAttempts?: number;
+    }
+  ) => Promise<Job[]>;
 }
 
 export type Task = (
@@ -124,15 +161,19 @@ export interface WatchedTaskList {
 
 export interface Job {
   id: string;
-  queue_name: string;
+  queue_name: string | null;
   task_identifier: string;
   payload: unknown;
   priority: number;
   run_at: Date;
   attempts: number;
+  max_attempts: number;
   last_error: string | null;
   created_at: Date;
   updated_at: Date;
+  key: string | null;
+  locked_at: Date | null;
+  locked_by: string | null;
 }
 
 export interface Worker {
@@ -157,14 +198,20 @@ export interface Runner {
 
 export interface TaskSpec {
   /**
-   * The queue to run this task under
+   * The queue to run this task under. (Default: null)
    */
   queueName?: string;
 
   /**
-   * A Date to schedule this task to run in the future
+   * A Date to schedule this task to run in the future. (Default: now)
    */
   runAt?: Date;
+
+  /**
+   * Higher (numerically larger) priority places job ahead of jobs with lower
+   * priority. (Default: 0)
+   */
+  priority?: number;
 
   /**
    * How many retries should this task get? (Default: 25)
@@ -172,7 +219,7 @@ export interface TaskSpec {
   maxAttempts?: number;
 
   /**
-   * Unique identifier for the job, can be used to update or remove it later if needed
+   * Unique identifier for the job, can be used to update or remove it later if needed. (Default: null)
    */
   jobKey?: string;
 }

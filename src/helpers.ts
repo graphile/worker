@@ -10,10 +10,11 @@ export function makeAddJob(withPgClient: WithPgClient) {
         select * from graphile_worker.add_job(
           identifier => $1::text,
           payload => $2::json,
-          queue_name => coalesce($3::text, public.gen_random_uuid()::text),
-          run_at => coalesce($4::timestamptz, now()),
-          max_attempts => coalesce($5::int, 25),
-          job_key => $6::text
+          queue_name => $3::text,
+          run_at => $4::timestamptz,
+          max_attempts => $5::int,
+          job_key => $6::text,
+          priority => $7::int
         );
         `,
         [
@@ -23,6 +24,7 @@ export function makeAddJob(withPgClient: WithPgClient) {
           spec.runAt ? spec.runAt.toISOString() : null,
           spec.maxAttempts || null,
           spec.jobKey || null,
+          spec.priority || null,
         ]
       );
       const job: Job = rows[0];
