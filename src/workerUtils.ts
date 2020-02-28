@@ -59,8 +59,8 @@ export async function makeWorkerUtils(
             run_at := $2,
             priority := $3,
             attempts := $4,
-            max_attempts := $5,
-           )`,
+            max_attempts := $5
+          )`,
           [
             ids,
             options.runAt || null,

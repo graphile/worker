@@ -161,15 +161,19 @@ export interface WatchedTaskList {
 
 export interface Job {
   id: string;
-  queue_name: string;
+  queue_name: string | null;
   task_identifier: string;
   payload: unknown;
   priority: number;
   run_at: Date;
   attempts: number;
+  max_attempts: number;
   last_error: string | null;
   created_at: Date;
   updated_at: Date;
+  key: string | null;
+  locked_at: Date | null;
+  locked_by: string | null;
 }
 
 export interface Worker {
