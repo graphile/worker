@@ -237,6 +237,22 @@ export interface SharedOptions {
    * Which PostgreSQL schema should Graphile Worker use? Defaults to 'graphile_worker'.
    */
   schema?: string;
+
+  /**
+   * A PostgreSQL connection string to the database containing the job queue
+   */
+  connectionString?: string;
+
+  /**
+   * The maximum size of the PostgreSQL pool. Defaults to the node-postgres
+   * default (10). Only useful when `connectionString` is given.
+   */
+  maxPoolSize?: number;
+
+  /**
+   * A pg.Pool instance to use instead of the `connectionString`
+   */
+  pgPool?: Pool;
 }
 
 /**
@@ -288,32 +304,6 @@ export interface RunnerOptions extends WorkerPoolOptions {
    * Each file in this directory will be used as a task handler
    */
   taskDirectory?: string;
-
-  /**
-   * A PostgreSQL connection string to the database containing the job queue
-   */
-  connectionString?: string;
-
-  /**
-   * A pg.Pool instance to use instead of the `connectionString`
-   */
-  pgPool?: Pool;
-
-  /**
-   * The maximum size of the PostgreSQL pool. Defaults to the node-postgres
-   * default (10).
-   */
-  maxPoolSize?: number;
 }
 
-export interface WorkerUtilsOptions extends SharedOptions {
-  /**
-   * A PostgreSQL connection string to the database containing the job queue
-   */
-  connectionString?: string;
-
-  /**
-   * A pg.Pool instance to use instead of the `connectionString`
-   */
-  pgPool?: Pool;
-}
+export interface WorkerUtilsOptions extends SharedOptions {}
