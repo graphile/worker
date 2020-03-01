@@ -1,9 +1,15 @@
 import { basename } from "path";
 import * as chokidar from "chokidar";
-import { isValidTask, TaskList, WatchedTaskList } from "./interfaces";
+import {
+  isValidTask,
+  TaskList,
+  WatchedTaskList,
+  SharedOptions,
+} from "./interfaces";
 import { tryStat, readdir } from "./fs";
 import { fauxRequire } from "./module";
-import { defaultLogger, Logger } from "./logger";
+import { Logger } from "./logger";
+import { processSharedOptions } from "./lib";
 
 function validTasks(
   logger: Logger,
@@ -72,10 +78,11 @@ async function loadFileIntoTasks(
 }
 
 export default async function getTasks(
+  options: SharedOptions,
   taskPath: string,
-  watch = false,
-  logger = defaultLogger
+  watch = false
 ): Promise<WatchedTaskList> {
+  const { logger } = await processSharedOptions(options);
   const pathStat = await tryStat(taskPath);
   if (!pathStat) {
     throw new Error(

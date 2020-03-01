@@ -4,7 +4,6 @@ import { RunnerOptions } from "./interfaces";
 import { run, runOnce } from "./index";
 import * as yargs from "yargs";
 import { POLL_INTERVAL, CONCURRENT_JOBS } from "./config";
-import { defaultLogger } from "./logger";
 import { runMigrations } from "./runner";
 
 const argv = yargs
@@ -84,29 +83,30 @@ async function main() {
     );
   }
 
-  // TODO: allow overriding the logger
-  const logger = defaultLogger;
-
-  if (SCHEMA_ONLY) {
-    await runMigrations({
-      connectionString: DATABASE_URL,
-      logger,
-    });
-    console.log("Schema updated");
-    return;
-  }
-
-  const watchedTasks = await getTasks(`${process.cwd()}/tasks`, WATCH, logger);
-
-  const options: RunnerOptions = {
+  const baseOptions: RunnerOptions = {
     concurrency: isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS,
     maxPoolSize: isInteger(argv["max-pool-size"]) ? argv["max-pool-size"] : 10,
     pollInterval: isInteger(argv["poll-interval"])
       ? argv["poll-interval"]
       : POLL_INTERVAL,
     connectionString: DATABASE_URL,
+  };
+
+  if (SCHEMA_ONLY) {
+    await runMigrations(baseOptions);
+    console.log("Schema updated");
+    return;
+  }
+
+  const watchedTasks = await getTasks(
+    baseOptions,
+    `${process.cwd()}/tasks`,
+    WATCH
+  );
+
+  const options: RunnerOptions = {
+    ...baseOptions,
     taskList: watchedTasks.tasks,
-    logger,
   };
 
   if (ONCE) {

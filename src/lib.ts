@@ -1,20 +1,18 @@
-import { WorkerSharedOptions } from "./interfaces";
+import { SharedOptions } from "./interfaces";
 import { Logger, defaultLogger, LogScope } from "./logger";
 import { Client } from "pg";
-import { POLL_INTERVAL, MAX_CONTIGUOUS_ERRORS } from "./config";
+import { MAX_CONTIGUOUS_ERRORS } from "./config";
 
 interface CompiledOptions {
   logger: Logger;
   workerSchema: string;
   escapedWorkerSchema: string;
-  pollInterval: number;
   maxContiguousErrors: number;
 }
 
-const _sharedOptionsCache = new WeakMap<WorkerSharedOptions, CompiledOptions>();
-
+const _sharedOptionsCache = new WeakMap<SharedOptions, CompiledOptions>();
 export function processSharedOptions(
-  options: WorkerSharedOptions,
+  options: SharedOptions,
   {
     scope,
   }: {
@@ -27,14 +25,12 @@ export function processSharedOptions(
       logger = defaultLogger,
       schema: workerSchema = process.env.GRAPHILE_WORKER_SCHEMA ||
         "graphile_worker",
-      pollInterval = POLL_INTERVAL,
     } = options;
     const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
     compiled = {
       logger,
       workerSchema,
       escapedWorkerSchema,
-      pollInterval,
       maxContiguousErrors: MAX_CONTIGUOUS_ERRORS,
     };
     _sharedOptionsCache.set(options, compiled);

@@ -7,7 +7,10 @@ const options: WorkerSharedOptions = {};
 
 test("gets tasks from folder", () =>
   withPgClient(async client => {
-    const { tasks, release } = await getTasks(`${__dirname}/fixtures/tasks`);
+    const { tasks, release } = await getTasks(
+      options,
+      `${__dirname}/fixtures/tasks`
+    );
     expect(tasks).toBeTruthy();
     expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
 Array [
@@ -34,6 +37,7 @@ Array [
 test("get tasks from file (vanilla)", () =>
   withPgClient(async client => {
     const { tasks, release } = await getTasks(
+      options,
       `${__dirname}/fixtures/tasksFile.js`
     );
     expect(tasks).toBeTruthy();
@@ -60,6 +64,7 @@ Array [
 test("get tasks from file (default)", () =>
   withPgClient(async client => {
     const { tasks, release } = await getTasks(
+      options,
       `${__dirname}/fixtures/tasksFile_default.js`
     );
     expect(tasks).toBeTruthy();
