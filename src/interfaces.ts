@@ -227,12 +227,7 @@ export interface TaskSpec {
 /**
  * These options are common Graphile Worker pools, workers, and utils.
  */
-export interface WorkerSharedOptions {
-  /**
-   * How long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)
-   */
-  pollInterval?: number;
-
+export interface SharedOptions {
   /**
    * How should messages be logged out? Defaults to using the console logger.
    */
@@ -244,6 +239,19 @@ export interface WorkerSharedOptions {
   schema?: string;
 }
 
+/**
+ * Shared between pools and individual workers.
+ */
+export interface WorkerSharedOptions extends SharedOptions {
+  /**
+   * How long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)
+   */
+  pollInterval?: number;
+}
+
+/**
+ * Options for an individual worker
+ */
 export interface WorkerOptions extends WorkerSharedOptions {
   /**
    * An identifier for this specific worker; if unset then a random ID will be assigned. Do not assign multiple workers the same worker ID!
@@ -251,6 +259,9 @@ export interface WorkerOptions extends WorkerSharedOptions {
   workerId?: string;
 }
 
+/**
+ * Options for a worker pool.
+ */
 export interface WorkerPoolOptions extends WorkerSharedOptions {
   /**
    * Number of jobs to run concurrently
@@ -264,23 +275,30 @@ export interface WorkerPoolOptions extends WorkerSharedOptions {
   noHandleSignals?: boolean;
 }
 
+/**
+ * Options for the `run`, `runOnce` and `runMigrations` methods.
+ */
 export interface RunnerOptions extends WorkerPoolOptions {
   /**
    * Task names and handler, e.g. from `getTasks` (use this if you need watch mode)
    */
   taskList?: TaskList;
+
   /**
    * Each file in this directory will be used as a task handler
    */
   taskDirectory?: string;
+
   /**
    * A PostgreSQL connection string to the database containing the job queue
    */
   connectionString?: string;
+
   /**
    * A pg.Pool instance to use instead of the `connectionString`
    */
   pgPool?: Pool;
+
   /**
    * The maximum size of the PostgreSQL pool. Defaults to the node-postgres
    * default (10).
@@ -288,7 +306,7 @@ export interface RunnerOptions extends WorkerPoolOptions {
   maxPoolSize?: number;
 }
 
-export interface WorkerUtilsOptions extends WorkerSharedOptions {
+export interface WorkerUtilsOptions extends SharedOptions {
   /**
    * A PostgreSQL connection string to the database containing the job queue
    */
