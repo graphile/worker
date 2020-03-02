@@ -2,6 +2,10 @@ import * as pg from "pg";
 import { Job, WorkerUtils, WorkerPoolOptions } from "../src/interfaces";
 import { migrate } from "../src/migrate";
 
+// Sometimes CI's clock can get interrupted (it is shared infra!) so this
+// extends the default timeout just in case.
+jest.setTimeout(15000);
+
 process.env.GRAPHILE_WORKER_DEBUG = "1";
 
 export const TEST_CONNECTION_STRING =

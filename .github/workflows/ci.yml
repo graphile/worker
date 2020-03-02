@@ -40,7 +40,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
       - run: yarn lint
-      - run: yarn jest -i
+      - run: yarn jest -i --ci
 
   altschema:
     runs-on: ubuntu-18.04
@@ -69,4 +69,4 @@ jobs:
           node-version: 12.x
       - run: yarn --frozen-lockfile
       - run: yarn lint
-      - run: yarn jest -i
+      - run: yarn jest -i --ci
