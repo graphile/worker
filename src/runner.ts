@@ -39,7 +39,10 @@ async function assertTaskList(
   return taskList;
 }
 
-export const runOnce = async (options: RunnerOptions): Promise<void> => {
+export const runOnce = async (
+  options: RunnerOptions,
+  overrideTaskList?: TaskList
+): Promise<void> => {
   const { concurrency = 1 } = options;
   const {
     withPgClient,
@@ -47,7 +50,8 @@ export const runOnce = async (options: RunnerOptions): Promise<void> => {
     releasers,
   } = await getUtilsAndReleasersFromOptions(options);
   try {
-    const taskList = await assertTaskList(options, releasers);
+    const taskList =
+      overrideTaskList || (await assertTaskList(options, releasers));
 
     const promises: Promise<void>[] = [];
     for (let i = 0; i < concurrency; i++) {
@@ -61,7 +65,10 @@ export const runOnce = async (options: RunnerOptions): Promise<void> => {
   }
 };
 
-export const run = async (options: RunnerOptions): Promise<Runner> => {
+export const run = async (
+  options: RunnerOptions,
+  overrideTaskList?: TaskList
+): Promise<Runner> => {
   const {
     pgPool,
     release,
@@ -70,7 +77,8 @@ export const run = async (options: RunnerOptions): Promise<Runner> => {
   } = await getUtilsAndReleasersFromOptions(options);
 
   try {
-    const taskList = await assertTaskList(options, releasers);
+    const taskList =
+      overrideTaskList || (await assertTaskList(options, releasers));
 
     const workerPool = runTaskList(options, taskList, pgPool);
     releasers.push(() => workerPool.release());

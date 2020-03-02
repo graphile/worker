@@ -91,7 +91,7 @@ async function main() {
     );
   }
 
-  const baseOptions: RunnerOptions = {
+  const options: RunnerOptions = {
     schema: SCHEMA || defaults.schema,
     concurrency: isInteger(argv.jobs) ? argv.jobs : defaults.concurrentJobs,
     maxPoolSize: isInteger(argv["max-pool-size"])
@@ -104,26 +104,17 @@ async function main() {
   };
 
   if (SCHEMA_ONLY) {
-    await runMigrations(baseOptions);
+    await runMigrations(options);
     console.log("Schema updated");
     return;
   }
 
-  const watchedTasks = await getTasks(
-    baseOptions,
-    `${process.cwd()}/tasks`,
-    WATCH
-  );
-
-  const options: RunnerOptions = {
-    ...baseOptions,
-    taskList: watchedTasks.tasks,
-  };
+  const watchedTasks = await getTasks(options, `${process.cwd()}/tasks`, WATCH);
 
   if (ONCE) {
-    await runOnce(options);
+    await runOnce(options, watchedTasks.tasks);
   } else {
-    const { promise } = await run(options);
+    const { promise } = await run(options, watchedTasks.tasks);
     // Continue forever(ish)
     await promise;
   }
