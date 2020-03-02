@@ -16,7 +16,7 @@ import {
   makeWithPgClientFromPool,
   makeWithPgClientFromClient,
 } from "./helpers";
-import { CONCURRENT_JOBS } from "./config";
+import { defaults } from "./config";
 import { Logger } from "./logger";
 import { processSharedOptions } from "./lib";
 
@@ -76,7 +76,7 @@ export function runTaskList(
   const { logger, escapedWorkerSchema } = processSharedOptions(options);
   logger.debug(`Worker pool options are ${inspect(options)}`, { options });
   const {
-    concurrency = CONCURRENT_JOBS,
+    concurrency = defaults.concurrentJobs,
     noHandleSignals,
     ...workerOptions
   } = options;

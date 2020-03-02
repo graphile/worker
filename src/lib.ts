@@ -7,9 +7,9 @@ import {
 } from "./interfaces";
 import { Logger, defaultLogger, LogScope } from "./logger";
 import { Client, Pool } from "pg";
-import { MAX_CONTIGUOUS_ERRORS, CONCURRENT_JOBS } from "./config";
 import { makeWithPgClientFromPool, makeAddJob } from "./helpers";
 import { migrate } from "./migrate";
+import { defaults } from "./config";
 
 interface CompiledSharedOptions {
   logger: Logger;
@@ -31,15 +31,14 @@ export function processSharedOptions(
   if (!compiled) {
     const {
       logger = defaultLogger,
-      schema: workerSchema = process.env.GRAPHILE_WORKER_SCHEMA ||
-        "graphile_worker",
+      schema: workerSchema = defaults.schema,
     } = options;
     const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
     compiled = {
       logger,
       workerSchema,
       escapedWorkerSchema,
-      maxContiguousErrors: MAX_CONTIGUOUS_ERRORS,
+      maxContiguousErrors: defaults.maxContiguousErrors,
     };
     _sharedOptionsCache.set(options, compiled);
   }
@@ -139,7 +138,7 @@ export const getUtilsAndReleasersFromOptions = async (
   settings: ProcessSharedOptionsSettings = {}
 ): Promise<CompiledOptions> => {
   const shared = processSharedOptions(options, settings);
-  const { concurrency = CONCURRENT_JOBS } = options;
+  const { concurrency = defaults.concurrentJobs } = options;
   return withReleasers(
     async (releasers, release): Promise<CompiledOptions> => {
       const pgPool: Pool = await assertPool(options, releasers);

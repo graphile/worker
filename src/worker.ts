@@ -10,7 +10,7 @@ import { randomBytes } from "crypto";
 import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import { processSharedOptions } from "./lib";
-import { POLL_INTERVAL } from "./config";
+import { defaults } from "./config";
 
 export function makeNewWorker(
   options: WorkerOptions,
@@ -20,7 +20,7 @@ export function makeNewWorker(
 ): Worker {
   const {
     workerId = `worker-${randomBytes(9).toString("hex")}`,
-    pollInterval = POLL_INTERVAL,
+    pollInterval = defaults.pollInterval,
   } = options;
   const {
     workerSchema,

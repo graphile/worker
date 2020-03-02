@@ -39,6 +39,7 @@
     "@types/debug": "^4.1.2",
     "@types/pg": "^7.14.1",
     "chokidar": "^3.3.1",
+    "cosmiconfig": "^6.0.0",
     "pg": ">=6.5 <8",
     "tslib": "^1.9.3",
     "yargs": "^15.1.0"

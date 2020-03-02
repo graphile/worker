@@ -3,8 +3,8 @@ import getTasks from "./getTasks";
 import { RunnerOptions } from "./interfaces";
 import { run, runOnce } from "./index";
 import * as yargs from "yargs";
-import { POLL_INTERVAL, CONCURRENT_JOBS } from "./config";
 import { runMigrations } from "./runner";
+import { defaults } from "./config";
 
 const argv = yargs
   .option("connection", {
@@ -33,7 +33,7 @@ const argv = yargs
   .option("jobs", {
     description: "number of jobs to run concurrently",
     alias: "j",
-    default: CONCURRENT_JOBS,
+    default: defaults.concurrentJobs,
   })
   .number("jobs")
   .option("max-pool-size", {
@@ -45,7 +45,7 @@ const argv = yargs
   .option("poll-interval", {
     description:
       "how long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)",
-    default: POLL_INTERVAL,
+    default: defaults.pollInterval,
   })
   .number("poll-interval")
   .strict(true).argv;
@@ -84,11 +84,13 @@ async function main() {
   }
 
   const baseOptions: RunnerOptions = {
-    concurrency: isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS,
-    maxPoolSize: isInteger(argv["max-pool-size"]) ? argv["max-pool-size"] : 10,
+    concurrency: isInteger(argv.jobs) ? argv.jobs : defaults.concurrentJobs,
+    maxPoolSize: isInteger(argv["max-pool-size"])
+      ? argv["max-pool-size"]
+      : defaults.maxPoolSize,
     pollInterval: isInteger(argv["poll-interval"])
       ? argv["poll-interval"]
-      : POLL_INTERVAL,
+      : defaults.pollInterval,
     connectionString: DATABASE_URL,
   };
 
