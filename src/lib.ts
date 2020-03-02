@@ -134,53 +134,37 @@ export interface CompiledOptions
   extends CompiledSharedOptions,
     ProcessOptionsExtensions {}
 
-const processOptionsCache: Map<
-  RunnerOptions,
-  Promise<ProcessOptionsExtensions>
-> = new Map();
 export const getUtilsAndReleasersFromOptions = async (
   options: RunnerOptions,
   settings: ProcessSharedOptionsSettings = {}
 ): Promise<CompiledOptions> => {
   const shared = processSharedOptions(options, settings);
-  let extensionsPromise:
-    | Promise<ProcessOptionsExtensions>
-    | undefined = processOptionsCache.get(options);
-  if (!extensionsPromise) {
-    const { concurrency = CONCURRENT_JOBS } = options;
-    extensionsPromise = withReleasers(
-      async (releasers, release): Promise<ProcessOptionsExtensions> => {
-        releasers.push(() => {
-          processOptionsCache.delete(options);
-        });
-        const pgPool: Pool = await assertPool(options, releasers);
-        // @ts-ignore
-        const max = pgPool?.options?.max || 10;
-        if (max < concurrency) {
-          console.warn(
-            `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`
-          );
-        }
-
-        const withPgClient = makeWithPgClientFromPool(pgPool);
-
-        // Migrate
-        await withPgClient(client => migrate(client, options));
-        const addJob = makeAddJob(options, withPgClient);
-
-        return {
-          pgPool,
-          withPgClient,
-          addJob,
-          release,
-          releasers,
-        };
+  const { concurrency = CONCURRENT_JOBS } = options;
+  return withReleasers(
+    async (releasers, release): Promise<CompiledOptions> => {
+      const pgPool: Pool = await assertPool(options, releasers);
+      // @ts-ignore
+      const max = pgPool?.options?.max || 10;
+      if (max < concurrency) {
+        console.warn(
+          `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`
+        );
       }
-    );
-    processOptionsCache.set(options, extensionsPromise);
-  }
-  return {
-    ...shared,
-    ...(await extensionsPromise),
-  };
+
+      const withPgClient = makeWithPgClientFromPool(pgPool);
+
+      // Migrate
+      await withPgClient(client => migrate(client, options));
+      const addJob = makeAddJob(options, withPgClient);
+
+      return {
+        ...shared,
+        pgPool,
+        withPgClient,
+        addJob,
+        release,
+        releasers,
+      };
+    }
+  );
 };
