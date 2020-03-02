@@ -41,7 +41,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
     };
 
     // Run the worker
-    const workerPool = runTaskList(tasks, pgPool, { concurrency: 3 });
+    const workerPool = runTaskList({ concurrency: 3 }, tasks, pgPool);
     let finished = false;
     workerPool.promise.then(() => {
       finished = true;
@@ -80,7 +80,7 @@ test("doesn't bail on deprecated `debug` function", () =>
         jobPromise = deferred();
       },
     };
-    const workerPool = runTaskList(tasks, pgPool, { concurrency: 3 });
+    const workerPool = runTaskList({ concurrency: 3 }, tasks, pgPool);
     await addJob(pgPool);
     await sleepUntil(() => !!jobPromise);
     jobPromise!.resolve();

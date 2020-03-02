@@ -13,9 +13,9 @@ import { processSharedOptions } from "./lib";
 import { POLL_INTERVAL } from "./config";
 
 export function makeNewWorker(
+  options: WorkerOptions,
   tasks: TaskList,
   withPgClient: WithPgClient,
-  options: WorkerOptions = {},
   continuous = true
 ): Worker {
   const {

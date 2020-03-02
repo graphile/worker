@@ -52,7 +52,7 @@ export const runOnce = async (options: RunnerOptions): Promise<void> => {
     const promises: Promise<void>[] = [];
     for (let i = 0; i < concurrency; i++) {
       promises.push(
-        withPgClient(client => runTaskListOnce(taskList, client, options))
+        withPgClient(client => runTaskListOnce(options, taskList, client))
       );
     }
     await Promise.all(promises);
@@ -72,7 +72,7 @@ export const run = async (options: RunnerOptions): Promise<Runner> => {
   try {
     const taskList = await assertTaskList(options, releasers);
 
-    const workerPool = runTaskList(taskList, pgPool, options);
+    const workerPool = runTaskList(options, taskList, pgPool);
     releasers.push(() => workerPool.release());
 
     let running = true;

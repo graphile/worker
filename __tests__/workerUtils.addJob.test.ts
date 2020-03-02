@@ -33,7 +33,7 @@ test("runs a job added through the worker utils", () =>
 
     const task: Task = jest.fn();
     const taskList = { task };
-    await runTaskListOnce(taskList, pgClient);
+    await runTaskListOnce(options, taskList, pgClient);
   }));
 
 test("supports the jobKey API", () =>
@@ -57,7 +57,7 @@ test("supports the jobKey API", () =>
 
     const task: Task = jest.fn();
     const taskList = { task };
-    await runTaskListOnce(taskList, pgClient);
+    await runTaskListOnce(options, taskList, pgClient);
   }));
 
 test("runs a job added through the addJob shortcut function", () =>
@@ -77,5 +77,5 @@ test("runs a job added through the addJob shortcut function", () =>
 
     const task: Task = jest.fn();
     const taskList = { task };
-    await runTaskListOnce(taskList, pgClient);
+    await runTaskListOnce(options, taskList, pgClient);
   }));

@@ -69,9 +69,9 @@ function registerSignalHandlers(logger: Logger) {
 }
 
 export function runTaskList(
+  options: WorkerPoolOptions,
   tasks: TaskList,
-  pgPool: Pool,
-  options: WorkerPoolOptions = {}
+  pgPool: Pool
 ): WorkerPool {
   const { logger, escapedWorkerSchema } = processSharedOptions(options);
   logger.debug(`Worker pool options are ${inspect(options)}`, { options });
@@ -215,7 +215,7 @@ export function runTaskList(
   // Spawn our workers; they can share clients from the pool.
   const withPgClient = makeWithPgClientFromPool(pgPool);
   for (let i = 0; i < concurrency; i++) {
-    workers.push(makeNewWorker(tasks, withPgClient, workerOptions));
+    workers.push(makeNewWorker(workerOptions, tasks, withPgClient));
   }
 
   // TODO: handle when a worker shuts down (spawn a new one)
@@ -224,9 +224,9 @@ export function runTaskList(
 }
 
 export const runTaskListOnce = (
+  options: WorkerOptions,
   tasks: TaskList,
-  client: PoolClient,
-  options: WorkerOptions = {}
+  client: PoolClient
 ) =>
-  makeNewWorker(tasks, makeWithPgClientFromClient(client), options, false)
+  makeNewWorker(options, tasks, makeWithPgClientFromClient(client), false)
     .promise;

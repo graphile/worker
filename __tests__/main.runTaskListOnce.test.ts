@@ -54,7 +54,7 @@ test("runs jobs", () =>
       job1,
       job2,
     };
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
 
     // Job should have been called once only
     expect(job1).toHaveBeenCalledTimes(1);
@@ -101,7 +101,7 @@ test("schedules errors for retry", () =>
     const tasks: TaskList = {
       job1,
     };
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
     expect(job1).toHaveBeenCalledTimes(1);
 
     // Check that it failed as expected
@@ -148,11 +148,11 @@ test("retries job", () =>
     };
 
     // Run the job (it will error)
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
     expect(job1).toHaveBeenCalledTimes(1);
 
     // Should do nothing the second time, because it's queued for the future (assuming we run this fast enough afterwards!)
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
     expect(job1).toHaveBeenCalledTimes(1);
 
     // Tell the job to be runnable
@@ -162,7 +162,7 @@ test("retries job", () =>
 
     // Run the job
     const start = new Date();
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
 
     // It should have ran again
     expect(job1).toHaveBeenCalledTimes(2);
@@ -208,11 +208,11 @@ test("supports future-scheduled jobs", () =>
     };
 
     // Run all jobs (none are ready)
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
     expect(future).not.toHaveBeenCalled();
 
     // Still not ready
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
     expect(future).not.toHaveBeenCalled();
 
     // Tell the job to be runnable
@@ -221,7 +221,7 @@ test("supports future-scheduled jobs", () =>
     );
 
     // Run the job
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
 
     // It should have ran again
     expect(future).toHaveBeenCalledTimes(1);
@@ -267,7 +267,7 @@ test("allows update of pending jobs", () =>
     expect(job.run_at).toEqual(runAt);
 
     // Run all jobs (none are ready)
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
     expect(job1).not.toHaveBeenCalled();
 
     // update the job to run immediately with correct payload
@@ -286,7 +286,7 @@ test("allows update of pending jobs", () =>
     expect(updatedJob.run_at).toEqual(now);
 
     // Run the task
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
     expect(tasks.job1).toHaveBeenCalledTimes(1);
   }));
 
@@ -304,7 +304,7 @@ test("schedules a new job if existing is completed", () =>
     );
 
     // run the job
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
     expect(tasks.job1).toHaveBeenCalledTimes(1);
 
     // attempt to update the job - it should schedule a new one instead
@@ -313,7 +313,7 @@ test("schedules a new job if existing is completed", () =>
     );
 
     // run again
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
     expect(tasks.job1).toHaveBeenCalledTimes(2);
 
     // check jobs ran in the right order
@@ -349,7 +349,7 @@ test("schedules a new job if existing is being processed", () =>
     );
 
     // run the job
-    const promise = runTaskListOnce(tasks, pgClient);
+    const promise = runTaskListOnce(options, tasks, pgClient);
 
     // wait for it to be picked up for processing
     await sleepUntil(() => defers.length > 0);
@@ -411,7 +411,7 @@ test("schedules a new job if the existing is pending retry", () =>
     );
 
     // run the job
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
     expect(tasks.job1).toHaveBeenCalledTimes(1);
 
     // Check that it failed as expected and retry has been scheduled
@@ -425,7 +425,7 @@ test("schedules a new job if the existing is pending retry", () =>
     expect(+jobs[0].run_at).toBeGreaterThanOrEqual(+initialJob.run_at + 200);
 
     // run again - nothing should happen
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
     expect(tasks.job1).toHaveBeenCalledTimes(1);
 
     // update the job to succeed
@@ -443,7 +443,7 @@ test("schedules a new job if the existing is pending retry", () =>
     expect(updatedJobs[0].last_error).toEqual(null);
 
     // run again - now it should happen immediately due to the update
-    await runTaskListOnce(tasks, pgClient);
+    await runTaskListOnce(options, tasks, pgClient);
     expect(tasks.job1).toHaveBeenCalledTimes(2);
 
     // check jobs ran in the right order
@@ -617,7 +617,7 @@ test("jobs in progress cannot be removed", () =>
       ).rows
     ).toHaveLength(1);
 
-    const promise = runTaskListOnce(tasks, pgClient);
+    const promise = runTaskListOnce(options, tasks, pgClient);
     // wait for it to be picked up for processing
     await sleepUntil(() => !!deferred);
     expect(tasks.job1).toHaveBeenCalledTimes(1);
@@ -663,7 +663,7 @@ test("runs jobs asynchronously", () =>
     const tasks: TaskList = {
       job1,
     };
-    const runPromise = runTaskListOnce(tasks, pgClient);
+    const runPromise = runTaskListOnce(options, tasks, pgClient);
     const worker: Worker = runPromise["worker"];
     expect(worker).toBeTruthy();
     let executed = false;
@@ -733,11 +733,11 @@ test("runs jobs in parallel", () =>
       job1,
     };
     const runPromises = [
-      runTaskListOnce(tasks, pgClient),
-      runTaskListOnce(tasks, pgClient),
-      runTaskListOnce(tasks, pgClient),
-      runTaskListOnce(tasks, pgClient),
-      runTaskListOnce(tasks, pgClient),
+      runTaskListOnce(options, tasks, pgClient),
+      runTaskListOnce(options, tasks, pgClient),
+      runTaskListOnce(options, tasks, pgClient),
+      runTaskListOnce(options, tasks, pgClient),
+      runTaskListOnce(options, tasks, pgClient),
     ];
     let executed = false;
     Promise.all(runPromises).then(() => {
@@ -811,7 +811,7 @@ test("single worker runs jobs in series, purges all before exit", () =>
     const tasks: TaskList = {
       job1,
     };
-    const runPromise = runTaskListOnce(tasks, pgClient);
+    const runPromise = runTaskListOnce(options, tasks, pgClient);
     let executed = false;
     runPromise.then(() => {
       executed = true;
@@ -860,9 +860,9 @@ test("jobs added to the same queue will be ran serially (even if multiple worker
       job1,
     };
     const runPromises = [
-      runTaskListOnce(tasks, pgClient),
-      runTaskListOnce(tasks, pgClient),
-      runTaskListOnce(tasks, pgClient),
+      runTaskListOnce(options, tasks, pgClient),
+      runTaskListOnce(options, tasks, pgClient),
+      runTaskListOnce(options, tasks, pgClient),
     ];
     let executed = false;
     Promise.all(runPromises).then(() => {
