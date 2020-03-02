@@ -13,6 +13,13 @@ const argv = yargs
     alias: "c",
   })
   .string("connection")
+  .option("schema", {
+    description:
+      "The database schema in which Graphile Worker is (to be) located",
+    alias: "s",
+    default: defaults.schema,
+  })
+  .string("schema")
   .option("schema-only", {
     description: "Just install (or update) the database schema, then exit",
     default: false,
@@ -63,6 +70,7 @@ const isInteger = (n: number): boolean => {
 
 async function main() {
   const DATABASE_URL = argv.connection || process.env.DATABASE_URL || undefined;
+  const SCHEMA = argv.schema || undefined;
   const ONCE = argv.once;
   const SCHEMA_ONLY = argv["schema-only"];
   const WATCH = argv.watch;
@@ -84,6 +92,7 @@ async function main() {
   }
 
   const baseOptions: RunnerOptions = {
+    schema: SCHEMA || defaults.schema,
     concurrency: isInteger(argv.jobs) ? argv.jobs : defaults.concurrentJobs,
     maxPoolSize: isInteger(argv["max-pool-size"])
       ? argv["max-pool-size"]
