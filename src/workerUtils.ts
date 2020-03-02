@@ -1,8 +1,6 @@
 import { WorkerUtilsOptions, TaskSpec, WorkerUtils, Job } from "./interfaces";
-import { makeWithPgClientFromPool, makeAddJob } from "./helpers";
-import { withReleasers, assertPool } from "./runner";
+import { getUtilsAndReleasersFromOptions } from "./lib";
 import { migrate } from "./migrate";
-import { processSharedOptions } from "./lib";
 
 /**
  * Construct (asynchronously) a new WorkerUtils instance.
@@ -10,21 +8,17 @@ import { processSharedOptions } from "./lib";
 export async function makeWorkerUtils(
   options: WorkerUtilsOptions
 ): Promise<WorkerUtils> {
-  const { logger, escapedWorkerSchema } = processSharedOptions(options, {
+  const {
+    logger,
+    escapedWorkerSchema,
+    release,
+    withPgClient,
+    addJob,
+  } = await getUtilsAndReleasersFromOptions(options, {
     scope: {
       label: "WorkerUtils",
     },
   });
-
-  const { pgPool, release } = await withReleasers(
-    async (releasers, release) => ({
-      pgPool: await assertPool(options, releasers, logger),
-      release,
-    })
-  );
-
-  const withPgClient = makeWithPgClientFromPool(pgPool);
-  const addJob = makeAddJob(withPgClient, options);
 
   return {
     withPgClient,

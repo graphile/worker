@@ -13,7 +13,9 @@ async function runOnceErrorAssertion(options: RunnerOptions, message: string) {
 }
 
 test("at least a list of tasks or a task directory must be provided", async () => {
-  const options: RunnerOptions = {};
+  const options: RunnerOptions = {
+    connectionString: TEST_CONNECTION_STRING,
+  };
   await runOnceErrorAssertion(
     options,
     "You must specify either `options.taskList` or `options.taskDirectory"
@@ -22,6 +24,7 @@ test("at least a list of tasks or a task directory must be provided", async () =
 
 test("taskList and taskDirectory cannot be provided a the same time", async () => {
   const options: RunnerOptions = {
+    connectionString: TEST_CONNECTION_STRING,
     taskDirectory: "foo",
     taskList: { task: () => {} },
   };

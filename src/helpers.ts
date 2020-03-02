@@ -9,8 +9,8 @@ import { Pool, PoolClient } from "pg";
 import { processSharedOptions } from "./lib";
 
 export function makeAddJob(
-  withPgClient: WithPgClient,
-  options: WorkerSharedOptions
+  options: WorkerSharedOptions,
+  withPgClient: WithPgClient
 ) {
   const { escapedWorkerSchema } = processSharedOptions(options);
   return (identifier: string, payload: any = {}, spec: TaskSpec = {}) => {
@@ -61,7 +61,7 @@ export function makeJobHelpers(
     withPgClient,
     query: (queryText, values) =>
       withPgClient(pgClient => pgClient.query(queryText, values)),
-    addJob: makeAddJob(withPgClient, options),
+    addJob: makeAddJob(options, withPgClient),
 
     // TODO: add an API for giving workers more helpers
   };
