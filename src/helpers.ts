@@ -15,7 +15,7 @@ export function makeAddJob(
   withPgClient: WithPgClient
 ) {
   const { escapedWorkerSchema } = processSharedOptions(options);
-  return (identifier: string, payload: any = {}, spec: TaskSpec = {}) => {
+  return (identifier: string, payload: unknown = {}, spec: TaskSpec = {}) => {
     return withPgClient(async pgClient => {
       const { rows } = await pgClient.query(
         `

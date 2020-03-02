@@ -17,7 +17,7 @@ export const ESCAPED_GRAPHILE_WORKER_SCHEMA = pg.Client.prototype.escapeIdentifi
   GRAPHILE_WORKER_SCHEMA
 );
 
-export async function withPgPool<T = any>(
+export async function withPgPool<T>(
   cb: (pool: pg.Pool) => Promise<T>
 ): Promise<T> {
   const pool = new pg.Pool({
@@ -30,7 +30,7 @@ export async function withPgPool<T = any>(
   }
 }
 
-export async function withPgClient<T = any>(
+export async function withPgClient<T>(
   cb: (client: pg.PoolClient) => Promise<T>
 ): Promise<T> {
   return withPgPool(async pool => {
@@ -43,7 +43,7 @@ export async function withPgClient<T = any>(
   });
 }
 
-export async function withTransaction<T = any>(
+export async function withTransaction<T>(
   cb: (client: pg.PoolClient) => Promise<T>,
   closeCommand = "rollback"
 ): Promise<T> {
@@ -57,8 +57,8 @@ export async function withTransaction<T = any>(
   });
 }
 
-function isPoolClient(o: any): o is pg.PoolClient {
-  return o && typeof o.release === "function";
+function isPoolClient(o: unknown): o is pg.PoolClient {
+  return typeof o === "object" && !!o && typeof o["release"] === "function";
 }
 
 export async function reset(

@@ -79,7 +79,7 @@ export async function makeWorkerUtils(
 export async function quickAddJob(
   options: WorkerUtilsOptions,
   identifier: string,
-  payload: any = {},
+  payload: unknown = {},
   spec: TaskSpec = {}
 ) {
   const utils = await makeWorkerUtils(options);

@@ -33,7 +33,7 @@ export type AddJobFunction = (
   /**
    * The payload (typically a JSON object) that will be passed to the task executor.
    */
-  payload?: any,
+  payload?: unknown,
 
   /**
    * Additional details about how the job should be handled.
@@ -73,7 +73,7 @@ export interface JobHelpers extends Helpers {
   /**
    * A shorthand for running an SQL query within the job.
    */
-  query<R extends QueryResultRow = any>(
+  query<R extends QueryResultRow>(
     queryText: string,
     values?: any[]
   ): Promise<QueryResult<R>>;
