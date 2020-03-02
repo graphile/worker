@@ -4,9 +4,11 @@ import {
   TaskSpec,
   JobHelpers,
   WorkerSharedOptions,
+  SharedOptions,
 } from "./interfaces";
 import { Pool, PoolClient } from "pg";
 import { processSharedOptions } from "./lib";
+import { Logger } from "./logger";
 
 export function makeAddJob(
   options: WorkerSharedOptions,
@@ -44,16 +46,18 @@ export function makeAddJob(
 }
 
 export function makeJobHelpers(
+  options: SharedOptions,
   job: Job,
-  { withPgClient }: { withPgClient: WithPgClient },
-  options: WorkerSharedOptions
+  {
+    withPgClient,
+    logger: overrideLogger,
+  }: { withPgClient: WithPgClient; logger?: Logger }
 ): JobHelpers {
-  const { logger } = processSharedOptions(options, {
-    scope: {
-      label: "job",
-      taskIdentifier: job.task_identifier,
-      jobId: job.id,
-    },
+  const baseLogger = overrideLogger || processSharedOptions(options).logger;
+  const logger = baseLogger.scope({
+    label: "job",
+    taskIdentifier: job.task_identifier,
+    jobId: job.id,
   });
   const helpers: JobHelpers = {
     job,

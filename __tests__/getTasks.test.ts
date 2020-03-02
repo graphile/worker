@@ -18,13 +18,9 @@ Array [
   "wouldyoulike_default",
 ]
 `);
-    const helpers = makeJobHelpers(
-      makeMockJob("would you like"),
-      {
-        withPgClient: makeWithPgClientFromClient(client),
-      },
-      options
-    );
+    const helpers = makeJobHelpers(options, makeMockJob("would you like"), {
+      withPgClient: makeWithPgClientFromClient(client),
+    });
     expect(await tasks.wouldyoulike(helpers.job.payload, helpers)).toEqual(
       "some sausages"
     );
@@ -48,13 +44,9 @@ Array [
 ]
 `);
 
-    const helpers = makeJobHelpers(
-      makeMockJob("task1"),
-      {
-        withPgClient: makeWithPgClientFromClient(client),
-      },
-      options
-    );
+    const helpers = makeJobHelpers(options, makeMockJob("task1"), {
+      withPgClient: makeWithPgClientFromClient(client),
+    });
     expect(await tasks.task1(helpers.job.payload, helpers)).toEqual("hi");
     expect(await tasks.task2(helpers.job.payload, helpers)).toEqual("hello");
 
@@ -75,13 +67,9 @@ Array [
 ]
 `);
 
-    const helpers = makeJobHelpers(
-      makeMockJob("t1"),
-      {
-        withPgClient: makeWithPgClientFromClient(client),
-      },
-      options
-    );
+    const helpers = makeJobHelpers(options, makeMockJob("t1"), {
+      withPgClient: makeWithPgClientFromClient(client),
+    });
     expect(await tasks.t1(helpers.job.payload, helpers)).toEqual(
       "come with me"
     );

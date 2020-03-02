@@ -159,14 +159,7 @@ export function makeNewWorker(
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
         assert(task, `Unsupported task '${job.task_identifier}'`);
-        const helpers = makeJobHelpers(
-          job,
-          { withPgClient },
-          {
-            ...options,
-            logger,
-          }
-        );
+        const helpers = makeJobHelpers(options, job, { withPgClient, logger });
         await task(job.payload, helpers);
       } catch (error) {
         err = error;
