@@ -10,7 +10,7 @@ export const runMigrations = async (options: RunnerOptions): Promise<void> => {
     options
   );
   try {
-    await withPgClient(client => migrate(client, options));
+    await withPgClient(client => migrate(options, client));
   } finally {
     await release();
   }

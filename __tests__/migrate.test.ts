@@ -27,7 +27,7 @@ test("migration installs schema; second migration does no harm", async () => {
     expect(graphileWorkerNamespaceBeforeMigration).toBeFalsy();
 
     // Perform migration
-    await migrate(pgClient, options);
+    await migrate(options, pgClient);
 
     // Assert migrations table exists and has relevant entries
     const { rows: migrationRows } = await pgClient.query(
@@ -50,9 +50,9 @@ test("migration installs schema; second migration does no harm", async () => {
     }
 
     // Assert that re-migrating causes no issues
-    await migrate(pgClient, options);
-    await migrate(pgClient, options);
-    await migrate(pgClient, options);
+    await migrate(options, pgClient);
+    await migrate(options, pgClient);
+    await migrate(options, pgClient);
     {
       const { rows: jobsRows } = await pgClient.query(
         `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`

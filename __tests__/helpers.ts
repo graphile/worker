@@ -65,11 +65,11 @@ export async function reset(
     `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`
   );
   if (isPoolClient(pgPoolOrClient)) {
-    await migrate(pgPoolOrClient, options);
+    await migrate(options, pgPoolOrClient);
   } else {
     const client = await pgPoolOrClient.connect();
     try {
-      await migrate(client, options);
+      await migrate(options, client);
     } finally {
       await client.release();
     }

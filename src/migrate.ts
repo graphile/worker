@@ -3,7 +3,7 @@ import { readdir, readFile } from "./fs";
 import { WorkerSharedOptions } from "./interfaces";
 import { processSharedOptions } from "./lib";
 
-async function installSchema(client: PoolClient, options: WorkerSharedOptions) {
+async function installSchema(options: WorkerSharedOptions, client: PoolClient) {
   const { escapedWorkerSchema } = processSharedOptions(options);
   await client.query(`
     create extension if not exists pgcrypto with schema public;
@@ -16,10 +16,10 @@ async function installSchema(client: PoolClient, options: WorkerSharedOptions) {
 }
 
 async function runMigration(
+  options: WorkerSharedOptions,
   client: PoolClient,
   migrationFile: string,
-  migrationNumber: number,
-  options: WorkerSharedOptions
+  migrationNumber: number
 ) {
   const { escapedWorkerSchema } = processSharedOptions(options);
   const rawText = await readFile(
@@ -47,8 +47,8 @@ async function runMigration(
 }
 
 export async function migrate(
-  client: PoolClient,
-  options: WorkerSharedOptions
+  options: WorkerSharedOptions,
+  client: PoolClient
 ) {
   const { escapedWorkerSchema } = processSharedOptions(options);
   let latestMigration: number | null = null;
@@ -63,7 +63,7 @@ export async function migrate(
     }
   } catch (e) {
     if (e.code === "42P01") {
-      await installSchema(client, options);
+      await installSchema(options, client);
     } else {
       throw e;
     }
@@ -74,7 +74,7 @@ export async function migrate(
   for (const migrationFile of migrationFiles) {
     const migrationNumber = parseInt(migrationFile.substr(0, 6), 10);
     if (latestMigration == null || migrationNumber > latestMigration) {
-      await runMigration(client, migrationFile, migrationNumber, options);
+      await runMigration(options, client, migrationFile, migrationNumber);
     }
   }
 }

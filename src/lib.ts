@@ -154,7 +154,7 @@ export const getUtilsAndReleasersFromOptions = async (
       const withPgClient = makeWithPgClientFromPool(pgPool);
 
       // Migrate
-      await withPgClient(client => migrate(client, options));
+      await withPgClient(client => migrate(options, client));
       const addJob = makeAddJob(options, withPgClient);
 
       return {

@@ -25,7 +25,7 @@ export async function makeWorkerUtils(
     logger,
     release,
     addJob,
-    migrate: () => withPgClient(pgClient => migrate(pgClient, options)),
+    migrate: () => withPgClient(pgClient => migrate(options, pgClient)),
 
     async completeJobs(ids) {
       const { rows } = await withPgClient(client =>
