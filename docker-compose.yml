@@ -2,20 +2,24 @@ version: "3.4"
 
 services:
   db:
-    image: postgres:11.5-alpine
+    image: postgres:12-alpine
+    restart: always
     tmpfs: /var/lib/postgresql/data
     ports:
       - "${PORT_DB-5432}:5432"
     environment:
       POSTGRES_DB: graphile_worker_test
+      POSTGRES_PASSWORD: workerdev
 
   app:
     build:
       context: .
+    depends_on:
+      - db
     volumes:
       - ./__tests__:/app/__tests__
       - ./sql:/app/sql
       - ./src:/app/src
       - ./perfTest:/app/perfTest
     environment:
-      TEST_CONNECTION_STRING: "postgres://postgres@db:5432/graphile_worker_test"
+      TEST_CONNECTION_STRING: "postgres://postgres:workerdev@db:5432/graphile_worker_test"
