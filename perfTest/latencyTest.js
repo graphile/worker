@@ -5,6 +5,10 @@ const { default: deferred } = require("../dist/deferred");
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+const options = {
+  concurrecy: 1,
+};
+
 async function main() {
   const pgPool = new Pool({ connectionString: process.env.PERF_DATABASE_URL });
   const startTimes = {};
@@ -18,7 +22,7 @@ async function main() {
       }
     },
   };
-  const workerPool = runTaskList(tasks, pgPool, 1);
+  const workerPool = runTaskList(options, tasks, pgPool);
 
   // Warm up
   await pgPool.query(
