@@ -1,5 +1,55 @@
 # Changelog
 
+### v0.5.0
+
+New "Administrative functions", ability to rename `graphile_worker` schema, and
+significant overhaul of the codebase in preparation for going to v1.0.
+
+#### v0.5.0 improvements:
+
+- Added "Administrative functions" to complete, reschedule or fail jobs in bulk
+  (good for UIs)
+- Added `noHandleSignals` option to disable our signal handling (if you enable
+  this, make sure you use your own signal handling!)
+- Ability to rename `graphile_worker` schema
+- Added `cosmiconfig` for configuration (very few options support this
+  currently)
+- Decrease already negligible chance of worker ID collision (use
+  `crypto.randomBytes()` rather than `Math.random()`)
+
+#### v0.5.0 breaking changes:
+
+(For CLI users there are no breaking changes.)
+
+The ability to override the SQL schema means that everything in the codebase
+needs to know this setting. To achieve this:
+
+- all major APIs now accept `options` as a configuration parameter
+- where this was optional before it is now required
+- where options was not the first argument, it has been moved to the first
+  argument (for consistency)
+
+As such the following APIs (most of which are internal) have been changed:
+
+- `getTasks(taskPath, watch, logger)` -> `getTasks(options, taskPath, watch)`
+- `runTaskList(tasks, pgPool, options?)` ->
+  `runTaskList(options, tasks, pgPool)`
+- `runTaskListOnce(tasks, client, options?)` ->
+  `runTaskList(options, tasks, client)`
+- `migrate(client)` -> `migrate(options, client)`
+- `makeAddJob(withPgClient)` -> `makeAddJob(options, withPgClient)`
+- `makeJobHelpers(job, { withPgClient }, baseLogger)` ->
+  `makeJobHelpers(options, job, { withPgClient, logger? })`
+- `makeNewWorker(tasks, withPgClient, options, continuous)` ->
+  `makeNewWorker(options, tasks, withPgClient, continuous)`
+
+NOTE: the main APIs you'd use already accepted options as first argument and are
+thus unaffected.
+
+Also if you're a TypeScript user: we've renamed `WorkerSharedOptions` to
+`SharedOptions` and added a new `WorkerSharedOptions`. This is particularly
+relevant if you're using the `WorkerUtils` class.
+
 ### v0.4.0
 
 Performance improvements and ability to efficiently queue jobs from JS.
