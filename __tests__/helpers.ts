@@ -57,8 +57,8 @@ export async function withTransaction<T>(
   });
 }
 
-function isPoolClient(o: unknown): o is pg.PoolClient {
-  return typeof o === "object" && !!o && typeof o["release"] === "function";
+function isPoolClient(o: pg.Pool | pg.PoolClient): o is pg.PoolClient {
+  return typeof o["release"] === "function";
 }
 
 export async function reset(
