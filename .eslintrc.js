@@ -2,10 +2,12 @@ module.exports = {
   parser: "@typescript-eslint/parser",
   extends: [
     "eslint:recommended",
+    "plugin:import/errors",
+    "plugin:import/typescript",
+    "prettier",
     "prettier/@typescript-eslint",
-    "plugin:prettier/recommended",
   ],
-  plugins: ["jest", "@typescript-eslint", "prettier"],
+  plugins: ["jest", "@typescript-eslint", "simple-import-sort", "import"],
   parserOptions: {
     ecmaVersion: 2018,
     sourceType: "module",
@@ -13,7 +15,7 @@ module.exports = {
   env: {
     node: true,
     jest: true,
-    es6: true
+    es6: true,
   },
   rules: {
     "@typescript-eslint/no-unused-vars": [
@@ -22,10 +24,10 @@ module.exports = {
         argsIgnorePattern: "^_",
         varsIgnorePattern: "^_",
         args: "after-used",
-        ignoreRestSiblings: true
-      }
+        ignoreRestSiblings: true,
+      },
     ],
-    "curly": "error",
+    curly: "error",
     "no-else-return": 0,
     "no-return-assign": [2, "except-parens"],
     "no-underscore-dangle": 0,
@@ -35,19 +37,30 @@ module.exports = {
     "prefer-arrow-callback": [
       "error",
       {
-        allowNamedFunctions: true
-      }
+        allowNamedFunctions: true,
+      },
     ],
     "class-methods-use-this": 0,
     "no-restricted-syntax": 0,
     "no-param-reassign": [
       "error",
       {
-        props: false
-      }
+        props: false,
+      },
     ],
 
     "arrow-body-style": 0,
     "no-nested-ternary": 0,
-  }
+
+    /*
+     * simple-import-sort seems to be the most stable import sorting currently,
+     * disable others
+     */
+    "simple-import-sort/sort": "error",
+    "sort-imports": "off",
+    "import/order": "off",
+
+    "import/no-deprecated": "warn",
+    "import/no-duplicates": "error",
+  },
 };

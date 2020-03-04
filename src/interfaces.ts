@@ -1,6 +1,7 @@
-import { PoolClient, Pool, QueryResultRow, QueryResult } from "pg";
-import { Logger } from "./logger";
+import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
+
 import { Release } from "./lib";
+import { Logger } from "./logger";
 
 /*
  * Terminology:

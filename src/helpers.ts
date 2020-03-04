@@ -1,12 +1,13 @@
-import {
-  WithPgClient,
-  Job,
-  TaskSpec,
-  JobHelpers,
-  WorkerSharedOptions,
-  SharedOptions,
-} from "./interfaces";
 import { Pool, PoolClient } from "pg";
+
+import {
+  Job,
+  JobHelpers,
+  SharedOptions,
+  TaskSpec,
+  WithPgClient,
+  WorkerSharedOptions,
+} from "./interfaces";
 import { processSharedOptions } from "./lib";
 import { Logger } from "./logger";
 

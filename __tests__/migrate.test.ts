@@ -1,10 +1,10 @@
+import { WorkerSharedOptions } from "../src";
 import { migrate } from "../src/migrate";
 import {
-  withPgClient,
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   GRAPHILE_WORKER_SCHEMA,
+  withPgClient,
 } from "./helpers";
-import { WorkerSharedOptions } from "../src";
 
 const options: WorkerSharedOptions = {};
 

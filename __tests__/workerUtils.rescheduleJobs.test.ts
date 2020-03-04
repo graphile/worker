@@ -1,11 +1,11 @@
+import { Job, makeWorkerUtils, WorkerSharedOptions } from "../src/index";
 import {
-  withPgClient,
+  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  makeSelectionOfJobs,
   reset,
   TEST_CONNECTION_STRING,
-  makeSelectionOfJobs,
-  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  withPgClient,
 } from "./helpers";
-import { makeWorkerUtils, Job, WorkerSharedOptions } from "../src/index";
 
 /** For sorting arrays of numbers or numeric strings */
 function numerically(a: string | number, b: string | number) {

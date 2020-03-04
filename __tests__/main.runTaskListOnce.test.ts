@@ -1,13 +1,13 @@
+import defer, { Deferred } from "../src/deferred";
+import { Task, TaskList, Worker, WorkerSharedOptions } from "../src/interfaces";
+import { runTaskListOnce } from "../src/main";
 import {
-  withPgClient,
+  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  jobCount,
   reset,
   sleepUntil,
-  jobCount,
-  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  withPgClient,
 } from "./helpers";
-import { TaskList, Task, Worker, WorkerSharedOptions } from "../src/interfaces";
-import { runTaskListOnce } from "../src/main";
-import defer, { Deferred } from "../src/deferred";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 

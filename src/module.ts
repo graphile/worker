@@ -1,4 +1,5 @@
 import { dirname } from "path";
+
 import { readFile } from "./fs";
 import _module = require("module");
 const { Module } = _module;

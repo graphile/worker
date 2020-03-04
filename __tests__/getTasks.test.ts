@@ -1,7 +1,7 @@
-import getTasks from "../src/getTasks";
-import { makeMockJob, withPgClient } from "./helpers";
-import { makeJobHelpers, makeWithPgClientFromClient } from "../src/helpers";
 import { WorkerSharedOptions } from "../src";
+import getTasks from "../src/getTasks";
+import { makeJobHelpers, makeWithPgClientFromClient } from "../src/helpers";
+import { makeMockJob, withPgClient } from "./helpers";
 
 const options: WorkerSharedOptions = {};
 

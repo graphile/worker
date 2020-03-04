@@ -1,24 +1,24 @@
 import { Pool, PoolClient } from "pg";
 import { inspect } from "util";
+
+import { defaults } from "./config";
+import deferred from "./deferred";
 import {
+  makeWithPgClientFromClient,
+  makeWithPgClientFromPool,
+} from "./helpers";
+import {
+  Job,
   TaskList,
   Worker,
-  Job,
-  WorkerPool,
   WorkerOptions,
+  WorkerPool,
   WorkerPoolOptions,
 } from "./interfaces";
-import deferred from "./deferred";
+import { processSharedOptions } from "./lib";
+import { Logger } from "./logger";
 import SIGNALS from "./signals";
 import { makeNewWorker } from "./worker";
-
-import {
-  makeWithPgClientFromPool,
-  makeWithPgClientFromClient,
-} from "./helpers";
-import { defaults } from "./config";
-import { Logger } from "./logger";
-import { processSharedOptions } from "./lib";
 
 const allWorkerPools: Array<WorkerPool> = [];
 

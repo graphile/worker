@@ -1,16 +1,17 @@
-import {
-  TaskList,
-  Worker,
-  Job,
-  WithPgClient,
-  WorkerOptions,
-} from "./interfaces";
 import * as assert from "assert";
 import { randomBytes } from "crypto";
+
+import { defaults } from "./config";
 import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
+import {
+  Job,
+  TaskList,
+  WithPgClient,
+  Worker,
+  WorkerOptions,
+} from "./interfaces";
 import { processSharedOptions } from "./lib";
-import { defaults } from "./config";
 
 export function makeNewWorker(
   options: WorkerOptions,
