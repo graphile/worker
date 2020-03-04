@@ -20,16 +20,16 @@ async function runMigration(
   options: WorkerSharedOptions,
   client: PoolClient,
   migrationFile: string,
-  migrationNumber: number
+  migrationNumber: number,
 ) {
   const { escapedWorkerSchema } = processSharedOptions(options);
   const rawText = await readFile(
     `${__dirname}/../sql/${migrationFile}`,
-    "utf8"
+    "utf8",
   );
   const text = rawText.replace(
     /:GRAPHILE_WORKER_SCHEMA\b/g,
-    escapedWorkerSchema
+    escapedWorkerSchema,
   );
   await client.query("begin");
   try {
@@ -49,7 +49,7 @@ async function runMigration(
 
 export async function migrate(
   options: WorkerSharedOptions,
-  client: PoolClient
+  client: PoolClient,
 ) {
   const { escapedWorkerSchema } = processSharedOptions(options);
   let latestMigration: number | null = null;
@@ -57,7 +57,7 @@ export async function migrate(
     const {
       rows: [row],
     } = await client.query(
-      `select id from ${escapedWorkerSchema}.migrations order by id desc limit 1;`
+      `select id from ${escapedWorkerSchema}.migrations order by id desc limit 1;`,
     );
     if (row) {
       latestMigration = row.id;

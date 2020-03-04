@@ -59,7 +59,7 @@ export class Logger {
 // The default console logger does not output metadata
 export const consoleLogFactory = (scope: LogScope) => (
   level: LogLevel,
-  message: string
+  message: string,
 ) => {
   if (level === LogLevel.DEBUG && !process.env.GRAPHILE_WORKER_DEBUG) {
     return;
@@ -85,7 +85,7 @@ export const consoleLogFactory = (scope: LogScope) => (
         }${scope.jobId ? `{${scope.jobId}}` : ""})`
       : "",
     level.toUpperCase(),
-    message
+    message,
   );
 };
 

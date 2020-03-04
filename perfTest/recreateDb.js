@@ -3,7 +3,7 @@ const { parse } = require("pg-connection-string");
 
 if (!process.env.PERF_DATABASE_URL) {
   throw new Error(
-    "No PERF_DATABASE_URL setting detected; please don't call this script directly!"
+    "No PERF_DATABASE_URL setting detected; please don't call this script directly!",
   );
 }
 const config = parse(process.env.PERF_DATABASE_URL);

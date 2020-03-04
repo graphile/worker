@@ -12,7 +12,7 @@ async function main() {
       perform graphile_worker.add_job('log_if_999', json_build_object('id', i)) from generate_series(1, ${jobCount}) i;
     end;
     $$ language plpgsql;
-  `
+  `,
   );
 
   pgPool.end();

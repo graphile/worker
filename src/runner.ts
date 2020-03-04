@@ -8,7 +8,7 @@ import { migrate } from "./migrate";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
   const { withPgClient, release } = await getUtilsAndReleasersFromOptions(
-    options
+    options,
   );
   try {
     await withPgClient(client => migrate(options, client));
@@ -19,12 +19,12 @@ export const runMigrations = async (options: RunnerOptions): Promise<void> => {
 
 async function assertTaskList(
   options: RunnerOptions,
-  releasers: Releasers
+  releasers: Releasers,
 ): Promise<TaskList> {
   let taskList: TaskList;
   assert(
     !options.taskDirectory || !options.taskList,
-    "Exactly one of either `taskDirectory` or `taskList` should be set"
+    "Exactly one of either `taskDirectory` or `taskList` should be set",
   );
   if (options.taskList) {
     taskList = options.taskList;
@@ -34,7 +34,7 @@ async function assertTaskList(
     taskList = watchedTasks.tasks;
   } else {
     throw new Error(
-      "You must specify either `options.taskList` or `options.taskDirectory`"
+      "You must specify either `options.taskList` or `options.taskDirectory`",
     );
   }
   return taskList;
@@ -42,7 +42,7 @@ async function assertTaskList(
 
 export const runOnce = async (
   options: RunnerOptions,
-  overrideTaskList?: TaskList
+  overrideTaskList?: TaskList,
 ): Promise<void> => {
   const { concurrency = 1 } = options;
   const {
@@ -57,7 +57,7 @@ export const runOnce = async (
     const promises: Promise<void>[] = [];
     for (let i = 0; i < concurrency; i++) {
       promises.push(
-        withPgClient(client => runTaskListOnce(options, taskList, client))
+        withPgClient(client => runTaskListOnce(options, taskList, client)),
       );
     }
     await Promise.all(promises);
@@ -68,7 +68,7 @@ export const runOnce = async (
 
 export const run = async (
   options: RunnerOptions,
-  overrideTaskList?: TaskList
+  overrideTaskList?: TaskList,
 ): Promise<Runner> => {
   const {
     pgPool,

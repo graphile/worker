@@ -62,8 +62,8 @@ async function main() {
       promises.push(
         exec(
           `node ../dist/cli.js --once -j ${CONCURRENCY} -m ${CONCURRENCY + 1}`,
-          execOptions
-        )
+          execOptions,
+        ),
       );
     }
     (await Promise.all(promises)).map(({ error, stdout, stderr }) => {
@@ -79,7 +79,7 @@ async function main() {
     });
   });
   console.log(
-    `Jobs per second: ${((1000 * JOB_COUNT) / (dur - startupTime)).toFixed(2)}`
+    `Jobs per second: ${((1000 * JOB_COUNT) / (dur - startupTime)).toFixed(2)}`,
   );
   console.log();
   console.log();

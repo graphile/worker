@@ -36,7 +36,7 @@ test("completes the jobs, leaves others unaffected", () =>
     const failedJobs = await utils.permanentlyFailJobs(jobIds, "TESTING!");
     const failedJobIds = failedJobs.map(j => j.id).sort(numerically);
     expect(failedJobIds).toEqual(
-      [failedJob.id, regularJob1.id, regularJob2.id].sort(numerically)
+      [failedJob.id, regularJob1.id, regularJob2.id].sort(numerically),
     );
     for (const j of failedJobs) {
       expect(j.last_error).toEqual("TESTING!");
@@ -48,7 +48,7 @@ test("completes the jobs, leaves others unaffected", () =>
       rows: remaining,
     } = await pgClient.query(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs where not (id = any($1)) order by id asc`,
-      [failedJobIds]
+      [failedJobIds],
     );
     expect(remaining).toHaveLength(2);
     expect(remaining[0]).toMatchObject(lockedJob);

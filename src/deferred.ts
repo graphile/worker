@@ -12,6 +12,6 @@ export default function defer<T = void>(): Deferred<T> {
       reject = _reject;
     }),
     // @ts-ignore error TS2454: Variable 'resolve' is used before being assigned.
-    { resolve, reject }
+    { resolve, reject },
   );
 }

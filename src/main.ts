@@ -30,7 +30,7 @@ let _shuttingDown = false;
 function registerSignalHandlers(logger: Logger) {
   if (_shuttingDown) {
     throw new Error(
-      "System has already gone into shutdown, should not be spawning new workers now!"
+      "System has already gone into shutdown, should not be spawning new workers now!",
     );
   }
   if (_registeredSignalHandlers) {
@@ -56,8 +56,8 @@ function registerSignalHandlers(logger: Logger) {
       _shuttingDown = true;
       Promise.all(
         allWorkerPools.map(pool =>
-          pool.gracefulShutdown(`Forced worker shutdown due to ${signal}`)
-        )
+          pool.gracefulShutdown(`Forced worker shutdown due to ${signal}`),
+        ),
       ).finally(() => {
         removeHandler();
         logger.error(`Graceful shutdown attempted; killing self via ${signal}`);
@@ -71,7 +71,7 @@ function registerSignalHandlers(logger: Logger) {
 export function runTaskList(
   options: WorkerPoolOptions,
   tasks: TaskList,
-  pgPool: Pool
+  pgPool: Pool,
 ): WorkerPool {
   const { logger, escapedWorkerSchema } = processSharedOptions(options);
   logger.debug(`Worker pool options are ${inspect(options)}`, { options });
@@ -108,12 +108,12 @@ export function runTaskList(
   const listenForChanges = (
     err: Error | undefined,
     client: PoolClient,
-    release: () => void
+    release: () => void,
   ) => {
     if (err) {
       logger.error(
         `Error connecting with notify listener (trying again in 5 seconds): ${err.message}`,
-        { error: err }
+        { error: err },
       );
       // Try again in 5 seconds
       setTimeout(() => {
@@ -152,8 +152,8 @@ export function runTaskList(
 
     logger.info(
       `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
-        "', '"
-      )}')`
+        "', '",
+      )}')`,
     );
   };
 
@@ -191,7 +191,7 @@ export function runTaskList(
           INNER JOIN ${escapedWorkerSchema}.job_queues ON (job_queues.queue_name = jobs.queue_name)
           WHERE job_queues.locked_by = ANY($1::text[]) AND jobs.id = ANY($3::int[]);
         `,
-          [workerIds, message, jobsInProgress.map(job => job.id)]
+          [workerIds, message, jobsInProgress.map(job => job.id)],
         );
         logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
           cancelledJobs,
@@ -226,7 +226,7 @@ export function runTaskList(
 export const runTaskListOnce = (
   options: WorkerOptions,
   tasks: TaskList,
-  client: PoolClient
+  client: PoolClient,
 ) =>
   makeNewWorker(options, tasks, makeWithPgClientFromClient(client), false)
     .promise;

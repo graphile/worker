@@ -17,7 +17,7 @@ export function makeNewWorker(
   options: WorkerOptions,
   tasks: TaskList,
   withPgClient: WithPgClient,
-  continuous = true
+  continuous = true,
 ): Worker {
   const {
     workerId = `worker-${randomBytes(9).toString("hex")}`,
@@ -86,7 +86,7 @@ export function makeNewWorker(
             `SELECT * FROM ${escapedWorkerSchema}.get_job($1, $2);`,
           values: [workerId, supportedTaskNames],
           name: `get_job/${workerSchema}`,
-        })
+        }),
       );
 
       // `doNext` cannot be executed concurrently, so we know this is safe.
@@ -96,13 +96,13 @@ export function makeNewWorker(
       if (continuous) {
         contiguousErrors++;
         logger.debug(
-          `Failed to acquire job: ${err.message} (${contiguousErrors}/${maxContiguousErrors})`
+          `Failed to acquire job: ${err.message} (${contiguousErrors}/${maxContiguousErrors})`,
         );
         if (contiguousErrors >= maxContiguousErrors) {
           promise.reject(
             new Error(
-              `Failed ${contiguousErrors} times in a row to acquire job; latest error: ${err.message}`
-            )
+              `Failed ${contiguousErrors} times in a row to acquire job; latest error: ${err.message}`,
+            ),
           );
           release();
           return;
@@ -179,7 +179,7 @@ export function makeNewWorker(
                   .trim()}`
               : ""
           }`,
-          { failure: true, job, error: err, duration }
+          { failure: true, job, error: err, duration },
         );
         // TODO: retry logic, in case of server connection interruption
         await withPgClient(client =>
@@ -187,7 +187,7 @@ export function makeNewWorker(
             text: `SELECT FROM ${escapedWorkerSchema}.fail_job($1, $2, $3);`,
             values: [workerId, job.id, message],
             name: `fail_job/${workerSchema}`,
-          })
+          }),
         );
       } else {
         if (!process.env.NO_LOG_SUCCESS) {
@@ -195,7 +195,7 @@ export function makeNewWorker(
             `Completed task ${job.id} (${
               job.task_identifier
             }) with success (${duration.toFixed(2)}ms)`,
-            { job, duration, success: true }
+            { job, duration, success: true },
           );
         }
         // TODO: retry logic, in case of server connection interruption
@@ -204,14 +204,14 @@ export function makeNewWorker(
             text: `SELECT FROM ${escapedWorkerSchema}.complete_job($1, $2);`,
             values: [workerId, job.id],
             name: `complete_job/${workerSchema}`,
-          })
+          }),
         );
       }
     } catch (fatalError) {
       const when = err ? `after failure '${err.message}'` : "after success";
       logger.error(
         `Failed to release job '${job.id}' ${when}; committing seppuku\n${fatalError.message}`,
-        { fatalError, job }
+        { fatalError, job },
       );
       promise.reject(fatalError);
       release();

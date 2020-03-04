@@ -14,7 +14,7 @@ import { fauxRequire } from "./module";
 
 function validTasks(
   logger: Logger,
-  obj: { [taskName: string]: unknown }
+  obj: { [taskName: string]: unknown },
 ): TaskList {
   const tasks: TaskList = {};
   Object.keys(obj).forEach(taskName => {
@@ -30,7 +30,7 @@ function validTasks(
           invalidTask: true,
           task,
           taskName,
-        }
+        },
       );
     }
   });
@@ -42,7 +42,7 @@ async function loadFileIntoTasks(
   tasks: { [taskName: string]: unknown },
   filename: string,
   name: string | null = null,
-  watch: boolean = false
+  watch: boolean = false,
 ) {
   const replacementModule = watch
     ? await fauxRequire(filename)
@@ -60,7 +60,7 @@ async function loadFileIntoTasks(
       throw new Error(
         `Invalid task '${name}' - expected function, received ${
           task ? typeof task : String(task)
-        }.`
+        }.`,
       );
     }
   } else {
@@ -81,13 +81,13 @@ async function loadFileIntoTasks(
 export default async function getTasks(
   options: SharedOptions,
   taskPath: string,
-  watch = false
+  watch = false,
 ): Promise<WatchedTaskList> {
   const { logger } = await processSharedOptions(options);
   const pathStat = await tryStat(taskPath);
   if (!pathStat) {
     throw new Error(
-      `Could not find tasks to execute - '${taskPath}' does not exist`
+      `Could not find tasks to execute - '${taskPath}' does not exist`,
     );
   }
 
@@ -118,7 +118,7 @@ export default async function getTasks(
                 error,
               });
             });
-        })
+        }),
       );
     }
     // Try and require it
@@ -141,17 +141,17 @@ export default async function getTasks(
                 tasks,
                 eventFilePath,
                 taskName,
-                watch
+                watch,
               )
                 .then(() => debugSupported(watchLogger))
                 .catch(error => {
                   watchLogger.error(
                     `Error in ${eventFilePath}: ${error.message}`,
-                    { eventFilePath, error }
+                    { eventFilePath, error },
                   );
                 });
             }
-          })
+          }),
       );
     }
 
@@ -166,7 +166,7 @@ export default async function getTasks(
             tasks,
             `${taskPath}/${file}`,
             taskName,
-            watch
+            watch,
           );
         } catch (error) {
           const message = `Error processing '${taskPath}/${file}': ${error.message}`;

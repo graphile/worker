@@ -19,7 +19,7 @@ test("at least a list of tasks or a task directory must be provided", async () =
   };
   await runOnceErrorAssertion(
     options,
-    "You must specify either `options.taskList` or `options.taskDirectory"
+    "You must specify either `options.taskList` or `options.taskDirectory",
   );
 });
 
@@ -31,7 +31,7 @@ test("taskList and taskDirectory cannot be provided a the same time", async () =
   };
   await runOnceErrorAssertion(
     options,
-    "Exactly one of either `taskDirectory` or `taskList` should be set"
+    "Exactly one of either `taskDirectory` or `taskList` should be set",
   );
 });
 
@@ -41,7 +41,7 @@ test("at least a connectionString, a pgPool or the DATABASE_URL env variable mus
   };
   await runOnceErrorAssertion(
     options,
-    "You must either specify `pgPool` or `connectionString`, or you must make the `DATABASE_URL` environmental variable available."
+    "You must either specify `pgPool` or `connectionString`, or you must make the `DATABASE_URL` environmental variable available.",
   );
 });
 
@@ -53,7 +53,7 @@ test("connectionString and a pgPool cannot provided a the same time", async () =
   };
   await runOnceErrorAssertion(
     options,
-    "Both `pgPool` and `connectionString` are set, at most one of these options should be provided"
+    "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
   );
 });
 
