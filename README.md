@@ -813,6 +813,7 @@ printable ASCII characters.
 - `queue_name` can be at most 128 characters long
 - `task_identifier` can be at most 128 characters long
 - `job_key` can be at most 512 characters long
+- `schema` should be reasonable; max 32 characters is preferred. Defaults to `graphile_worker` (15 chars)
 
 ## Uninstallation
 
