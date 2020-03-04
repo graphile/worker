@@ -1,5 +1,6 @@
 import * as pg from "pg";
-import { Job, WorkerUtils, WorkerPoolOptions } from "../src/interfaces";
+
+import { Job, WorkerPoolOptions, WorkerUtils } from "../src/interfaces";
 import { migrate } from "../src/migrate";
 
 // Sometimes CI's clock can get interrupted (it is shared infra!) so this

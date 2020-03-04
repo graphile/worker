@@ -1,4 +1,4 @@
-import { WorkerUtilsOptions, TaskSpec, WorkerUtils, Job } from "./interfaces";
+import { Job, TaskSpec, WorkerUtils, WorkerUtilsOptions } from "./interfaces";
 import { getUtilsAndReleasersFromOptions } from "./lib";
 import { migrate } from "./migrate";
 

@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-import getTasks from "./getTasks";
-import { RunnerOptions } from "./interfaces";
-import { run, runOnce } from "./index";
 import * as yargs from "yargs";
-import { runMigrations } from "./runner";
+
 import { defaults } from "./config";
+import getTasks from "./getTasks";
+import { run, runOnce } from "./index";
+import { RunnerOptions } from "./interfaces";
+import { runMigrations } from "./runner";
 
 const argv = yargs
   .option("connection", {

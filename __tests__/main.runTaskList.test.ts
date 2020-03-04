@@ -1,16 +1,17 @@
 // See also main.runTaskListOnce.test.ts
-import {
-  reset,
-  withPgPool,
-  sleepUntil,
-  sleep,
-  jobCount,
-  ESCAPED_GRAPHILE_WORKER_SCHEMA,
-} from "./helpers";
-import { TaskList, Task, WorkerSharedOptions } from "../src/interfaces";
-import { runTaskList } from "../src/main";
-import deferred, { Deferred } from "../src/deferred";
 import { Pool } from "pg";
+
+import deferred, { Deferred } from "../src/deferred";
+import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
+import { runTaskList } from "../src/main";
+import {
+  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  jobCount,
+  reset,
+  sleep,
+  sleepUntil,
+  withPgPool,
+} from "./helpers";
 
 const addJob = (pgPool: Pool, id?: string | number) =>
   pgPool.query(

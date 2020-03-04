@@ -1,15 +1,16 @@
 import * as assert from "assert";
+import { Client, Pool } from "pg";
+
+import { defaults } from "./config";
+import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
 import {
-  SharedOptions,
-  RunnerOptions,
   AddJobFunction,
+  RunnerOptions,
+  SharedOptions,
   WithPgClient,
 } from "./interfaces";
-import { Logger, defaultLogger, LogScope } from "./logger";
-import { Client, Pool } from "pg";
-import { makeWithPgClientFromPool, makeAddJob } from "./helpers";
+import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
-import { defaults } from "./config";
 
 interface CompiledSharedOptions {
   logger: Logger;

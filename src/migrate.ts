@@ -1,4 +1,5 @@
 import { PoolClient } from "pg";
+
 import { readdir, readFile } from "./fs";
 import { WorkerSharedOptions } from "./interfaces";
 import { processSharedOptions } from "./lib";

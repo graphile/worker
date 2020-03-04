@@ -1,15 +1,16 @@
-import { basename } from "path";
 import * as chokidar from "chokidar";
+import { basename } from "path";
+
+import { readdir, tryStat } from "./fs";
 import {
   isValidTask,
+  SharedOptions,
   TaskList,
   WatchedTaskList,
-  SharedOptions,
 } from "./interfaces";
-import { tryStat, readdir } from "./fs";
-import { fauxRequire } from "./module";
-import { Logger } from "./logger";
 import { processSharedOptions } from "./lib";
+import { Logger } from "./logger";
+import { fauxRequire } from "./module";
 
 function validTasks(
   logger: Logger,

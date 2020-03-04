@@ -1,7 +1,8 @@
-import { runOnce } from "../src/runner";
-import { RunnerOptions } from "../src/interfaces";
 import { Pool } from "pg";
-import { withPgPool, TEST_CONNECTION_STRING } from "./helpers";
+
+import { RunnerOptions } from "../src/interfaces";
+import { runOnce } from "../src/runner";
+import { TEST_CONNECTION_STRING, withPgPool } from "./helpers";
 
 async function runOnceErrorAssertion(options: RunnerOptions, message: string) {
   expect.assertions(1);

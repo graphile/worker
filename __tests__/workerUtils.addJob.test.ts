@@ -1,16 +1,16 @@
 import {
-  withPgClient,
-  reset,
-  TEST_CONNECTION_STRING,
-  ESCAPED_GRAPHILE_WORKER_SCHEMA,
-} from "./helpers";
-import {
   makeWorkerUtils,
   quickAddJob,
   runTaskListOnce,
   Task,
   WorkerSharedOptions,
 } from "../src/index";
+import {
+  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  reset,
+  TEST_CONNECTION_STRING,
+  withPgClient,
+} from "./helpers";
 
 const options: WorkerSharedOptions = {};
 

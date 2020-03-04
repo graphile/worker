@@ -1,9 +1,10 @@
 import * as assert from "assert";
+
 import getTasks from "./getTasks";
 import { Runner, RunnerOptions, TaskList } from "./interfaces";
+import { getUtilsAndReleasersFromOptions, Releasers } from "./lib";
 import { runTaskList, runTaskListOnce } from "./main";
 import { migrate } from "./migrate";
-import { getUtilsAndReleasersFromOptions, Releasers } from "./lib";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
   const { withPgClient, release } = await getUtilsAndReleasersFromOptions(
