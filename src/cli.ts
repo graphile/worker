@@ -3,9 +3,8 @@ import getTasks from "./getTasks";
 import { RunnerOptions } from "./interfaces";
 import { run, runOnce } from "./index";
 import * as yargs from "yargs";
-import { POLL_INTERVAL, CONCURRENT_JOBS } from "./config";
-import { defaultLogger } from "./logger";
 import { runMigrations } from "./runner";
+import { defaults } from "./config";
 
 const argv = yargs
   .option("connection", {
@@ -14,6 +13,13 @@ const argv = yargs
     alias: "c",
   })
   .string("connection")
+  .option("schema", {
+    description:
+      "The database schema in which Graphile Worker is (to be) located",
+    alias: "s",
+    default: defaults.schema,
+  })
+  .string("schema")
   .option("schema-only", {
     description: "Just install (or update) the database schema, then exit",
     default: false,
@@ -34,7 +40,7 @@ const argv = yargs
   .option("jobs", {
     description: "number of jobs to run concurrently",
     alias: "j",
-    default: CONCURRENT_JOBS,
+    default: defaults.concurrentJobs,
   })
   .number("jobs")
   .option("max-pool-size", {
@@ -46,7 +52,7 @@ const argv = yargs
   .option("poll-interval", {
     description:
       "how long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)",
-    default: POLL_INTERVAL,
+    default: defaults.pollInterval,
   })
   .number("poll-interval")
   .strict(true).argv;
@@ -64,6 +70,7 @@ const isInteger = (n: number): boolean => {
 
 async function main() {
   const DATABASE_URL = argv.connection || process.env.DATABASE_URL || undefined;
+  const SCHEMA = argv.schema || undefined;
   const ONCE = argv.once;
   const SCHEMA_ONLY = argv["schema-only"];
   const WATCH = argv.watch;
@@ -84,35 +91,30 @@ async function main() {
     );
   }
 
-  // TODO: allow overriding the logger
-  const logger = defaultLogger;
+  const options: RunnerOptions = {
+    schema: SCHEMA || defaults.schema,
+    concurrency: isInteger(argv.jobs) ? argv.jobs : defaults.concurrentJobs,
+    maxPoolSize: isInteger(argv["max-pool-size"])
+      ? argv["max-pool-size"]
+      : defaults.maxPoolSize,
+    pollInterval: isInteger(argv["poll-interval"])
+      ? argv["poll-interval"]
+      : defaults.pollInterval,
+    connectionString: DATABASE_URL,
+  };
 
   if (SCHEMA_ONLY) {
-    await runMigrations({
-      connectionString: DATABASE_URL,
-      logger,
-    });
+    await runMigrations(options);
     console.log("Schema updated");
     return;
   }
 
-  const watchedTasks = await getTasks(`${process.cwd()}/tasks`, WATCH, logger);
-
-  const options: RunnerOptions = {
-    concurrency: isInteger(argv.jobs) ? argv.jobs : CONCURRENT_JOBS,
-    maxPoolSize: isInteger(argv["max-pool-size"]) ? argv["max-pool-size"] : 10,
-    pollInterval: isInteger(argv["poll-interval"])
-      ? argv["poll-interval"]
-      : POLL_INTERVAL,
-    connectionString: DATABASE_URL,
-    taskList: watchedTasks.tasks,
-    logger,
-  };
+  const watchedTasks = await getTasks(options, `${process.cwd()}/tasks`, WATCH);
 
   if (ONCE) {
-    await runOnce(options);
+    await runOnce(options, watchedTasks.tasks);
   } else {
-    const { promise } = await run(options);
+    const { promise } = await run(options, watchedTasks.tasks);
     // Continue forever(ish)
     await promise;
   }

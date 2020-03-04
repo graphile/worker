@@ -7,7 +7,7 @@
     "prepack": "rm -Rf dist && tsc && chmod +x dist/cli.js",
     "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && tsc --watch",
     "lint": "eslint 'src/**/*'",
-    "test": "createdb graphile_worker_test || true && psql -Xv ON_ERROR_STOP=1 -f __tests__/reset-db.sql graphile_worker_test && jest -i",
+    "test": "createdb graphile_worker_test || true && psql -X -v GRAPHILE_WORKER_SCHEMA=\"${GRAPHILE_WORKER_SCHEMA:-graphile_worker}\" -v ON_ERROR_STOP=1 -f __tests__/reset-db.sql graphile_worker_test && jest -i",
     "perfTest": "cd perfTest && node ./run.js"
   },
   "bin": {
@@ -39,8 +39,8 @@
     "@types/debug": "^4.1.2",
     "@types/pg": "^7.14.1",
     "chokidar": "^3.3.1",
+    "cosmiconfig": "^6.0.0",
     "pg": ">=6.5 <8",
-    "pg-connection-string": "^2.0.0",
     "tslib": "^1.9.3",
     "yargs": "^15.1.0"
   },
@@ -54,6 +54,7 @@
     "eslint-plugin-prettier": "^3.1.2",
     "eslint_d": "^8.0.0",
     "jest": "^25.1.0",
+    "pg-connection-string": "^2.0.0",
     "prettier": "^1.19.1",
     "ts-jest": "^25.2.0",
     "typescript": "^3.7.5"

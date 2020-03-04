@@ -1,13 +1,25 @@
-import { WithPgClient, Job, TaskSpec, JobHelpers } from "./interfaces";
+import {
+  WithPgClient,
+  Job,
+  TaskSpec,
+  JobHelpers,
+  WorkerSharedOptions,
+  SharedOptions,
+} from "./interfaces";
 import { Pool, PoolClient } from "pg";
+import { processSharedOptions } from "./lib";
 import { Logger } from "./logger";
 
-export function makeAddJob(withPgClient: WithPgClient) {
-  return (identifier: string, payload: any = {}, spec: TaskSpec = {}) => {
+export function makeAddJob(
+  options: WorkerSharedOptions,
+  withPgClient: WithPgClient
+) {
+  const { escapedWorkerSchema } = processSharedOptions(options);
+  return (identifier: string, payload: unknown = {}, spec: TaskSpec = {}) => {
     return withPgClient(async pgClient => {
       const { rows } = await pgClient.query(
         `
-        select * from graphile_worker.add_job(
+        select * from ${escapedWorkerSchema}.add_job(
           identifier => $1::text,
           payload => $2::json,
           queue_name => $3::text,
@@ -34,22 +46,26 @@ export function makeAddJob(withPgClient: WithPgClient) {
 }
 
 export function makeJobHelpers(
+  options: SharedOptions,
   job: Job,
-  { withPgClient }: { withPgClient: WithPgClient },
-  baseLogger: Logger
+  {
+    withPgClient,
+    logger: overrideLogger,
+  }: { withPgClient: WithPgClient; logger?: Logger }
 ): JobHelpers {
-  const jobLogger = baseLogger.scope({
+  const baseLogger = overrideLogger || processSharedOptions(options).logger;
+  const logger = baseLogger.scope({
     label: "job",
     taskIdentifier: job.task_identifier,
     jobId: job.id,
   });
   const helpers: JobHelpers = {
     job,
-    logger: jobLogger,
+    logger,
     withPgClient,
     query: (queryText, values) =>
       withPgClient(pgClient => pgClient.query(queryText, values)),
-    addJob: makeAddJob(withPgClient),
+    addJob: makeAddJob(options, withPgClient),
 
     // TODO: add an API for giving workers more helpers
   };
@@ -57,10 +73,10 @@ export function makeJobHelpers(
   // DEPRECATED METHODS
   Object.assign(helpers, {
     debug(format: string, ...parameters: any[]): void {
-      jobLogger.error(
+      logger.error(
         "REMOVED: `helpers.debug` has been replaced with `helpers.logger.debug`; please do not use `helpers.debug`"
       );
-      jobLogger.debug(format, { parameters });
+      logger.debug(format, { parameters });
     },
   } as any);
 

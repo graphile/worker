@@ -1,13 +1,23 @@
 import * as pg from "pg";
-import { Job, WorkerUtils } from "../src/interfaces";
+import { Job, WorkerUtils, WorkerPoolOptions } from "../src/interfaces";
 import { migrate } from "../src/migrate";
+
+// Sometimes CI's clock can get interrupted (it is shared infra!) so this
+// extends the default timeout just in case.
+jest.setTimeout(15000);
 
 process.env.GRAPHILE_WORKER_DEBUG = "1";
 
 export const TEST_CONNECTION_STRING =
   process.env.TEST_CONNECTION_STRING || "graphile_worker_test";
 
-export async function withPgPool<T = any>(
+export const GRAPHILE_WORKER_SCHEMA =
+  process.env.GRAPHILE_WORKER_SCHEMA || "graphile_worker";
+export const ESCAPED_GRAPHILE_WORKER_SCHEMA = pg.Client.prototype.escapeIdentifier(
+  GRAPHILE_WORKER_SCHEMA
+);
+
+export async function withPgPool<T>(
   cb: (pool: pg.Pool) => Promise<T>
 ): Promise<T> {
   const pool = new pg.Pool({
@@ -20,7 +30,7 @@ export async function withPgPool<T = any>(
   }
 }
 
-export async function withPgClient<T = any>(
+export async function withPgClient<T>(
   cb: (client: pg.PoolClient) => Promise<T>
 ): Promise<T> {
   return withPgPool(async pool => {
@@ -33,7 +43,7 @@ export async function withPgClient<T = any>(
   });
 }
 
-export async function withTransaction<T = any>(
+export async function withTransaction<T>(
   cb: (client: pg.PoolClient) => Promise<T>,
   closeCommand = "rollback"
 ): Promise<T> {
@@ -47,18 +57,23 @@ export async function withTransaction<T = any>(
   });
 }
 
-function isPoolClient(o: any): o is pg.PoolClient {
-  return o && typeof o.release === "function";
+function isPoolClient(o: pg.Pool | pg.PoolClient): o is pg.PoolClient {
+  return typeof o["release"] === "function";
 }
 
-export async function reset(pgPoolOrClient: pg.Pool | pg.PoolClient) {
-  await pgPoolOrClient.query("drop schema if exists graphile_worker cascade;");
+export async function reset(
+  pgPoolOrClient: pg.Pool | pg.PoolClient,
+  options: WorkerPoolOptions
+) {
+  await pgPoolOrClient.query(
+    `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`
+  );
   if (isPoolClient(pgPoolOrClient)) {
-    await migrate(pgPoolOrClient);
+    await migrate(options, pgPoolOrClient);
   } else {
     const client = await pgPoolOrClient.connect();
     try {
-      await migrate(client);
+      await migrate(options, client);
     } finally {
       await client.release();
     }
@@ -71,7 +86,7 @@ export async function jobCount(
   const {
     rows: [row],
   } = await pgPoolOrClient.query(
-    "select count(*)::int from graphile_worker.jobs"
+    `select count(*)::int from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`
   );
   return row ? row.count || 0 : 0;
 }
@@ -125,13 +140,13 @@ export async function makeSelectionOfJobs(
   ({
     rows: [lockedJob],
   } = await pgClient.query<Job>(
-    `update graphile_worker.jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
+    `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
     [lockedJob.id]
   ));
   ({
     rows: [failedJob],
   } = await pgClient.query<Job>(
-    `update graphile_worker.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
+    `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
     [failedJob.id]
   ));
 

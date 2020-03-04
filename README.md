@@ -218,6 +218,8 @@ Options:
   --version            Show version number                             [boolean]
   --connection, -c     Database connection string, defaults to the
                        'DATABASE_URL' envvar                            [string]
+  --schema, -s         The database schema in which Graphile Worker is (to be)
+                       located             [string] [default: "graphile_worker"]
   --schema-only        Just install (or update) the database schema, then exit
                                                       [boolean] [default: false]
   --once               Run until there are no runnable jobs left, then exit
@@ -264,9 +266,9 @@ migrations and then resolves.
 
 The following options for these methods are available.
 
-- `concurrency`: The equivalent of the cli `--jobs` option with the same default value.
+- `concurrency`: The equivalent of the CLI `--jobs` option with the same default value.
 - `nohandleSignals`: If set true, we won't install signal handlers and it'll be up to you to handle graceful shutdown of the worker if the process receives a signal.
-- `pollInterval`: The equivalent of the cli `--poll-interval` option with the same default value.
+- `pollInterval`: The equivalent of the CLI `--poll-interval` option with the same default value.
 - `logger`: To change how log messages are output you may provide a custom logger; see [`Logger`](#logger) below
 - the database is identified through one of these options:
   - `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
@@ -274,6 +276,7 @@ The following options for these methods are available.
 - the tasks to execute are identified through one of these options:
   - `taskDirectory`: A path string to a directory containing the task handlers.
   - `taskList`: An object with the task names as keys and a corresponding task handler functions as values
+- `schema` can be used to change the default `graphile_worker` schema to something else (equivalent to `--schema` on the CLI)
 
 Exactly one of either `taskDirectory` or `taskList` must be provided (except for `runMigrations` which doesn't require a task list).
 
@@ -348,7 +351,7 @@ singleton throughout your code.
 - exactly one of these keys must be present to determine how to connect to the database:
   - `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
   - `pgPool`: A `pg.Pool` instance to use
-- there are currently no other options
+- `schema` can be used to change the default `graphile_worker` schema to something else (equivalent to `--schema` on the CLI)
 
 ### WorkerUtils
 
@@ -810,6 +813,7 @@ printable ASCII characters.
 - `queue_name` can be at most 128 characters long
 - `task_identifier` can be at most 128 characters long
 - `job_key` can be at most 512 characters long
+- `schema` should be reasonable; max 32 characters is preferred. Defaults to `graphile_worker` (15 chars)
 
 ## Uninstallation
 
@@ -981,7 +985,7 @@ docker-compose exec app yarn jest -i
 Reset the test db
 
 ```
-cat __tests__/reset-db.sql | docker-compose exec -T db psql -U postgres graphile_worker_test
+cat __tests__/reset-db.sql | docker-compose exec -T db psql -U postgres -v GRAPHILE_WORKER_SCHEMA=graphile_worker graphile_worker_test
 ```
 
 Run the perf tests

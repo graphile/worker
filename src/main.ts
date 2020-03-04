@@ -16,8 +16,9 @@ import {
   makeWithPgClientFromPool,
   makeWithPgClientFromClient,
 } from "./helpers";
-import { CONCURRENT_JOBS } from "./config";
-import { defaultLogger, Logger } from "./logger";
+import { defaults } from "./config";
+import { Logger } from "./logger";
+import { processSharedOptions } from "./lib";
 
 const allWorkerPools: Array<WorkerPool> = [];
 
@@ -68,14 +69,14 @@ function registerSignalHandlers(logger: Logger) {
 }
 
 export function runTaskList(
+  options: WorkerPoolOptions,
   tasks: TaskList,
-  pgPool: Pool,
-  options: WorkerPoolOptions = {}
+  pgPool: Pool
 ): WorkerPool {
-  const { logger = defaultLogger } = options;
+  const { logger, escapedWorkerSchema } = processSharedOptions(options);
   logger.debug(`Worker pool options are ${inspect(options)}`, { options });
   const {
-    concurrency = CONCURRENT_JOBS,
+    concurrency = defaults.concurrentJobs,
     noHandleSignals,
     ...workerOptions
   } = options;
@@ -185,9 +186,9 @@ export function runTaskList(
         });
         const { rows: cancelledJobs } = await pgPool.query(
           `
-          SELECT graphile_worker.fail_job(job_queues.locked_by, jobs.id, $2)
-          FROM graphile_worker.jobs
-          INNER JOIN graphile_worker.job_queues ON (job_queues.queue_name = jobs.queue_name)
+          SELECT ${escapedWorkerSchema}.fail_job(job_queues.locked_by, jobs.id, $2)
+          FROM ${escapedWorkerSchema}.jobs
+          INNER JOIN ${escapedWorkerSchema}.job_queues ON (job_queues.queue_name = jobs.queue_name)
           WHERE job_queues.locked_by = ANY($1::text[]) AND jobs.id = ANY($3::int[]);
         `,
           [workerIds, message, jobsInProgress.map(job => job.id)]
@@ -214,7 +215,7 @@ export function runTaskList(
   // Spawn our workers; they can share clients from the pool.
   const withPgClient = makeWithPgClientFromPool(pgPool);
   for (let i = 0; i < concurrency; i++) {
-    workers.push(makeNewWorker(tasks, withPgClient, workerOptions));
+    workers.push(makeNewWorker(workerOptions, tasks, withPgClient));
   }
 
   // TODO: handle when a worker shuts down (spawn a new one)
@@ -223,9 +224,9 @@ export function runTaskList(
 }
 
 export const runTaskListOnce = (
+  options: WorkerOptions,
   tasks: TaskList,
-  client: PoolClient,
-  options: WorkerOptions = {}
+  client: PoolClient
 ) =>
-  makeNewWorker(tasks, makeWithPgClientFromClient(client), options, false)
+  makeNewWorker(options, tasks, makeWithPgClientFromClient(client), false)
     .promise;

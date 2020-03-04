@@ -1,11 +1,16 @@
 import getTasks from "../src/getTasks";
 import { makeMockJob, withPgClient } from "./helpers";
 import { makeJobHelpers, makeWithPgClientFromClient } from "../src/helpers";
-import { defaultLogger } from "../src/logger";
+import { WorkerSharedOptions } from "../src";
+
+const options: WorkerSharedOptions = {};
 
 test("gets tasks from folder", () =>
   withPgClient(async client => {
-    const { tasks, release } = await getTasks(`${__dirname}/fixtures/tasks`);
+    const { tasks, release } = await getTasks(
+      options,
+      `${__dirname}/fixtures/tasks`
+    );
     expect(tasks).toBeTruthy();
     expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
 Array [
@@ -13,13 +18,9 @@ Array [
   "wouldyoulike_default",
 ]
 `);
-    const helpers = makeJobHelpers(
-      makeMockJob("would you like"),
-      {
-        withPgClient: makeWithPgClientFromClient(client),
-      },
-      defaultLogger
-    );
+    const helpers = makeJobHelpers(options, makeMockJob("would you like"), {
+      withPgClient: makeWithPgClientFromClient(client),
+    });
     expect(await tasks.wouldyoulike(helpers.job.payload, helpers)).toEqual(
       "some sausages"
     );
@@ -32,6 +33,7 @@ Array [
 test("get tasks from file (vanilla)", () =>
   withPgClient(async client => {
     const { tasks, release } = await getTasks(
+      options,
       `${__dirname}/fixtures/tasksFile.js`
     );
     expect(tasks).toBeTruthy();
@@ -42,13 +44,9 @@ Array [
 ]
 `);
 
-    const helpers = makeJobHelpers(
-      makeMockJob("task1"),
-      {
-        withPgClient: makeWithPgClientFromClient(client),
-      },
-      defaultLogger
-    );
+    const helpers = makeJobHelpers(options, makeMockJob("task1"), {
+      withPgClient: makeWithPgClientFromClient(client),
+    });
     expect(await tasks.task1(helpers.job.payload, helpers)).toEqual("hi");
     expect(await tasks.task2(helpers.job.payload, helpers)).toEqual("hello");
 
@@ -58,6 +56,7 @@ Array [
 test("get tasks from file (default)", () =>
   withPgClient(async client => {
     const { tasks, release } = await getTasks(
+      options,
       `${__dirname}/fixtures/tasksFile_default.js`
     );
     expect(tasks).toBeTruthy();
@@ -68,13 +67,9 @@ Array [
 ]
 `);
 
-    const helpers = makeJobHelpers(
-      makeMockJob("t1"),
-      {
-        withPgClient: makeWithPgClientFromClient(client),
-      },
-      defaultLogger
-    );
+    const helpers = makeJobHelpers(options, makeMockJob("t1"), {
+      withPgClient: makeWithPgClientFromClient(client),
+    });
     expect(await tasks.t1(helpers.job.payload, helpers)).toEqual(
       "come with me"
     );

@@ -1,2 +1,2 @@
-drop schema if exists graphile_worker cascade;
-drop extension if exists pgcrypto;
+drop schema if exists :GRAPHILE_WORKER_SCHEMA cascade;
+drop extension if exists pgcrypto cascade;

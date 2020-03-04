@@ -1,6 +1,6 @@
 import { PoolClient, Pool, QueryResultRow, QueryResult } from "pg";
 import { Logger } from "./logger";
-import { Release } from "./runner";
+import { Release } from "./lib";
 
 /*
  * Terminology:
@@ -33,7 +33,7 @@ export type AddJobFunction = (
   /**
    * The payload (typically a JSON object) that will be passed to the task executor.
    */
-  payload?: any,
+  payload?: unknown,
 
   /**
    * Additional details about how the job should be handled.
@@ -73,7 +73,7 @@ export interface JobHelpers extends Helpers {
   /**
    * A shorthand for running an SQL query within the job.
    */
-  query<R extends QueryResultRow = any>(
+  query<R extends QueryResultRow>(
     queryText: string,
     values?: any[]
   ): Promise<QueryResult<R>>;
@@ -224,18 +224,50 @@ export interface TaskSpec {
   jobKey?: string;
 }
 
-export interface WorkerSharedOptions {
-  /**
-   * How long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)
-   */
-  pollInterval?: number;
-
+/**
+ * These options are common Graphile Worker pools, workers, and utils.
+ */
+export interface SharedOptions {
   /**
    * How should messages be logged out? Defaults to using the console logger.
    */
   logger?: Logger;
+
+  /**
+   * Which PostgreSQL schema should Graphile Worker use? Defaults to 'graphile_worker'.
+   */
+  schema?: string;
+
+  /**
+   * A PostgreSQL connection string to the database containing the job queue
+   */
+  connectionString?: string;
+
+  /**
+   * The maximum size of the PostgreSQL pool. Defaults to the node-postgres
+   * default (10). Only useful when `connectionString` is given.
+   */
+  maxPoolSize?: number;
+
+  /**
+   * A pg.Pool instance to use instead of the `connectionString`
+   */
+  pgPool?: Pool;
 }
 
+/**
+ * Shared between pools and individual workers.
+ */
+export interface WorkerSharedOptions extends SharedOptions {
+  /**
+   * How long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)
+   */
+  pollInterval?: number;
+}
+
+/**
+ * Options for an individual worker
+ */
 export interface WorkerOptions extends WorkerSharedOptions {
   /**
    * An identifier for this specific worker; if unset then a random ID will be assigned. Do not assign multiple workers the same worker ID!
@@ -243,6 +275,9 @@ export interface WorkerOptions extends WorkerSharedOptions {
   workerId?: string;
 }
 
+/**
+ * Options for a worker pool.
+ */
 export interface WorkerPoolOptions extends WorkerSharedOptions {
   /**
    * Number of jobs to run concurrently
@@ -256,43 +291,19 @@ export interface WorkerPoolOptions extends WorkerSharedOptions {
   noHandleSignals?: boolean;
 }
 
+/**
+ * Options for the `run`, `runOnce` and `runMigrations` methods.
+ */
 export interface RunnerOptions extends WorkerPoolOptions {
   /**
    * Task names and handler, e.g. from `getTasks` (use this if you need watch mode)
    */
   taskList?: TaskList;
+
   /**
    * Each file in this directory will be used as a task handler
    */
   taskDirectory?: string;
-  /**
-   * A PostgreSQL connection string to the database containing the job queue
-   */
-  connectionString?: string;
-  /**
-   * A pg.Pool instance to use instead of the `connectionString`
-   */
-  pgPool?: Pool;
-  /**
-   * The maximum size of the PostgreSQL pool. Defaults to the node-postgres
-   * default (10).
-   */
-  maxPoolSize?: number;
 }
 
-export interface WorkerUtilsOptions {
-  /**
-   * A PostgreSQL connection string to the database containing the job queue
-   */
-  connectionString?: string;
-
-  /**
-   * A pg.Pool instance to use instead of the `connectionString`
-   */
-  pgPool?: Pool;
-
-  /**
-   * How should messages be logged out? Defaults to using the console logger.
-   */
-  logger?: Logger;
-}
+export interface WorkerUtilsOptions extends SharedOptions {}

@@ -1,19 +1,28 @@
 // See also main.runTaskListOnce.test.ts
-import { reset, withPgPool, sleepUntil, sleep, jobCount } from "./helpers";
-import { TaskList, Task } from "../src/interfaces";
+import {
+  reset,
+  withPgPool,
+  sleepUntil,
+  sleep,
+  jobCount,
+  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+} from "./helpers";
+import { TaskList, Task, WorkerSharedOptions } from "../src/interfaces";
 import { runTaskList } from "../src/main";
 import deferred, { Deferred } from "../src/deferred";
 import { Pool } from "pg";
 
 const addJob = (pgPool: Pool, id?: string | number) =>
   pgPool.query(
-    `select graphile_worker.add_job('job1', json_build_object('id', $1::text), 'serial')`,
+    `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', json_build_object('id', $1::text), 'serial')`,
     [String(id != null ? id : Math.random())]
   );
 
+const options: WorkerSharedOptions = {};
+
 test("main will execute jobs as they come up, and exits cleanly", () =>
   withPgPool(async pgPool => {
-    await reset(pgPool);
+    await reset(pgPool, options);
 
     // Build the tasks
     const jobPromises: {
@@ -32,7 +41,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
     };
 
     // Run the worker
-    const workerPool = runTaskList(tasks, pgPool, { concurrency: 3 });
+    const workerPool = runTaskList({ concurrency: 3 }, tasks, pgPool);
     let finished = false;
     workerPool.promise.then(() => {
       finished = true;
@@ -62,7 +71,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
 
 test("doesn't bail on deprecated `debug` function", () =>
   withPgPool(async pgPool => {
-    await reset(pgPool);
+    await reset(pgPool, options);
     let jobPromise: Deferred | null = null;
     const tasks: TaskList = {
       job1(payload, helpers) {
@@ -71,7 +80,7 @@ test("doesn't bail on deprecated `debug` function", () =>
         jobPromise = deferred();
       },
     };
-    const workerPool = runTaskList(tasks, pgPool, { concurrency: 3 });
+    const workerPool = runTaskList({ concurrency: 3 }, tasks, pgPool);
     await addJob(pgPool);
     await sleepUntil(() => !!jobPromise);
     jobPromise!.resolve();

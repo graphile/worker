@@ -5,24 +5,34 @@ import {
   WithPgClient,
   WorkerOptions,
 } from "./interfaces";
-import { POLL_INTERVAL, MAX_CONTIGUOUS_ERRORS } from "./config";
 import * as assert from "assert";
 import { randomBytes } from "crypto";
 import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
-import { defaultLogger } from "./logger";
+import { processSharedOptions } from "./lib";
+import { defaults } from "./config";
 
 export function makeNewWorker(
+  options: WorkerOptions,
   tasks: TaskList,
   withPgClient: WithPgClient,
-  options: WorkerOptions = {},
   continuous = true
 ): Worker {
   const {
-    pollInterval = POLL_INTERVAL,
     workerId = `worker-${randomBytes(9).toString("hex")}`,
-    logger: baseLogger = defaultLogger,
+    pollInterval = defaults.pollInterval,
   } = options;
+  const {
+    workerSchema,
+    escapedWorkerSchema,
+    logger,
+    maxContiguousErrors,
+  } = processSharedOptions(options, {
+    scope: {
+      label: "worker",
+      workerId,
+    },
+  });
   const promise = deferred();
   let activeJob: Job | null = null;
 
@@ -36,11 +46,6 @@ export function makeNewWorker(
     return false;
   };
   let active = true;
-
-  const logger = baseLogger.scope({
-    label: "worker",
-    workerId,
-  });
 
   const release = () => {
     if (!active) {
@@ -76,10 +81,10 @@ export function makeNewWorker(
         client.query({
           text:
             // TODO: breaking change; change this to more optimal:
-            // "SELECT id, queue_name, task_identifier, payload FROM graphile_worker.get_job($1, $2);",
-            "SELECT * FROM graphile_worker.get_job($1, $2);",
+            // `SELECT id, queue_name, task_identifier, payload FROM ${escapedWorkerSchema}.get_job($1, $2);`,
+            `SELECT * FROM ${escapedWorkerSchema}.get_job($1, $2);`,
           values: [workerId, supportedTaskNames],
-          name: "get_job",
+          name: `get_job/${workerSchema}`,
         })
       );
 
@@ -90,9 +95,9 @@ export function makeNewWorker(
       if (continuous) {
         contiguousErrors++;
         logger.debug(
-          `Failed to acquire job: ${err.message} (${contiguousErrors}/${MAX_CONTIGUOUS_ERRORS})`
+          `Failed to acquire job: ${err.message} (${contiguousErrors}/${maxContiguousErrors})`
         );
-        if (contiguousErrors >= MAX_CONTIGUOUS_ERRORS) {
+        if (contiguousErrors >= maxContiguousErrors) {
           promise.reject(
             new Error(
               `Failed ${contiguousErrors} times in a row to acquire job; latest error: ${err.message}`
@@ -154,7 +159,7 @@ export function makeNewWorker(
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
         assert(task, `Unsupported task '${job.task_identifier}'`);
-        const helpers = makeJobHelpers(job, { withPgClient }, logger);
+        const helpers = makeJobHelpers(options, job, { withPgClient, logger });
         await task(job.payload, helpers);
       } catch (error) {
         err = error;
@@ -178,9 +183,9 @@ export function makeNewWorker(
         // TODO: retry logic, in case of server connection interruption
         await withPgClient(client =>
           client.query({
-            text: "SELECT FROM graphile_worker.fail_job($1, $2, $3);",
+            text: `SELECT FROM ${escapedWorkerSchema}.fail_job($1, $2, $3);`,
             values: [workerId, job.id, message],
-            name: "fail_job",
+            name: `fail_job/${workerSchema}`,
           })
         );
       } else {
@@ -195,9 +200,9 @@ export function makeNewWorker(
         // TODO: retry logic, in case of server connection interruption
         await withPgClient(client =>
           client.query({
-            text: "SELECT FROM graphile_worker.complete_job($1, $2);",
+            text: `SELECT FROM ${escapedWorkerSchema}.complete_job($1, $2);`,
             values: [workerId, job.id],
-            name: "complete_job",
+            name: `complete_job/${workerSchema}`,
           })
         );
       }
