@@ -19,7 +19,10 @@ significant overhaul of the codebase in preparation for going to v1.0.
 
 #### v0.5.0 breaking changes:
 
-(For CLI users there are no breaking changes.)
+**CLI users**: no breaking changes.
+
+**Library users**: none of the documented (in the README) APIs are affected,
+except `runTaskListOnce` and some tiny tweaks to TypeScript types.
 
 The ability to override the SQL schema means that everything in the codebase
 needs to know this setting. To achieve this:
@@ -43,12 +46,11 @@ As such the following APIs (most of which are internal) have been changed:
 - `makeNewWorker(tasks, withPgClient, options, continuous)` ->
   `makeNewWorker(options, tasks, withPgClient, continuous)`
 
-NOTE: the main APIs you'd use already accepted options as first argument and are
-thus unaffected.
-
 Also if you're a TypeScript user: we've renamed `WorkerSharedOptions` to
 `SharedOptions` and added a new `WorkerSharedOptions`. This is particularly
-relevant if you're using the `WorkerUtils` class.
+relevant if you're using the `WorkerUtils` class. We've also tweaked what
+options are available on each of these, but this is unlikely to affect you
+negatively.
 
 ### v0.4.0
 
