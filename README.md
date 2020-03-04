@@ -266,9 +266,9 @@ migrations and then resolves.
 
 The following options for these methods are available.
 
-- `concurrency`: The equivalent of the cli `--jobs` option with the same default value.
+- `concurrency`: The equivalent of the CLI `--jobs` option with the same default value.
 - `nohandleSignals`: If set true, we won't install signal handlers and it'll be up to you to handle graceful shutdown of the worker if the process receives a signal.
-- `pollInterval`: The equivalent of the cli `--poll-interval` option with the same default value.
+- `pollInterval`: The equivalent of the CLI `--poll-interval` option with the same default value.
 - `logger`: To change how log messages are output you may provide a custom logger; see [`Logger`](#logger) below
 - the database is identified through one of these options:
   - `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
@@ -276,6 +276,7 @@ The following options for these methods are available.
 - the tasks to execute are identified through one of these options:
   - `taskDirectory`: A path string to a directory containing the task handlers.
   - `taskList`: An object with the task names as keys and a corresponding task handler functions as values
+- `schema` can be used to change the default `graphile_worker` schema to something else (equivalent to `--schema` on the CLI)
 
 Exactly one of either `taskDirectory` or `taskList` must be provided (except for `runMigrations` which doesn't require a task list).
 
@@ -350,7 +351,7 @@ singleton throughout your code.
 - exactly one of these keys must be present to determine how to connect to the database:
   - `connectionString`: A PostgreSQL connection string to the database containing the job queue, or
   - `pgPool`: A `pg.Pool` instance to use
-- there are currently no other options
+- `schema` can be used to change the default `graphile_worker` schema to something else (equivalent to `--schema` on the CLI)
 
 ### WorkerUtils
 
