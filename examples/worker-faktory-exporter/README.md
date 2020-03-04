@@ -1,6 +1,9 @@
 # Graphile-Worker use case
 
-Use `graphile-worker` to export jobs to the [Faktory](https://github.com/contribsys/faktory) work server. With Faktory you can execute jobs with any language by clients using the Faktory API to fetch a job from a queue.
+Use `graphile-worker` to export jobs to the
+[Faktory](https://github.com/contribsys/faktory) work server. With Faktory you
+can execute jobs with any language by clients using the Faktory API to fetch a
+job from a queue.
 
 # Tutorial
 

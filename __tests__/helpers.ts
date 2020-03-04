@@ -15,11 +15,11 @@ export const TEST_CONNECTION_STRING =
 export const GRAPHILE_WORKER_SCHEMA =
   process.env.GRAPHILE_WORKER_SCHEMA || "graphile_worker";
 export const ESCAPED_GRAPHILE_WORKER_SCHEMA = pg.Client.prototype.escapeIdentifier(
-  GRAPHILE_WORKER_SCHEMA
+  GRAPHILE_WORKER_SCHEMA,
 );
 
 export async function withPgPool<T>(
-  cb: (pool: pg.Pool) => Promise<T>
+  cb: (pool: pg.Pool) => Promise<T>,
 ): Promise<T> {
   const pool = new pg.Pool({
     connectionString: TEST_CONNECTION_STRING,
@@ -32,7 +32,7 @@ export async function withPgPool<T>(
 }
 
 export async function withPgClient<T>(
-  cb: (client: pg.PoolClient) => Promise<T>
+  cb: (client: pg.PoolClient) => Promise<T>,
 ): Promise<T> {
   return withPgPool(async pool => {
     const client = await pool.connect();
@@ -46,7 +46,7 @@ export async function withPgClient<T>(
 
 export async function withTransaction<T>(
   cb: (client: pg.PoolClient) => Promise<T>,
-  closeCommand = "rollback"
+  closeCommand = "rollback",
 ): Promise<T> {
   return withPgClient(async client => {
     await client.query("begin");
@@ -64,10 +64,10 @@ function isPoolClient(o: pg.Pool | pg.PoolClient): o is pg.PoolClient {
 
 export async function reset(
   pgPoolOrClient: pg.Pool | pg.PoolClient,
-  options: WorkerPoolOptions
+  options: WorkerPoolOptions,
 ) {
   await pgPoolOrClient.query(
-    `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`
+    `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
   );
   if (isPoolClient(pgPoolOrClient)) {
     await migrate(options, pgPoolOrClient);
@@ -82,12 +82,12 @@ export async function reset(
 }
 
 export async function jobCount(
-  pgPoolOrClient: pg.Pool | pg.PoolClient
+  pgPoolOrClient: pg.Pool | pg.PoolClient,
 ): Promise<number> {
   const {
     rows: [row],
   } = await pgPoolOrClient.query(
-    `select count(*)::int from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`
+    `select count(*)::int from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
   );
   return row ? row.count || 0 : 0;
 }
@@ -123,14 +123,14 @@ export async function sleepUntil(condition: () => boolean, maxDuration = 2000) {
   }
   if (!condition()) {
     throw new Error(
-      `Slept for ${Date.now() - start}ms but condition never passed`
+      `Slept for ${Date.now() - start}ms but condition never passed`,
     );
   }
 }
 
 export async function makeSelectionOfJobs(
   utils: WorkerUtils,
-  pgClient: pg.PoolClient
+  pgClient: pg.PoolClient,
 ) {
   const future = new Date(Date.now() + 60 * 60 * 1000);
   let failedJob = await utils.addJob("job1", { a: 1, runAt: future });
@@ -142,13 +142,13 @@ export async function makeSelectionOfJobs(
     rows: [lockedJob],
   } = await pgClient.query<Job>(
     `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
-    [lockedJob.id]
+    [lockedJob.id],
   ));
   ({
     rows: [failedJob],
   } = await pgClient.query<Job>(
     `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
-    [failedJob.id]
+    [failedJob.id],
   ));
 
   return {

@@ -13,7 +13,7 @@ import { Logger } from "./logger";
 
 export function makeAddJob(
   options: WorkerSharedOptions,
-  withPgClient: WithPgClient
+  withPgClient: WithPgClient,
 ) {
   const { escapedWorkerSchema } = processSharedOptions(options);
   return (identifier: string, payload: unknown = {}, spec: TaskSpec = {}) => {
@@ -38,7 +38,7 @@ export function makeAddJob(
           spec.maxAttempts || null,
           spec.jobKey || null,
           spec.priority || null,
-        ]
+        ],
       );
       const job: Job = rows[0];
       return job;
@@ -52,7 +52,7 @@ export function makeJobHelpers(
   {
     withPgClient,
     logger: overrideLogger,
-  }: { withPgClient: WithPgClient; logger?: Logger }
+  }: { withPgClient: WithPgClient; logger?: Logger },
 ): JobHelpers {
   const baseLogger = overrideLogger || processSharedOptions(options).logger;
   const logger = baseLogger.scope({
@@ -75,7 +75,7 @@ export function makeJobHelpers(
   Object.assign(helpers, {
     debug(format: string, ...parameters: any[]): void {
       logger.error(
-        "REMOVED: `helpers.debug` has been replaced with `helpers.logger.debug`; please do not use `helpers.debug`"
+        "REMOVED: `helpers.debug` has been replaced with `helpers.logger.debug`; please do not use `helpers.debug`",
       );
       logger.debug(format, { parameters });
     },

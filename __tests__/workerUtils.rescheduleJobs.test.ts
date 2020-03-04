@@ -40,11 +40,11 @@ test("completes the jobs, leaves others unaffected", () =>
     });
     const rescheduledJobIds = rescheduledJobs.map(j => j.id).sort(numerically);
     expect(rescheduledJobIds).toEqual(
-      [failedJob.id, regularJob1.id, regularJob2.id].sort(numerically)
+      [failedJob.id, regularJob1.id, regularJob2.id].sort(numerically),
     );
     for (const j of rescheduledJobs) {
       expect(j.last_error).toEqual(
-        j.id === failedJob.id ? "Failed forever" : null
+        j.id === failedJob.id ? "Failed forever" : null,
       );
       expect(j.attempts).toEqual(1);
       expect(+j.run_at).toBeCloseTo(+nowish);
@@ -52,7 +52,7 @@ test("completes the jobs, leaves others unaffected", () =>
 
     const { rows: remaining } = await pgClient.query<Job>(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs where not (id = any($1)) order by id asc`,
-      [rescheduledJobIds]
+      [rescheduledJobIds],
     );
     expect(remaining).toHaveLength(2);
     expect(remaining[0]).toMatchObject(lockedJob);

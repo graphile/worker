@@ -1,20 +1,27 @@
 # Graphile-Worker delegation to GCP Cloud Tasks
 
-[Cloud Tasks](https://cloud.google.com/tasks/) is a fully managed service that allows you to manage the execution, dispatch, and delivery of a large number of distributed tasks. You can use `graphile-worker` to export jobs to the queue.
+[Cloud Tasks](https://cloud.google.com/tasks/) is a fully managed service that
+allows you to manage the execution, dispatch, and delivery of a large number of
+distributed tasks. You can use `graphile-worker` to export jobs to the queue.
 
 ### Why delegate to Cloud Tasks?
 
-There are several reasons you might want to delegate from Graphile Worker to Cloud Tasks, common ones are:
+There are several reasons you might want to delegate from Graphile Worker to
+Cloud Tasks, common ones are:
 
-- You already have tasks and workers set up in a GCP project. Graphile Worker delegation will allow you to integrate Postgres triggers directly into Cloud Tasks.
-- You need a fully managed zero-ops Task queue with a GUI and deeper logs & monitoring integrations
+- You already have tasks and workers set up in a GCP project. Graphile Worker
+  delegation will allow you to integrate Postgres triggers directly into Cloud
+  Tasks.
+- You need a fully managed zero-ops Task queue with a GUI and deeper logs &
+  monitoring integrations
 
 # Tutorial
 
 ## Pre-requisites
 
 - You will need a GCP project with billing enabled
-- Set up Cloud Tasks following the [official docs](https://googleapis.dev/nodejs/tasks/latest/index.html)
+- Set up Cloud Tasks following the
+  [official docs](https://googleapis.dev/nodejs/tasks/latest/index.html)
 
 ## Install Node dependencies
 
@@ -30,7 +37,9 @@ or if you use npm
 
 ## Start a Postgres instance
 
-Make sure your database is running. You can use a locally installed database, run Postgres on Docker or use Cloud SQL through a proxy. How to set up your database is out of the scope of this tutorial.
+Make sure your database is running. You can use a locally installed database,
+run Postgres on Docker or use Cloud SQL through a proxy. How to set up your
+database is out of the scope of this tutorial.
 
 ## Create a task file
 
@@ -103,7 +112,7 @@ To run Graphile Worker task
 // tasks/cloud-tasks-exporter.js
 module.exports = async (payload, { logger }) => {
   logger.info(
-    `Delegating task to Cloud Tasks with payload ${JSON.stringify(payload)}`
+    `Delegating task to Cloud Tasks with payload ${JSON.stringify(payload)}`,
   );
 
   await createTask({

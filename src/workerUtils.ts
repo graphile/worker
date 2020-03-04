@@ -6,7 +6,7 @@ import { migrate } from "./migrate";
  * Construct (asynchronously) a new WorkerUtils instance.
  */
 export async function makeWorkerUtils(
-  options: WorkerUtilsOptions
+  options: WorkerUtilsOptions,
 ): Promise<WorkerUtils> {
   const {
     logger,
@@ -31,8 +31,8 @@ export async function makeWorkerUtils(
       const { rows } = await withPgClient(client =>
         client.query<Job>(
           `select * from ${escapedWorkerSchema}.complete_jobs($1)`,
-          [ids]
-        )
+          [ids],
+        ),
       );
       return rows;
     },
@@ -41,8 +41,8 @@ export async function makeWorkerUtils(
       const { rows } = await withPgClient(client =>
         client.query<Job>(
           `select * from ${escapedWorkerSchema}.permanently_fail_jobs($1, $2)`,
-          [ids, reason || null]
-        )
+          [ids, reason || null],
+        ),
       );
       return rows;
     },
@@ -63,8 +63,8 @@ export async function makeWorkerUtils(
             options.priority || null,
             options.attempts || null,
             options.maxAttempts || null,
-          ]
-        )
+          ],
+        ),
       );
       return rows;
     },
@@ -80,7 +80,7 @@ export async function quickAddJob(
   options: WorkerUtilsOptions,
   identifier: string,
   payload: unknown = {},
-  spec: TaskSpec = {}
+  spec: TaskSpec = {},
 ) {
   const utils = await makeWorkerUtils(options);
   try {

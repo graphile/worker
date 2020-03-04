@@ -88,7 +88,7 @@ async function main() {
 
   if (!DATABASE_URL) {
     throw new Error(
-      "Please use `--connection` flag or set `DATABASE_URL` envvar to indicate the PostgreSQL connection string."
+      "Please use `--connection` flag or set `DATABASE_URL` envvar to indicate the PostgreSQL connection string.",
     );
   }
 

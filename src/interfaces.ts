@@ -18,7 +18,7 @@ import { Logger } from "./logger";
  */
 
 export type WithPgClient = <T = void>(
-  callback: (pgClient: PoolClient) => Promise<T>
+  callback: (pgClient: PoolClient) => Promise<T>,
 ) => Promise<T>;
 
 /**
@@ -39,7 +39,7 @@ export type AddJobFunction = (
   /**
    * Additional details about how the job should be handled.
    */
-  spec?: TaskSpec
+  spec?: TaskSpec,
 ) => Promise<Job>;
 
 export interface Helpers {
@@ -76,7 +76,7 @@ export interface JobHelpers extends Helpers {
    */
   query<R extends QueryResultRow>(
     queryText: string,
-    values?: any[]
+    values?: any[],
   ): Promise<QueryResult<R>>;
 }
 
@@ -135,13 +135,13 @@ export interface WorkerUtils extends Helpers {
       priority?: number;
       attempts?: number;
       maxAttempts?: number;
-    }
+    },
   ) => Promise<Job[]>;
 }
 
 export type Task = (
   payload: unknown,
-  helpers: JobHelpers
+  helpers: JobHelpers,
 ) => void | Promise<void>;
 
 export function isValidTask(fn: unknown): fn is Task {

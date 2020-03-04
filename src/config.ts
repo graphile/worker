@@ -49,7 +49,7 @@ export const defaults: WorkerDefaults = {
   maxContiguousErrors:
     enforceNumberOrUndefined(
       "maxContiguousErrors",
-      cosmiconfig?.maxContiguousErrors
+      cosmiconfig?.maxContiguousErrors,
     ) || 10,
   pollInterval:
     enforceNumberOrUndefined("pollInterval", cosmiconfig?.pollInterval) || 2000,
@@ -62,7 +62,7 @@ export const defaults: WorkerDefaults = {
 
 function enforceStringOrUndefined(
   keyName: String,
-  str: unknown
+  str: unknown,
 ): string | undefined {
   if (typeof str === "string") {
     return str;
@@ -70,14 +70,14 @@ function enforceStringOrUndefined(
     return undefined;
   } else {
     throw new Error(
-      `Expected '${keyName}' to be a string (or not set), but received ${typeof str}`
+      `Expected '${keyName}' to be a string (or not set), but received ${typeof str}`,
     );
   }
 }
 
 function enforceNumberOrUndefined(
   keyName: String,
-  nr: unknown
+  nr: unknown,
 ): number | undefined {
   if (typeof nr === "number") {
     return nr;
@@ -87,14 +87,14 @@ function enforceNumberOrUndefined(
       return val;
     } else {
       throw new Error(
-        `Expected '${keyName}' to be a number (or not set), but received ${nr}`
+        `Expected '${keyName}' to be a number (or not set), but received ${nr}`,
       );
     }
   } else if (!nr) {
     return undefined;
   } else {
     throw new Error(
-      `Expected '${keyName}' to be a number (or not set), but received ${typeof nr}`
+      `Expected '${keyName}' to be a number (or not set), but received ${typeof nr}`,
     );
   }
 }

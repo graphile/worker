@@ -58,7 +58,7 @@ async function createTask({
 // Graphile Worker Task
 module.exports = async (payload, { logger }) => {
   logger.info(
-    `Delegating task to Cloud Tasks with payload ${JSON.stringify(payload)}`
+    `Delegating task to Cloud Tasks with payload ${JSON.stringify(payload)}`,
   );
 
   await createTask({

@@ -26,7 +26,7 @@ async function main() {
 
   // Warm up
   await pgPool.query(
-    `select graphile_worker.add_job('latency', json_build_object('id', -i)) from generate_series(1, 100) i`
+    `select graphile_worker.add_job('latency', json_build_object('id', -i)) from generate_series(1, 100) i`,
   );
   await forEmptyQueue(pgPool);
   // Reset
@@ -47,7 +47,7 @@ async function main() {
         startTimes[id] = process.hrtime();
         await client.query(
           `select graphile_worker.add_job('latency', json_build_object('id', $1::int))`,
-          [id]
+          [id],
         );
         await deferreds[id];
       }
@@ -61,7 +61,7 @@ async function main() {
   assert.equal(latencies.length, SAMPLES, "Incorrect latency count");
   // Study the latencies
   const numericLatencies = latencies.map(
-    ([seconds, nanoseconds]) => seconds * 1e3 + nanoseconds * 1e-6
+    ([seconds, nanoseconds]) => seconds * 1e3 + nanoseconds * 1e-6,
   );
 
   const min = Math.min.apply(Math, numericLatencies);
@@ -72,8 +72,8 @@ async function main() {
 
   console.log(
     `Latencies - min: ${min.toFixed(2)}ms, max: ${max.toFixed(
-      2
-    )}ms, avg: ${average.toFixed(2)}ms`
+      2,
+    )}ms, avg: ${average.toFixed(2)}ms`,
   );
 
   await workerPool.release();
@@ -92,7 +92,7 @@ async function forEmptyQueue(pgPool) {
     const {
       rows: [row],
     } = await pgPool.query(
-      `select count(*) from graphile_worker.jobs where task_identifier = 'latency'`
+      `select count(*) from graphile_worker.jobs where task_identifier = 'latency'`,
     );
     remaining = (row && row.count) || 0;
     sleep(2000);

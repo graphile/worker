@@ -26,7 +26,7 @@ interface ProcessSharedOptionsSettings {
 const _sharedOptionsCache = new WeakMap<SharedOptions, CompiledSharedOptions>();
 export function processSharedOptions(
   options: SharedOptions,
-  { scope }: ProcessSharedOptionsSettings = {}
+  { scope }: ProcessSharedOptionsSettings = {},
 ): CompiledSharedOptions {
   let compiled = _sharedOptionsCache.get(options);
   if (!compiled) {
@@ -57,12 +57,12 @@ export type Releasers = Array<() => void | Promise<void>>;
 
 export async function assertPool(
   options: SharedOptions,
-  releasers: Releasers
+  releasers: Releasers,
 ): Promise<Pool> {
   const { logger } = processSharedOptions(options);
   assert(
     !options.pgPool || !options.connectionString,
-    "Both `pgPool` and `connectionString` are set, at most one of these options should be provided"
+    "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
   );
   let pgPool: Pool;
   if (options.pgPool) {
@@ -81,7 +81,7 @@ export async function assertPool(
     releasers.push(() => pgPool.end());
   } else {
     throw new Error(
-      "You must either specify `pgPool` or `connectionString`, or you must make the `DATABASE_URL` environmental variable available."
+      "You must either specify `pgPool` or `connectionString`, or you must make the `DATABASE_URL` environmental variable available.",
     );
   }
 
@@ -104,7 +104,7 @@ export async function assertPool(
 export type Release = () => Promise<void>;
 
 export async function withReleasers<T>(
-  callback: (releasers: Releasers, release: Release) => Promise<T>
+  callback: (releasers: Releasers, release: Release) => Promise<T>,
 ): Promise<T> {
   const releasers: Releasers = [];
   const release: Release = async () => {
@@ -136,7 +136,7 @@ export interface CompiledOptions
 
 export const getUtilsAndReleasersFromOptions = async (
   options: RunnerOptions,
-  settings: ProcessSharedOptionsSettings = {}
+  settings: ProcessSharedOptionsSettings = {},
 ): Promise<CompiledOptions> => {
   const shared = processSharedOptions(options, settings);
   const { concurrency = defaults.concurrentJobs } = options;
@@ -147,7 +147,7 @@ export const getUtilsAndReleasersFromOptions = async (
       const max = pgPool?.options?.max || 10;
       if (max < concurrency) {
         console.warn(
-          `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`
+          `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`,
         );
       }
 
@@ -165,6 +165,6 @@ export const getUtilsAndReleasersFromOptions = async (
         release,
         releasers,
       };
-    }
+    },
   );
 };
