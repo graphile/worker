@@ -218,6 +218,8 @@ Options:
   --version            Show version number                             [boolean]
   --connection, -c     Database connection string, defaults to the
                        'DATABASE_URL' envvar                            [string]
+  --schema, -s         The database schema in which Graphile Worker is (to be)
+                       located             [string] [default: "graphile_worker"]
   --schema-only        Just install (or update) the database schema, then exit
                                                       [boolean] [default: false]
   --once               Run until there are no runnable jobs left, then exit
