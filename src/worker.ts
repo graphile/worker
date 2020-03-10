@@ -35,7 +35,7 @@ export function makeNewWorker(
     },
   });
   const promise = deferred();
-  let activeJob: Job | null = null;
+  let activeJobs: Job[] | null = null;
 
   let doNextTimer: NodeJS.Timer | null = null;
   const cancelDoNext = () => {
@@ -69,21 +69,19 @@ export function makeNewWorker(
     again = false;
     cancelDoNext();
     assert(active, "doNext called when active was false");
-    assert(!activeJob, "There should be no active job");
+    assert(!activeJobs, "There should be no active job");
 
     // Find us a job
     try {
       const supportedTaskNames = Object.keys(tasks);
       assert(supportedTaskNames.length, "No runnable tasks!");
 
-      const {
-        rows: [jobRow],
-      } = await withPgClient(client =>
+      const { rows: jobRows } = await withPgClient(client =>
         client.query({
           text:
             // TODO: breaking change; change this to more optimal:
             // `SELECT id, queue_name, task_identifier, payload FROM ${escapedWorkerSchema}.get_job($1, $2);`,
-            `SELECT * FROM ${escapedWorkerSchema}.get_job($1, $2);`,
+            `SELECT * FROM ${escapedWorkerSchema}.get_jobs($1, $2);`,
           values: [workerId, supportedTaskNames],
           name: `get_job/${workerSchema}`,
         }),
@@ -91,7 +89,15 @@ export function makeNewWorker(
 
       // `doNext` cannot be executed concurrently, so we know this is safe.
       // eslint-disable-next-line require-atomic-updates
-      activeJob = jobRow && jobRow.id ? jobRow : null;
+      const validJobs = jobRows.filter(r => r.id);
+
+      if (validJobs.length > 1) {
+        console.log("MULTIPLE JOBS", validJobs);
+        // throw new Error("STOP");
+      } else {
+        console.log("checked jobs", validJobs.length);
+      }
+      activeJobs = validJobs.length ? validJobs.filter(r => r.id) : null;
     } catch (err) {
       if (continuous) {
         contiguousErrors++;
@@ -124,7 +130,7 @@ export function makeNewWorker(
     contiguousErrors = 0;
 
     // If we didn't get a job, try again later (if appropriate)
-    if (!activeJob) {
+    if (!activeJobs) {
       if (continuous) {
         if (active) {
           if (again) {
@@ -146,72 +152,92 @@ export function makeNewWorker(
     }
 
     // We did get a job then; store it into the current scope.
-    const job = activeJob;
+    const jobs = activeJobs;
 
     // We may want to know if an error occurred or not
     let err: Error | null = null;
     try {
-      /*
-       * Be **VERY** careful about which parts of this code can throw - we
-       * **MUST** release the job once we've attempted it (success or error).
-       */
-      const startTimestamp = process.hrtime();
-      try {
-        logger.debug(`Found task ${job.id} (${job.task_identifier})`);
-        const task = tasks[job.task_identifier];
-        assert(task, `Unsupported task '${job.task_identifier}'`);
-        const helpers = makeJobHelpers(options, job, { withPgClient, logger });
-        await task(job.payload, helpers);
-      } catch (error) {
-        err = error;
-      }
-      const durationRaw = process.hrtime(startTimestamp);
-      const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
-      if (err) {
-        const { message, stack } = err;
-        logger.error(
-          `Failed task ${job.id} (${job.task_identifier}) with error ${
-            err.message
-          } (${duration.toFixed(2)}ms)${
-            stack
-              ? `:\n  ${String(stack)
-                  .replace(/\n/g, "\n  ")
-                  .trim()}`
-              : ""
-          }`,
-          { failure: true, job, error: err, duration },
-        );
-        // TODO: retry logic, in case of server connection interruption
-        await withPgClient(client =>
-          client.query({
-            text: `SELECT FROM ${escapedWorkerSchema}.fail_job($1, $2, $3);`,
-            values: [workerId, job.id, message],
-            name: `fail_job/${workerSchema}`,
-          }),
-        );
-      } else {
-        if (!process.env.NO_LOG_SUCCESS) {
-          logger.info(
-            `Completed task ${job.id} (${
-              job.task_identifier
-            }) with success (${duration.toFixed(2)}ms)`,
-            { job, duration, success: true },
-          );
+      const successes: string[] = [];
+      const failures: { id: string; message: string }[] = [];
+
+      for (const job of jobs) {
+        /*
+         * Be **VERY** careful about which parts of this code can throw - we
+         * **MUST** release the job once we've attempted it (success or error).
+         */
+        const startTimestamp = process.hrtime();
+        try {
+          logger.debug(`Found task ${job.id} (${job.task_identifier})`);
+          const task = tasks[job.task_identifier];
+          assert(task, `Unsupported task '${job.task_identifier}'`);
+          const helpers = makeJobHelpers(options, job, {
+            withPgClient,
+            logger,
+          });
+          await task(job.payload, helpers);
+        } catch (error) {
+          err = error;
         }
-        // TODO: retry logic, in case of server connection interruption
-        await withPgClient(client =>
-          client.query({
-            text: `SELECT FROM ${escapedWorkerSchema}.complete_job($1, $2);`,
-            values: [workerId, job.id],
-            name: `complete_job/${workerSchema}`,
-          }),
-        );
+        const durationRaw = process.hrtime(startTimestamp);
+        const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
+        if (err) {
+          const { message, stack } = err;
+          logger.error(
+            `Failed task ${job.id} (${job.task_identifier}) with error ${
+              err.message
+            } (${duration.toFixed(2)}ms)${
+              stack
+                ? `:\n  ${String(stack)
+                    .replace(/\n/g, "\n  ")
+                    .trim()}`
+                : ""
+            }`,
+            { failure: true, job, error: err, duration },
+          );
+          // TODO: retry logic, in case of server connection interruption
+          // await withPgClient(client =>
+          //   client.query({
+          //     text: `SELECT FROM ${escapedWorkerSchema}.fail_job($1, $2, $3);`,
+          //     values: [workerId, job.id, message],
+          //     name: `fail_job/${workerSchema}`,
+          //   }),
+          // );
+          failures.push({ ...job, message });
+        } else {
+          if (!process.env.NO_LOG_SUCCESS) {
+            logger.info(
+              `Completed task ${job.id} (${
+                job.task_identifier
+              }) with success (${duration.toFixed(2)}ms)`,
+              { job, duration, success: true },
+            );
+          }
+          // TODO: retry logic, in case of server connection interruption
+          // await withPgClient(client =>
+          //   client.query({
+          //     text: `SELECT FROM ${escapedWorkerSchema}.complete_job($1, $2);`,
+          //     values: [workerId, job.id],
+          //     name: `complete_job/${workerSchema}`,
+          //   }),
+          // );
+          successes.push(job.id);
+        }
       }
+
+      await withPgClient(client =>
+        client.query({
+          text: `SELECT FROM ${escapedWorkerSchema}.complete_batch($1, $2, $3);`,
+          values: [workerId, successes, failures],
+          name: `complete_batch/${workerSchema}`,
+        }),
+      );
     } catch (fatalError) {
       const when = err ? `after failure '${err.message}'` : "after success";
       logger.error(
-        `Failed to release job '${job.id}' ${when}; committing seppuku\n${fatalError.message}`,
-        { fatalError, job },
+        `Failed to release jobs ${jobs
+          .map(j => j.id)
+          .join(", ")} ${when}; shutting down\n${fatalError.message}`,
+        { fatalError, jobs },
       );
       promise.reject(fatalError);
       release();
@@ -219,7 +245,7 @@ export function makeNewWorker(
     } finally {
       // `doNext` cannot be executed concurrently, so we know this is safe.
       // eslint-disable-next-line require-atomic-updates
-      activeJob = null;
+      activeJobs = null;
     }
     if (active) {
       doNext();
@@ -249,7 +275,7 @@ export function makeNewWorker(
     workerId,
     release,
     promise,
-    getActiveJob: () => activeJob,
+    getActiveJob: () => null, // TODO
   };
 
   // For tests
