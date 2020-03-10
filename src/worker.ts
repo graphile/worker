@@ -185,7 +185,7 @@ export function makeNewWorker(
         await withPgClient(client =>
           client.query({
             text: `SELECT FROM ${escapedWorkerSchema}.fail_job($1, $2, $3);`,
-            values: [workerId, job.id, message],
+            values: [workerId, job.id, message || ''],
             name: `fail_job/${workerSchema}`,
           }),
         );
