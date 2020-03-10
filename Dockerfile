@@ -1,5 +1,9 @@
 FROM node:12-alpine
 RUN apk add --no-cache bash
+
+ENTRYPOINT ["yarn"]
+CMD ["watch"]
+
 WORKDIR /app
 
 COPY package.json yarn.lock ./
@@ -15,5 +19,3 @@ COPY ./jest.config.js ./
 
 RUN yarn prepack
 
-ENTRYPOINT ["yarn"]
-CMD ["watch"]
