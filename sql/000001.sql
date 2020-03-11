@@ -76,7 +76,13 @@ $$ language plpgsql;
 create trigger _900_notify_worker after insert on :GRAPHILE_WORKER_SCHEMA.jobs for each statement execute procedure :GRAPHILE_WORKER_SCHEMA.tg_jobs__notify_new_jobs();
 
 -- Function to queue a job
-create function :GRAPHILE_WORKER_SCHEMA.add_job(identifier text, payload json = '{}', queue_name text = public.gen_random_uuid()::text, run_at timestamptz = now(), max_attempts int = 25) returns :GRAPHILE_WORKER_SCHEMA.jobs as $$
+create function :GRAPHILE_WORKER_SCHEMA.add_job(
+  identifier text,
+  payload json = '{}',
+  queue_name text = public.gen_random_uuid()::text,
+  run_at timestamptz = now(),
+  max_attempts int = 25
+) returns :GRAPHILE_WORKER_SCHEMA.jobs as $$
   insert into :GRAPHILE_WORKER_SCHEMA.jobs(task_identifier, payload, queue_name, run_at, max_attempts) values(identifier, payload, queue_name, run_at, max_attempts) returning *;
 $$ language sql;
 

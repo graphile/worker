@@ -11,7 +11,8 @@ update :GRAPHILE_WORKER_SCHEMA.jobs
   and q.locked_at is not null;
 
 -- update add_job behaviour to meet new requirements
-drop function if exists :GRAPHILE_WORKER_SCHEMA.add_job(identifier text,
+drop function if exists :GRAPHILE_WORKER_SCHEMA.add_job(
+  identifier text,
   payload json,
   queue_name text,
   run_at timestamptz,
