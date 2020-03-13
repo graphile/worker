@@ -30,7 +30,7 @@ And please give some love to our featured sponsors 🤩:
 <td align="center"><a href="https://qwick.com"><img src="https://www.graphile.org/images/sponsors/qwick.png" width="90" height="90" alt="Qwick" /><br />Qwick *</a></td>
 </tr></table>
 
-<i>* A featured project sponsor for Graphile Worker</i>
+<i>\* A featured project sponsor for Graphile Worker</i>
 
 ## Quickstart: CLI
 
