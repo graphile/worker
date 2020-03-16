@@ -188,14 +188,7 @@ export function makeNewWorker(
             }`,
             { failure: true, job, error: err, duration },
           );
-          // TODO: retry logic, in case of server connection interruption
-          // await withPgClient(client =>
-          //   client.query({
-          //     text: `SELECT FROM ${escapedWorkerSchema}.fail_job($1, $2, $3);`,
-          //     values: [workerId, job.id, message],
-          //     name: `fail_job/${workerSchema}`,
-          //   }),
-          // );
+
           failures.push({ ...job, message });
         } else {
           if (!process.env.NO_LOG_SUCCESS) {
@@ -206,18 +199,12 @@ export function makeNewWorker(
               { job, duration, success: true },
             );
           }
-          // TODO: retry logic, in case of server connection interruption
-          // await withPgClient(client =>
-          //   client.query({
-          //     text: `SELECT FROM ${escapedWorkerSchema}.complete_job($1, $2);`,
-          //     values: [workerId, job.id],
-          //     name: `complete_job/${workerSchema}`,
-          //   }),
-          // );
+
           successes.push(job.id);
         }
       }
 
+      // TODO: retry logic, in case of server connection interruption
       await withPgClient(client =>
         client.query({
           text: `SELECT FROM ${escapedWorkerSchema}.complete_batch($1, $2, $3);`,
