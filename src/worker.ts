@@ -91,12 +91,6 @@ export function makeNewWorker(
       // eslint-disable-next-line require-atomic-updates
       const validJobs = jobRows.filter(r => r.id);
 
-      if (validJobs.length > 1) {
-        console.log("MULTIPLE JOBS", validJobs);
-        // throw new Error("STOP");
-      } else {
-        console.log("checked jobs", validJobs.length);
-      }
       activeJobs = validJobs.length ? validJobs.filter(r => r.id) : null;
     } catch (err) {
       if (continuous) {

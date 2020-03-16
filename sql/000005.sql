@@ -36,28 +36,29 @@ begin
       and attempts < max_attempts
       and (task_identifiers is null or task_identifier = any(task_identifiers))
       order by priority asc, run_at asc, id asc
-      limit 10
+
+      -- TODO make this a configurable value
+      limit 1
+
       for update
       skip locked
   ) into v_jobs;
 
-  -- if v_job_id is null then
-  --   return null;
-  -- end if;
+  if array_length(v_jobs, 1) is not null then
+    update :GRAPHILE_WORKER_SCHEMA.job_queues
+      set
+        locked_by = worker_id,
+        locked_at = v_now
+      where job_queues.queue_name = any(select (j->>'queue_name') from unnest(v_jobs) j);
 
-  update :GRAPHILE_WORKER_SCHEMA.job_queues
-    set
-      locked_by = worker_id,
-      locked_at = v_now
-    where job_queues.queue_name = any(select (j->>'queue_name') from unnest(v_jobs) j);
-
-  return query update :GRAPHILE_WORKER_SCHEMA.jobs
-    set
-      attempts = attempts + 1,
-      locked_by = worker_id,
-      locked_at = v_now
-    where id = any(select (j->>'id')::bigint from unnest(v_jobs) j)
-    returning *;
+    return query update :GRAPHILE_WORKER_SCHEMA.jobs
+      set
+        attempts = attempts + 1,
+        locked_by = worker_id,
+        locked_at = v_now
+      where id = any(select (j->>'id')::bigint from unnest(v_jobs) j)
+      returning *;
+  end if;
 end;
 $$ language plpgsql volatile;
 
@@ -73,7 +74,7 @@ begin
   with failures as (
     update :GRAPHILE_WORKER_SCHEMA.jobs
       set
-        last_error = f->>'error_message',
+        last_error = f->>'message',
         run_at = greatest(now(), run_at) + (exp(least(attempts, 10))::text || ' seconds')::interval,
         locked_by = null,
         locked_at = null
