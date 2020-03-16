@@ -190,7 +190,7 @@ export function makeNewWorker(
             { failure: true, job, error: err, duration },
           );
 
-          failures.push({ ...job, message });
+          failures.push({ id: job.id, message });
         } else {
           if (!process.env.NO_LOG_SUCCESS) {
             logger.info(
