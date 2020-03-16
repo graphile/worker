@@ -91,7 +91,7 @@ export function makeNewWorker(
       // eslint-disable-next-line require-atomic-updates
       const validJobs = jobRows.filter(r => r.id);
 
-      activeJobs = validJobs.length ? validJobs.filter(r => r.id) : null;
+      activeJobs = validJobs.length ? validJobs : null;
     } catch (err) {
       if (continuous) {
         contiguousErrors++;
