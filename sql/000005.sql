@@ -4,21 +4,16 @@ create or replace function :GRAPHILE_WORKER_SCHEMA.get_jobs(
   job_expiry interval = interval '4 hours'
 ) returns setof :GRAPHILE_WORKER_SCHEMA.jobs as $$
 declare
-  v_jobs jsonb[];
   v_now timestamptz = now();
 begin
   if worker_id is null or length(worker_id) < 10 then
     raise exception 'invalid worker id';
   end if;
 
-  select array(
-    select jsonb_build_object(
-      'queue_name',
-      jobs.queue_name,
-      'id',
-      jobs.id
-    )
-      from :GRAPHILE_WORKER_SCHEMA.jobs
+  return query with jobs_q as (
+    select
+      id, queue_name
+      from :GRAPHILE_WORKER_SCHEMA.jobs jobs
       where (jobs.locked_at is null or jobs.locked_at < (v_now - job_expiry))
       and (
         jobs.queue_name is null
@@ -42,23 +37,29 @@ begin
 
       for update
       skip locked
-  ) into v_jobs;
-
-  if array_length(v_jobs, 1) is not null then
+  ),
+  queues_q as (
     update :GRAPHILE_WORKER_SCHEMA.job_queues
       set
         locked_by = worker_id,
         locked_at = v_now
-      where job_queues.queue_name = any(select (j->>'queue_name') from unnest(v_jobs) j);
-
-    return query update :GRAPHILE_WORKER_SCHEMA.jobs
-      set
-        attempts = attempts + 1,
-        locked_by = worker_id,
-        locked_at = v_now
-      where id = any(select (j->>'id')::bigint from unnest(v_jobs) j)
-      returning *;
-  end if;
+      where exists(
+        select 1
+        from jobs_q
+        where jobs_q.queue_name = job_queues.queue_name
+      )
+  )
+  update :GRAPHILE_WORKER_SCHEMA.jobs
+    set
+      attempts = attempts + 1,
+      locked_by = worker_id,
+      locked_at = v_now
+    where exists(
+      select 1
+      from jobs_q
+      where jobs_q.id = :GRAPHILE_WORKER_SCHEMA.jobs.id
+    )
+    returning *;
 end;
 $$ language plpgsql volatile;
 
@@ -109,6 +110,9 @@ begin
 
 end;
 $$ language plpgsql volatile strict;
+
+
+
 
 
 
