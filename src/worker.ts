@@ -154,6 +154,7 @@ export function makeNewWorker(
       const successes: string[] = [];
       const failures: { id: string; message: string }[] = [];
 
+      // TODO consider using Promise.all here to run jobs in parallel
       for (const job of jobs) {
         /*
          * Be **VERY** careful about which parts of this code can throw - we

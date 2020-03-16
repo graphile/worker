@@ -71,37 +71,41 @@ create or replace function :GRAPHILE_WORKER_SCHEMA.complete_batch(
 declare
   v_row :GRAPHILE_WORKER_SCHEMA.jobs;
 begin
-  with failures as (
-    update :GRAPHILE_WORKER_SCHEMA.jobs
-      set
-        last_error = f->>'message',
-        run_at = greatest(now(), run_at) + (exp(least(attempts, 10))::text || ' seconds')::interval,
-        locked_by = null,
-        locked_at = null
-      from unnest(failures) f
-      where id = (f->>'id')::bigint and locked_by = worker_id
-      returning queue_name
-  )
-  update :GRAPHILE_WORKER_SCHEMA.job_queues jq
-    set locked_by = null, locked_at = null
-    where exists (
-      select 1
-      from unnest(failures) f
-      where jq.queue_name = f->>'queue_name'
-    ) and locked_by = worker_id;
+  if array_length(failures, 1) is not null then
+    with fail_jobs as (
+      update :GRAPHILE_WORKER_SCHEMA.jobs
+        set
+          last_error = f->>'message',
+          run_at = greatest(now(), run_at) + (exp(least(attempts, 10))::text || ' seconds')::interval,
+          locked_by = null,
+          locked_at = null
+        from unnest(failures) f
+        where id = (f->>'id')::bigint and locked_by = worker_id
+        returning queue_name
+    )
+    update :GRAPHILE_WORKER_SCHEMA.job_queues jq
+      set locked_by = null, locked_at = null
+      where exists (
+        select 1
+        from fail_jobs f
+        where jq.queue_name = f.queue_name
+      ) and locked_by = worker_id;
+  end if;
 
-  with successes as (
-    delete from :GRAPHILE_WORKER_SCHEMA.jobs
-      where id = any(success_ids)
-    returning queue_name
-  )
-  update :GRAPHILE_WORKER_SCHEMA.job_queues jq
-    set locked_by = null, locked_at = null
-    where exists (
-      select 1
-      from successes s
-      where jq.queue_name = s.queue_name
-    ) and locked_by = worker_id;
+  if array_length(success_ids, 1) is not null then
+    with success_jobs as (
+      delete from :GRAPHILE_WORKER_SCHEMA.jobs
+        where id = any(success_ids)
+      returning queue_name
+    )
+    update :GRAPHILE_WORKER_SCHEMA.job_queues jq
+      set locked_by = null, locked_at = null
+      where exists (
+        select 1
+        from success_jobs s
+        where jq.queue_name = s.queue_name
+      ) and locked_by = worker_id;
+  end if;
 
 end;
 $$ language plpgsql volatile strict;
