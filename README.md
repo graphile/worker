@@ -13,6 +13,8 @@ used with any PostgreSQL-backed application. Pairs beautifully with
 [PostGraphile](https://www.graphile.org/postgraphile/) or
 [PostgREST](http://postgrest.org/).
 
+<!-- SPONSORS_BEGIN -->
+
 ## Crowd-funded open-source software
 
 To help us develop this software sustainably under the MIT license, we ask all
@@ -31,6 +33,8 @@ And please give some love to our featured sponsors 🤩:
 </tr></table>
 
 <i>\* A featured project sponsor for Graphile Worker</i>
+
+<!-- SPONSORS_END -->
 
 ## Quickstart: CLI
 
