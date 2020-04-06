@@ -168,11 +168,20 @@ export function makeNewWorker(
       const durationRaw = process.hrtime(startTimestamp);
       const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
       if (err) {
-        const { message, stack } = err;
+        const { message: rawMessage, stack } = err;
+
+        /**
+         * Guaranteed to be a non-empty string
+         */
+        const message: string =
+          rawMessage ||
+          String(err) ||
+          "Non error or error without message thrown.";
+
         logger.error(
-          `Failed task ${job.id} (${job.task_identifier}) with error ${
-            err.message
-          } (${duration.toFixed(2)}ms)${
+          `Failed task ${job.id} (${
+            job.task_identifier
+          }) with error ${message} (${duration.toFixed(2)}ms)${
             stack
               ? `:\n  ${String(stack)
                   .replace(/\n/g, "\n  ")
@@ -185,7 +194,7 @@ export function makeNewWorker(
         await withPgClient(client =>
           client.query({
             text: `SELECT FROM ${escapedWorkerSchema}.fail_job($1, $2, $3);`,
-            values: [workerId, job.id, message || ''],
+            values: [workerId, job.id, message],
             name: `fail_job/${workerSchema}`,
           }),
         );
