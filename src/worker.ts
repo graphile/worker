@@ -78,7 +78,7 @@ export function makeNewWorker(
 
       const {
         rows: [jobRow],
-      } = await withPgClient(client =>
+      } = await withPgClient((client) =>
         client.query({
           text:
             // TODO: breaking change; change this to more optimal:
@@ -182,16 +182,12 @@ export function makeNewWorker(
           `Failed task ${job.id} (${
             job.task_identifier
           }) with error ${message} (${duration.toFixed(2)}ms)${
-            stack
-              ? `:\n  ${String(stack)
-                  .replace(/\n/g, "\n  ")
-                  .trim()}`
-              : ""
+            stack ? `:\n  ${String(stack).replace(/\n/g, "\n  ").trim()}` : ""
           }`,
           { failure: true, job, error: err, duration },
         );
         // TODO: retry logic, in case of server connection interruption
-        await withPgClient(client =>
+        await withPgClient((client) =>
           client.query({
             text: `SELECT FROM ${escapedWorkerSchema}.fail_job($1, $2, $3);`,
             values: [workerId, job.id, message],
@@ -208,7 +204,7 @@ export function makeNewWorker(
           );
         }
         // TODO: retry logic, in case of server connection interruption
-        await withPgClient(client =>
+        await withPgClient((client) =>
           client.query({
             text: `SELECT FROM ${escapedWorkerSchema}.complete_job($1, $2);`,
             values: [workerId, job.id],

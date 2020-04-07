@@ -127,7 +127,7 @@ async function main() {
   );
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
@@ -364,7 +364,7 @@ async function main() {
   }
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
@@ -427,7 +427,7 @@ async function main() {
   );
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
@@ -590,7 +590,7 @@ current directory
 
 ```js
 // tasks/task_1.js
-module.exports = async payload => {
+module.exports = async (payload) => {
   await doMyLogicWith(payload);
 };
 ```
@@ -643,7 +643,7 @@ Example:
 ```js
 const {
   rows: [row],
-} = await withPgClient(pgClient => pgClient.query("select 1 as one"));
+} = await withPgClient((pgClient) => pgClient.query("select 1 as one"));
 ```
 
 #### `helpers.addJob(identifier, payload?, options?)`

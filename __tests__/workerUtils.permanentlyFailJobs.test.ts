@@ -15,7 +15,7 @@ function numerically(a: string | number, b: string | number) {
 const options: WorkerSharedOptions = {};
 
 test("completes the jobs, leaves others unaffected", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     const utils = await makeWorkerUtils({
@@ -31,10 +31,10 @@ test("completes the jobs, leaves others unaffected", () =>
     } = await makeSelectionOfJobs(utils, pgClient);
 
     const jobs = [failedJob, regularJob1, lockedJob, regularJob2];
-    const jobIds = jobs.map(j => j.id).sort(numerically);
+    const jobIds = jobs.map((j) => j.id).sort(numerically);
 
     const failedJobs = await utils.permanentlyFailJobs(jobIds, "TESTING!");
-    const failedJobIds = failedJobs.map(j => j.id).sort(numerically);
+    const failedJobIds = failedJobs.map((j) => j.id).sort(numerically);
     expect(failedJobIds).toEqual(
       [failedJob.id, regularJob1.id, regularJob2.id].sort(numerically),
     );

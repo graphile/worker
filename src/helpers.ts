@@ -17,7 +17,7 @@ export function makeAddJob(
 ) {
   const { escapedWorkerSchema } = processSharedOptions(options);
   return (identifier: string, payload: unknown = {}, spec: TaskSpec = {}) => {
-    return withPgClient(async pgClient => {
+    return withPgClient(async (pgClient) => {
       const { rows } = await pgClient.query(
         `
         select * from ${escapedWorkerSchema}.add_job(
@@ -65,7 +65,7 @@ export function makeJobHelpers(
     logger,
     withPgClient,
     query: (queryText, values) =>
-      withPgClient(pgClient => pgClient.query(queryText, values)),
+      withPgClient((pgClient) => pgClient.query(queryText, values)),
     addJob: makeAddJob(options, withPgClient),
 
     // TODO: add an API for giving workers more helpers

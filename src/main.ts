@@ -37,7 +37,7 @@ function registerSignalHandlers(logger: Logger) {
     return;
   }
   _registeredSignalHandlers = true;
-  SIGNALS.forEach(signal => {
+  SIGNALS.forEach((signal) => {
     logger.debug(`Registering signal handler for ${signal}`, {
       registeringSignalHandler: signal,
     });
@@ -47,7 +47,7 @@ function registerSignalHandlers(logger: Logger) {
       });
       process.removeListener(signal, handler);
     };
-    const handler = function() {
+    const handler = function () {
       logger.error(`Received '${signal}'; attempting graceful shutdown...`);
       setTimeout(removeHandler, 5000);
       if (_shuttingDown) {
@@ -55,7 +55,7 @@ function registerSignalHandlers(logger: Logger) {
       }
       _shuttingDown = true;
       Promise.all(
-        allWorkerPools.map(pool =>
+        allWorkerPools.map((pool) =>
           pool.gracefulShutdown(`Forced worker shutdown due to ${signal}`),
         ),
       ).finally(() => {
@@ -125,7 +125,7 @@ export function runTaskList(
     client.on("notification", () => {
       if (listenForChangesClient === client) {
         // Find a worker that's available
-        workers.some(worker => worker.nudge());
+        workers.some((worker) => worker.nudge());
       }
     });
 
@@ -165,7 +165,7 @@ export function runTaskList(
     release: async () => {
       unlistenForChanges();
       promise.resolve();
-      await Promise.all(workers.map(worker => worker.release()));
+      await Promise.all(workers.map((worker) => worker.release()));
       const idx = allWorkerPools.indexOf(workerPool);
       allWorkerPools.splice(idx, 1);
     },
@@ -175,12 +175,12 @@ export function runTaskList(
       try {
         logger.debug(`Attempting graceful shutdown`);
         // Release all our workers' jobs
-        const workerIds = workers.map(worker => worker.workerId);
+        const workerIds = workers.map((worker) => worker.workerId);
         const jobsInProgress: Array<Job> = workers
-          .map(worker => worker.getActiveJob())
+          .map((worker) => worker.getActiveJob())
           .filter((job): job is Job => !!job);
         // Remove all the workers - we're shutting them down manually
-        workers.splice(0, workers.length).map(worker => worker.release());
+        workers.splice(0, workers.length).map((worker) => worker.release());
         logger.debug(`Releasing the jobs '${workerIds.join(", ")}'`, {
           workerIds,
         });
@@ -191,7 +191,7 @@ export function runTaskList(
           INNER JOIN ${escapedWorkerSchema}.job_queues ON (job_queues.queue_name = jobs.queue_name)
           WHERE job_queues.locked_by = ANY($1::text[]) AND jobs.id = ANY($3::int[]);
         `,
-          [workerIds, message, jobsInProgress.map(job => job.id)],
+          [workerIds, message, jobsInProgress.map((job) => job.id)],
         );
         logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
           cancelledJobs,

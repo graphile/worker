@@ -77,7 +77,7 @@ test("providing just a connectionString is possible", async () => {
 });
 
 test("providing just a pgPool is possible", async () =>
-  withPgPool(async pgPool => {
+  withPgPool(async (pgPool) => {
     const options: RunnerOptions = {
       taskList: { task: () => {} },
       pgPool: pgPool,

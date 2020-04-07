@@ -3,7 +3,7 @@ const { Pool } = require("pg");
 const { runTaskList } = require("../dist/main");
 const { default: deferred } = require("../dist/deferred");
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const options = {
   concurrecy: 1,
@@ -81,7 +81,7 @@ async function main() {
   console.log("Done");
 }
 
-main().catch(e => {
+main().catch((e) => {
   console.error(e);
   process.exit(1);
 });

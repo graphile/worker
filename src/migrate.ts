@@ -70,7 +70,7 @@ export async function migrate(
     }
   }
   const migrationFiles = (await readdir(`${__dirname}/../sql`))
-    .filter(f => f.match(/^[0-9]{6}\.sql$/))
+    .filter((f) => f.match(/^[0-9]{6}\.sql$/))
     .sort();
   for (const migrationFile of migrationFiles) {
     const migrationNumber = parseInt(migrationFile.substr(0, 6), 10);
