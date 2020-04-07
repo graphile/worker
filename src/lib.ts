@@ -85,7 +85,7 @@ export async function assertPool(
     );
   }
 
-  pgPool.on("error", err => {
+  pgPool.on("error", (err) => {
     /*
      * This handler is required so that client connection errors don't bring
      * the server down (via `unhandledError`).
@@ -108,7 +108,7 @@ export async function withReleasers<T>(
 ): Promise<T> {
   const releasers: Releasers = [];
   const release: Release = async () => {
-    await Promise.all(releasers.map(fn => fn()));
+    await Promise.all(releasers.map((fn) => fn()));
   };
   try {
     return await callback(releasers, release);
@@ -154,7 +154,7 @@ export const getUtilsAndReleasersFromOptions = async (
       const withPgClient = makeWithPgClientFromPool(pgPool);
 
       // Migrate
-      await withPgClient(client => migrate(options, client));
+      await withPgClient((client) => migrate(options, client));
       const addJob = makeAddJob(options, withPgClient);
 
       return {

@@ -34,7 +34,7 @@ export async function withPgPool<T>(
 export async function withPgClient<T>(
   cb: (client: pg.PoolClient) => Promise<T>,
 ): Promise<T> {
-  return withPgPool(async pool => {
+  return withPgPool(async (pool) => {
     const client = await pool.connect();
     try {
       return await cb(client);
@@ -48,7 +48,7 @@ export async function withTransaction<T>(
   cb: (client: pg.PoolClient) => Promise<T>,
   closeCommand = "rollback",
 ): Promise<T> {
-  return withPgClient(async client => {
+  return withPgClient(async (client) => {
     await client.query("begin");
     try {
       return await cb(client);
@@ -113,7 +113,7 @@ export function makeMockJob(taskIdentifier: string): Job {
 }
 
 export const sleep = (ms: number) =>
-  new Promise(resolve => setTimeout(resolve, ms));
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function sleepUntil(condition: () => boolean, maxDuration = 2000) {
   const start = Date.now();

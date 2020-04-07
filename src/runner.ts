@@ -11,7 +11,7 @@ export const runMigrations = async (options: RunnerOptions): Promise<void> => {
     options,
   );
   try {
-    await withPgClient(client => migrate(options, client));
+    await withPgClient((client) => migrate(options, client));
   } finally {
     await release();
   }
@@ -57,7 +57,7 @@ export const runOnce = async (
     const promises: Promise<void>[] = [];
     for (let i = 0; i < concurrency; i++) {
       promises.push(
-        withPgClient(client => runTaskListOnce(options, taskList, client)),
+        withPgClient((client) => runTaskListOnce(options, taskList, client)),
       );
     }
     await Promise.all(promises);

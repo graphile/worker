@@ -17,7 +17,7 @@ function validTasks(
   obj: { [taskName: string]: unknown },
 ): TaskList {
   const tasks: TaskList = {};
-  Object.keys(obj).forEach(taskName => {
+  Object.keys(obj).forEach((taskName) => {
     const task = obj[taskName];
     if (isValidTask(task)) {
       tasks[taskName] = task;
@@ -64,7 +64,7 @@ async function loadFileIntoTasks(
       );
     }
   } else {
-    Object.keys(tasks).forEach(taskName => {
+    Object.keys(tasks).forEach((taskName) => {
       delete tasks[taskName];
     });
     if (
@@ -112,7 +112,7 @@ export default async function getTasks(
         chokidar.watch(taskPath, { ignoreInitial: true }).on("all", () => {
           loadFileIntoTasks(watchLogger, tasks, taskPath, null, watch)
             .then(() => debugSupported(watchLogger))
-            .catch(error => {
+            .catch((error) => {
               watchLogger.error(`Error in ${taskPath}: ${error.message}`, {
                 taskPath,
                 error,
@@ -144,7 +144,7 @@ export default async function getTasks(
                 watch,
               )
                 .then(() => debugSupported(watchLogger))
-                .catch(error => {
+                .catch((error) => {
                   watchLogger.error(
                     `Error in ${eventFilePath}: ${error.message}`,
                     { eventFilePath, error },
@@ -184,7 +184,7 @@ export default async function getTasks(
   return {
     tasks,
     release: () => {
-      watchers.forEach(watcher => watcher.close());
+      watchers.forEach((watcher) => watcher.close());
     },
   };
 }

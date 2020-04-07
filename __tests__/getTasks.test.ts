@@ -6,7 +6,7 @@ import { makeMockJob, withPgClient } from "./helpers";
 const options: WorkerSharedOptions = {};
 
 test("gets tasks from folder", () =>
-  withPgClient(async client => {
+  withPgClient(async (client) => {
     const { tasks, release } = await getTasks(
       options,
       `${__dirname}/fixtures/tasks`,
@@ -31,7 +31,7 @@ Array [
   }));
 
 test("get tasks from file (vanilla)", () =>
-  withPgClient(async client => {
+  withPgClient(async (client) => {
     const { tasks, release } = await getTasks(
       options,
       `${__dirname}/fixtures/tasksFile.js`,
@@ -54,7 +54,7 @@ Array [
   }));
 
 test("get tasks from file (default)", () =>
-  withPgClient(async client => {
+  withPgClient(async (client) => {
     const { tasks, release } = await getTasks(
       options,
       `${__dirname}/fixtures/tasksFile_default.js`,
