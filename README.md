@@ -666,7 +666,7 @@ NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
 - `payload` - a JSON object with information to tell the task executor what to
   do (defaults to an empty object)
 - `queue_name` - if you want certain tasks to run one at a time, add them to the
-  same named queue (defaults to a random value)
+  same named queue (defaults to `null`)
 - `run_at` - a timestamp after which to run the job; defaults to now.
 - `max_attempts` - if this task fails, how many times should we retry it?
   Default: 25.
