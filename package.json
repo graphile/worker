@@ -39,10 +39,10 @@
   "homepage": "https://github.com/graphile/worker#readme",
   "dependencies": {
     "@types/debug": "^4.1.2",
-    "@types/pg": "^7.14.1",
+    "@types/pg": "^7.14.3",
     "chokidar": "^3.3.1",
     "cosmiconfig": "^6.0.0",
-    "pg": ">=6.5 <8",
+    "pg": ">=6.5 <9",
     "tslib": "^1.11.1",
     "yargs": "^15.1.0"
   },
