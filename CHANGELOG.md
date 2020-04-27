@@ -1,5 +1,15 @@
 # Changelog
 
+### v0.6.0
+
+- Use target es2018 for TypeScript (Node v10 supports everything we need)
+  (thanks @keepitsimple)
+- When task promise is rejected with non-Error, use a fallback (thanks
+  @parker-torii)
+- Support `pg@8.x` and hence Node v14 (thanks @purge)
+- Fix mistake in README
+- General maintenance
+
 ### v0.5.0
 
 New "Administrative functions", ability to rename `graphile_worker` schema, and
