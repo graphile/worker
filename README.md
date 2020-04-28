@@ -67,7 +67,7 @@ module.exports = async (payload, helpers) => {
 ```bash
 npx graphile-worker -c "my_db"
 # or, if you have a remote database, something like:
-#   npx graphile-worker -c "postgres://user:pass@host:port/db?ssl=1"
+#   npx graphile-worker -c "postgres://user:pass@host:port/db?ssl=true"
 # or, if you prefer envvars
 #   DATABASE_URL="..." npx graphile-worker
 ```
