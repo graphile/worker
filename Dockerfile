@@ -27,4 +27,4 @@ WORKDIR /worker/
 ENTRYPOINT ["./dist/cli.js"]
 
 COPY --from=clean /worker/ /worker/
-RUN yarn install --frozen-lockfile --production=true --no-progress
+RUN yarn install --frozen-lockfile --production=true --no-progress && yarn cache clean

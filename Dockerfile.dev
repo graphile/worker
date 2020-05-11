@@ -18,4 +18,3 @@ COPY ./jest.config.js ./
 
 
 RUN yarn prepack
-
