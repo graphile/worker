@@ -1,5 +1,9 @@
 # Changelog
 
+### v0.6.1
+
+- Official Docker image (thanks @madflow)
+
 ### v0.6.0
 
 - Use target es2018 for TypeScript (Node v10 supports everything we need)
