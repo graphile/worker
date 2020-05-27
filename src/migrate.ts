@@ -55,12 +55,12 @@ export async function migrate(
   let latestMigration: number | null = null;
 
   const {
-    rows: [schemaExists],
-  } = await client.query({
-    text: `SELECT EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name=$1);`,
-    values: [escapedWorkerSchema],
-  });
-  if (!schemaExists.exists) {
+    rows: [pgNamespace],
+  } = await client.query(
+    `select oid from pg_catalog.pg_namespace where nspname = $1;`,
+    [workerSchema],
+  );
+  if (!pgNamespace) {
     await installSchema(options, client);
   }
 
