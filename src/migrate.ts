@@ -53,21 +53,24 @@ export async function migrate(
 ) {
   const { escapedWorkerSchema } = processSharedOptions(options);
   let latestMigration: number | null = null;
-  try {
-    const {
-      rows: [row],
-    } = await client.query(
-      `select id from ${escapedWorkerSchema}.migrations order by id desc limit 1;`,
-    );
-    if (row) {
-      latestMigration = row.id;
-    }
-  } catch (e) {
-    if (e.code === "42P01") {
-      await installSchema(options, client);
-    } else {
-      throw e;
-    }
+
+  const {
+    rows: [schemaExists],
+  } = await client.query({
+    text: `SELECT EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name=$1);`,
+    values: [escapedWorkerSchema],
+  });
+  if (!schemaExists.exists) {
+    await installSchema(options, client);
+  }
+
+  const {
+    rows: [row],
+  } = await client.query(
+    `select id from ${escapedWorkerSchema}.migrations order by id desc limit 1;`,
+  );
+  if (row) {
+    latestMigration = row.id;
   }
   const migrationFiles = (await readdir(`${__dirname}/../sql`))
     .filter((f) => f.match(/^[0-9]{6}\.sql$/))
