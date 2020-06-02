@@ -1020,6 +1020,16 @@ If the worker completely dies unexpectedly (e.g. `process.exit()`, segfault,
 available to be processed again automatically. You can free them up earlier than
 this by clearing the `locked_at` and `locked_by` columns on the relevant tables.
 
+If the worker schema has not yet been installed into your database, the
+following error may appear in your PostgreSQL server logs. This is completely
+harmless and should only appear once as the worker will create the schema for
+you.
+
+```
+ERROR: relation "graphile_worker.migrations" does not exist at character 16
+STATEMENT: select id from "graphile_worker".migrations order by id desc limit 1;
+```
+
 ## Development
 
 ```
