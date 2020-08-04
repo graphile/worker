@@ -15,9 +15,9 @@ Graphile ecosystem. Find out
 
 - Joe Dennis
 - domonda
-- Robert Claypool
 - James Allain
 - Jack Dinker
+- Robert Claypool
 - Nigel Taylor
 - DocIQ
 - Principia Mentis
@@ -26,7 +26,8 @@ Graphile ecosystem. Find out
 - Sterblue
 - HR-ON
 - Ian Stewart
-- Janakan Arulkumarasan
+- Dovetail
+- Jacob Gillespie
 
 ## Supporters
 
@@ -35,16 +36,14 @@ Graphile ecosystem. Find out
 - stlbucket
 - Matt Bretl
 - Chris Watland
-- Mark Lipscombe
-- James Rascoe
 - Mark Rapoza
 - innovation.rocks
+- purge
 - Daniel Woelfel
-- cybere
-- Philipp Litzenberger
 - Bjørn Michelsen
+- Philipp Litzenberger
 - CJ
-- Ben Botwin
+- apoland
 - Cameron Ellis
 - Mansoor Razzaq
-- Borut Jures
+- rcy
