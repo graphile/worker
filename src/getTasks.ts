@@ -44,9 +44,7 @@ async function loadFileIntoTasks(
   name: string | null = null,
   watch: boolean = false,
 ) {
-  const replacementModule = watch
-    ? await fauxRequire(filename)
-    : require(filename);
+  const replacementModule = watch ? fauxRequire(filename) : require(filename);
 
   if (!replacementModule) {
     throw new Error(`Module '${filename}' doesn't have an export`);
