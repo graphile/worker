@@ -1,6 +1,5 @@
+import { readFileSync } from "fs";
 import { dirname } from "path";
-
-import { readFile } from "./fs";
 import _module = require("module");
 const { Module } = _module;
 
@@ -12,12 +11,13 @@ function stripBOM(str: string) {
 }
 
 /**
- * This function emulates the behaviour of `require()`, enabling us to call it
+ * This function emulates the behavior of `require()`, enabling us to call it
  * multiple times without worrying about having to clear out the cache (useful
  * for watch mode).
  */
-export async function fauxRequire(filename: string) {
-  const contents = await readFile(filename, "utf8");
+export function fauxRequire(spec: string) {
+  const filename = require.resolve(spec);
+  const contents = readFileSync(filename, "utf8");
 
   const code = stripBOM(contents);
 
@@ -37,10 +37,22 @@ export async function fauxRequire(filename: string) {
    */
   // @ts-ignore
   replacementModule.paths = Module._nodeModulePaths(dirname(filename));
+  const codeWithWrapper = `\
+const { resolve } = require('path');
+
+const fauxRequire = (path) => global.graphileWorker_fauxRequire(resolve(__dirname, path));
+fauxRequire.resolve = require.resolve;
+
+(function(module, exports, require) {
+${code};
+})(module, exports, fauxRequire);
+`;
   // @ts-ignore
-  replacementModule._compile(code, filename);
+  replacementModule._compile(codeWithWrapper, filename);
 
   replacementModule.loaded = true;
 
   return replacementModule.exports;
 }
+
+global["graphileWorker_fauxRequire"] = fauxRequire;
