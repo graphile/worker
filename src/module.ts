@@ -1,6 +1,5 @@
-import { dirname } from "path";
-
 import { readFileSync } from "fs";
+import { dirname } from "path";
 import _module = require("module");
 const { Module } = _module;
 
