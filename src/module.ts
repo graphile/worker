@@ -40,9 +40,13 @@ export function fauxRequire(spec: string) {
   replacementModule.paths = Module._nodeModulePaths(dirname(filename));
   const codeWithWrapper = `\
 const { resolve } = require('path');
+
+const fauxRequire = (path) => global.graphileWorker_fauxRequire(resolve(__dirname, path));
+fauxRequire.resolve = require.resolve;
+
 (function(module, exports, require) {
 ${code};
-})(module, exports, (path) => global.graphileWorker_fauxRequire(resolve(__dirname, path)));
+})(module, exports, fauxRequire);
 `;
   // @ts-ignore
   replacementModule._compile(codeWithWrapper, filename);
