@@ -8,6 +8,9 @@ import { RunnerOptions } from "./interfaces";
 import { runMigrations } from "./runner";
 
 const argv = yargs
+  .parserConfiguration({
+    "boolean-negation": false,
+  })
   .option("connection", {
     description:
       "Database connection string, defaults to the 'DATABASE_URL' envvar",
@@ -56,10 +59,16 @@ const argv = yargs
     default: defaults.pollInterval,
   })
   .number("poll-interval")
+  .option("no-prepared-statements", {
+    description:
+      "set this flag if you want to disable prepared statements, e.g. for compatibility with pgBouncer",
+    default: false,
+  })
+  .boolean("no-prepared-statements")
   .strict(true).argv;
 
 if (argv._.length > 0) {
-  console.error(`Unrecognised additional arguments: '${argv._.join("', '")}'`);
+  console.error(`Unrecognized additional arguments: '${argv._.join("', '")}'`);
   console.error();
   yargs.showHelp();
   process.exit(1);
@@ -102,6 +111,7 @@ async function main() {
       ? argv["poll-interval"]
       : defaults.pollInterval,
     connectionString: DATABASE_URL,
+    noPreparedStatements: !!argv["no-prepared-statements"],
   };
 
   if (SCHEMA_ONLY) {

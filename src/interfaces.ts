@@ -254,6 +254,12 @@ export interface SharedOptions {
    * A pg.Pool instance to use instead of the `connectionString`
    */
   pgPool?: Pool;
+
+  /**
+   * Set true if you want to prevent the use of prepared statements; for
+   * example if you wish to use Graphile Worker with pgBouncer or similar.
+   */
+  noPreparedStatements?: boolean;
 }
 
 /**
