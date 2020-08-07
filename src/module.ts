@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import { dirname } from "path";
 import _module = require("module");
-const { Module } = _module;
+const { Module, builtinModules } = _module;
 
 function stripBOM(str: string) {
   if (str.charCodeAt(0) === 0xfeff) {
@@ -16,6 +16,10 @@ function stripBOM(str: string) {
  * for watch mode).
  */
 export function fauxRequire(spec: string) {
+  if (builtinModules.includes(spec)) {
+    // Don't try and faux require builtin modules
+    return require(spec);
+  }
   const filename = require.resolve(spec);
   const contents = readFileSync(filename, "utf8");
 
@@ -40,7 +44,13 @@ export function fauxRequire(spec: string) {
   const codeWithWrapper = `\
 const { resolve } = require('path');
 
-const fauxRequire = (path) => global.graphileWorker_fauxRequire(resolve(__dirname, path));
+const fauxRequire = (path) => {
+  const spec =
+    path.startsWith(".") || path.startsWith("/")
+      ? resolve(__dirname, path)
+      : path;
+  return global.graphileWorker_fauxRequire(spec);
+}
 fauxRequire.resolve = require.resolve;
 
 (function(module, exports, require) {
