@@ -15,12 +15,24 @@ function stripBOM(str: string) {
  * multiple times without worrying about having to clear out the cache (useful
  * for watch mode).
  */
-export function fauxRequire(spec: string) {
+export function fauxRequire(spec: string, cache = {}) {
   if (builtinModules.includes(spec)) {
     // Don't try and faux require builtin modules
     return require(spec);
   }
   const filename = require.resolve(spec);
+  if (filename.indexOf("/node_modules/") >= 0) {
+    // Don't try and faux require node_modules (we only want one copy of these
+    // in memory)
+    return require(spec);
+  }
+  if (!filename.endsWith(".js")) {
+    // Don't try and faux require .json, etc files
+    return require(spec);
+  }
+  if (cache[filename]) {
+    return cache[filename].exports;
+  }
   const contents = readFileSync(filename, "utf8");
 
   const code = stripBOM(contents);
@@ -49,18 +61,25 @@ const fauxRequire = (path) => {
     path.startsWith(".") || path.startsWith("/")
       ? resolve(__dirname, path)
       : path;
-  return global.graphileWorker_fauxRequire(spec);
+  return global.graphileWorker_fauxRequire(spec, fauxRequire.cache);
 }
 fauxRequire.resolve = require.resolve;
+fauxRequire.cache = global.graphileWorker_fauxRequireCache;
 
 (function(module, exports, require) {
 ${code};
 })(module, exports, fauxRequire);
 `;
+
+  // Since the code is evaluated synchronously, we set this immediately before
+  // compiling and clear after.
+  global["graphileWorker_fauxRequireCache"] = cache;
   // @ts-ignore
   replacementModule._compile(codeWithWrapper, filename);
+  global["graphileWorker_fauxRequireCache"] = null;
 
   replacementModule.loaded = true;
+  cache[filename] = replacementModule;
 
   return replacementModule.exports;
 }
