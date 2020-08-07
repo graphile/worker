@@ -1,11 +1,13 @@
 # Changelog
 
-### v0.7.0
+### v0.7.1
 
 - Add `--no-prepared-statements` flag to allow disabling of prepared statements
   for pgBouncer compatibility.
 - Fix issue in watch mode where files `require()`d from inside a task are cached
   permanently.
+
+(v0.7.0 was yanked due to an issue with watch mode.)
 
 ### v0.6.1
 
