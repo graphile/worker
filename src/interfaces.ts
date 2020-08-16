@@ -231,6 +231,8 @@ export interface TaskSpec {
   flags?: string[];
 }
 
+export type ForbiddenFlagsFn = () => string[] | Promise<string[]>;
+
 /**
  * These options are common Graphile Worker pools, workers, and utils.
  */
@@ -273,7 +275,7 @@ export interface SharedOptions {
    *
    * Graphile worker will skip the execution of any jobs that contain these flags
    */
-  forbiddenFlags?: null | string[] | (() => string[] | Promise<string[]>);
+  forbiddenFlags?: null | string[] | ForbiddenFlagsFn;
 }
 
 /**
