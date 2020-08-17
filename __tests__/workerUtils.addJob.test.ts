@@ -56,7 +56,7 @@ test("supports the jobKey API", () =>
     );
     expect(jobs).toHaveLength(1);
     expect(jobs[0].payload.a).toBe(4);
-    expect(jobs[0].revision).toBe(3); // TODO: decide whether to start revision at 0 or 1, which would determine what we want this to be
+    expect(jobs[0].revision).toBe(3);
 
     const task: Task = jest.fn();
     const taskList = { task };
