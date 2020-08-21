@@ -53,8 +53,7 @@ begin
         max_attempts=excluded.max_attempts,
         run_at=excluded.run_at,
         priority=excluded.priority,
-
-        revision=:GRAPHILE_WORKER_SCHEMA.jobs.revision+1,
+        revision=jobs.revision + 1,
 
         -- always reset error/retry state
         attempts=0,
