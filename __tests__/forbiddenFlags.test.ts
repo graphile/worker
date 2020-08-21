@@ -12,6 +12,8 @@ import {
   withPgPool,
 } from "./helpers";
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const options: WorkerSharedOptions = {};
 
 test("supports the flags API", () =>
@@ -66,17 +68,25 @@ test("get_job skips forbidden flags with string[] arg", () =>
 
     // Assert that it has an entry in jobs / job_queues
     const pgClient = await pgPool.connect();
+    try {
+      await runTaskListOnce(
+        { forbiddenFlags: [badFlag] },
+        { "flag-test": job },
+        pgClient,
+      );
 
-    await runTaskListOnce(
-      { forbiddenFlags: ["d"] },
-      { "flag-test": job },
-      pgClient,
-    );
+      const { rows: jobs } = await pgClient.query(
+        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
+      );
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0].attempts).toEqual(0);
+      expect(jobs[0].flags).toEqual(["c", "d"]);
 
-    await pgClient.release();
-
-    expect(shouldRun).toHaveBeenCalled();
-    expect(shouldSkip).not.toHaveBeenCalled();
+      expect(shouldRun).toHaveBeenCalledTimes(1);
+      expect(shouldSkip).not.toHaveBeenCalled();
+    } finally {
+      pgClient.release();
+    }
   }));
 
 test("get_job skips forbidden flags with () => string[] arg", () =>
@@ -107,17 +117,25 @@ test("get_job skips forbidden flags with () => string[] arg", () =>
 
     // Assert that it has an entry in jobs / job_queues
     const pgClient = await pgPool.connect();
+    try {
+      await runTaskListOnce(
+        { forbiddenFlags: () => [badFlag] },
+        { "flag-test": job },
+        pgClient,
+      );
 
-    await runTaskListOnce(
-      { forbiddenFlags: () => ["d"] },
-      { "flag-test": job },
-      pgClient,
-    );
+      const { rows: jobs } = await pgClient.query(
+        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
+      );
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0].attempts).toEqual(0);
+      expect(jobs[0].flags).toEqual(["c", "d"]);
 
-    await pgClient.release();
-
-    expect(shouldRun).toHaveBeenCalled();
-    expect(shouldSkip).not.toHaveBeenCalled();
+      expect(shouldRun).toHaveBeenCalledTimes(1);
+      expect(shouldSkip).not.toHaveBeenCalled();
+    } finally {
+      pgClient.release();
+    }
   }));
 
 test("get_job skips forbidden flags with () => Promise<string[]> arg", () =>
@@ -148,15 +166,21 @@ test("get_job skips forbidden flags with () => Promise<string[]> arg", () =>
 
     // Assert that it has an entry in jobs / job_queues
     const pgClient = await pgPool.connect();
+    try {
+      await runTaskListOnce(
+        {
+          forbiddenFlags: async () => {
+            await sleep(5);
+            return [badFlag];
+          },
+        },
+        { "flag-test": job },
+        pgClient,
+      );
 
-    await runTaskListOnce(
-      { forbiddenFlags: async () => ["d"] },
-      { "flag-test": job },
-      pgClient,
-    );
-
-    await pgClient.release();
-
-    expect(shouldRun).toHaveBeenCalled();
-    expect(shouldSkip).not.toHaveBeenCalled();
+      expect(shouldRun).toHaveBeenCalledTimes(1);
+      expect(shouldSkip).not.toHaveBeenCalled();
+    } finally {
+      pgClient.release();
+    }
   }));
