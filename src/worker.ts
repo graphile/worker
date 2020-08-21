@@ -98,9 +98,13 @@ export function makeNewWorker(
         client.query({
           text:
             // TODO: breaking change; change this to more optimal:
-            // `SELECT id, queue_name, task_identifier, payload FROM ${escapedWorkerSchema}.get_job($1, $2);`,
-            `SELECT * FROM ${escapedWorkerSchema}.get_job($1, $2, $3);`,
-          values: [workerId, supportedTaskNames, flagsToSkip],
+            // `SELECT id, queue_name, task_identifier, payload FROM ...`,
+            `SELECT * FROM ${escapedWorkerSchema}.get_job($1, $2, forbidden_flags := $3::text[]);`,
+          values: [
+            workerId,
+            supportedTaskNames,
+            flagsToSkip && flagsToSkip.length ? flagsToSkip : null,
+          ],
           name: noPreparedStatements ? undefined : `get_job/${workerSchema}`,
         }),
       );
