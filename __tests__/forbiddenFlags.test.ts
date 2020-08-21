@@ -40,11 +40,21 @@ test("supports the flags API", () =>
     await runTaskListOnce(options, taskList, pgClient);
   }));
 
-test("get_job skips forbidden flags with string[] arg", () =>
+const badFlag = "d";
+
+test.each([
+  ["string[]", [badFlag]],
+  ["()=>string[]", () => [badFlag]],
+  [
+    "()=>Promise<string[]>",
+    async () => {
+      await sleep(5);
+      return [badFlag];
+    },
+  ],
+])("get_job skips forbidden flags with %s arg", (_, forbiddenFlags) =>
   withPgPool(async (pgPool) => {
     await reset(pgPool, options);
-
-    const badFlag = "d";
 
     const shouldRun = jest.fn();
     const shouldSkip = jest.fn();
@@ -63,124 +73,25 @@ test("get_job skips forbidden flags with string[] arg", () =>
     const utils = await makeWorkerUtils({ pgPool });
 
     await utils.addJob("flag-test", { a: 1 }, { flags: ["a", "b"] });
-    await utils.addJob("flag-test", { a: 1 }, { flags: ["c", "d"] });
+    await utils.addJob("flag-test", { a: 1 }, { flags: ["c", badFlag] });
     await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
     const pgClient = await pgPool.connect();
     try {
-      await runTaskListOnce(
-        { forbiddenFlags: [badFlag] },
-        { "flag-test": job },
-        pgClient,
-      );
+      await runTaskListOnce({ forbiddenFlags }, { "flag-test": job }, pgClient);
 
       const { rows: jobs } = await pgClient.query(
         `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
       );
       expect(jobs).toHaveLength(1);
       expect(jobs[0].attempts).toEqual(0);
-      expect(jobs[0].flags).toEqual(["c", "d"]);
+      expect(jobs[0].flags).toEqual(["c", badFlag]);
 
       expect(shouldRun).toHaveBeenCalledTimes(1);
       expect(shouldSkip).not.toHaveBeenCalled();
     } finally {
       pgClient.release();
     }
-  }));
-
-test("get_job skips forbidden flags with () => string[] arg", () =>
-  withPgPool(async (pgPool) => {
-    await reset(pgPool, options);
-
-    const badFlag = "d";
-
-    const shouldRun = jest.fn();
-    const shouldSkip = jest.fn();
-
-    const job: Task = async (_payload, helpers) => {
-      const flags = helpers.job.flags || [];
-
-      if (flags.includes(badFlag)) {
-        shouldSkip();
-      } else {
-        shouldRun();
-      }
-    };
-
-    // Schedule a job
-    const utils = await makeWorkerUtils({ pgPool });
-
-    await utils.addJob("flag-test", { a: 1 }, { flags: ["a", "b"] });
-    await utils.addJob("flag-test", { a: 1 }, { flags: ["c", "d"] });
-    await utils.release();
-
-    // Assert that it has an entry in jobs / job_queues
-    const pgClient = await pgPool.connect();
-    try {
-      await runTaskListOnce(
-        { forbiddenFlags: () => [badFlag] },
-        { "flag-test": job },
-        pgClient,
-      );
-
-      const { rows: jobs } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-      );
-      expect(jobs).toHaveLength(1);
-      expect(jobs[0].attempts).toEqual(0);
-      expect(jobs[0].flags).toEqual(["c", "d"]);
-
-      expect(shouldRun).toHaveBeenCalledTimes(1);
-      expect(shouldSkip).not.toHaveBeenCalled();
-    } finally {
-      pgClient.release();
-    }
-  }));
-
-test("get_job skips forbidden flags with () => Promise<string[]> arg", () =>
-  withPgPool(async (pgPool) => {
-    await reset(pgPool, options);
-
-    const badFlag = "d";
-
-    const shouldRun = jest.fn();
-    const shouldSkip = jest.fn();
-
-    const job: Task = async (_payload, helpers) => {
-      const flags = helpers.job.flags || [];
-
-      if (flags.includes(badFlag)) {
-        shouldSkip();
-      } else {
-        shouldRun();
-      }
-    };
-
-    // Schedule a job
-    const utils = await makeWorkerUtils({ pgPool });
-
-    await utils.addJob("flag-test", { a: 1 }, { flags: ["a", "b"] });
-    await utils.addJob("flag-test", { a: 1 }, { flags: ["c", "d"] });
-    await utils.release();
-
-    // Assert that it has an entry in jobs / job_queues
-    const pgClient = await pgPool.connect();
-    try {
-      await runTaskListOnce(
-        {
-          forbiddenFlags: async () => {
-            await sleep(5);
-            return [badFlag];
-          },
-        },
-        { "flag-test": job },
-        pgClient,
-      );
-
-      expect(shouldRun).toHaveBeenCalledTimes(1);
-      expect(shouldSkip).not.toHaveBeenCalled();
-    } finally {
-      pgClient.release();
-    }
-  }));
+  }),
+);
