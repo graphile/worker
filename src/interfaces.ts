@@ -173,6 +173,7 @@ export interface Job {
   created_at: Date;
   updated_at: Date;
   key: string | null;
+  revision: number;
   locked_at: Date | null;
   locked_by: string | null;
   flags: string[] | null;

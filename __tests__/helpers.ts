@@ -108,6 +108,7 @@ export function makeMockJob(taskIdentifier: string): Job {
     updated_at: createdAt,
     locked_at: null,
     locked_by: null,
+    revision: 0,
     key: null,
     flags: null,
   };

@@ -1,5 +1,15 @@
 # Changelog
 
+### v0.7.2
+
+- Add `--no-prepared-statements` flag to allow disabling of prepared statements
+  for pgBouncer compatibility.
+- Fix issue in watch mode where files `require()`d from inside a task are cached
+  permanently.
+
+(v0.7.0 and v0.7.1 had issues with the experimental watch mode enhancements, so
+were never upgraded to `@latest`.)
+
 ### v0.6.1
 
 - Official Docker image (thanks @madflow)
