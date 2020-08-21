@@ -232,7 +232,7 @@ export interface TaskSpec {
   flags?: string[];
 }
 
-export type ForbiddenFlagsFn = () => string[] | Promise<string[]>;
+export type ForbiddenFlagsFn = () => null | string[] | Promise<null | string[]>;
 
 /**
  * These options are common Graphile Worker pools, workers, and utils.
