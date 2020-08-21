@@ -33,7 +33,7 @@ test("supports the flags API", () =>
     );
     expect(jobs).toHaveLength(1);
     expect(jobs[0]).toHaveProperty("flags");
-    expect(jobs[0].flags).toHaveLength(2);
+    expect(jobs[0].flags).toEqual({ a: true, b: true });
 
     const task: Task = jest.fn();
     const taskList = { task };
@@ -62,7 +62,7 @@ test.each([
     const job: Task = async (_payload, helpers) => {
       const flags = helpers.job.flags || [];
 
-      if (flags.includes(badFlag)) {
+      if (flags[badFlag]) {
         shouldSkip();
       } else {
         shouldRun();
@@ -86,7 +86,7 @@ test.each([
       );
       expect(jobs).toHaveLength(1);
       expect(jobs[0].attempts).toEqual(0);
-      expect(jobs[0].flags).toEqual(["c", badFlag]);
+      expect(jobs[0].flags).toEqual({ c: true, d: true });
 
       expect(shouldRun).toHaveBeenCalledTimes(1);
       expect(shouldSkip).not.toHaveBeenCalled();
@@ -126,7 +126,7 @@ test.each([
     const job: Task = async (_payload, helpers) => {
       const flags = helpers.job.flags || [];
 
-      if (flags.includes(badFlag)) {
+      if (flags[badFlag]) {
         ranWithDFlag();
       } else {
         ranWithoutDFlag();

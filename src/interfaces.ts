@@ -176,7 +176,7 @@ export interface Job {
   revision: number;
   locked_at: Date | null;
   locked_by: string | null;
-  flags: string[] | null;
+  flags: { [flag: string]: true } | null;
 }
 
 export interface Worker {

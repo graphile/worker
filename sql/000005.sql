@@ -1,5 +1,5 @@
 alter table :GRAPHILE_WORKER_SCHEMA.jobs add column revision int default 0 not null;
-alter table :GRAPHILE_WORKER_SCHEMA.jobs add column flags text[] default null; 
+alter table :GRAPHILE_WORKER_SCHEMA.jobs add column flags jsonb default null;
 
 drop function :GRAPHILE_WORKER_SCHEMA.add_job(text, json, text, timestamptz, int, text, int);
 create function :GRAPHILE_WORKER_SCHEMA.add_job(
@@ -49,7 +49,10 @@ begin
         coalesce(max_attempts, 25),
         job_key,
         coalesce(priority, 0),
-        flags
+        (
+          select jsonb_object_agg(flag, true)
+          from unnest(flags) as item(flag)
+        )
       )
       on conflict (key) do update set
         task_identifier=excluded.task_identifier,
@@ -102,7 +105,10 @@ begin
       coalesce(max_attempts, 25),
       job_key,
       coalesce(priority, 0),
-      flags
+      (
+        select jsonb_object_agg(flag, true)
+        from unnest(flags) as item(flag)
+      )
     )
     returning *
     into v_job;
@@ -146,7 +152,7 @@ begin
     and run_at <= v_now
     and attempts < max_attempts
     and (task_identifiers is null or task_identifier = any(task_identifiers))
-    and (forbidden_flags is null or not (forbidden_flags && flags))
+    and (forbidden_flags is null or (flags ?| forbidden_flags) is not true)
     order by priority asc, run_at asc, id asc
     limit 1
     for update
