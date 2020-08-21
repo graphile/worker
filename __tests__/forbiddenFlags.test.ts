@@ -95,3 +95,65 @@ test.each([
     }
   }),
 );
+
+test.each([
+  ["unknown flag", ["z"]],
+  ["empty[]", []],
+  ["()=>empty[]", () => []],
+  [
+    "()=>Promise<empty[]>",
+    async () => {
+      await sleep(5);
+      return [];
+    },
+  ],
+  ["null", null],
+  ["()=>null", () => null],
+  [
+    "()=>Promise<null>",
+    async () => {
+      await sleep(5);
+      return null;
+    },
+  ],
+])("get_job runs all jobs with forbidden flags = %s", (_, forbiddenFlags) =>
+  withPgPool(async (pgPool) => {
+    await reset(pgPool, options);
+
+    const ranWithoutDFlag = jest.fn();
+    const ranWithDFlag = jest.fn();
+
+    const job: Task = async (_payload, helpers) => {
+      const flags = helpers.job.flags || [];
+
+      if (flags.includes(badFlag)) {
+        ranWithDFlag();
+      } else {
+        ranWithoutDFlag();
+      }
+    };
+
+    // Schedule a job
+    const utils = await makeWorkerUtils({ pgPool });
+
+    await utils.addJob("flag-test", { a: 1 }, { flags: ["a", "b"] });
+    await utils.addJob("flag-test", { a: 1 }, { flags: ["c", badFlag] });
+    await utils.release();
+
+    // Assert that it has an entry in jobs / job_queues
+    const pgClient = await pgPool.connect();
+    try {
+      await runTaskListOnce({ forbiddenFlags }, { "flag-test": job }, pgClient);
+
+      const { rows: jobs } = await pgClient.query(
+        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
+      );
+      expect(jobs).toHaveLength(0);
+
+      expect(ranWithoutDFlag).toHaveBeenCalledTimes(1);
+      expect(ranWithDFlag).toHaveBeenCalledTimes(1);
+    } finally {
+      pgClient.release();
+    }
+  }),
+);
