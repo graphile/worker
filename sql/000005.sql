@@ -1,3 +1,4 @@
+alter table :GRAPHILE_WORKER_SCHEMA.jobs add column revision int default 0 not null;
 alter table :GRAPHILE_WORKER_SCHEMA.jobs add column flags text[] default null; 
 
 drop function :GRAPHILE_WORKER_SCHEMA.add_job;
@@ -8,8 +9,8 @@ create function :GRAPHILE_WORKER_SCHEMA.add_job(
   run_at timestamptz = null,
   max_attempts int = null,
   job_key text = null,
-  flags text[] = null,
-  priority int = null
+  priority int = null,
+  flags text[] = null
 ) returns :GRAPHILE_WORKER_SCHEMA.jobs as $$
 declare
   v_job :GRAPHILE_WORKER_SCHEMA.jobs;
@@ -37,8 +38,8 @@ begin
       run_at,
       max_attempts,
       key,
-      flags,
-      priority
+      priority,
+      flags
     )
       values(
         identifier,
@@ -47,8 +48,8 @@ begin
         coalesce(run_at, now()),
         coalesce(max_attempts, 25),
         job_key,
-        flags,
-        coalesce(priority, 0)
+        coalesce(priority, 0),
+        flags
       )
       on conflict (key) do update set
         task_identifier=excluded.task_identifier,
@@ -56,9 +57,9 @@ begin
         queue_name=excluded.queue_name,
         max_attempts=excluded.max_attempts,
         run_at=excluded.run_at,
-        flags=excluded.flags,
         priority=excluded.priority,
-
+        revision=jobs.revision + 1,
+        flags=excluded.flags,
         -- always reset error/retry state
         attempts=0,
         last_error=null
@@ -89,8 +90,8 @@ begin
     run_at,
     max_attempts,
     key,
-    flags,
-    priority
+    priority,
+    flags
   )
     values(
       identifier,
@@ -99,8 +100,8 @@ begin
       coalesce(run_at, now()),
       coalesce(max_attempts, 25),
       job_key,
-      flags,
-      coalesce(priority, 0)
+      coalesce(priority, 0),
+      flags
     )
     returning *
     into v_job;
@@ -110,7 +111,13 @@ end;
 $$ language plpgsql volatile;
 
 drop function :GRAPHILE_WORKER_SCHEMA.get_job;
-create or replace function :GRAPHILE_WORKER_SCHEMA.get_job(worker_id text, task_identifiers text[] = null, forbidden_flags text[] = null, job_expiry interval = interval '4 hours') returns :GRAPHILE_WORKER_SCHEMA.jobs as $$
+
+create function :GRAPHILE_WORKER_SCHEMA.get_job(
+  worker_id text,
+  task_identifiers text[] = null,
+  job_expiry interval = interval '4 hours',
+  forbidden_flags text[] = null
+) returns :GRAPHILE_WORKER_SCHEMA.jobs as $$
 declare
   v_job_id bigint;
   v_queue_name text;
