@@ -87,9 +87,9 @@ export function makeNewWorker(
 
         if (Array.isArray(forbiddenFlagsResult)) {
           flagsToSkip = forbiddenFlagsResult;
+        } else if (forbiddenFlagsResult != null) {
+          flagsToSkip = await forbiddenFlagsResult;
         }
-
-        flagsToSkip = await forbiddenFlagsResult;
       }
 
       const {
