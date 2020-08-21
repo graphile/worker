@@ -1,7 +1,7 @@
 alter table :GRAPHILE_WORKER_SCHEMA.jobs add column revision int default 0 not null;
 alter table :GRAPHILE_WORKER_SCHEMA.jobs add column flags text[] default null; 
 
-drop function :GRAPHILE_WORKER_SCHEMA.add_job;
+drop function :GRAPHILE_WORKER_SCHEMA.add_job(text, json, text, timestamptz, int, text, int);
 create function :GRAPHILE_WORKER_SCHEMA.add_job(
   identifier text,
   payload json = null,
@@ -111,7 +111,7 @@ begin
 end;
 $$ language plpgsql volatile;
 
-drop function :GRAPHILE_WORKER_SCHEMA.get_job;
+drop function :GRAPHILE_WORKER_SCHEMA.get_job(text, text[], interval);
 create function :GRAPHILE_WORKER_SCHEMA.get_job(
   worker_id text,
   task_identifiers text[] = null,
