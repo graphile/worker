@@ -70,3 +70,39 @@ jobs:
       - run: yarn --frozen-lockfile
       - run: yarn lint
       - run: yarn jest -i --ci
+
+  database_updated:
+    runs-on: ubuntu-18.04
+
+    services:
+      postgres:
+        image: postgres:11
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: graphile_worker_test
+        ports:
+          - "0.0.0.0:5432:5432"
+        # needed because the postgres container does not provide a healthcheck
+        options:
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+      - run: yarn --frozen-lockfile
+      - name: Install pg_dump
+        run: |
+          sudo bash -c "echo deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main >> /etc/apt/sources.list.d/pgdg.list"
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          sudo apt-get update
+          sudo apt-get -yqq install postgresql-client-11
+      - name: "Check schema hasn't changed"
+        run: |
+          yarn db:dump
+          git update-index -q --refresh
+          git diff-index --quiet HEAD -- || (git diff && echo "^^^ The database schema has changed, please run 'yarn db:dump'" && exit 1)
