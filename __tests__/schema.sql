@@ -1,19 +1,8 @@
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
 CREATE SCHEMA graphile_worker;
 ALTER SCHEMA graphile_worker OWNER TO graphile_worker_role;
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
-SET default_tablespace = '';
-SET default_with_oids = false;
 CREATE TABLE graphile_worker.jobs (
     id bigint NOT NULL,
     queue_name text DEFAULT (public.gen_random_uuid())::text,
