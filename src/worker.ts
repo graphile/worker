@@ -23,6 +23,7 @@ export function makeNewWorker(
     workerId = `worker-${randomBytes(9).toString("hex")}`,
     pollInterval = defaults.pollInterval,
     noPreparedStatements,
+    forbiddenFlags,
   } = options;
   const {
     workerSchema,
@@ -77,15 +78,33 @@ export function makeNewWorker(
       const supportedTaskNames = Object.keys(tasks);
       assert(supportedTaskNames.length, "No runnable tasks!");
 
+      let flagsToSkip: null | string[] = null;
+
+      if (Array.isArray(forbiddenFlags)) {
+        flagsToSkip = forbiddenFlags;
+      } else if (typeof forbiddenFlags === "function") {
+        const forbiddenFlagsResult = forbiddenFlags();
+
+        if (Array.isArray(forbiddenFlagsResult)) {
+          flagsToSkip = forbiddenFlagsResult;
+        } else if (forbiddenFlagsResult != null) {
+          flagsToSkip = await forbiddenFlagsResult;
+        }
+      }
+
       const {
         rows: [jobRow],
       } = await withPgClient((client) =>
         client.query({
           text:
             // TODO: breaking change; change this to more optimal:
-            // `SELECT id, queue_name, task_identifier, payload FROM ${escapedWorkerSchema}.get_job($1, $2);`,
-            `SELECT * FROM ${escapedWorkerSchema}.get_job($1, $2);`,
-          values: [workerId, supportedTaskNames],
+            // `SELECT id, queue_name, task_identifier, payload FROM ...`,
+            `SELECT * FROM ${escapedWorkerSchema}.get_job($1, $2, forbidden_flags := $3::text[]);`,
+          values: [
+            workerId,
+            supportedTaskNames,
+            flagsToSkip && flagsToSkip.length ? flagsToSkip : null,
+          ],
           name: noPreparedStatements ? undefined : `get_job/${workerSchema}`,
         }),
       );

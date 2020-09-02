@@ -176,6 +176,7 @@ export interface Job {
   revision: number;
   locked_at: Date | null;
   locked_by: string | null;
+  flags: { [flag: string]: true } | null;
 }
 
 export interface Worker {
@@ -224,7 +225,14 @@ export interface TaskSpec {
    * Unique identifier for the job, can be used to update or remove it later if needed. (Default: null)
    */
   jobKey?: string;
+
+  /**
+   * Flags for the job, can be used to dynamically filter which jobs can and cannot run at runtime
+   */
+  flags?: string[];
 }
+
+export type ForbiddenFlagsFn = () => null | string[] | Promise<null | string[]>;
 
 /**
  * These options are common Graphile Worker pools, workers, and utils.
@@ -261,6 +269,14 @@ export interface SharedOptions {
    * example if you wish to use Graphile Worker with pgBouncer or similar.
    */
   noPreparedStatements?: boolean;
+
+  /**
+   * An array of strings or function returning an array of strings or promise resolving to
+   * an array of strings that represent flags
+   *
+   * Graphile worker will skip the execution of any jobs that contain these flags
+   */
+  forbiddenFlags?: null | string[] | ForbiddenFlagsFn;
 }
 
 /**
