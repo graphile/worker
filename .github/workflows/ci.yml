@@ -104,4 +104,5 @@ jobs:
       - name: "Check schema hasn't changed"
         run: |
           yarn db:dump
+          git update-index -q --refresh
           git diff-index --quiet HEAD -- || (git diff && echo "^^^ The database schema has changed, please run 'yarn db:dump'" && exit 1)
