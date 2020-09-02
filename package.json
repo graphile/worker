@@ -10,6 +10,7 @@
     "lint:fix": "eslint --ext .js,.jsx,.ts,.tsx,.graphql . --fix; prettier --ignore-path .eslintignore --write '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
     "prettier:check": "prettier --ignore-path .eslintignore --check '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
     "test": "yarn prepack && depcheck && createdb graphile_worker_test || true && psql -X -v GRAPHILE_WORKER_SCHEMA=\"${GRAPHILE_WORKER_SCHEMA:-graphile_worker}\" -v ON_ERROR_STOP=1 -f __tests__/reset-db.sql graphile_worker_test && jest -i",
+    "dump_db": "dropdb --if-exists graphile_worker_test && createdb graphile_worker_test && ts-node src/cli.ts -c graphile_worker_test --schema-only && pg_dump --schema-only graphile_worker_test | sed -e '/^--/d' -e '/^\\s*$/d' > __tests__/schema.sql",
     "perfTest": "cd perfTest && node ./run.js"
   },
   "bin": {
