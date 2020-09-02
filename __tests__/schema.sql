@@ -19,10 +19,11 @@ CREATE TABLE graphile_worker.jobs (
     locked_at timestamp with time zone,
     locked_by text,
     revision integer DEFAULT 0 NOT NULL,
+    flags jsonb,
     CONSTRAINT jobs_key_check CHECK ((length(key) > 0))
 );
 ALTER TABLE graphile_worker.jobs OWNER TO graphile_worker_role;
-CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer) RETURNS graphile_worker.jobs
+CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[]) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
 declare
@@ -50,7 +51,8 @@ begin
       run_at,
       max_attempts,
       key,
-      priority
+      priority,
+      flags
     )
       values(
         identifier,
@@ -59,7 +61,11 @@ begin
         coalesce(run_at, now()),
         coalesce(max_attempts, 25),
         job_key,
-        coalesce(priority, 0)
+        coalesce(priority, 0),
+        (
+          select jsonb_object_agg(flag, true)
+          from unnest(flags) as item(flag)
+        )
       )
       on conflict (key) do update set
         task_identifier=excluded.task_identifier,
@@ -69,6 +75,7 @@ begin
         run_at=excluded.run_at,
         priority=excluded.priority,
         revision=jobs.revision + 1,
+        flags=excluded.flags,
         -- always reset error/retry state
         attempts=0,
         last_error=null
@@ -96,7 +103,8 @@ begin
     run_at,
     max_attempts,
     key,
-    priority
+    priority,
+    flags
   )
     values(
       identifier,
@@ -105,14 +113,18 @@ begin
       coalesce(run_at, now()),
       coalesce(max_attempts, 25),
       job_key,
-      coalesce(priority, 0)
+      coalesce(priority, 0),
+      (
+        select jsonb_object_agg(flag, true)
+        from unnest(flags) as item(flag)
+      )
     )
     returning *
     into v_job;
   return v_job;
 end;
 $$;
-ALTER FUNCTION graphile_worker.add_job(identifier text, payload json, queue_name text, run_at timestamp with time zone, max_attempts integer, job_key text, priority integer) OWNER TO graphile_worker_role;
+ALTER FUNCTION graphile_worker.add_job(identifier text, payload json, queue_name text, run_at timestamp with time zone, max_attempts integer, job_key text, priority integer, flags text[]) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.complete_job(worker_id text, job_id bigint) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
@@ -167,7 +179,7 @@ begin
 end;
 $$;
 ALTER FUNCTION graphile_worker.fail_job(worker_id text, job_id bigint, error_message text) OWNER TO graphile_worker_role;
-CREATE FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[] DEFAULT NULL::text[], job_expiry interval DEFAULT '04:00:00'::interval) RETURNS graphile_worker.jobs
+CREATE FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[] DEFAULT NULL::text[], job_expiry interval DEFAULT '04:00:00'::interval, forbidden_flags text[] DEFAULT NULL::text[]) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
 declare
@@ -197,6 +209,7 @@ begin
     and run_at <= v_now
     and attempts < max_attempts
     and (task_identifiers is null or task_identifier = any(task_identifiers))
+    and (forbidden_flags is null or (flags ?| forbidden_flags) is not true)
     order by priority asc, run_at asc, id asc
     limit 1
     for update
@@ -221,7 +234,7 @@ begin
   return v_row;
 end;
 $$;
-ALTER FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[], job_expiry interval) OWNER TO graphile_worker_role;
+ALTER FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[], job_expiry interval, forbidden_flags text[]) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.jobs__decrease_job_queue_count() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
