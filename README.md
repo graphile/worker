@@ -170,6 +170,8 @@ https://graphile.org/support/
 - Automatically re-attempts failed jobs with exponential back-off
 - Customisable retry count (default: 25 attempts over ~3 days)
 - Task de-duplication via unique `job_key`
+- Flexible runtime controls that can be used for complex rate limiting via
+  (graphile-worker-rate-limiter)[https://github.com/politics-rewired/graphile-worker-rate-limiter]
 - Open source; liberal MIT license
 - Executes tasks written in Node.js (these can call out to any other language or
   networked service)
@@ -503,6 +505,11 @@ export interface TaskSpec {
    * Unique identifier for the job, can be used to update or remove it later if needed
    */
   jobKey?: string;
+
+  /**
+   * Flags for the job, can be used to dynamically filter which jobs can and cannot run at runtime
+   */
+  flags?: string[];
 }
 ```
 
@@ -673,6 +680,10 @@ NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
 - `job_key` - unique identifier for the job, used to update or remove it later
   if needed (see [Updating and removing jobs](#updating-and-removing-jobs)); can
   also be used for de-duplication
+- `flags` - a text array (`text[]`) representing a flags to attach to the job.
+  Can be used alongside the `forbiddenFlags` option in library mode to implement
+  complex rate limiting or other behaviors which requiring skipping jobs at
+  runtime (see [Forbidden Flags][#forbidden-flags])
 
 Typically you'll want to set the `identifier` and `payload`:
 
@@ -872,6 +883,31 @@ left unmodified.
 This method can be used to postpone or advance job execution, or to schedule a
 previously failed or permanently failed job for execution. The updated jobs will
 be returned (note that this may be fewer jobs than you requested).
+
+## Forbidden flags
+
+Jobs can have multiple text `flags`, specified attached to the job when it is
+created. When the worker is run in library mode, you can pass it an option for
+`forbiddenFlags`:
+
+```js
+await run({
+  // graphile worker options as normal, except...
+  forbiddenFlags: fobiddenFlagsOpt,
+});
+```
+
+where forbiddenFlags can be an array of strings or function (asychronously)
+returning an array of strings.
+
+If a function, `graphile-worker` will invoke your `foribddenFlags` function
+before each time that it finds a job to run, and will skip any job that has a
+flag returned by your function.
+
+For an example of how this can be used to create achive rate-limiting logic, see
+[this project](https://github.com/politics-rewired/graphile-worker-rate-limiter)
+and the discussion
+[on this issue](https://github.com/graphile/worker/issues/118).
 
 ## Rationality checks
 
