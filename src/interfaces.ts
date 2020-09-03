@@ -211,7 +211,7 @@ export interface TaskSpec {
   runAt?: Date;
 
   /**
-   * Higher (numerically larger) priority places job ahead of jobs with lower
+   * Lower (by PostgreSQL `asc`) priority places job ahead of jobs with lower
    * priority. (Default: 0)
    */
   priority?: number;
