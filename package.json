@@ -11,7 +11,8 @@
     "prettier:check": "prettier --ignore-path .eslintignore --check '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
     "test": "yarn prepack && depcheck && createdb graphile_worker_test || true && psql -X -v GRAPHILE_WORKER_SCHEMA=\"${GRAPHILE_WORKER_SCHEMA:-graphile_worker}\" -v ON_ERROR_STOP=1 -f __tests__/reset-db.sql graphile_worker_test && jest -i",
     "db:dump": "./scripts/dump_db",
-    "perfTest": "cd perfTest && node ./run.js"
+    "perfTest": "cd perfTest && node ./run.js",
+    "preversion": "grep '^### Pending' RELEASE_NOTES.md && echo \"⚠️ Cannot publish with 'Pending' in RELEASE_NOTES ⚠️\" && exit 1 || true"
   },
   "bin": {
     "graphile-worker": "./dist/cli.js"
