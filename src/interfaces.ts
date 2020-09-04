@@ -222,12 +222,14 @@ export interface TaskSpec {
   maxAttempts?: number;
 
   /**
-   * Unique identifier for the job, can be used to update or remove it later if needed. (Default: null)
+   * Unique identifier for the job, can be used to update or remove it later if
+   * needed. (Default: null)
    */
   jobKey?: string;
 
   /**
-   * Flags for the job, can be used to dynamically filter which jobs can and cannot run at runtime
+   * Flags for the job, can be used to dynamically filter which jobs can and
+   * cannot run at runtime. (Default: null)
    */
   flags?: string[];
 }
