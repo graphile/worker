@@ -7,6 +7,8 @@
   feature for rate limiting (thanks @ben-pr-p)
 - Fix incorrect description of priority - numerically smaller numbers run first
   (thanks @ben-pr-p)
+- Add support for `PG*`
+  [PostgreSQL envvars](https://www.postgresql.org/docs/current/libpq-envars.html)
 
 ### v0.7.2
 
