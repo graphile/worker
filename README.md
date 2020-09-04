@@ -503,6 +503,12 @@ export interface TaskSpec {
    * Unique identifier for the job, can be used to update or remove it later if needed
    */
   jobKey?: string;
+
+  /**
+   * Jobs are executed in numerically ascending order of priority (jobs with a
+   * numerically smaller priority are run first). (Default: 0)
+   */
+  priority?: number;
 }
 ```
 
@@ -673,6 +679,9 @@ NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
 - `job_key` - unique identifier for the job, used to update or remove it later
   if needed (see [Updating and removing jobs](#updating-and-removing-jobs)); can
   also be used for de-duplication
+- `priority` - an integer representing the jobs priority. Jobs are executed in
+  numerically ascending order of priority (jobs with a numerically smaller
+  priority are run first).
 
 Typically you'll want to set the `identifier` and `payload`:
 

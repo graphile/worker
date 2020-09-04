@@ -211,8 +211,8 @@ export interface TaskSpec {
   runAt?: Date;
 
   /**
-   * Higher (numerically larger) priority places job ahead of jobs with lower
-   * priority. (Default: 0)
+   * Jobs are executed in numerically ascending order of priority (jobs with a
+   * numerically smaller priority are run first). (Default: 0)
    */
   priority?: number;
 
