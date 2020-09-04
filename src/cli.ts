@@ -95,9 +95,9 @@ async function main() {
     throw new Error("Cannot specify both --watch and --once");
   }
 
-  if (!DATABASE_URL) {
+  if (!DATABASE_URL && !process.env.PGDATABASE) {
     throw new Error(
-      "Please use `--connection` flag or set `DATABASE_URL` envvar to indicate the PostgreSQL connection string.",
+      "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
     );
   }
 
