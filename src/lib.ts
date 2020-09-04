@@ -91,7 +91,7 @@ export function connectionStringFromEnvvars() {
     if (PGUSER || PGPASSWORD) {
       str += "@";
     }
-    if (PGHOST) {
+    if (PGHOST && !PGHOST.startsWith("/")) {
       str += PGHOST;
     }
     if (PGPORT) {
@@ -117,6 +117,9 @@ export function connectionStringFromEnvvars() {
       }
       return "";
     };
+    if (PGHOST && PGHOST.startsWith("/")) {
+      str += q("host", PGHOST);
+    }
     str += q(
       "ssl",
       ["1", "true"].includes(PGREQUIRESSL || "") ||

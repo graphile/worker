@@ -15,8 +15,8 @@ export const TEST_CONNECTION_STRING =
 
 const parsed = parse(TEST_CONNECTION_STRING);
 
-export const PGHOST = parsed.host || "localhost";
-export const PGDATABASE = parsed.database;
+export const PGHOST = parsed.host || process.env.PGHOST;
+export const PGDATABASE = parsed.database || undefined;
 
 export const GRAPHILE_WORKER_SCHEMA =
   process.env.GRAPHILE_WORKER_SCHEMA || "graphile_worker";
