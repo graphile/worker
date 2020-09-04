@@ -1,4 +1,12 @@
-# Changelog
+# Release notes
+
+### Pending
+
+- Track revision count for jobs (thanks @lukeramsden)
+- ["Forbidden flags"](https://github.com/graphile/worker#forbidden-flags)
+  feature for rate limiting (thanks @ben-pr-p)
+- Fix incorrect description of priority - numerically smaller numbers run first
+  (thanks @ben-pr-p)
 
 ### v0.7.2
 
