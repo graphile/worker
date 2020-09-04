@@ -201,7 +201,8 @@ export interface Runner {
 
 export interface TaskSpec {
   /**
-   * The queue to run this task under. (Default: null)
+   * The queue to run this task under (only specify if you want jobs in this
+   * queue to run serially). (Default: null)
    */
   queueName?: string;
 
