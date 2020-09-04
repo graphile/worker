@@ -109,7 +109,9 @@ export function connectionStringFromEnvvars() {
           sep +
           encodeURIComponent(key) +
           "=" +
-          encodeURIComponent(val === true ? "1" : val === false ? "0" : val);
+          encodeURIComponent(
+            val === true ? "true" : val === false ? "false" : val,
+          );
         if (sep === "?") {
           sep = "&";
         }
