@@ -1,6 +1,6 @@
 # Release notes
 
-### Pending
+### v0.8.0
 
 - Track revision count for jobs (thanks @lukeramsden)
 - ["Forbidden flags"](https://github.com/graphile/worker#forbidden-flags)
