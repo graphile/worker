@@ -201,7 +201,8 @@ export interface Runner {
 
 export interface TaskSpec {
   /**
-   * The queue to run this task under. (Default: null)
+   * The queue to run this task under (only specify if you want jobs in this
+   * queue to run serially). (Default: null)
    */
   queueName?: string;
 
@@ -222,12 +223,14 @@ export interface TaskSpec {
   maxAttempts?: number;
 
   /**
-   * Unique identifier for the job, can be used to update or remove it later if needed. (Default: null)
+   * Unique identifier for the job, can be used to update or remove it later if
+   * needed. (Default: null)
    */
   jobKey?: string;
 
   /**
-   * Flags for the job, can be used to dynamically filter which jobs can and cannot run at runtime
+   * Flags for the job, can be used to dynamically filter which jobs can and
+   * cannot run at runtime. (Default: null)
    */
   flags?: string[];
 }
