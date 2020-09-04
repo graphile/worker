@@ -505,8 +505,9 @@ export interface TaskSpec {
   jobKey?: string;
 
   /**
-   * Lower (by PostgreSQL `asc`) priority places job ahead of jobs with lower
-   * priority. (Default: 0)
+   * A numerically smaller value for priority places a job ahead of jobs with a
+   * numerically larger priority: jobs are executed in numerically ascending
+   * order of priority. (Default: 0)
    */
   priority?: number;
 }
@@ -679,8 +680,9 @@ NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
 - `job_key` - unique identifier for the job, used to update or remove it later
   if needed (see [Updating and removing jobs](#updating-and-removing-jobs)); can
   also be used for de-duplication
-- `priority` - an integer representing the jobs priority. Jobs with a lower
-  priority are run first.
+- `priority` - an integer representing the jobs priority. Jobs are executed in
+  numerically ascending order of priority (jobs with a numerically smaller
+  priority are run first).
 
 Typically you'll want to set the `identifier` and `payload`:
 
