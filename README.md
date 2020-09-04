@@ -505,9 +505,8 @@ export interface TaskSpec {
   jobKey?: string;
 
   /**
-   * A numerically smaller value for priority places a job ahead of jobs with a
-   * numerically larger priority: jobs are executed in numerically ascending
-   * order of priority. (Default: 0)
+   * Jobs are executed in numerically ascending order of priority (jobs with a
+   * numerically smaller priority are run first). (Default: 0)
    */
   priority?: number;
 }
