@@ -5,7 +5,6 @@ import { defaults } from "./config";
 import getTasks from "./getTasks";
 import { run, runOnce } from "./index";
 import { RunnerOptions } from "./interfaces";
-import { connectionStringFromEnvvars } from "./lib";
 import { runMigrations } from "./runner";
 
 const argv = yargs
@@ -80,7 +79,7 @@ const isInteger = (n: number): boolean => {
 };
 
 async function main() {
-  const DATABASE_URL = argv.connection || connectionStringFromEnvvars();
+  const DATABASE_URL = argv.connection || process.env.DATABASE_URL || undefined;
   const SCHEMA = argv.schema || undefined;
   const ONCE = argv.once;
   const SCHEMA_ONLY = argv["schema-only"];
@@ -96,9 +95,9 @@ async function main() {
     throw new Error("Cannot specify both --watch and --once");
   }
 
-  if (!DATABASE_URL) {
+  if (!DATABASE_URL && !process.env.PGDATABASE) {
     throw new Error(
-      "Please use `--connection` flag, set `DATABASE_URL` envvar, or set `PGHOST` and `PGDATABASE` envvars to indicate the PostgreSQL connection string.",
+      "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
     );
   }
 
