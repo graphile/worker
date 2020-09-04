@@ -1,4 +1,5 @@
 import * as pg from "pg";
+import { parse } from "pg-connection-string";
 
 import { Job, WorkerPoolOptions, WorkerUtils } from "../src/interfaces";
 import { migrate } from "../src/migrate";
@@ -11,6 +12,11 @@ process.env.GRAPHILE_WORKER_DEBUG = "1";
 
 export const TEST_CONNECTION_STRING =
   process.env.TEST_CONNECTION_STRING || "graphile_worker_test";
+
+const parsed = parse(TEST_CONNECTION_STRING);
+
+export const PGHOST = parsed.host || "localhost";
+export const PGDATABASE = parsed.database;
 
 export const GRAPHILE_WORKER_SCHEMA =
   process.env.GRAPHILE_WORKER_SCHEMA || "graphile_worker";

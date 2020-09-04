@@ -53,6 +53,88 @@ export function processSharedOptions(
   }
 }
 
+/**
+ * Builds a connection string from the `PG*` or `DATABASE_URL` envvars.
+ *
+ * @remarks
+ * In future we should rely on the `pg` module to correctly interperet these
+ * envvars; but since our internals rely on manipulation of the connection
+ * string (and this is also required for passing the connection string down to
+ * child processes, e.g. from the hooks) for now we'll do best efforts
+ * connection string construction from the envvars.
+ */
+export function connectionStringFromEnvvars() {
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL;
+  } else if (process.env.PGHOST && process.env.PGDATABASE) {
+    const {
+      PGHOST,
+      PGPORT,
+      PGDATABASE,
+      PGUSER,
+      PGPASSWORD,
+      PGAPPNAME,
+      PGCLIENTENCODING,
+      PGSSLMODE,
+      PGREQUIRESSL,
+      PGSSLCERT,
+      PGSSLKEY,
+      PGSSLROOTCERT,
+    } = process.env;
+    let str = "postgres://";
+    if (PGUSER) {
+      str += encodeURIComponent(PGUSER);
+    }
+    if (PGPASSWORD) {
+      str += ":" + encodeURIComponent(PGPASSWORD);
+    }
+    if (PGUSER || PGPASSWORD) {
+      str += "@";
+    }
+    if (PGHOST) {
+      str += PGHOST;
+    }
+    if (PGPORT) {
+      str += ":" + PGPORT;
+    }
+    str += "/";
+    str += PGDATABASE;
+    let sep = "?";
+    const q = (
+      key: string,
+      val: string | null | undefined | boolean,
+    ): string => {
+      if (val != null) {
+        const str =
+          sep +
+          encodeURIComponent(key) +
+          "=" +
+          encodeURIComponent(val === true ? "1" : val === false ? "0" : val);
+        if (sep === "?") {
+          sep = "&";
+        }
+        return str;
+      }
+      return "";
+    };
+    str += q(
+      "ssl",
+      ["1", "true"].includes(PGREQUIRESSL || "") ||
+        ["allow", "prefer", "require", "verify-ca", "verify-full"].includes(
+          PGSSLMODE || "",
+        ),
+    );
+    str += q("client_encoding", PGCLIENTENCODING);
+    str += q("application_name", PGAPPNAME);
+    str += q("sslcert", PGSSLCERT);
+    str += q("sslkey", PGSSLKEY);
+    str += q("sslrootcert", PGSSLROOTCERT);
+    return str;
+  } else {
+    return undefined;
+  }
+}
+
 export type Releasers = Array<() => void | Promise<void>>;
 
 export async function assertPool(
@@ -65,23 +147,19 @@ export async function assertPool(
     "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
   );
   let pgPool: Pool;
+  const connectionString =
+    options.connectionString || connectionStringFromEnvvars();
   if (options.pgPool) {
     pgPool = options.pgPool;
-  } else if (options.connectionString) {
+  } else if (connectionString) {
     pgPool = new Pool({
-      connectionString: options.connectionString,
-      max: options.maxPoolSize,
-    });
-    releasers.push(() => pgPool.end());
-  } else if (process.env.DATABASE_URL) {
-    pgPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString,
       max: options.maxPoolSize,
     });
     releasers.push(() => pgPool.end());
   } else {
     throw new Error(
-      "You must either specify `pgPool` or `connectionString`, or you must make the `DATABASE_URL` environmental variable available.",
+      "You must either specify `pgPool` or `connectionString`, or you must make the `DATABASE_URL` or `PG*` environmental variables available.",
     );
   }
 

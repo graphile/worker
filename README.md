@@ -310,8 +310,13 @@ The following options for these methods are available.
 Exactly one of either `taskDirectory` or `taskList` must be provided (except for
 `runMigrations` which doesn't require a task list).
 
-Either `connectionString` or `pgPool` must be provided, or the `DATABASE_URL`
-envvar must be set.
+One of these must be provided (in order of priority):
+
+- `pgPool` pg.Pool instance
+- `connectionString` setting
+- `DATABASE_URL` envvar
+- PostgreSQL environmental variables, including at least `PGDATABASE` and
+  `PGHOST`
 
 ## Library usage: queueing jobs
 
