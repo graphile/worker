@@ -315,7 +315,8 @@ One of these must be provided (in order of priority):
 - `pgPool` pg.Pool instance
 - `connectionString` setting
 - `DATABASE_URL` envvar
-- PostgreSQL environmental variables, including at least `PGDATABASE`
+- [PostgreSQL environmental variables](https://www.postgresql.org/docs/current/libpq-envars.html),
+  including at least `PGDATABASE` (NOTE: not all envvars are supported)
 
 ## Library usage: queueing jobs
 
