@@ -139,8 +139,8 @@ export interface WorkerUtils extends Helpers {
   ) => Promise<Job[]>;
 }
 
-export type Task = (
-  payload: unknown,
+export type Task<T = unknown> = (
+  payload: T,
   helpers: JobHelpers,
 ) => void | Promise<void>;
 
@@ -160,11 +160,11 @@ export interface WatchedTaskList {
   release: () => void;
 }
 
-export interface Job {
+export interface Job<T = unknown> {
   id: string;
   queue_name: string | null;
   task_identifier: string;
-  payload: unknown;
+  payload: T;
   priority: number;
   run_at: Date;
   attempts: number;
