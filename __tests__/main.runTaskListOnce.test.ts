@@ -9,12 +9,12 @@ import {
   withPgClient,
 } from "./helpers";
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const options: WorkerSharedOptions = {};
 
 test("runs jobs", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Schedule a job
@@ -42,7 +42,7 @@ test("runs jobs", () =>
     expect(q.locked_by).toBeFalsy();
 
     // Run the task
-    const job1: Task = jest.fn(o => {
+    const job1: Task = jest.fn((o) => {
       expect(o).toMatchInlineSnapshot(`
         Object {
           "a": 1,
@@ -63,7 +63,7 @@ test("runs jobs", () =>
   }));
 
 test("schedules errors for retry", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Schedule a job
@@ -132,7 +132,7 @@ test("schedules errors for retry", () =>
   }));
 
 test("retries job", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Add the job
@@ -195,7 +195,7 @@ test("retries job", () =>
   }));
 
 test("supports future-scheduled jobs", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Add the job
@@ -240,10 +240,10 @@ test("supports future-scheduled jobs", () =>
   }));
 
 test("allows update of pending jobs", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
-    const job1: Task = jest.fn(o => {
+    const job1: Task = jest.fn((o) => {
       expect(o).toMatchObject({ a: "right" });
     });
     const tasks: TaskList = {
@@ -291,7 +291,7 @@ test("allows update of pending jobs", () =>
   }));
 
 test("schedules a new job if existing is completed", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     const tasks: TaskList = {
@@ -330,7 +330,7 @@ test("schedules a new job if existing is completed", () =>
   }));
 
 test("schedules a new job if existing is being processed", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     const defers: Deferred[] = [];
@@ -392,7 +392,7 @@ test("schedules a new job if existing is being processed", () =>
   }));
 
 test("schedules a new job if the existing is pending retry", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     const tasks: TaskList = {
@@ -460,7 +460,7 @@ test("schedules a new job if the existing is pending retry", () =>
   }));
 
 test("job details are reset if not specified in update", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Schedule a future job
@@ -559,7 +559,7 @@ test("job details are reset if not specified in update", () =>
   }));
 
 test("pending jobs can be removed", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Schedule a job
@@ -591,7 +591,7 @@ test("pending jobs can be removed", () =>
   }));
 
 test("jobs in progress cannot be removed", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     let deferred: Deferred | null = null;
@@ -645,7 +645,7 @@ test("jobs in progress cannot be removed", () =>
   }));
 
 test("runs jobs asynchronously", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Schedule a job
@@ -713,7 +713,7 @@ test("runs jobs asynchronously", () =>
   }));
 
 test("runs jobs in parallel", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Schedule 5 jobs
@@ -757,7 +757,7 @@ test("runs jobs in parallel", () =>
         `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
       );
       expect(jobs).toHaveLength(5);
-      jobs.forEach(job => {
+      jobs.forEach((job) => {
         expect(job.task_identifier).toEqual("job1");
         expect(job.payload).toEqual({ a: 1 });
         expect(+job.run_at).toBeGreaterThanOrEqual(+start);
@@ -770,8 +770,8 @@ test("runs jobs in parallel", () =>
       );
       expect(jobQueues).toHaveLength(5);
       const locks: Array<string> = [];
-      jobQueues.forEach(q => {
-        const job = jobs.find(j => j.queue_name === q.queue_name);
+      jobQueues.forEach((q) => {
+        const job = jobs.find((j) => j.queue_name === q.queue_name);
         expect(job).toBeTruthy();
         expect(q.job_count).toEqual(1);
         expect(+q.locked_at).toBeGreaterThanOrEqual(+start);
@@ -783,7 +783,7 @@ test("runs jobs in parallel", () =>
     }
 
     expect(executed).toBeFalsy();
-    jobPromises.forEach(jobPromise => jobPromise!.resolve());
+    jobPromises.forEach((jobPromise) => jobPromise!.resolve());
     await Promise.all(runPromises);
     expect(executed).toBeTruthy();
 
@@ -793,7 +793,7 @@ test("runs jobs in parallel", () =>
   }));
 
 test("single worker runs jobs in series, purges all before exit", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Schedule 5 jobs
@@ -841,7 +841,7 @@ test("single worker runs jobs in series, purges all before exit", () =>
   }));
 
 test("jobs added to the same queue will be ran serially (even if multiple workers)", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Schedule 5 jobs

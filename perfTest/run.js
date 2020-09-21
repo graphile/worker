@@ -7,7 +7,7 @@ const JOB_COUNT = 20000;
 const PARALLELISM = 4;
 const CONCURRENCY = 10;
 
-const time = async cb => {
+const time = async (cb) => {
   const start = process.hrtime();
   await cb();
   const diff = process.hrtime(start);
@@ -22,8 +22,9 @@ process.chdir(__dirname);
 process.env.NO_LOG_SUCCESS = "1";
 
 // if connection string not provided, assume postgres is available locally
-process.env.PERF_DATABASE_URL = `${process.env.TEST_CONNECTION_STRING ||
-  "graphile_worker_perftest"}`;
+process.env.PERF_DATABASE_URL = `${
+  process.env.TEST_CONNECTION_STRING || "graphile_worker_perftest"
+}`;
 
 const env = {
   ...process.env,
@@ -91,7 +92,7 @@ async function main() {
   });
 }
 
-main().catch(e => {
+main().catch((e) => {
   console.error(e);
   process.exit(1);
 });

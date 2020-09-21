@@ -15,7 +15,7 @@ import {
 const options: WorkerSharedOptions = {};
 
 test("runs a job added through the worker utils", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Schedule a job
@@ -37,7 +37,7 @@ test("runs a job added through the worker utils", () =>
   }));
 
 test("supports the jobKey API", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Schedule a job
@@ -47,6 +47,7 @@ test("supports the jobKey API", () =>
     await utils.addJob("job1", { a: 1 }, { jobKey: "UNIQUE" });
     await utils.addJob("job1", { a: 2 }, { jobKey: "UNIQUE" });
     await utils.addJob("job1", { a: 3 }, { jobKey: "UNIQUE" });
+    await utils.addJob("job1", { a: 4 }, { jobKey: "UNIQUE" });
     await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
@@ -54,6 +55,8 @@ test("supports the jobKey API", () =>
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
     );
     expect(jobs).toHaveLength(1);
+    expect(jobs[0].payload.a).toBe(4);
+    expect(jobs[0].revision).toBe(3);
 
     const task: Task = jest.fn();
     const taskList = { task };
@@ -61,7 +64,7 @@ test("supports the jobKey API", () =>
   }));
 
 test("runs a job added through the addJob shortcut function", () =>
-  withPgClient(async pgClient => {
+  withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Schedule a job

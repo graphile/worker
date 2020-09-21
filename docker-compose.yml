@@ -13,6 +13,7 @@ services:
 
   app:
     build:
+      dockerfile: Dockerfile.dev
       context: .
     depends_on:
       - db

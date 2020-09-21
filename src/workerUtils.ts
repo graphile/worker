@@ -25,10 +25,10 @@ export async function makeWorkerUtils(
     logger,
     release,
     addJob,
-    migrate: () => withPgClient(pgClient => migrate(options, pgClient)),
+    migrate: () => withPgClient((pgClient) => migrate(options, pgClient)),
 
     async completeJobs(ids) {
-      const { rows } = await withPgClient(client =>
+      const { rows } = await withPgClient((client) =>
         client.query<Job>(
           `select * from ${escapedWorkerSchema}.complete_jobs($1)`,
           [ids],
@@ -38,7 +38,7 @@ export async function makeWorkerUtils(
     },
 
     async permanentlyFailJobs(ids, reason) {
-      const { rows } = await withPgClient(client =>
+      const { rows } = await withPgClient((client) =>
         client.query<Job>(
           `select * from ${escapedWorkerSchema}.permanently_fail_jobs($1, $2)`,
           [ids, reason || null],
@@ -48,7 +48,7 @@ export async function makeWorkerUtils(
     },
 
     async rescheduleJobs(ids, options) {
-      const { rows } = await withPgClient(client =>
+      const { rows } = await withPgClient((client) =>
         client.query<Job>(
           `select * from ${escapedWorkerSchema}.reschedule_jobs(
             $1,

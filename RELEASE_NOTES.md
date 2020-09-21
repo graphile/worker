@@ -1,4 +1,38 @@
-# Changelog
+# Release notes
+
+### v0.8.0
+
+- Track revision count for jobs (thanks @lukeramsden)
+- ["Forbidden flags"](https://github.com/graphile/worker#forbidden-flags)
+  feature for rate limiting (thanks @ben-pr-p)
+- Fix incorrect description of priority - numerically smaller numbers run first
+  (thanks @ben-pr-p)
+- Add support for `PG*`
+  [PostgreSQL envvars](https://www.postgresql.org/docs/current/libpq-envars.html)
+
+### v0.7.2
+
+- Add `--no-prepared-statements` flag to allow disabling of prepared statements
+  for pgBouncer compatibility.
+- Fix issue in watch mode where files `require()`d from inside a task are cached
+  permanently.
+
+(v0.7.0 and v0.7.1 had issues with the experimental watch mode enhancements, so
+were never upgraded to `@latest`.)
+
+### v0.6.1
+
+- Official Docker image (thanks @madflow)
+
+### v0.6.0
+
+- Use target es2018 for TypeScript (Node v10 supports everything we need)
+  (thanks @keepitsimple)
+- When task promise is rejected with non-Error, use a fallback (thanks
+  @parker-torii)
+- Support `pg@8.x` and hence Node v14 (thanks @purge)
+- Fix mistake in README
+- General maintenance
 
 ### v0.5.0
 

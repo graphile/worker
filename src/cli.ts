@@ -8,6 +8,9 @@ import { RunnerOptions } from "./interfaces";
 import { runMigrations } from "./runner";
 
 const argv = yargs
+  .parserConfiguration({
+    "boolean-negation": false,
+  })
   .option("connection", {
     description:
       "Database connection string, defaults to the 'DATABASE_URL' envvar",
@@ -56,10 +59,16 @@ const argv = yargs
     default: defaults.pollInterval,
   })
   .number("poll-interval")
+  .option("no-prepared-statements", {
+    description:
+      "set this flag if you want to disable prepared statements, e.g. for compatibility with pgBouncer",
+    default: false,
+  })
+  .boolean("no-prepared-statements")
   .strict(true).argv;
 
 if (argv._.length > 0) {
-  console.error(`Unrecognised additional arguments: '${argv._.join("', '")}'`);
+  console.error(`Unrecognized additional arguments: '${argv._.join("', '")}'`);
   console.error();
   yargs.showHelp();
   process.exit(1);
@@ -86,9 +95,9 @@ async function main() {
     throw new Error("Cannot specify both --watch and --once");
   }
 
-  if (!DATABASE_URL) {
+  if (!DATABASE_URL && !process.env.PGDATABASE) {
     throw new Error(
-      "Please use `--connection` flag or set `DATABASE_URL` envvar to indicate the PostgreSQL connection string.",
+      "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
     );
   }
 
@@ -102,6 +111,7 @@ async function main() {
       ? argv["poll-interval"]
       : defaults.pollInterval,
     connectionString: DATABASE_URL,
+    noPreparedStatements: !!argv["no-prepared-statements"],
   };
 
   if (SCHEMA_ONLY) {
@@ -121,7 +131,7 @@ async function main() {
   }
 }
 
-main().catch(e => {
+main().catch((e) => {
   console.error(e); // eslint-disable-line no-console
   process.exit(1);
 });

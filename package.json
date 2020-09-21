@@ -1,6 +1,6 @@
 {
   "name": "graphile-worker",
-  "version": "0.5.0",
+  "version": "0.8.0",
   "description": "Job queue for PostgreSQL",
   "main": "dist/index.js",
   "scripts": {
@@ -10,7 +10,9 @@
     "lint:fix": "eslint --ext .js,.jsx,.ts,.tsx,.graphql . --fix; prettier --ignore-path .eslintignore --write '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
     "prettier:check": "prettier --ignore-path .eslintignore --check '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
     "test": "yarn prepack && depcheck && createdb graphile_worker_test || true && psql -X -v GRAPHILE_WORKER_SCHEMA=\"${GRAPHILE_WORKER_SCHEMA:-graphile_worker}\" -v ON_ERROR_STOP=1 -f __tests__/reset-db.sql graphile_worker_test && jest -i",
-    "perfTest": "cd perfTest && node ./run.js"
+    "db:dump": "./scripts/dump_db",
+    "perfTest": "cd perfTest && node ./run.js",
+    "preversion": "grep '^### Pending' RELEASE_NOTES.md && echo \"⚠️ Cannot publish with 'Pending' in RELEASE_NOTES ⚠️\" && exit 1 || true"
   },
   "bin": {
     "graphile-worker": "./dist/cli.js"
@@ -39,29 +41,30 @@
   "homepage": "https://github.com/graphile/worker#readme",
   "dependencies": {
     "@types/debug": "^4.1.2",
-    "@types/pg": "^7.14.1",
-    "chokidar": "^3.3.1",
+    "@types/pg": "^7.14.3",
+    "chokidar": "^3.4.0",
     "cosmiconfig": "^6.0.0",
-    "pg": ">=6.5 <8",
-    "tslib": "^1.9.3",
+    "pg": ">=6.5 <9",
+    "tslib": "^1.11.1",
     "yargs": "^15.1.0"
   },
   "devDependencies": {
-    "@types/jest": "^25.1.1",
-    "@typescript-eslint/eslint-plugin": "^2.19.0",
-    "@typescript-eslint/parser": "^2.19.0",
+    "@types/jest": "^25.2.1",
+    "@typescript-eslint/eslint-plugin": "^2.29.0",
+    "@typescript-eslint/parser": "^2.29.0",
     "depcheck": "^0.9.2",
     "eslint": "^6.8.0",
-    "eslint-config-prettier": "^6.10.0",
-    "eslint-plugin-import": "^2.20.1",
-    "eslint-plugin-jest": "^23.6.0",
-    "eslint-plugin-simple-import-sort": "^5.0.1",
-    "eslint_d": "^8.0.0",
-    "jest": "^25.1.0",
-    "pg-connection-string": "^2.0.0",
-    "prettier": "^1.19.1",
-    "ts-jest": "^25.2.0",
-    "typescript": "^3.7.5"
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-jest": "^23.8.2",
+    "eslint-plugin-simple-import-sort": "^5.0.2",
+    "eslint_d": "^8.1.1",
+    "jest": "^25.4.0",
+    "pg-connection-string": "^2.2.0",
+    "prettier": "^2.0.5",
+    "ts-jest": "^25.4.0",
+    "ts-node": "^9.0.0",
+    "typescript": "^3.8.3"
   },
   "files": [
     "dist",

@@ -1,4 +1,5 @@
 import * as pg from "pg";
+import { parse } from "pg-connection-string";
 
 import { Job, WorkerPoolOptions, WorkerUtils } from "../src/interfaces";
 import { migrate } from "../src/migrate";
@@ -11,6 +12,11 @@ process.env.GRAPHILE_WORKER_DEBUG = "1";
 
 export const TEST_CONNECTION_STRING =
   process.env.TEST_CONNECTION_STRING || "graphile_worker_test";
+
+const parsed = parse(TEST_CONNECTION_STRING);
+
+export const PGHOST = parsed.host || process.env.PGHOST;
+export const PGDATABASE = parsed.database || undefined;
 
 export const GRAPHILE_WORKER_SCHEMA =
   process.env.GRAPHILE_WORKER_SCHEMA || "graphile_worker";
@@ -34,7 +40,7 @@ export async function withPgPool<T>(
 export async function withPgClient<T>(
   cb: (client: pg.PoolClient) => Promise<T>,
 ): Promise<T> {
-  return withPgPool(async pool => {
+  return withPgPool(async (pool) => {
     const client = await pool.connect();
     try {
       return await cb(client);
@@ -48,7 +54,7 @@ export async function withTransaction<T>(
   cb: (client: pg.PoolClient) => Promise<T>,
   closeCommand = "rollback",
 ): Promise<T> {
-  return withPgClient(async client => {
+  return withPgClient(async (client) => {
     await client.query("begin");
     try {
       return await cb(client);
@@ -108,12 +114,14 @@ export function makeMockJob(taskIdentifier: string): Job {
     updated_at: createdAt,
     locked_at: null,
     locked_by: null,
+    revision: 0,
     key: null,
+    flags: null,
   };
 }
 
 export const sleep = (ms: number) =>
-  new Promise(resolve => setTimeout(resolve, ms));
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function sleepUntil(condition: () => boolean, maxDuration = 2000) {
   const start = Date.now();

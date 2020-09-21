@@ -13,6 +13,8 @@ used with any PostgreSQL-backed application. Pairs beautifully with
 [PostGraphile](https://www.graphile.org/postgraphile/) or
 [PostgREST](http://postgrest.org/).
 
+<!-- SPONSORS_BEGIN -->
+
 ## Crowd-funded open-source software
 
 To help us develop this software sustainably under the MIT license, we ask all
@@ -24,9 +26,15 @@ and development via sponsorship.
 And please give some love to our featured sponsors 🤩:
 
 <table><tr>
-<td align="center"><a href="http://chads.website/"><img src="https://www.graphile.org/images/sponsors/chadf.png" width="90" height="90" alt="Chad Furman" /><br />Chad Furman</a></td>
-<td align="center"><a href="https://storyscript.io/?utm_source=postgraphile"><img src="https://www.graphile.org/images/sponsors/storyscript.png" width="90" height="90" alt="Storyscript" /><br />Storyscript</a></td>
+<td align="center"><a href="http://chads.website"><img src="https://graphile.org/images/sponsors/chadf.png" width="90" height="90" alt="Chad Furman" /><br />Chad Furman</a> *</td>
+<td align="center"><a href="https://storyscript.com/?utm_source=postgraphile"><img src="https://graphile.org/images/sponsors/storyscript.png" width="90" height="90" alt="Storyscript" /><br />Storyscript</a> *</td>
+<td align="center"><a href="https://postlight.com/?utm_source=graphile"><img src="https://graphile.org/images/sponsors/postlight.jpg" width="90" height="90" alt="Postlight" /><br />Postlight</a> *</td>
+<td align="center"><a href="https://qwick.com/"><img src="https://graphile.org/images/sponsors/qwick.png" width="90" height="90" alt="Qwick" /><br />Qwick</a></td>
 </tr></table>
+
+<em>\* Sponsors the entire Graphile suite</em>
+
+<!-- SPONSORS_END -->
 
 ## Quickstart: CLI
 
@@ -59,7 +67,7 @@ module.exports = async (payload, helpers) => {
 ```bash
 npx graphile-worker -c "my_db"
 # or, if you have a remote database, something like:
-#   npx graphile-worker -c "postgres://user:pass@host:port/db?ssl=1"
+#   npx graphile-worker -c "postgres://user:pass@host:port/db?ssl=true"
 # or, if you prefer envvars
 #   DATABASE_URL="..." npx graphile-worker
 ```
@@ -119,7 +127,7 @@ async function main() {
   );
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
@@ -162,6 +170,8 @@ https://graphile.org/support/
 - Automatically re-attempts failed jobs with exponential back-off
 - Customisable retry count (default: 25 attempts over ~3 days)
 - Task de-duplication via unique `job_key`
+- Flexible runtime controls that can be used for complex rate limiting (e.g. via
+  (graphile-worker-rate-limiter)[https://github.com/politics-rewired/graphile-worker-rate-limiter])
 - Open source; liberal MIT license
 - Executes tasks written in Node.js (these can call out to any other language or
   networked service)
@@ -295,12 +305,18 @@ The following options for these methods are available.
     handler functions as values
 - `schema` can be used to change the default `graphile_worker` schema to
   something else (equivalent to `--schema` on the CLI)
+- `forbiddenFlags` see [Forbidden flags](#forbidden-flags) below
 
 Exactly one of either `taskDirectory` or `taskList` must be provided (except for
 `runMigrations` which doesn't require a task list).
 
-Either `connectionString` or `pgPool` must be provided, or the `DATABASE_URL`
-envvar must be set.
+One of these must be provided (in order of priority):
+
+- `pgPool` pg.Pool instance
+- `connectionString` setting
+- `DATABASE_URL` envvar
+- [PostgreSQL environmental variables](https://www.postgresql.org/docs/current/libpq-envars.html),
+  including at least `PGDATABASE` (NOTE: not all envvars are supported)
 
 ## Library usage: queueing jobs
 
@@ -356,7 +372,7 @@ async function main() {
   }
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
@@ -419,7 +435,7 @@ async function main() {
   );
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
@@ -476,15 +492,21 @@ export type AddJobFunction = (
 
 export interface TaskSpec {
   /**
-   * The queue to run this task under (specify if you want the job to run
-   * serially).
+   * The queue to run this task under (only specify if you want jobs in this
+   * queue to run serially). (Default: null)
    */
   queueName?: string;
 
   /**
-   * A Date to schedule this task to run in the future
+   * A Date to schedule this task to run in the future. (Default: now)
    */
   runAt?: Date;
+
+  /**
+   * Jobs are executed in numerically ascending order of priority (jobs with a
+   * numerically smaller priority are run first). (Default: 0)
+   */
+  priority?: number;
 
   /**
    * How many retries should this task get? (Default: 25)
@@ -492,9 +514,16 @@ export interface TaskSpec {
   maxAttempts?: number;
 
   /**
-   * Unique identifier for the job, can be used to update or remove it later if needed
+   * Unique identifier for the job, can be used to update or remove it later if
+   * needed. (Default: null)
    */
   jobKey?: string;
+
+  /**
+   * Flags for the job, can be used to dynamically filter which jobs can and
+   * cannot run at runtime. (Default: null)
+   */
+  flags?: string[];
 }
 ```
 
@@ -582,7 +611,7 @@ current directory
 
 ```js
 // tasks/task_1.js
-module.exports = async payload => {
+module.exports = async (payload) => {
   await doMyLogicWith(payload);
 };
 ```
@@ -635,7 +664,7 @@ Example:
 ```js
 const {
   rows: [row],
-} = await withPgClient(pgClient => pgClient.query("select 1 as one"));
+} = await withPgClient((pgClient) => pgClient.query("select 1 as one"));
 ```
 
 #### `helpers.addJob(identifier, payload?, options?)`
@@ -658,13 +687,20 @@ NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
 - `payload` - a JSON object with information to tell the task executor what to
   do (defaults to an empty object)
 - `queue_name` - if you want certain tasks to run one at a time, add them to the
-  same named queue (defaults to a random value)
+  same named queue (defaults to `null`)
 - `run_at` - a timestamp after which to run the job; defaults to now.
 - `max_attempts` - if this task fails, how many times should we retry it?
   Default: 25.
 - `job_key` - unique identifier for the job, used to update or remove it later
   if needed (see [Updating and removing jobs](#updating-and-removing-jobs)); can
   also be used for de-duplication
+- `priority` - an integer representing the jobs priority. Jobs are executed in
+  numerically ascending order of priority (jobs with a numerically smaller
+  priority are run first).
+- `flags` - an optional text array (`text[]`) representing a flags to attach to
+  the job. Can be used alongside the `forbiddenFlags` option in library mode to
+  implement complex rate limiting or other behaviors which requiring skipping
+  jobs at runtime (see [Forbidden flags](#forbidden-flags)).
 
 Typically you'll want to set the `identifier` and `payload`:
 
@@ -865,6 +901,40 @@ This method can be used to postpone or advance job execution, or to schedule a
 previously failed or permanently failed job for execution. The updated jobs will
 be returned (note that this may be fewer jobs than you requested).
 
+## Forbidden flags
+
+When a job is created (or updated via `job_key`), you may set its `flags` to a
+list of strings. When the worker is run in library mode, you may pass the
+`forbiddenFlags` option to indicate that jobs with any of the given flags should
+not be executed.
+
+```js
+await run({
+  // ...
+  forbiddenFlags: forbiddenFlags,
+});
+```
+
+The `forbiddenFlags` option can be:
+
+- null
+- an array of strings
+- a function returning null or an array of strings
+- an (async) function returning a promise that resolve to null or an array of
+  strings
+
+If `forbiddenFlags` is a function, `graphile-worker` will invoke it each time a
+worker looks for a job to run, and will skip over any job that has any flag
+returned by your function. You should ensure that `forbiddenFlags` resolves
+quickly; it's advised that you maintain a cache you update periodically (e.g.
+once a second) rather than always calculating on the fly, or use pub/sub or a
+similar technique to maintain the forbidden flags list.
+
+For an example of how this can be used to achieve rate-limiting logic, see the
+[graphile-worker-rate-limiter project](https://github.com/politics-rewired/graphile-worker-rate-limiter)
+and the discussion on
+[issue #118](https://github.com/graphile/worker/issues/118).
+
 ## Rationality checks
 
 We recommend that you limit `queue_name`, `task_identifier` and `job_key` to
@@ -1012,6 +1082,16 @@ If the worker completely dies unexpectedly (e.g. `process.exit()`, segfault,
 available to be processed again automatically. You can free them up earlier than
 this by clearing the `locked_at` and `locked_by` columns on the relevant tables.
 
+If the worker schema has not yet been installed into your database, the
+following error may appear in your PostgreSQL server logs. This is completely
+harmless and should only appear once as the worker will create the schema for
+you.
+
+```
+ERROR: relation "graphile_worker.migrations" does not exist at character 16
+STATEMENT: select id from "graphile_worker".migrations order by id desc limit 1;
+```
+
 ## Development
 
 ```
@@ -1026,7 +1106,35 @@ createdb graphile_worker_test
 yarn test
 ```
 
-### Using Docker
+### Using the official Docker image
+
+```
+docker pull graphile/worker
+```
+
+When using the Docker image you can pass any supported options to the command
+line or use the supported environment variables. For the current list of
+supported command line options you can run:
+
+`docker run --init --rm -it graphile/worker --help`
+
+Adding tasks to execute is done by mounting the `tasks` directory as a volume
+into the `/worker` directory.
+
+The following example has a `tasks` directory in the current directory on the
+Docker host. The PostgreSQL server is also running on the same host.
+
+```bash
+docker run \
+  --init \
+  --rm -it \
+  --network=host \
+  -v "$PWD/tasks":/worker/tasks \
+  graphile/worker \
+    -c "postgres://postgres:postgres@localhost:5432/postgres"
+```
+
+### Using Docker to develop this module
 
 Start the dev db and app in the background
 

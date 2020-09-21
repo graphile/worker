@@ -22,7 +22,7 @@ const addJob = (pgPool: Pool, id?: string | number) =>
 const options: WorkerSharedOptions = {};
 
 test("main will execute jobs as they come up, and exits cleanly", () =>
-  withPgPool(async pgPool => {
+  withPgPool(async (pgPool) => {
     await reset(pgPool, options);
 
     // Build the tasks
@@ -71,7 +71,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
   }));
 
 test("doesn't bail on deprecated `debug` function", () =>
-  withPgPool(async pgPool => {
+  withPgPool(async (pgPool) => {
     await reset(pgPool, options);
     let jobPromise: Deferred | null = null;
     const tasks: TaskList = {

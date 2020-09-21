@@ -22,6 +22,8 @@ export function makeNewWorker(
   const {
     workerId = `worker-${randomBytes(9).toString("hex")}`,
     pollInterval = defaults.pollInterval,
+    noPreparedStatements,
+    forbiddenFlags,
   } = options;
   const {
     workerSchema,
@@ -76,14 +78,32 @@ export function makeNewWorker(
       const supportedTaskNames = Object.keys(tasks);
       assert(supportedTaskNames.length, "No runnable tasks!");
 
+      let flagsToSkip: null | string[] = null;
+
+      if (Array.isArray(forbiddenFlags)) {
+        flagsToSkip = forbiddenFlags;
+      } else if (typeof forbiddenFlags === "function") {
+        const forbiddenFlagsResult = forbiddenFlags();
+
+        if (Array.isArray(forbiddenFlagsResult)) {
+          flagsToSkip = forbiddenFlagsResult;
+        } else if (forbiddenFlagsResult != null) {
+          flagsToSkip = await forbiddenFlagsResult;
+        }
+      }
+
       const { rows: jobRows } = await withPgClient(client =>
         client.query({
           text:
             // TODO: breaking change; change this to more optimal:
-            // `SELECT id, queue_name, task_identifier, payload FROM ${escapedWorkerSchema}.get_job($1, $2);`,
-            `SELECT * FROM ${escapedWorkerSchema}.get_jobs($1, $2);`,
-          values: [workerId, supportedTaskNames],
-          name: `get_job/${workerSchema}`,
+            // `SELECT id, queue_name, task_identifier, payload FROM ...`,
+            `SELECT * FROM ${escapedWorkerSchema}.get_jobs($1, $2, forbidden_flags := $3::text[]);`,
+          values: [
+            workerId,
+            supportedTaskNames,
+            flagsToSkip && flagsToSkip.length ? flagsToSkip : null,
+          ],
+          name: noPreparedStatements ? undefined : `get_job/${workerSchema}`,
         }),
       );
 
@@ -176,11 +196,20 @@ export function makeNewWorker(
         const durationRaw = process.hrtime(startTimestamp);
         const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
         if (err) {
-          const { message, stack } = err;
+          const { message: rawMessage, stack } = err;
+
+          /**
+           * Guaranteed to be a non-empty string
+           */
+          const message: string =
+            rawMessage ||
+            String(err) ||
+            "Non error or error without message thrown.";
+
           logger.error(
-            `Failed task ${job.id} (${job.task_identifier}) with error ${
-              err.message
-            } (${duration.toFixed(2)}ms)${
+            `Failed task ${job.id} (${
+              job.task_identifier
+            }) with error ${message} (${duration.toFixed(2)}ms)${
               stack
                 ? `:\n  ${String(stack)
                     .replace(/\n/g, "\n  ")
@@ -189,8 +218,16 @@ export function makeNewWorker(
             }`,
             { failure: true, job, error: err, duration },
           );
-
           failures.push({ id: job.id, message });
+
+          // // TODO: retry logic, in case of server connection interruption
+          // await withPgClient((client) =>
+          //   client.query({
+          //     text: `SELECT FROM ${escapedWorkerSchema}.fail_job($1, $2, $3);`,
+          //     values: [workerId, job.id, message],
+          //     name: noPreparedStatements ? undefined : `fail_job/${workerSchema}`,
+          //   }),
+          // );
         } else {
           if (!process.env.NO_LOG_SUCCESS) {
             logger.info(
@@ -202,6 +239,17 @@ export function makeNewWorker(
           }
 
           successes.push(job.id);
+
+          // // TODO: retry logic, in case of server connection interruption
+          // await withPgClient((client) =>
+          // client.query({
+          //   text: `SELECT FROM ${escapedWorkerSchema}.complete_job($1, $2);`,
+          //   values: [workerId, job.id],
+          //   name: noPreparedStatements
+          //     ? undefined
+          //     : `complete_job/${workerSchema}`,
+          // }),
+          // );
         }
       }
 

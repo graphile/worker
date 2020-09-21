@@ -9,14 +9,14 @@ import {
 const options: WorkerSharedOptions = {};
 
 test("migration installs schema; second migration does no harm", async () => {
-  await withPgClient(async pgClient => {
+  await withPgClient(async (pgClient) => {
     await pgClient.query(
       `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
     );
   });
   // We need to use a fresh connection after dropping the schema because the SQL
   // functions' plans get cached using the stale OIDs.
-  await withPgClient(async pgClient => {
+  await withPgClient(async (pgClient) => {
     // Assert DB is empty
     const {
       rows: [graphileWorkerNamespaceBeforeMigration],

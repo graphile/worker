@@ -1,8 +1,7 @@
+import { readFileSync } from "fs";
 import { dirname } from "path";
-
-import { readFile } from "./fs";
 import _module = require("module");
-const { Module } = _module;
+const { Module, builtinModules } = _module;
 
 function stripBOM(str: string) {
   if (str.charCodeAt(0) === 0xfeff) {
@@ -12,12 +11,29 @@ function stripBOM(str: string) {
 }
 
 /**
- * This function emulates the behaviour of `require()`, enabling us to call it
+ * This function emulates the behavior of `require()`, enabling us to call it
  * multiple times without worrying about having to clear out the cache (useful
  * for watch mode).
  */
-export async function fauxRequire(filename: string) {
-  const contents = await readFile(filename, "utf8");
+export function fauxRequire(spec: string, cache = {}) {
+  if (builtinModules.includes(spec)) {
+    // Don't try and faux require builtin modules
+    return require(spec);
+  }
+  const filename = require.resolve(spec);
+  if (filename.indexOf("/node_modules/") >= 0) {
+    // Don't try and faux require node_modules (we only want one copy of these
+    // in memory)
+    return require(spec);
+  }
+  if (!filename.endsWith(".js")) {
+    // Don't try and faux require .json, etc files
+    return require(spec);
+  }
+  if (cache[filename]) {
+    return cache[filename].exports;
+  }
+  const contents = readFileSync(filename, "utf8");
 
   const code = stripBOM(contents);
 
@@ -37,10 +53,35 @@ export async function fauxRequire(filename: string) {
    */
   // @ts-ignore
   replacementModule.paths = Module._nodeModulePaths(dirname(filename));
+  const codeWithWrapper = `\
+const { resolve } = require('path');
+
+const fauxRequire = (path) => {
+  const spec =
+    path.startsWith(".") || path.startsWith("/")
+      ? resolve(__dirname, path)
+      : path;
+  return global.graphileWorker_fauxRequire(spec, fauxRequire.cache);
+}
+fauxRequire.resolve = require.resolve;
+fauxRequire.cache = global.graphileWorker_fauxRequireCache;
+
+(function(module, exports, require) {
+${code};
+})(module, exports, fauxRequire);
+`;
+
+  // Since the code is evaluated synchronously, we set this immediately before
+  // compiling and clear after.
+  global["graphileWorker_fauxRequireCache"] = cache;
   // @ts-ignore
-  replacementModule._compile(code, filename);
+  replacementModule._compile(codeWithWrapper, filename);
+  global["graphileWorker_fauxRequireCache"] = null;
 
   replacementModule.loaded = true;
+  cache[filename] = replacementModule;
 
   return replacementModule.exports;
 }
+
+global["graphileWorker_fauxRequire"] = fauxRequire;

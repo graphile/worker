@@ -65,27 +65,28 @@ export async function assertPool(
     "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
   );
   let pgPool: Pool;
+  const connectionString = options.connectionString || process.env.DATABASE_URL;
   if (options.pgPool) {
     pgPool = options.pgPool;
-  } else if (options.connectionString) {
+  } else if (connectionString) {
     pgPool = new Pool({
-      connectionString: options.connectionString,
+      connectionString,
       max: options.maxPoolSize,
     });
     releasers.push(() => pgPool.end());
-  } else if (process.env.DATABASE_URL) {
+  } else if (process.env.PGDATABASE) {
     pgPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      /* Pool automatically pulls settings from envvars */
       max: options.maxPoolSize,
     });
     releasers.push(() => pgPool.end());
   } else {
     throw new Error(
-      "You must either specify `pgPool` or `connectionString`, or you must make the `DATABASE_URL` environmental variable available.",
+      "You must either specify `pgPool` or `connectionString`, or you must make the `DATABASE_URL` or `PG*` environmental variables available.",
     );
   }
 
-  pgPool.on("error", err => {
+  pgPool.on("error", (err) => {
     /*
      * This handler is required so that client connection errors don't bring
      * the server down (via `unhandledError`).
@@ -108,7 +109,7 @@ export async function withReleasers<T>(
 ): Promise<T> {
   const releasers: Releasers = [];
   const release: Release = async () => {
-    await Promise.all(releasers.map(fn => fn()));
+    await Promise.all(releasers.map((fn) => fn()));
   };
   try {
     return await callback(releasers, release);
@@ -154,7 +155,7 @@ export const getUtilsAndReleasersFromOptions = async (
       const withPgClient = makeWithPgClientFromPool(pgPool);
 
       // Migrate
-      await withPgClient(client => migrate(options, client));
+      await withPgClient((client) => migrate(options, client));
       const addJob = makeAddJob(options, withPgClient);
 
       return {
