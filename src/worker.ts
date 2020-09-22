@@ -92,7 +92,7 @@ export function makeNewWorker(
         }
       }
 
-      const { rows: jobRows } = await withPgClient(client =>
+      const { rows: jobRows } = await withPgClient((client) =>
         client.query({
           text:
             // TODO: breaking change; change this to more optimal:
@@ -109,7 +109,7 @@ export function makeNewWorker(
 
       // `doNext` cannot be executed concurrently, so we know this is safe.
       // eslint-disable-next-line require-atomic-updates
-      const validJobs = jobRows.filter(r => r.id);
+      const validJobs = jobRows.filter((r) => r.id);
 
       activeJobs = validJobs.length ? validJobs : null;
     } catch (err) {
@@ -210,11 +210,7 @@ export function makeNewWorker(
             `Failed task ${job.id} (${
               job.task_identifier
             }) with error ${message} (${duration.toFixed(2)}ms)${
-              stack
-                ? `:\n  ${String(stack)
-                    .replace(/\n/g, "\n  ")
-                    .trim()}`
-                : ""
+              stack ? `:\n  ${String(stack).replace(/\n/g, "\n  ").trim()}` : ""
             }`,
             { failure: true, job, error: err, duration },
           );
@@ -254,7 +250,7 @@ export function makeNewWorker(
       }
 
       // TODO: retry logic, in case of server connection interruption
-      await withPgClient(client =>
+      await withPgClient((client) =>
         client.query({
           text: `SELECT FROM ${escapedWorkerSchema}.complete_batch($1, $2, $3);`,
           values: [workerId, successes, failures],
@@ -265,7 +261,7 @@ export function makeNewWorker(
       const when = err ? `after failure '${err.message}'` : "after success";
       logger.error(
         `Failed to release jobs ${jobs
-          .map(j => j.id)
+          .map((j) => j.id)
           .join(", ")} ${when}; shutting down\n${fatalError.message}`,
         { fatalError, jobs },
       );
