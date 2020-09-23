@@ -1168,6 +1168,22 @@ docker-compose logs -f db
 docker-compose logs -f app
 ```
 
+### Database migrations
+
+New database migrations must be accompanied by an updated db dump. This can be
+generated using the command `yarn db:dump`, and requires a running postgres 11
+server. Using docker:
+
+```
+docker run -e POSTGRES_HOST_AUTH_METHOD=trust -d -p 5432:5432 postgres:11
+```
+
+then run
+
+```
+PGUSER=postgres PGHOST=localhost yarn db:dump
+```
+
 ## Thanks for reading!
 
 If this project helps you out, please
