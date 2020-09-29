@@ -1,5 +1,9 @@
 # Release notes
 
+### Pending
+
+- Add your changes here
+
 ### v0.8.1
 
 - Fix issue with cyclic requires in watch mode
