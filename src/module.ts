@@ -74,12 +74,12 @@ ${code};
   // Since the code is evaluated synchronously, we set this immediately before
   // compiling and clear after.
   global["graphileWorker_fauxRequireCache"] = cache;
+  cache[filename] = replacementModule;
   // @ts-ignore
   replacementModule._compile(codeWithWrapper, filename);
   global["graphileWorker_fauxRequireCache"] = null;
 
   replacementModule.loaded = true;
-  cache[filename] = replacementModule;
 
   return replacementModule.exports;
 }
