@@ -1,5 +1,9 @@
 # Release notes
 
+### v0.8.1
+
+- Fix issue with cyclic requires in watch mode
+
 ### v0.8.0
 
 - Track revision count for jobs (thanks @lukeramsden)
