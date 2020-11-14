@@ -3,6 +3,7 @@
 ### Pending
 
 - Add your changes here
+- TypeScript: make the `Task` type generic, to allow specifying payloads
 
 ### v0.8.1
 
