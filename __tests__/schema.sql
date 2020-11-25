@@ -125,6 +125,49 @@ begin
 end;
 $$;
 ALTER FUNCTION graphile_worker.add_job(identifier text, payload json, queue_name text, run_at timestamp with time zone, max_attempts integer, job_key text, priority integer, flags text[]) OWNER TO graphile_worker_role;
+CREATE FUNCTION graphile_worker.complete_batch(worker_id text, success_ids bigint[], failures json[]) RETURNS void
+    LANGUAGE plpgsql STRICT
+    AS $$
+declare
+  v_row "graphile_worker".jobs;
+begin
+  if array_length(failures, 1) is not null then
+    with fail_jobs as (
+      update "graphile_worker".jobs
+        set
+          last_error = f->>'message',
+          run_at = greatest(now(), run_at) + (exp(least(attempts, 10))::text || ' seconds')::interval,
+          locked_by = null,
+          locked_at = null
+        from unnest(failures) f
+        where id = (f->>'id')::bigint and locked_by = worker_id
+        returning queue_name
+    )
+    update "graphile_worker".job_queues jq
+      set locked_by = null, locked_at = null
+      where exists (
+        select 1
+        from fail_jobs f
+        where jq.queue_name = f.queue_name
+      ) and locked_by = worker_id;
+  end if;
+  if array_length(success_ids, 1) is not null then
+    with success_jobs as (
+      delete from "graphile_worker".jobs
+        where id = any(success_ids)
+      returning queue_name
+    )
+    update "graphile_worker".job_queues jq
+      set locked_by = null, locked_at = null
+      where exists (
+        select 1
+        from success_jobs s
+        where jq.queue_name = s.queue_name
+      ) and locked_by = worker_id;
+  end if;
+end;
+$$;
+ALTER FUNCTION graphile_worker.complete_batch(worker_id text, success_ids bigint[], failures json[]) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.complete_job(worker_id text, job_id bigint) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
@@ -235,6 +278,67 @@ begin
 end;
 $$;
 ALTER FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[], job_expiry interval, forbidden_flags text[]) OWNER TO graphile_worker_role;
+CREATE FUNCTION graphile_worker.get_jobs(worker_id text, task_identifiers text[] DEFAULT NULL::text[], job_expiry interval DEFAULT '04:00:00'::interval, forbidden_flags text[] DEFAULT NULL::text[]) RETURNS SETOF graphile_worker.jobs
+    LANGUAGE plpgsql
+    AS $$
+declare
+  v_now timestamptz = now();
+begin
+  if worker_id is null or length(worker_id) < 10 then
+    raise exception 'invalid worker id';
+  end if;
+  return query with jobs_q as (
+    select
+      id, queue_name
+      from "graphile_worker".jobs jobs
+      where (jobs.locked_at is null or jobs.locked_at < (v_now - job_expiry))
+      and (
+        jobs.queue_name is null
+      or
+        exists (
+          select 1
+          from "graphile_worker".job_queues
+          where job_queues.queue_name = jobs.queue_name
+          and (job_queues.locked_at is null or job_queues.locked_at < (v_now - job_expiry))
+          for update
+          skip locked
+        )
+      )
+      and run_at <= v_now
+      and attempts < max_attempts
+      and (task_identifiers is null or task_identifier = any(task_identifiers))
+      and (forbidden_flags is null or (flags ?| forbidden_flags) is not true)
+      order by priority asc, run_at asc, id asc
+      -- TODO make this a configurable value
+      limit 1
+      for update
+      skip locked
+  ),
+  queues_q as (
+    update "graphile_worker".job_queues
+      set
+        locked_by = worker_id,
+        locked_at = v_now
+      where exists(
+        select 1
+        from jobs_q
+        where jobs_q.queue_name = job_queues.queue_name
+      )
+  )
+  update "graphile_worker".jobs
+    set
+      attempts = attempts + 1,
+      locked_by = worker_id,
+      locked_at = v_now
+    where exists(
+      select 1
+      from jobs_q
+      where jobs_q.id = "graphile_worker".jobs.id
+    )
+    returning *;
+end;
+$$;
+ALTER FUNCTION graphile_worker.get_jobs(worker_id text, task_identifiers text[], job_expiry interval, forbidden_flags text[]) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.jobs__decrease_job_queue_count() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
