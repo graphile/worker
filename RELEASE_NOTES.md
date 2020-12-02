@@ -2,7 +2,8 @@
 
 ### Pending
 
-- Add your changes here
+- New `job_key_mode` setting allows for preserving `run_at`, governing whether
+  `job_key` does debouncing (as before) or throttling.
 
 ### v0.8.1
 

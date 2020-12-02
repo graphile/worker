@@ -28,7 +28,8 @@ export function makeAddJob(
           max_attempts => $5::int,
           job_key => $6::text,
           priority => $7::int,
-          flags => $8::text[]
+          flags => $8::text[],
+          job_key_mode => $9::text
         );
         `,
         [
@@ -40,6 +41,7 @@ export function makeAddJob(
           spec.jobKey || null,
           spec.priority || null,
           spec.flags || null,
+          spec.jobKeyMode || null,
         ],
       );
       const job: Job = rows[0];
