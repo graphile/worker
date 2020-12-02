@@ -263,11 +263,6 @@ export const runTaskListOnce = (
   options: WorkerOptions,
   tasks: TaskList,
   client: PoolClient,
-) => {
-  return makeNewWorker(
-    options,
-    tasks,
-    makeWithPgClientFromClient(client),
-    false,
-  ).promise;
-};
+) =>
+  makeNewWorker(options, tasks, makeWithPgClientFromClient(client), false)
+    .promise;
