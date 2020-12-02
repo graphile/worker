@@ -1,7 +1,9 @@
+import { EventEmitter } from "events";
 import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 
 import { Release } from "./lib";
 import { Logger } from "./logger";
+import { Signal } from "./signals";
 
 /*
  * Terminology:
@@ -197,6 +199,7 @@ export interface Runner {
   stop: () => Promise<void>;
   addJob: AddJobFunction;
   promise: Promise<void>;
+  events: WorkerEvents;
 }
 
 export interface TaskSpec {
@@ -280,6 +283,11 @@ export interface SharedOptions {
    * Graphile worker will skip the execution of any jobs that contain these flags
    */
   forbiddenFlags?: null | string[] | ForbiddenFlagsFn;
+
+  /**
+   * An EventEmitter instance to which we'll emit events.
+   */
+  events?: WorkerEvents;
 }
 
 /**
@@ -334,3 +342,132 @@ export interface RunnerOptions extends WorkerPoolOptions {
 }
 
 export interface WorkerUtilsOptions extends SharedOptions {}
+
+type BaseEventMap = Record<string, any>;
+type EventMapKey<TEventMap extends BaseEventMap> = string & keyof TEventMap;
+type EventCallback<TPayload> = (params: TPayload) => void;
+
+interface TypedEventEmitter<TEventMap extends BaseEventMap>
+  extends EventEmitter {
+  addListener<TEventName extends EventMapKey<TEventMap>>(
+    eventName: TEventName,
+    callback: EventCallback<TEventMap[TEventName]>,
+  ): this;
+  on<TEventName extends EventMapKey<TEventMap>>(
+    eventName: TEventName,
+    callback: EventCallback<TEventMap[TEventName]>,
+  ): this;
+  once<TEventName extends EventMapKey<TEventMap>>(
+    eventName: TEventName,
+    callback: EventCallback<TEventMap[TEventName]>,
+  ): this;
+
+  removeListener<TEventName extends EventMapKey<TEventMap>>(
+    eventName: TEventName,
+    callback: EventCallback<TEventMap[TEventName]>,
+  ): this;
+  off<TEventName extends EventMapKey<TEventMap>>(
+    eventName: TEventName,
+    callback: EventCallback<TEventMap[TEventName]>,
+  ): this;
+
+  emit<TEventName extends EventMapKey<TEventMap>>(
+    eventName: TEventName,
+    params: TEventMap[TEventName],
+  ): boolean;
+}
+
+/**
+ * These are the events that a worker instance supports.
+ */
+export type WorkerEvents = TypedEventEmitter<{
+  /**
+   * When a worker pool is created
+   */
+  "pool:create": { workerPool: WorkerPool };
+
+  /**
+   * When a worker pool attempts to connect to PG ready to issue a LISTEN
+   * statement
+   */
+  "pool:listen:connecting": { workerPool: WorkerPool };
+
+  /**
+   * When a worker pool starts listening for jobs via PG LISTEN
+   */
+  "pool:listen:success": { workerPool: WorkerPool; client: PoolClient };
+
+  /**
+   * When a worker pool faces an error on their PG LISTEN client
+   */
+  "pool:listen:error": {
+    workerPool: WorkerPool;
+    error: any;
+    client: PoolClient;
+  };
+
+  /**
+   * When a worker pool is released
+   */
+  "pool:release": { pool: WorkerPool };
+
+  /**
+   * When a worker pool starts a graceful shutdown
+   */
+  "pool:gracefulShutdown": { pool: WorkerPool; message: string };
+
+  /**
+   * When a worker pool graceful shutdown throws an error
+   */
+  "pool:gracefulShutdown:error": { pool: WorkerPool; error: any };
+
+  /**
+   * When a worker is created
+   */
+  "worker:create": { worker: Worker; tasks: TaskList };
+
+  /**
+   * When a worker calls get_job but there are no available jobs
+   */
+  "worker:getJob:error": { worker: Worker; error: any };
+
+  /**
+   * When a worker calls get_job but there are no available jobs
+   */
+  "worker:getJob:empty": { worker: Worker };
+
+  /**
+   * When a worker is created
+   */
+  "worker:fatalError": { worker: Worker; error: any; jobError: any | null };
+
+  /**
+   * When a job is retrieved by get_job
+   */
+  "job:start": { worker: Worker; job: Job };
+
+  /**
+   * When a job completes successfully
+   */
+  "job:success": { worker: Worker; job: Job };
+
+  /**
+   * When a job throws an error
+   */
+  "job:error": { worker: Worker; job: Job; error: any };
+
+  /**
+   * When a job fails permanently (emitted after job:error when appropriate)
+   */
+  "job:failed": { worker: Worker; job: Job; error: any };
+
+  /**
+   * When the runner is terminated by a signal
+   */
+  gracefulShutdown: { signal: Signal };
+
+  /**
+   * When the runner is stopped
+   */
+  stop: {};
+}>;

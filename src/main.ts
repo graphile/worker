@@ -1,3 +1,4 @@
+import { EventEmitter } from "events";
 import { Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
@@ -11,6 +12,7 @@ import {
   Job,
   TaskList,
   Worker,
+  WorkerEvents,
   WorkerOptions,
   WorkerPool,
   WorkerPoolOptions,
@@ -25,14 +27,38 @@ const allWorkerPools: Array<WorkerPool> = [];
 // Exported for testing only
 export { allWorkerPools as _allWorkerPools };
 
+/**
+ * All pools share the same signal handlers, so we need to broadcast
+ * gracefulShutdown to all the pools' events; we use this event emitter to
+ * aggregate these requests.
+ */
+let _signalHandlersEventEmitter: WorkerEvents = new EventEmitter();
+
+/**
+ * Only register the signal handlers once _globally_.
+ */
 let _registeredSignalHandlers = false;
+
+/**
+ * Only trigger graceful shutdown once.
+ */
 let _shuttingDown = false;
-function registerSignalHandlers(logger: Logger) {
+
+/**
+ * This will register the signal handlers to make sure the worker shuts down
+ * gracefully if it can. It will only register signal handlers once; even if
+ * you call it multiple times it will always use the first logger it is passed,
+ * future calls will register the events but take no further actions.
+ */
+function registerSignalHandlers(logger: Logger, events: WorkerEvents) {
   if (_shuttingDown) {
     throw new Error(
       "System has already gone into shutdown, should not be spawning new workers now!",
     );
   }
+  _signalHandlersEventEmitter.on("gracefulShutdown", (o) =>
+    events.emit("gracefulShutdown", o),
+  );
   if (_registeredSignalHandlers) {
     return;
   }
@@ -54,6 +80,7 @@ function registerSignalHandlers(logger: Logger) {
         return;
       }
       _shuttingDown = true;
+      _signalHandlersEventEmitter.emit("gracefulShutdown", { signal });
       Promise.all(
         allWorkerPools.map((pool) =>
           pool.gracefulShutdown(`Forced worker shutdown due to ${signal}`),
@@ -73,7 +100,7 @@ export function runTaskList(
   tasks: TaskList,
   pgPool: Pool,
 ): WorkerPool {
-  const { logger, escapedWorkerSchema } = processSharedOptions(options);
+  const { logger, escapedWorkerSchema, events } = processSharedOptions(options);
   logger.debug(`Worker pool options are ${inspect(options)}`, { options });
   const {
     concurrency = defaults.concurrentJobs,
@@ -83,7 +110,7 @@ export function runTaskList(
 
   if (!noHandleSignals) {
     // Clean up when certain signals occur
-    registerSignalHandlers(logger);
+    registerSignalHandlers(logger, events);
   }
 
   const promise = deferred();
@@ -105,64 +132,10 @@ export function runTaskList(
     }
   };
 
-  const listenForChanges = (
-    err: Error | undefined,
-    client: PoolClient,
-    release: () => void,
-  ) => {
-    if (err) {
-      logger.error(
-        `Error connecting with notify listener (trying again in 5 seconds): ${err.message}`,
-        { error: err },
-      );
-      // Try again in 5 seconds
-      setTimeout(() => {
-        pgPool.connect(listenForChanges);
-      }, 5000);
-      return;
-    }
-    listenForChangesClient = client;
-    client.on("notification", () => {
-      if (listenForChangesClient === client) {
-        // Find a worker that's available
-        workers.some((worker) => worker.nudge());
-      }
-    });
-
-    // Subscribe to jobs:insert message
-    client.query('LISTEN "jobs:insert"');
-
-    // On error, release this client and try again
-    client.on("error", (e: Error) => {
-      logger.error(`Error with database notify listener: ${e.message}`, {
-        error: e,
-      });
-      listenForChangesClient = null;
-      try {
-        release();
-      } catch (e) {
-        logger.error(`Error occurred releasing client: ${e.stack}`, {
-          error: e,
-        });
-      }
-      pgPool.connect(listenForChanges);
-    });
-
-    const supportedTaskNames = Object.keys(tasks);
-
-    logger.info(
-      `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
-        "', '",
-      )}')`,
-    );
-  };
-
-  // Create a client dedicated to listening for new jobs.
-  pgPool.connect(listenForChanges);
-
   // This is a representation of us that can be interacted with externally
-  const workerPool = {
+  const workerPool: WorkerPool = {
     release: async () => {
+      events.emit("pool:release", { pool: this });
       unlistenForChanges();
       promise.resolve();
       await Promise.all(workers.map((worker) => worker.release()));
@@ -172,6 +145,7 @@ export function runTaskList(
 
     // Make sure we clean up after ourselves even if a signal is caught
     async gracefulShutdown(message: string) {
+      events.emit("pool:gracefulShutdown", { pool: this, message });
       try {
         logger.debug(`Attempting graceful shutdown`);
         // Release all our workers' jobs
@@ -198,6 +172,7 @@ export function runTaskList(
         });
         logger.debug("Jobs released");
       } catch (e) {
+        events.emit("pool:gracefulShutdown:error", { pool: this, error: e });
         logger.error(`Error occurred during graceful shutdown: ${e.message}`, {
           error: e,
         });
@@ -211,6 +186,67 @@ export function runTaskList(
 
   // Ensure that during a forced shutdown we get cleaned up too
   allWorkerPools.push(workerPool);
+  events.emit("pool:create", { workerPool });
+
+  const listenForChanges = (
+    err: Error | undefined,
+    client: PoolClient,
+    release: () => void,
+  ) => {
+    if (err) {
+      events.emit("pool:listen:error", { workerPool, client, error: err });
+      logger.error(
+        `Error connecting with notify listener (trying again in 5 seconds): ${err.message}`,
+        { error: err },
+      );
+      // Try again in 5 seconds
+      setTimeout(() => {
+        pgPool.connect(listenForChanges);
+      }, 5000);
+      return;
+    }
+    events.emit("pool:listen:success", { workerPool, client });
+    listenForChangesClient = client;
+    client.on("notification", () => {
+      if (listenForChangesClient === client) {
+        // Find a worker that's available
+        workers.some((worker) => worker.nudge());
+      }
+    });
+
+    // On error, release this client and try again
+    client.on("error", (e: Error) => {
+      events.emit("pool:listen:error", { workerPool, client, error: e });
+      logger.error(`Error with database notify listener: ${e.message}`, {
+        error: e,
+      });
+      listenForChangesClient = null;
+      try {
+        release();
+      } catch (e) {
+        logger.error(`Error occurred releasing client: ${e.stack}`, {
+          error: e,
+        });
+      }
+      events.emit("pool:listen:connecting", { workerPool });
+      pgPool.connect(listenForChanges);
+    });
+
+    // Subscribe to jobs:insert message
+    client.query('LISTEN "jobs:insert"');
+
+    const supportedTaskNames = Object.keys(tasks);
+
+    logger.info(
+      `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
+        "', '",
+      )}')`,
+    );
+  };
+
+  // Create a client dedicated to listening for new jobs.
+  events.emit("pool:listen:connecting", { workerPool });
+  pgPool.connect(listenForChanges);
 
   // Spawn our workers; they can share clients from the pool.
   const withPgClient = makeWithPgClientFromPool(pgPool);
@@ -227,6 +263,11 @@ export const runTaskListOnce = (
   options: WorkerOptions,
   tasks: TaskList,
   client: PoolClient,
-) =>
-  makeNewWorker(options, tasks, makeWithPgClientFromClient(client), false)
-    .promise;
+) => {
+  return makeNewWorker(
+    options,
+    tasks,
+    makeWithPgClientFromClient(client),
+    false,
+  ).promise;
+};

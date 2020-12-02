@@ -75,6 +75,7 @@ export const run = async (
     release,
     releasers,
     addJob,
+    events,
   } = await getUtilsAndReleasersFromOptions(options);
 
   try {
@@ -89,6 +90,7 @@ export const run = async (
       async stop() {
         if (running) {
           running = false;
+          events.emit("stop", {});
           await release();
         } else {
           throw new Error("Runner is already stopped");
@@ -96,6 +98,7 @@ export const run = async (
       },
       addJob,
       promise: workerPool.promise,
+      events,
     };
   } catch (e) {
     await release();

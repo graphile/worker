@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import { EventEmitter } from "events";
 import { Client, Pool } from "pg";
 
 import { defaults } from "./config";
@@ -8,11 +9,13 @@ import {
   RunnerOptions,
   SharedOptions,
   WithPgClient,
+  WorkerEvents,
 } from "./interfaces";
 import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
 
 interface CompiledSharedOptions {
+  events: WorkerEvents;
   logger: Logger;
   workerSchema: string;
   escapedWorkerSchema: string;
@@ -33,9 +36,11 @@ export function processSharedOptions(
     const {
       logger = defaultLogger,
       schema: workerSchema = defaults.schema,
+      events = new EventEmitter(),
     } = options;
     const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
     compiled = {
+      events,
       logger,
       workerSchema,
       escapedWorkerSchema,
