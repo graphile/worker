@@ -62,6 +62,27 @@ export function makeNewWorker(
     return promise;
   };
 
+  const nudge = () => {
+    assert(active, "nudge called after worker terminated");
+    if (doNextTimer) {
+      // Must be idle; call early
+      doNext();
+      return true;
+    } else {
+      again = true;
+      // Not idle; find someone else!
+      return false;
+    }
+  };
+
+  const worker = {
+    nudge,
+    workerId,
+    release,
+    promise,
+    getActiveJob: () => activeJob,
+  };
+
   logger.debug(`Spawned`);
 
   let contiguousErrors = 0;
@@ -255,29 +276,8 @@ export function makeNewWorker(
     }
   };
 
-  const nudge = () => {
-    assert(active, "nudge called after worker terminated");
-    if (doNextTimer) {
-      // Must be idle; call early
-      doNext();
-      return true;
-    } else {
-      again = true;
-      // Not idle; find someone else!
-      return false;
-    }
-  };
-
   // Start!
   doNext();
-
-  const worker = {
-    nudge,
-    workerId,
-    release,
-    promise,
-    getActiveJob: () => activeJob,
-  };
 
   // For tests
   promise["worker"] = worker;
