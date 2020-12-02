@@ -1,19 +1,17 @@
-DROP FUNCTION graphile_worker.add_job(identifier text, payload json, queue_name text, run_at timestamp with time zone, max_attempts integer, job_key text, priority integer, flags text[]);
-CREATE FUNCTION graphile_worker.add_job(
+drop function :GRAPHILE_WORKER_SCHEMA.add_job(text, json, text, timestamptz, int, text, int, text[]);
+create function :GRAPHILE_WORKER_SCHEMA.add_job(
   identifier text,
-  payload json DEFAULT NULL::json,
-  queue_name text DEFAULT NULL::text,
-  run_at timestamp with time zone DEFAULT NULL::timestamp with time zone,
-  max_attempts integer DEFAULT NULL::integer,
-  job_key text DEFAULT NULL::text,
-  priority integer DEFAULT NULL::integer,
-  flags text[] DEFAULT NULL::text[],
-  job_key_mode text DEFAULT 'replace'
-) RETURNS graphile_worker.jobs
-    LANGUAGE plpgsql
-    AS $$
+  payload json = null,
+  queue_name text = null,
+  run_at timestamptz = null,
+  max_attempts integer = null,
+  job_key text = null,
+  priority integer = null,
+  flags text[] = null,
+  job_key_mode text = 'replace'
+) returns :GRAPHILE_WORKER_SCHEMA.jobs as $$
 declare
-  v_job "graphile_worker".jobs;
+  v_job :GRAPHILE_WORKER_SCHEMA.jobs;
 begin
   -- Apply rationality checks
   if length(identifier) > 128 then
@@ -30,7 +28,7 @@ begin
   end if;
   if job_key is not null and (job_key_mode is null or job_key_mode in ('replace', 'preserve_run_at')) then
     -- Upsert job
-    insert into "graphile_worker".jobs (
+    insert into :GRAPHILE_WORKER_SCHEMA.jobs (
       task_identifier,
       payload,
       queue_name,
@@ -78,14 +76,14 @@ begin
     -- Upsert failed -> there must be an existing job that is locked. Remove
     -- existing key to allow a new one to be inserted, and prevent any
     -- subsequent retries by bumping attempts to the max allowed.
-    update "graphile_worker".jobs
+    update :GRAPHILE_WORKER_SCHEMA.jobs
       set
         key = null,
         attempts = jobs.max_attempts
       where key = job_key;
   elsif job_key is not null and job_key_mode = 'preserve' then
     -- Upsert job
-    insert into "graphile_worker".jobs (
+    insert into :GRAPHILE_WORKER_SCHEMA.jobs (
       task_identifier,
       payload,
       queue_name,
@@ -125,7 +123,7 @@ begin
     -- Upsert failed -> there must be an existing job that is locked. Remove
     -- existing key to allow a new one to be inserted, and prevent any
     -- subsequent retries by bumping attempts to the max allowed.
-    update "graphile_worker".jobs
+    update :GRAPHILE_WORKER_SCHEMA.jobs
       set
         key = null,
         attempts = jobs.max_attempts
@@ -134,7 +132,7 @@ begin
     raise exception 'Invalid job_key_mode value, expected ''replace'', ''preserve_run_at'' or ''preserve''.' using errcode = 'GWBKM';
   end if;
   -- insert the new job. Assume no conflicts due to the update above
-  insert into "graphile_worker".jobs(
+  insert into :GRAPHILE_WORKER_SCHEMA.jobs(
     task_identifier,
     payload,
     queue_name,
@@ -161,4 +159,4 @@ begin
     into v_job;
   return v_job;
 end;
-$$;
+$$ language plpgsql volatile;
