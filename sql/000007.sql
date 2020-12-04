@@ -156,9 +156,8 @@ begin
 end;
 $$ language plpgsql volatile;
 
-CREATE OR REPLACE FUNCTION :GRAPHILE_WORKER_SCHEMA.remove_job(job_key text) RETURNS :GRAPHILE_WORKER_SCHEMA.jobs
-    LANGUAGE plpgsql STRICT
-    AS $$
+create or replace function :GRAPHILE_WORKER_SCHEMA.remove_job(job_key text)
+returns :GRAPHILE_WORKER_SCHEMA.jobs as $$
 declare
   v_job :GRAPHILE_WORKER_SCHEMA.jobs;
 begin
@@ -177,4 +176,4 @@ begin
   returning * into v_job;
   return v_job;
 end;
-$$;
+$$ language plpgsql strict;
