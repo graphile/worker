@@ -9,5 +9,5 @@ This directory contains examples of use cases for `graphile-worker`.
   exporting jobs to GCP [Cloud Tasks](https://cloud.google.com/tasks/) task
   queue.
 
-- [worker-bullmq-exporter](./worker-bullmq-exporter): A way of
-  exporting jobs to a [BullMQ](https://github.com/taskforcesh/bullmq) queue.
+- [worker-bullmq-exporter](./worker-bullmq-exporter): A way of exporting jobs to
+  a [BullMQ](https://github.com/taskforcesh/bullmq) queue.
