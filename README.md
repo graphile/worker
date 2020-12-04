@@ -463,10 +463,10 @@ The `addJob` arguments are as follows:
   - `maxAttempts`: how many retries should this task get? (Default: 25)
   - `jobKey`: unique identifier for the job, used to replace, update or remove
     it later if needed (see
-    [Updating and removing jobs](#updating-and-removing-jobs)); can be used for
+    [Replacing, updating and removing jobs](##replacing-updating-and-removing-jobs)); can be used for
     de-duplication (i.e. throttling or debouncing)
   - `jobKeyMode`: controls the behavior of `jobKey` when a matching job is found
-    (see [Updating and removing jobs](#updating-and-removing-jobs))
+    (see [Replacing, updating and removing jobs](#replacing-updating-and-removing-jobs))
 
 Example:
 
