@@ -105,61 +105,6 @@ export function runTaskList(
     }
   };
 
-  const listenForChanges = (
-    err: Error | undefined,
-    client: PoolClient,
-    release: () => void,
-  ) => {
-    if (err) {
-      logger.error(
-        `Error connecting with notify listener (trying again in 5 seconds): ${err.message}`,
-        { error: err },
-      );
-      // Try again in 5 seconds
-      setTimeout(() => {
-        pgPool.connect(listenForChanges);
-      }, 5000);
-      return;
-    }
-    listenForChangesClient = client;
-    client.on("notification", () => {
-      if (listenForChangesClient === client) {
-        // Find a worker that's available
-        workers.some((worker) => worker.nudge());
-      }
-    });
-
-    // Subscribe to jobs:insert message
-    client.query('LISTEN "jobs:insert"');
-
-    // On error, release this client and try again
-    client.on("error", (e: Error) => {
-      logger.error(`Error with database notify listener: ${e.message}`, {
-        error: e,
-      });
-      listenForChangesClient = null;
-      try {
-        release();
-      } catch (e) {
-        logger.error(`Error occurred releasing client: ${e.stack}`, {
-          error: e,
-        });
-      }
-      pgPool.connect(listenForChanges);
-    });
-
-    const supportedTaskNames = Object.keys(tasks);
-
-    logger.info(
-      `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
-        "', '",
-      )}')`,
-    );
-  };
-
-  // Create a client dedicated to listening for new jobs.
-  pgPool.connect(listenForChanges);
-
   // This is a representation of us that can be interacted with externally
   const workerPool = {
     release: async () => {
@@ -208,6 +153,61 @@ export function runTaskList(
 
     promise,
   };
+
+  const listenForChanges = (
+    err: Error | undefined,
+    client: PoolClient,
+    release: () => void,
+  ) => {
+    if (err) {
+      logger.error(
+        `Error connecting with notify listener (trying again in 5 seconds): ${err.message}`,
+        { error: err },
+      );
+      // Try again in 5 seconds
+      setTimeout(() => {
+        pgPool.connect(listenForChanges);
+      }, 5000);
+      return;
+    }
+    listenForChangesClient = client;
+    client.on("notification", () => {
+      if (listenForChangesClient === client) {
+        // Find a worker that's available
+        workers.some((worker) => worker.nudge());
+      }
+    });
+
+    // On error, release this client and try again
+    client.on("error", (e: Error) => {
+      logger.error(`Error with database notify listener: ${e.message}`, {
+        error: e,
+      });
+      listenForChangesClient = null;
+      try {
+        release();
+      } catch (e) {
+        logger.error(`Error occurred releasing client: ${e.stack}`, {
+          error: e,
+        });
+      }
+      pgPool.connect(listenForChanges);
+    });
+
+    // Subscribe to jobs:insert message
+    client.query('LISTEN "jobs:insert"');
+
+    const supportedTaskNames = Object.keys(tasks);
+
+    logger.info(
+      `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
+        "', '",
+      )}')`,
+    );
+  };
+
+  // Create a client dedicated to listening for new jobs.
+  pgPool.connect(listenForChanges);
 
   // Ensure that during a forced shutdown we get cleaned up too
   allWorkerPools.push(workerPool);
