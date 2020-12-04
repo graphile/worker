@@ -878,7 +878,7 @@ The full `job_key_mode` algorithm is roughly as follows:
   - it will have its `attempts` reset to 0 (as if it were newly scheduled)
   - it will have its `last_error` cleared
   - it will have all other attributes updated to their new values, including
-    `run_at` (even when `job_key_mode` is 'preserve_run_at').
+    `run_at` (even when `job_key_mode` is `preserve_run_at`).
 - Otherwise, if `job_key_mode` is `preserve_run_at`:
   - the job will have all its attributes except for `run_at` updated to their
     new values.
@@ -895,18 +895,23 @@ SELECT graphile_worker.remove_job('abc');
 
 ### `job_key` caveats
 
-**IMPORTANT**: the `job_key` is treated as universally unique, so you can update
-a job to have a completely different `task_identifier` or `payload`. You must be
-careful to ensure that your `job_key` is sufficiently unique to prevent you
-accidentally replacing or deleting unrelated jobs by mistake; one way to
-approach this is to incorporate the `task_identifier` into the `job_key`.
+**IMPORTANT**: jobs that complete successfully are deleted, there is no
+permanent `job_key` log, i.e. `remove_job` on a completed `job_key` is a no-op
+as no row exists.
 
-**IMPORTANT**: If a job is updated using `add_job` once it is already running or
-completed, a second job will be scheduled separately (except with
+**IMPORTANT**: the `job_key` is treated as universally unique (whilst the job is
+pending/failed), so you can update a job to have a completely different
+`task_identifier` or `payload`. You must be careful to ensure that your
+`job_key` is sufficiently unique to prevent you accidentally replacing or
+deleting unrelated jobs by mistake; one way to approach this is to incorporate
+the `task_identifier` into the `job_key`.
+
+**IMPORTANT**: If a job is updated using `add_job` when it is currently locked
+(i.e. running), a second job will be scheduled separately (unless
 `job_key_mode = 'unsafe_dedupe'`), meaning both will run.
 
-**IMPORTANT**: calling `remove_job` for a running job will not actually remove
-it, but will prevent it from running again on failure.
+**IMPORTANT**: calling `remove_job` for a locked (i.e. running) job will not
+actually remove it, but will prevent it from running again on failure.
 
 ## Administration functions
 
