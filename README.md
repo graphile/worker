@@ -850,18 +850,19 @@ In all cases if no match is found then a new job will be created; behavior when
 an existing job with the same job key is found is controlled by the
 `job_key_mode` setting:
 
-- `replace` (default) - overwrites the job with the new values. This is
+- `replace` (default) - overwrites the unlocked job with the new values. This is
   primarily useful for rescheduling, updating, or **debouncing** (delaying
   execution until there have been no events for at least a certain time period).
-  Locked jobs are capped and a new job is scheduled.
-- `preserve_run_at` - overwrites the job with the new values, but preserves
-  `run_at`. This is primarily useful for **throttling** (executing at most once
-  over a given time period). Locked jobs are capped and a new job is scheduled.
+  Locked jobs will cause a new job to be scheduled instead.
+- `preserve_run_at` - overwrites the unlocked job with the new values, but
+  preserves `run_at`. This is primarily useful for **throttling** (executing at
+  most once over a given time period). Locked jobs will cause a new job to be
+  scheduled instead.
 - `unsafe_dedupe` - if an existing job is found, even if it is locked or
-  permanently failed, then no attributes will be updated. This is very dangerous
-  as it means that the event that triggered this `add_job` call may not result
-  in any action. It is strongly advised you do not use this mode unless you are
-  certain you know what you are doing.
+  permanently failed, then it won't be updated. This is very dangerous as it
+  means that the event that triggered this `add_job` call may not result in any
+  action. It is strongly advised you do not use this mode unless you are certain
+  you know what you are doing.
 
 The full `job_key_mode` algorithm is roughly as follows:
 
