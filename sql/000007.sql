@@ -60,8 +60,8 @@ begin
         payload=excluded.payload,
         queue_name=excluded.queue_name,
         max_attempts=excluded.max_attempts,
-        run_at=(case job_key_mode
-          when 'preserve_run_at' then (case when jobs.attempts > 0 then excluded.run_at else jobs.run_at end)
+        run_at=(case
+          when job_key_mode = 'preserve_run_at' and job.attempts = 0 then jobs.run_at
           else excluded.run_at
         end),
         priority=excluded.priority,
