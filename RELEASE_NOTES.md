@@ -2,8 +2,14 @@
 
 ### Pending
 
-- New `job_key_mode` setting allows for preserving `run_at`, governing whether
-  `job_key` does debouncing (as before) or throttling.
+- New `job_key_mode` setting; see README for full details, but summary:
+  - defaults to `replace` (existing behavior, i.e. debouncing)
+  - if set to `preserve_run_at` it will preserve `run_at` which effectively
+    changes it from debouncing to throttling
+  - if set to `unsafe_dedupe` it will not update the attributes when an existing
+    job with that job key exists, even if that job is already running
+- `remove_job` now prevents locked jobs from running again on error (and removes
+  their key)
 
 ### v0.8.1
 
