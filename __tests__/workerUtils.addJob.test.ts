@@ -76,34 +76,47 @@ test("supports the jobKey API with jobKeyMode", () =>
     const runAt3 = new Date("2202-01-01T00:00:00Z");
     const runAt4 = new Date("2203-01-01T00:00:00Z");
     let job;
+
+    // Job first added in replace mode:
     job = await utils.addJob(
       "job1",
       { a: 1 },
       { jobKey: "UNIQUE", runAt: runAt1, jobKeyMode: "replace" },
     );
     expect(job.revision).toBe(0);
+    expect(job.payload).toEqual({ a: 1 });
     expect(job.run_at.toISOString()).toBe(runAt1.toISOString());
+
+    // Now updated, but preserve run_at
     job = await utils.addJob(
       "job1",
       { a: 2 },
       { jobKey: "UNIQUE", runAt: runAt2, jobKeyMode: "preserve_run_at" },
     );
     expect(job.revision).toBe(1);
+    expect(job.payload).toEqual({ a: 2 });
     expect(job.run_at.toISOString()).toBe(runAt1.toISOString());
+
+    // unsafe_dedupe should take no action other than to bump the revision number
     job = await utils.addJob(
       "job1",
       { a: 3 },
-      { jobKey: "UNIQUE", runAt: runAt3, jobKeyMode: "preserve" },
+      { jobKey: "UNIQUE", runAt: runAt3, jobKeyMode: "unsafe_dedupe" },
     );
     expect(job.revision).toBe(2);
+    expect(job.payload).toEqual({ a: 2 });
     expect(job.run_at.toISOString()).toBe(runAt1.toISOString());
+
+    // Replace the job one final time
     job = await utils.addJob(
       "job1",
       { a: 4 },
       { jobKey: "UNIQUE", runAt: runAt4, jobKeyMode: "replace" },
     );
     expect(job.revision).toBe(3);
+    expect(job.payload).toEqual({ a: 4 });
     expect(job.run_at.toISOString()).toBe(runAt4.toISOString());
+
     await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
@@ -111,8 +124,8 @@ test("supports the jobKey API with jobKeyMode", () =>
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
     );
     expect(jobs).toHaveLength(1);
-    expect(jobs[0].payload.a).toBe(4);
     expect(jobs[0].revision).toBe(3);
+    expect(jobs[0].payload.a).toBe(4);
     expect(jobs[0].run_at.toISOString()).toBe(runAt4.toISOString());
 
     const task: Task = jest.fn();

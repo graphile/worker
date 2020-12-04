@@ -27,7 +27,11 @@ begin
     raise exception 'Job maximum attempts must be at least 1.' using errcode = 'GWBMA';
   end if;
   if job_key is not null and (job_key_mode is null or job_key_mode in ('replace', 'preserve_run_at')) then
-    -- Upsert job
+    -- Upsert job if existing job isn't locked, but in the case of locked
+    -- existing job create a new job instead as it must have already started
+    -- executing (i.e. it's world state is out of date, and the fact add_job
+    -- has been called again implies there's new information that needs to be
+    -- acted upon).
     insert into :GRAPHILE_WORKER_SCHEMA.jobs (
       task_identifier,
       payload,
@@ -75,14 +79,21 @@ begin
     end if;
     -- Upsert failed -> there must be an existing job that is locked. Remove
     -- existing key to allow a new one to be inserted, and prevent any
-    -- subsequent retries by bumping attempts to the max allowed.
+    -- subsequent retries of existing job by bumping attempts to the max
+    -- allowed.
     update :GRAPHILE_WORKER_SCHEMA.jobs
       set
         key = null,
         attempts = jobs.max_attempts
       where key = job_key;
-  elsif job_key is not null and job_key_mode = 'preserve' then
-    -- Upsert job
+  elsif job_key is not null and job_key_mode = 'unsafe_dedupe' then
+    -- Insert job, but if one already exists then do nothing, even if the
+    -- existing job has already started (and thus represents an out-of-date
+    -- world state). This is dangerous because it means that whatever state
+    -- change triggered this add_job may not be acted upon (since it happened
+    -- after the existing job started executing, but no further job is being
+    -- scheduled), but it is useful in very rare circumstances for
+    -- de-duplication. If in doubt, DO NOT USE THIS.
     insert into :GRAPHILE_WORKER_SCHEMA.jobs (
       task_identifier,
       payload,
@@ -106,30 +117,14 @@ begin
           from unnest(flags) as item(flag)
         )
       )
-      on conflict (key) do update set
-        revision=jobs.revision + 1,
-        -- If job was rescheduled due to failures, reset the run_at
-        run_at=(case when jobs.attempts > 0 then excluded.run_at else jobs.run_at end),
-        -- always reset error/retry state
-        attempts=0,
-        last_error=null
-      where jobs.locked_at is null
+      on conflict (key)
+      -- Bump the revision so that there's something to return
+      do update set revision = jobs.revision + 1
       returning *
       into v_job;
-    -- If upsert succeeded (insert or update), return early
-    if not (v_job is null) then
-      return v_job;
-    end if;
-    -- Upsert failed -> there must be an existing job that is locked. Remove
-    -- existing key to allow a new one to be inserted, and prevent any
-    -- subsequent retries by bumping attempts to the max allowed.
-    update :GRAPHILE_WORKER_SCHEMA.jobs
-      set
-        key = null,
-        attempts = jobs.max_attempts
-      where key = job_key;
+    return v_job;
   elsif job_key is not null then
-    raise exception 'Invalid job_key_mode value, expected ''replace'', ''preserve_run_at'' or ''preserve''.' using errcode = 'GWBKM';
+    raise exception 'Invalid job_key_mode value, expected ''replace'', ''preserve_run_at'' or ''unsafe_dedupe''.' using errcode = 'GWBKM';
   end if;
   -- insert the new job. Assume no conflicts due to the update above
   insert into :GRAPHILE_WORKER_SCHEMA.jobs(
@@ -160,3 +155,26 @@ begin
   return v_job;
 end;
 $$ language plpgsql volatile;
+
+CREATE OR REPLACE FUNCTION :GRAPHILE_WORKER_SCHEMA.remove_job(job_key text) RETURNS :GRAPHILE_WORKER_SCHEMA.jobs
+    LANGUAGE plpgsql STRICT
+    AS $$
+declare
+  v_job :GRAPHILE_WORKER_SCHEMA.jobs;
+begin
+  -- Delete job if not locked
+  delete from :GRAPHILE_WORKER_SCHEMA.jobs
+    where key = job_key
+    and locked_at is null
+  returning * into v_job;
+  if not (v_job is null) then
+    return v_job;
+  end if;
+  -- Otherwise prevent job from retrying
+  update :GRAPHILE_WORKER_SCHEMA.jobs
+    set attempts = max_attempts
+    where key = job_key
+  returning * into v_job;
+  return v_job;
+end;
+$$;

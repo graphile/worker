@@ -527,10 +527,11 @@ export interface TaskSpec {
   /**
    * Modifies the behavior of `jobKey`; when 'replace' all attributes will be
    * updated, when 'preserve_run_at' all attributes except 'run_at' will be
-   * updated, when 'preserve' only system-controlled attributes will be
-   * updated. (Default: 'replace')
+   * updated, when 'unsafe_dedupe' a new job will only be added if no existing
+   * job (including locked jobs and permanently failed jobs) with matching job
+   * key exists. (Default: 'replace')
    */
-  jobKeyMode?: "replace" | "preserve_run_at" | "preserve";
+  jobKeyMode?: "replace" | "preserve_run_at" | "unsafe_dedupe";
 
   /**
    * Flags for the job, can be used to dynamically filter which jobs can and
@@ -718,11 +719,13 @@ NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
 - `job_key_mode` - when `job_key` is specified, this setting indicates what
   should happen when an existing job is found with the same job key:
   - `replace` (default) - all job parameters are updated to the new values,
-    including the `run_at`
+    including the `run_at` (inserts new job if matching job is locked)
   - `preserve_run_at` - all job parameters are updated to the new values, except
-    for `run_at` which maintains the previous value
-  - `preserve` - only updates system-managed values (`revision`, `attempts` and
-    `last_error`)
+    for `run_at` which maintains the previous value (inserts new job if matching
+    job is locked)
+  - `unsafe_dedupe` - only inserts the job if no existing job (whether or not it
+    is locked or has failed permanently) with matching key is found; does not
+    update the existing job
 
 Typically you'll want to set the `identifier` and `payload`:
 
@@ -828,40 +831,10 @@ CREATE TRIGGER generate_pdf_update
 
 ### Replacing/updating jobs
 
-Jobs scheduled with a `job_key` parameter may be replaced/updated, provided they
-are still pending, by calling `add_job` again with the same `job_key` value.
-This can be used for rescheduling jobs, to ensure only one of a given job is
-scheduled at a time, or to update other settings for the job. Behavior of this
-updating is controlled by the `job_key_mode` setting, but in all cases the
-following is true:
-
-- If an existing job with the same job key is found:
-  - If the existing job is locked:
-    - it will have it's `key` cleared
-    - it will have its attempts set to `max_attempts` to avoid it running again
-    - a new job will be created with the given attributes.
-  - Otherwise, if the existing job has previously failed:
-    - it will have its `attempts` reset to 0 (as if it were newly scheduled)
-    - it will have its `last_error` cleared
-    - it will have `run_at` overwritten with the new value (even when
-      `job_key_mode` is 'preserve').
-- Otherwise a new job will be created with the given attributes.
-
-When an existing unlocked job is found with matching `key`, the value of
-`job_key_mode` details how the other job attributes will be updated:
-
-- `replace` (default) - all job parameters are updated to the new values,
-  including the `run_at`. This is primarily useful for **debouncing** as it will
-  keep pushing the job execution back until updates stop coming in.
-- `preserve_run_at` - all job parameters are updated to the new values, except
-  for `run_at` which maintains the previous value. This is primarily useful for
-  **throttling**; the `run_at` will not increase beyond the initial `run_at` and
-  additional matching `add_job` calls will not result in duplicate jobs being
-  created.
-- `preserve` - only updates system-managed values (`revision`, `attempts` and
-  `last_error`). This is similarly useful to `preserve_run_at` but has the
-  advantage that because it does not update the `queue_name` it is slightly more
-  efficient.
+Jobs scheduled with a `job_key` parameter may be replaced/updated by calling
+`add_job` again with the same `job_key` value. This can be used for rescheduling
+jobs, to ensure only one of a given job is scheduled at a time, or to update
+other settings for the job.
 
 For example after the below SQL transaction, the `send_email` job will run only
 once, with the payload `'{"count": 2}'`:
@@ -872,6 +845,44 @@ SELECT graphile_worker.add_job('send_email', '{"count": 1}', job_key := 'abc');
 SELECT graphile_worker.add_job('send_email', '{"count": 2}', job_key := 'abc');
 COMMIT;
 ```
+
+In all cases if no match is found then a new job will be created; behavior when
+an existing job with the same job key is found is controlled by the
+`job_key_mode` setting:
+
+- `replace` (default) - overwrites the job with the new values. This is
+  primarily useful for rescheduling, updating, or **debouncing** (delaying
+  execution until there have been no events for at least a certain time period).
+  Locked jobs are capped and a new job is scheduled.
+- `preserve_run_at` - overwrites the job with the new values, but preserves
+  `run_at`. This is primarily useful for **throttling** (executing at most once
+  over a given time period). Locked jobs are capped and a new job is scheduled.
+- `unsafe_dedupe` - if an existing job is found, even if it is locked or
+  permanently failed, then no attributes will be updated. This is very dangerous
+  as it means that the event that triggered this `add_job` call may not result
+  in any action. It is strongly advised you do not use this mode unless you are
+  certain you know what you are doing.
+
+The full `job_key_mode` algorithm is roughly as follows:
+
+- If no existing job with the same job key is found:
+  - a new job will be created with the new attributes.
+- Otherwise, if `job_key_mode` is `unsafe_dedupe`:
+  - stop and return the existing job.
+- Otherwise, if the existing job is locked:
+  - it will have it's `key` cleared
+  - it will have its attempts set to `max_attempts` to avoid it running again
+  - a new job will be created with the new attributes.
+- Otherwise, if the existing job has previously failed:
+  - it will have its `attempts` reset to 0 (as if it were newly scheduled)
+  - it will have its `last_error` cleared
+  - it will have all other attributes updated to their new values, including
+    `run_at` (even when `job_key_mode` is 'preserve_run_at').
+- Otherwise, if `job_key_mode` is `preserve_run_at`:
+  - the job will have all its attributes except for `run_at` updated to their
+    new values.
+- Otherwise:
+  - the job will have all its attributes updated to their new values.
 
 ### Removing jobs
 
@@ -890,8 +901,11 @@ accidentally replacing or deleting unrelated jobs by mistake; one way to
 approach this is to incorporate the `task_identifier` into the `job_key`.
 
 **IMPORTANT**: If a job is updated using `add_job` once it is already running or
-completed, the second job will be scheduled separately, meaning both will run.
-Likewise, calling `remove_job` for a running or completed job is a no-op.
+completed, a second job will be scheduled separately (except with
+`job_key_mode = 'unsafe_dedupe'`), meaning both will run.
+
+**IMPORTANT**: calling `remove_job` for a running job will not actually remove
+it, but will prevent it from running again on failure.
 
 ## Administration functions
 
@@ -1163,7 +1177,7 @@ STATEMENT: select id from "graphile_worker".migrations order by id desc limit 1;
 - `GWBJK` - Job key is too long (max length: 512).
 - `GWBMA` - Job maximum attempts must be at least 1.
 - `GWBKM` - Invalid job_key_mode value, expected 'replace', 'preserve_run_at' or
-  'preserve'.
+  'unsafe_dedupe'.
 
 ## Development
 
