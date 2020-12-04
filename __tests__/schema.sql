@@ -342,9 +342,9 @@ begin
   if not (v_job is null) then
     return v_job;
   end if;
-  -- Otherwise prevent job from retrying
+  -- Otherwise prevent job from retrying, and clear the key
   update "graphile_worker".jobs
-    set attempts = max_attempts
+    set attempts = max_attempts, key = null
     where key = job_key
   returning * into v_job;
   return v_job;
