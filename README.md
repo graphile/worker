@@ -262,16 +262,10 @@ the APIs for running jobs.
 ### `run(options: RunnerOptions): Promise<Runner>`
 
 Runs until either stopped by a signal event like `SIGINT` or by calling the
-`stop()` function on the Runner object `run()` resolves to.
+`stop()` method on the resolved object.
 
-The Runner object also contains a `addJob` method (see [`addJob`](#addjob)) that
-can be used to enqueue jobs:
-
-```js
-await runner.addJob("testTask", {
-  thisIsThePayload: true,
-});
-```
+The the resolved 'Runner' object has a number of helpers on it, see
+[Runner object](#runner-object) for more information.
 
 ### `runOnce(options: RunnerOptions): Promise<void>`
 
@@ -318,6 +312,145 @@ One of these must be provided (in order of priority):
 - `DATABASE_URL` envvar
 - [PostgreSQL environmental variables](https://www.postgresql.org/docs/current/libpq-envars.html),
   including at least `PGDATABASE` (NOTE: not all envvars are supported)
+
+### `Runner` object
+
+The `run` method above resolves to a 'Runner' object that has the following
+methods and properties:
+
+- `stop(): Promise<void>` - stops the runner from accepting new jobs, and
+  returns a promise that resolves when all the in progress tasks (if any) are
+  complete.
+- `addJob: AddJobFunction` - see [`addJob`](#addjob).
+- `promise: Promise<void>` - a promise that resolves once the runner has
+  completed.
+- `events: WorkerEvents` - a Node.js `EventEmitter` that exposes certain events
+  within the runner (see [`WorkerEvents`](#workerevents)).
+
+#### Example: adding a job with `runner.addJob`
+
+See [`addJob`](#addjob) for more details.
+
+```js
+await runner.addJob("testTask", {
+  thisIsThePayload: true,
+});
+```
+
+#### Example: listening to an event with `runner.events`
+
+See [`WorkerEvents`](#workerevents) for more details.
+
+```js
+runner.events.on("job.success", ({ worker, job }) => {
+  console.log(`Hooray! Worker ${worker.workerId} completed job ${job.id}`);
+});
+```
+
+### `WorkerEvents`
+
+We support a large number of events via an EventEmitter. You can either retrieve
+the event emitter via the `events` property on the `Runner` object, or you can
+create your own event emitter and pass it to Graphile Worker via the
+`WorkerOptions.events` option (this is primarily useful for getting events from
+the other Graphile Worker entrypoints).
+
+Details of what events we support and what data is available on the event
+payload is detailed below in TypeScript syntax:
+
+```
+export type WorkerEvents = TypedEventEmitter<{
+  /**
+   * When a worker pool is created
+   */
+  "pool:create": { workerPool: WorkerPool };
+
+  /**
+   * When a worker pool attempts to connect to PG ready to issue a LISTEN
+   * statement
+   */
+  "pool:listen:connecting": { workerPool: WorkerPool };
+
+  /**
+   * When a worker pool starts listening for jobs via PG LISTEN
+   */
+  "pool:listen:success": { workerPool: WorkerPool; client: PoolClient };
+
+  /**
+   * When a worker pool faces an error on their PG LISTEN client
+   */
+  "pool:listen:error": {
+    workerPool: WorkerPool;
+    error: any;
+    client: PoolClient;
+  };
+
+  /**
+   * When a worker pool is released
+   */
+  "pool:release": { pool: WorkerPool };
+
+  /**
+   * When a worker pool starts a graceful shutdown
+   */
+  "pool:gracefulShutdown": { pool: WorkerPool; message: string };
+
+  /**
+   * When a worker pool graceful shutdown throws an error
+   */
+  "pool:gracefulShutdown:error": { pool: WorkerPool; error: any };
+
+  /**
+   * When a worker is created
+   */
+  "worker:create": { worker: Worker; tasks: TaskList };
+
+  /**
+   * When a worker calls get_job but there are no available jobs
+   */
+  "worker:getJob:error": { worker: Worker; error: any };
+
+  /**
+   * When a worker calls get_job but there are no available jobs
+   */
+  "worker:getJob:empty": { worker: Worker };
+
+  /**
+   * When a worker is created
+   */
+  "worker:fatalError": { worker: Worker; error: any; jobError: any | null };
+
+  /**
+   * When a job is retrieved by get_job
+   */
+  "job:start": { worker: Worker; job: Job };
+
+  /**
+   * When a job completes successfully
+   */
+  "job:success": { worker: Worker; job: Job };
+
+  /**
+   * When a job throws an error
+   */
+  "job:error": { worker: Worker; job: Job; error: any };
+
+  /**
+   * When a job fails permanently (emitted after job:error when appropriate)
+   */
+  "job:failed": { worker: Worker; job: Job; error: any };
+
+  /**
+   * When the runner is terminated by a signal
+   */
+  gracefulShutdown: { signal: Signal };
+
+  /**
+   * When the runner is stopped
+   */
+  stop: {};
+}>;
+```
 
 ## Library usage: queueing jobs
 
