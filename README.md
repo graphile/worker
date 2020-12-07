@@ -301,6 +301,9 @@ The following options for these methods are available.
 - `schema` can be used to change the default `graphile_worker` schema to
   something else (equivalent to `--schema` on the CLI)
 - `forbiddenFlags` see [Forbidden flags](#forbidden-flags) below
+- `events`: pass your own `new EventEmitter()` if you want to customize the
+  options, get earlier events (before the runner object resolves), or want to
+  get events from alternative Graphile Worker entrypoints.
 
 Exactly one of either `taskDirectory` or `taskList` must be provided (except for
 `runMigrations` which doesn't require a task list).
