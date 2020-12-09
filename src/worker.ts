@@ -30,6 +30,7 @@ export function makeNewWorker(
     escapedWorkerSchema,
     logger,
     maxContiguousErrors,
+    events,
   } = processSharedOptions(options, {
     scope: {
       label: "worker",
@@ -37,6 +38,14 @@ export function makeNewWorker(
     },
   });
   const promise = deferred();
+  promise.then(
+    () => {
+      events.emit("worker:stop", { worker });
+    },
+    (error) => {
+      events.emit("worker:stop", { worker, error });
+    },
+  );
   let activeJob: Job | null = null;
 
   let doNextTimer: NodeJS.Timer | null = null;
@@ -55,6 +64,7 @@ export function makeNewWorker(
       return;
     }
     active = false;
+    events.emit("worker:release", { worker });
     if (cancelDoNext()) {
       // Nothing in progress; resolve the promise
       promise.resolve();
@@ -75,13 +85,15 @@ export function makeNewWorker(
     }
   };
 
-  const worker = {
+  const worker: Worker = {
     nudge,
     workerId,
     release,
     promise,
     getActiveJob: () => activeJob,
   };
+
+  events.emit("worker:create", { worker, tasks });
 
   logger.debug(`Spawned`);
 
@@ -120,7 +132,7 @@ export function makeNewWorker(
           text:
             // TODO: breaking change; change this to more optimal:
             // `SELECT id, queue_name, task_identifier, payload FROM ...`,
-            `SELECT * FROM ${escapedWorkerSchema}.get_job($1, $2, forbidden_flags := $3::text[]);`,
+            `SELECT * FROM ${escapedWorkerSchema}.get_job($1, $2, forbidden_flags := $3::text[]); `,
           values: [
             workerId,
             supportedTaskNames,
@@ -133,7 +145,14 @@ export function makeNewWorker(
       // `doNext` cannot be executed concurrently, so we know this is safe.
       // eslint-disable-next-line require-atomic-updates
       activeJob = jobRow && jobRow.id ? jobRow : null;
+
+      if (activeJob) {
+        events.emit("job:start", { worker, job: activeJob });
+      } else {
+        events.emit("worker:getJob:empty", { worker });
+      }
     } catch (err) {
+      events.emit("worker:getJob:error", { worker, error: err });
       if (continuous) {
         contiguousErrors++;
         logger.debug(
@@ -209,6 +228,24 @@ export function makeNewWorker(
       const durationRaw = process.hrtime(startTimestamp);
       const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
       if (err) {
+        try {
+          events.emit("job:error", { worker, job, error: err });
+        } catch (e) {
+          logger.error(
+            "Error occurred in event emitter for 'job:error'; this is an issue in your application code and you should fix it",
+          );
+        }
+        if (job.attempts >= job.max_attempts) {
+          try {
+            // Failed forever
+            events.emit("job:failed", { worker, job, error: err });
+          } catch (e) {
+            logger.error(
+              "Error occurred in event emitter for 'job:failed'; this is an issue in your application code and you should fix it",
+            );
+          }
+        }
+
         const { message: rawMessage, stack } = err;
 
         /**
@@ -236,6 +273,13 @@ export function makeNewWorker(
           }),
         );
       } else {
+        try {
+          events.emit("job:success", { worker, job });
+        } catch (e) {
+          logger.error(
+            "Error occurred in event emitter for 'job:success'; this is an issue in your application code and you should fix it",
+          );
+        }
         if (!process.env.NO_LOG_SUCCESS) {
           logger.info(
             `Completed task ${job.id} (${
@@ -256,6 +300,18 @@ export function makeNewWorker(
         );
       }
     } catch (fatalError) {
+      try {
+        events.emit("worker:fatalError", {
+          worker,
+          error: fatalError,
+          jobError: err,
+        });
+      } catch (e) {
+        logger.error(
+          "Error occurred in event emitter for 'worker:fatalError'; this is an issue in your application code and you should fix it",
+        );
+      }
+
       const when = err ? `after failure '${err.message}'` : "after success";
       logger.error(
         `Failed to release job '${job.id}' ${when}; committing seppuku\n${fatalError.message}`,
