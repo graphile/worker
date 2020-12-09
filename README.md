@@ -345,7 +345,7 @@ await runner.addJob("testTask", {
 See [`WorkerEvents`](#workerevents) for more details.
 
 ```js
-runner.events.on("job.success", ({ worker, job }) => {
+runner.events.on("job:success", ({ worker, job }) => {
   console.log(`Hooray! Worker ${worker.workerId} completed job ${job.id}`);
 });
 ```
