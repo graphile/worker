@@ -1,7 +1,10 @@
 # Release notes
 
-### Pending
+### v0.9.0
 
+- Replace jobs ordering index for improved performance (thanks @ben-pr-p)
+  - NOTE: this migration might take a moment if you have a large jobs table
+- New events system lets you monitor what's going on inside Graphile Worker
 - New `job_key_mode` setting; see README for full details, but summary:
   - defaults to `replace` (existing behavior, i.e. debouncing)
   - if set to `preserve_run_at` it will preserve `run_at` which effectively
