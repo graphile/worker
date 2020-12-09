@@ -38,6 +38,14 @@ export function makeNewWorker(
     },
   });
   const promise = deferred();
+  promise.then(
+    () => {
+      events.emit("worker:stop", { worker });
+    },
+    (error) => {
+      events.emit("worker:stop", { worker, error });
+    },
+  );
   let activeJob: Job | null = null;
 
   let doNextTimer: NodeJS.Timer | null = null;
@@ -56,6 +64,7 @@ export function makeNewWorker(
       return;
     }
     active = false;
+    events.emit("worker:release", { worker });
     if (cancelDoNext()) {
       // Nothing in progress; resolve the promise
       promise.resolve();

@@ -22,6 +22,8 @@ const EVENTS = [
   "pool:gracefulShutdown",
   "pool:gracefulShutdown:error",
   "worker:create",
+  "worker:release",
+  "worker:stop",
   "worker:getJob:error",
   "worker:getJob:empty",
   "worker:fatalError",
@@ -114,6 +116,7 @@ test("emits the expected events", () =>
     await sleep(1);
     expect(finished).toBeFalsy();
     expect(eventCount("stop")).toEqual(0);
+    expect(eventCount("worker:release")).toEqual(0);
     expect(eventCount("pool:release")).toEqual(0);
     await runner.stop();
     expect(eventCount("stop")).toEqual(1);
@@ -121,6 +124,8 @@ test("emits the expected events", () =>
     await sleep(1);
     expect(finished).toBeTruthy();
     await runner.promise;
+    expect(eventCount("worker:release")).toEqual(CONCURRENCY);
+    expect(eventCount("worker:stop")).toEqual(CONCURRENCY);
     expect(eventCount("pool:release")).toEqual(1);
     expect(await jobCount(pgPool)).toEqual(0);
   }));

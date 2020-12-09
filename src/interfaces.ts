@@ -427,6 +427,16 @@ export type WorkerEvents = TypedEventEmitter<{
   "worker:create": { worker: Worker; tasks: TaskList };
 
   /**
+   * When a worker release is requested
+   */
+  "worker:release": { worker: Worker };
+
+  /**
+   * When a worker stops (normally after a release)
+   */
+  "worker:stop": { worker: Worker; error?: any };
+
+  /**
    * When a worker calls get_job but there are no available jobs
    */
   "worker:getJob:error": { worker: Worker; error: any };
