@@ -102,11 +102,7 @@ export function runTaskList(
 ): WorkerPool {
   const { logger, escapedWorkerSchema, events } = processSharedOptions(options);
   logger.debug(`Worker pool options are ${inspect(options)}`, { options });
-  const {
-    concurrency = defaults.concurrentJobs,
-    noHandleSignals,
-    ...workerOptions
-  } = options;
+  const { concurrency = defaults.concurrentJobs, noHandleSignals } = options;
 
   if (!noHandleSignals) {
     // Clean up when certain signals occur
@@ -251,7 +247,7 @@ export function runTaskList(
   // Spawn our workers; they can share clients from the pool.
   const withPgClient = makeWithPgClientFromPool(pgPool);
   for (let i = 0; i < concurrency; i++) {
-    workers.push(makeNewWorker(workerOptions, tasks, withPgClient));
+    workers.push(makeNewWorker(options, tasks, withPgClient));
   }
 
   // TODO: handle when a worker shuts down (spawn a new one)
