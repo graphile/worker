@@ -24,6 +24,7 @@ const EVENTS = [
   "worker:create",
   "worker:release",
   "worker:stop",
+  "worker:getJob:start",
   "worker:getJob:error",
   "worker:getJob:empty",
   "worker:fatalError",
@@ -31,6 +32,7 @@ const EVENTS = [
   "job:success",
   "job:error",
   "job:failed",
+  "job:complete",
   "gracefulShutdown",
   "stop",
 ];
@@ -109,8 +111,10 @@ test("emits the expected events", () =>
       await sleepUntil(() => !!jobPromises[i]);
       expect(eventCount("job:start")).toEqual(i + 1);
       expect(eventCount("job:success")).toEqual(i);
+      expect(eventCount("job:complete")).toEqual(i);
       jobPromises[i].resolve();
-      await sleepUntil(() => eventCount("job:success") === i + 1);
+      await sleepUntil(() => eventCount("job:complete") === i + 1);
+      expect(eventCount("job:success")).toEqual(i + 1);
     }
 
     await sleep(1);

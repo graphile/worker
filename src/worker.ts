@@ -125,6 +125,7 @@ export function makeNewWorker(
         }
       }
 
+      events.emit("worker:getJob:start", { worker });
       const {
         rows: [jobRow],
       } = await withPgClient((client) =>
@@ -299,6 +300,7 @@ export function makeNewWorker(
           }),
         );
       }
+      events.emit("job:complete", { worker, job });
     } catch (fatalError) {
       try {
         events.emit("worker:fatalError", {
