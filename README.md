@@ -419,6 +419,11 @@ export type WorkerEvents = TypedEventEmitter<{
   "worker:stop": { worker: Worker; error?: any };
 
   /**
+   * When a worker is about to ask the database for a job to execute
+   */
+  "worker:getJob:start": { worker: Worker };
+
+  /**
    * When a worker calls get_job but there are no available jobs
    */
   "worker:getJob:error": { worker: Worker; error: any };
@@ -452,6 +457,12 @@ export type WorkerEvents = TypedEventEmitter<{
    * When a job fails permanently (emitted after job:error when appropriate)
    */
   "job:failed": { worker: Worker; job: Job; error: any };
+
+  /**
+   * When a job has finished executing and the result (success or failure) has
+   * been written back to the database
+   */
+  "job:complete": { worker: Worker; job: Job };
 
   /**
    * When the runner is terminated by a signal
