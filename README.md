@@ -592,8 +592,8 @@ main().catch((err) => {
 
 The `addJob` API exists in many places in graphile-worker, but all the instances
 have exactly the same call signature. The API is used to add a job to the queue
-for immediate or delayed execution. With `jobKey` it can also be used to replace
-existing jobs.
+for immediate or delayed execution. With `jobKey` and `jobKeyMode` it can also
+be used to replace existing jobs.
 
 NOTE: `quickAddJob` is similar to `addJob`, but accepts an additional initial
 parameter describing how to connect to the database).
@@ -607,9 +607,13 @@ The `addJob` arguments are as follows:
   - `queueName`: the queue to run this task under
   - `runAt`: a Date to schedule this task to run in the future
   - `maxAttempts`: how many retries should this task get? (Default: 25)
-  - `jobKey`: unique identifier for the job, used to update or remove it later
-    if needed (see [Updating and removing jobs](#updating-and-removing-jobs));
-    can also be used for de-duplication
+  - `jobKey`: unique identifier for the job, used to replace, update or remove
+    it later if needed (see
+    [Replacing, updating and removing jobs](#replacing-updating-and-removing-jobs));
+    can be used for de-duplication (i.e. throttling or debouncing)
+  - `jobKeyMode`: controls the behavior of `jobKey` when a matching job is found
+    (see
+    [Replacing, updating and removing jobs](#replacing-updating-and-removing-jobs))
 
 Example:
 
@@ -665,6 +669,15 @@ export interface TaskSpec {
    * needed. (Default: null)
    */
   jobKey?: string;
+
+  /**
+   * Modifies the behavior of `jobKey`; when 'replace' all attributes will be
+   * updated, when 'preserve_run_at' all attributes except 'run_at' will be
+   * updated, when 'unsafe_dedupe' a new job will only be added if no existing
+   * job (including locked jobs and permanently failed jobs) with matching job
+   * key exists. (Default: 'replace')
+   */
+  jobKeyMode?: "replace" | "preserve_run_at" | "unsafe_dedupe";
 
   /**
    * Flags for the job, can be used to dynamically filter which jobs can and
@@ -838,9 +851,10 @@ NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
 - `run_at` - a timestamp after which to run the job; defaults to now.
 - `max_attempts` - if this task fails, how many times should we retry it?
   Default: 25.
-- `job_key` - unique identifier for the job, used to update or remove it later
-  if needed (see [Updating and removing jobs](#updating-and-removing-jobs)); can
-  also be used for de-duplication
+- `job_key` - unique identifier for the job, used to replace, update or remove
+  it later if needed (see
+  [Replacing, updating and removing jobs](#replacing-updating-and-removing-jobs));
+  can also be used for de-duplication
 - `priority` - an integer representing the jobs priority. Jobs are executed in
   numerically ascending order of priority (jobs with a numerically smaller
   priority are run first).
@@ -848,6 +862,16 @@ NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
   the job. Can be used alongside the `forbiddenFlags` option in library mode to
   implement complex rate limiting or other behaviors which requiring skipping
   jobs at runtime (see [Forbidden flags](#forbidden-flags)).
+- `job_key_mode` - when `job_key` is specified, this setting indicates what
+  should happen when an existing job is found with the same job key:
+  - `replace` (default) - all job parameters are updated to the new values,
+    including the `run_at` (inserts new job if matching job is locked)
+  - `preserve_run_at` - all job parameters are updated to the new values, except
+    for `run_at` which maintains the previous value (inserts new job if matching
+    job is locked)
+  - `unsafe_dedupe` - only inserts the job if no existing job (whether or not it
+    is locked or has failed permanently) with matching key is found; does not
+    update the existing job
 
 Typically you'll want to set the `identifier` and `payload`:
 
@@ -949,15 +973,17 @@ CREATE TRIGGER generate_pdf_update
   EXECUTE PROCEDURE trigger_job('generate_pdf');
 ```
 
-## Updating and removing jobs
+## Replacing, updating and removing jobs
 
-Jobs scheduled with a `job_key` parameter may be updated later, provided they
-are still pending, by calling `add_job` again with the same `job_key` value.
-This can be used for rescheduling jobs or to ensure only one of a given job is
-scheduled at a time. When a job is updated, any omitted parameters are reset to
-their defaults, with the exception of `queue_name` which persists unless
-overridden. For example after the below SQL transaction, the `send_email` job
-will run only once, with the payload `'{"count": 2}'`:
+### Replacing/updating jobs
+
+Jobs scheduled with a `job_key` parameter may be replaced/updated by calling
+`add_job` again with the same `job_key` value. This can be used for rescheduling
+jobs, to ensure only one of a given job is scheduled at a time, or to update
+other settings for the job.
+
+For example after the below SQL transaction, the `send_email` job will run only
+once, with the payload `'{"count": 2}'`:
 
 ```sql
 BEGIN;
@@ -966,15 +992,72 @@ SELECT graphile_worker.add_job('send_email', '{"count": 2}', job_key := 'abc');
 COMMIT;
 ```
 
+In all cases if no match is found then a new job will be created; behavior when
+an existing job with the same job key is found is controlled by the
+`job_key_mode` setting:
+
+- `replace` (default) - overwrites the unlocked job with the new values. This is
+  primarily useful for rescheduling, updating, or **debouncing** (delaying
+  execution until there have been no events for at least a certain time period).
+  Locked jobs will cause a new job to be scheduled instead.
+- `preserve_run_at` - overwrites the unlocked job with the new values, but
+  preserves `run_at`. This is primarily useful for **throttling** (executing at
+  most once over a given time period). Locked jobs will cause a new job to be
+  scheduled instead.
+- `unsafe_dedupe` - if an existing job is found, even if it is locked or
+  permanently failed, then it won't be updated. This is very dangerous as it
+  means that the event that triggered this `add_job` call may not result in any
+  action. It is strongly advised you do not use this mode unless you are certain
+  you know what you are doing.
+
+The full `job_key_mode` algorithm is roughly as follows:
+
+- If no existing job with the same job key is found:
+  - a new job will be created with the new attributes.
+- Otherwise, if `job_key_mode` is `unsafe_dedupe`:
+  - stop and return the existing job.
+- Otherwise, if the existing job is locked:
+  - it will have it's `key` cleared
+  - it will have its attempts set to `max_attempts` to avoid it running again
+  - a new job will be created with the new attributes.
+- Otherwise, if the existing job has previously failed:
+  - it will have its `attempts` reset to 0 (as if it were newly scheduled)
+  - it will have its `last_error` cleared
+  - it will have all other attributes updated to their new values, including
+    `run_at` (even when `job_key_mode` is `preserve_run_at`).
+- Otherwise, if `job_key_mode` is `preserve_run_at`:
+  - the job will have all its attributes except for `run_at` updated to their
+    new values.
+- Otherwise:
+  - the job will have all its attributes updated to their new values.
+
+### Removing jobs
+
 Pending jobs may also be removed using `job_key`:
 
 ```sql
 SELECT graphile_worker.remove_job('abc');
 ```
 
-**Note:** If a job is updated using `add_job` once it is already running or
-completed, the second job will be scheduled separately, meaning both will run.
-Likewise, calling `remove_job` for a running or completed job is a no-op.
+### `job_key` caveats
+
+**IMPORTANT**: jobs that complete successfully are deleted, there is no
+permanent `job_key` log, i.e. `remove_job` on a completed `job_key` is a no-op
+as no row exists.
+
+**IMPORTANT**: the `job_key` is treated as universally unique (whilst the job is
+pending/failed), so you can update a job to have a completely different
+`task_identifier` or `payload`. You must be careful to ensure that your
+`job_key` is sufficiently unique to prevent you accidentally replacing or
+deleting unrelated jobs by mistake; one way to approach this is to incorporate
+the `task_identifier` into the `job_key`.
+
+**IMPORTANT**: If a job is updated using `add_job` when it is currently locked
+(i.e. running), a second job will be scheduled separately (unless
+`job_key_mode = 'unsafe_dedupe'`), meaning both will run.
+
+**IMPORTANT**: calling `remove_job` for a locked (i.e. running) job will not
+actually remove it, but will prevent it from running again on failure.
 
 ## Administration functions
 
@@ -1238,6 +1321,15 @@ you.
 ERROR: relation "graphile_worker.migrations" does not exist at character 16
 STATEMENT: select id from "graphile_worker".migrations order by id desc limit 1;
 ```
+
+### Error codes
+
+- `GWBID` - Task identifier is too long (max length: 128).
+- `GWBQN` - Job queue name is too long (max length: 128).
+- `GWBJK` - Job key is too long (max length: 512).
+- `GWBMA` - Job maximum attempts must be at least 1.
+- `GWBKM` - Invalid job_key_mode value, expected 'replace', 'preserve_run_at' or
+  'unsafe_dedupe'.
 
 ## Development
 

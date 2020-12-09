@@ -232,6 +232,15 @@ export interface TaskSpec {
   jobKey?: string;
 
   /**
+   * Modifies the behavior of `jobKey`; when 'replace' all attributes will be
+   * updated, when 'preserve_run_at' all attributes except 'run_at' will be
+   * updated, when 'unsafe_dedupe' a new job will only be added if no existing
+   * job (including locked jobs and permanently failed jobs) with matching job
+   * key exists. (Default: 'replace')
+   */
+  jobKeyMode?: "replace" | "preserve_run_at" | "unsafe_dedupe";
+
+  /**
    * Flags for the job, can be used to dynamically filter which jobs can and
    * cannot run at runtime. (Default: null)
    */

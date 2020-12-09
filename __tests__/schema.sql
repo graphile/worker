@@ -23,7 +23,7 @@ CREATE TABLE graphile_worker.jobs (
     CONSTRAINT jobs_key_check CHECK ((length(key) > 0))
 );
 ALTER TABLE graphile_worker.jobs OWNER TO graphile_worker_role;
-CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[]) RETURNS graphile_worker.jobs
+CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
 declare
@@ -40,10 +40,14 @@ begin
     raise exception 'Job key is too long (max length: 512).' using errcode = 'GWBJK';
   end if;
   if max_attempts < 1 then
-    raise exception 'Job maximum attempts must be at least 1' using errcode = 'GWBMA';
+    raise exception 'Job maximum attempts must be at least 1.' using errcode = 'GWBMA';
   end if;
-  if job_key is not null then
-    -- Upsert job
+  if job_key is not null and (job_key_mode is null or job_key_mode in ('replace', 'preserve_run_at')) then
+    -- Upsert job if existing job isn't locked, but in the case of locked
+    -- existing job create a new job instead as it must have already started
+    -- executing (i.e. it's world state is out of date, and the fact add_job
+    -- has been called again implies there's new information that needs to be
+    -- acted upon).
     insert into "graphile_worker".jobs (
       task_identifier,
       payload,
@@ -72,7 +76,10 @@ begin
         payload=excluded.payload,
         queue_name=excluded.queue_name,
         max_attempts=excluded.max_attempts,
-        run_at=excluded.run_at,
+        run_at=(case
+          when job_key_mode = 'preserve_run_at' and jobs.attempts = 0 then jobs.run_at
+          else excluded.run_at
+        end),
         priority=excluded.priority,
         revision=jobs.revision + 1,
         flags=excluded.flags,
@@ -88,12 +95,52 @@ begin
     end if;
     -- Upsert failed -> there must be an existing job that is locked. Remove
     -- existing key to allow a new one to be inserted, and prevent any
-    -- subsequent retries by bumping attempts to the max allowed.
+    -- subsequent retries of existing job by bumping attempts to the max
+    -- allowed.
     update "graphile_worker".jobs
       set
         key = null,
         attempts = jobs.max_attempts
       where key = job_key;
+  elsif job_key is not null and job_key_mode = 'unsafe_dedupe' then
+    -- Insert job, but if one already exists then do nothing, even if the
+    -- existing job has already started (and thus represents an out-of-date
+    -- world state). This is dangerous because it means that whatever state
+    -- change triggered this add_job may not be acted upon (since it happened
+    -- after the existing job started executing, but no further job is being
+    -- scheduled), but it is useful in very rare circumstances for
+    -- de-duplication. If in doubt, DO NOT USE THIS.
+    insert into "graphile_worker".jobs (
+      task_identifier,
+      payload,
+      queue_name,
+      run_at,
+      max_attempts,
+      key,
+      priority,
+      flags
+    )
+      values(
+        identifier,
+        coalesce(payload, '{}'::json),
+        queue_name,
+        coalesce(run_at, now()),
+        coalesce(max_attempts, 25),
+        job_key,
+        coalesce(priority, 0),
+        (
+          select jsonb_object_agg(flag, true)
+          from unnest(flags) as item(flag)
+        )
+      )
+      on conflict (key)
+      -- Bump the revision so that there's something to return
+      do update set revision = jobs.revision + 1
+      returning *
+      into v_job;
+    return v_job;
+  elsif job_key is not null then
+    raise exception 'Invalid job_key_mode value, expected ''replace'', ''preserve_run_at'' or ''unsafe_dedupe''.' using errcode = 'GWBKM';
   end if;
   -- insert the new job. Assume no conflicts due to the update above
   insert into "graphile_worker".jobs(
@@ -124,7 +171,7 @@ begin
   return v_job;
 end;
 $$;
-ALTER FUNCTION graphile_worker.add_job(identifier text, payload json, queue_name text, run_at timestamp with time zone, max_attempts integer, job_key text, priority integer, flags text[]) OWNER TO graphile_worker_role;
+ALTER FUNCTION graphile_worker.add_job(identifier text, payload json, queue_name text, run_at timestamp with time zone, max_attempts integer, job_key text, priority integer, flags text[], job_key_mode text) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.complete_job(worker_id text, job_id bigint) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
@@ -282,12 +329,26 @@ CREATE FUNCTION graphile_worker.permanently_fail_jobs(job_ids bigint[], error_me
 $$;
 ALTER FUNCTION graphile_worker.permanently_fail_jobs(job_ids bigint[], error_message text) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.remove_job(job_key text) RETURNS graphile_worker.jobs
-    LANGUAGE sql STRICT
+    LANGUAGE plpgsql STRICT
     AS $$
+declare
+  v_job "graphile_worker".jobs;
+begin
+  -- Delete job if not locked
   delete from "graphile_worker".jobs
     where key = job_key
     and locked_at is null
-  returning *;
+  returning * into v_job;
+  if not (v_job is null) then
+    return v_job;
+  end if;
+  -- Otherwise prevent job from retrying, and clear the key
+  update "graphile_worker".jobs
+    set attempts = max_attempts, key = null
+    where key = job_key
+  returning * into v_job;
+  return v_job;
+end;
 $$;
 ALTER FUNCTION graphile_worker.remove_job(job_key text) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.reschedule_jobs(job_ids bigint[], run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, priority integer DEFAULT NULL::integer, attempts integer DEFAULT NULL::integer, max_attempts integer DEFAULT NULL::integer) RETURNS SETOF graphile_worker.jobs
