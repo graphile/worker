@@ -489,7 +489,7 @@ export type WorkerEvents = TypedEventEmitter<{
    * When a job has finished executing and the result (success or failure) has
    * been written back to the database
    */
-  "job:complete": { worker: Worker; job: Job };
+  "job:complete": { worker: Worker; job: Job; error: any };
 
   /**
    * When the runner is terminated by a signal

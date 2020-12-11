@@ -300,7 +300,7 @@ export function makeNewWorker(
           }),
         );
       }
-      events.emit("job:complete", { worker, job });
+      events.emit("job:complete", { worker, job, error: err });
     } catch (fatalError) {
       try {
         events.emit("worker:fatalError", {
