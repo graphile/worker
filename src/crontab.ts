@@ -1,42 +1,12 @@
 import * as JSON5 from "json5";
 
+import { CronItem, CronItemOptions } from "./interfaces";
+
 const SECOND = 1000; /*milliseconds*/
 const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 const WEEK = 7 * DAY;
-
-/**
- * a.k.a. `opts`, this allows you to change the behaviour when scheduling a cron task.
- */
-interface CronItemOptions {
-  /** How many jobs should we attempt to backfill? 0 to disable backfilling */
-  backfillCount: number;
-
-  /** Override the default job max_attempts */
-  maxAttempts?: number;
-
-  /**
-   * Do not back-fill if the next job is due within this many milliseconds (or
-   * overdue). If undefined, jobs will always be backfilled.
-   */
-  exclusionPeriod?: number;
-}
-
-/**
- * A recurring task schedule; this may represent a line in the `crontab` file,
- * or may be user configured.
- */
-interface CronItem {
-  minutes: number[];
-  hours: number[];
-  dates: number[];
-  months: number[];
-  dows: number[];
-  task: string;
-  options: CronItemOptions;
-  payload: any;
-}
 
 const CRONTAB_LINE_PARTS = /^([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+(.*)$/;
 const CRONTAB_NUMBER = /^([0-9]+)$/;
