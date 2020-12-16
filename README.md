@@ -170,6 +170,7 @@ https://graphile.org/support/
 - Adding jobs to same named queue runs them in series
 - Automatically re-attempts failed jobs with exponential back-off
 - Customisable retry count (default: 25 attempts over ~3 days)
+- Crontab-like scheduling feature for recurring tasks
 - Task de-duplication via unique `job_key`
 - Flexible runtime controls that can be used for complex rate limiting (e.g. via
   (graphile-worker-rate-limiter)[https://github.com/politics-rewired/graphile-worker-rate-limiter])
@@ -1141,6 +1142,119 @@ left unmodified.
 This method can be used to postpone or advance job execution, or to schedule a
 previously failed or permanently failed job for execution. The updated jobs will
 be returned (note that this may be fewer jobs than you requested).
+
+## Recurring tasks (crontab)
+
+Graphile Worker supports triggering recurring tasks according to a cron-like
+schedule. This is designed for recurring tasks such as sending a weekly email,
+running database maintenance tasks every day, performing data roll-ups hourly,
+downloading external data every 20 minutes, etc.
+
+Graphile Worker's crontab support:
+
+- guarantees (thanks to PostgreSQL) that no duplicate task schedules will occur
+- can backfill missed jobs if desired (e.g. if the Worker wasn't running when
+  the job was due to be scheduled)
+- schedules tasks using Graphile Worker's regular job queue, so you get all the
+  regular features such as exponential back-off on failure.
+
+**NOTE**: It is not intended that you add recurring tasks for each of your
+individual application users, instead you should have relatively few recurring
+tasks, and those tasks can create additional jobs for the individual users if
+necessary.
+
+Tasks are by default read from a `crontab` file next to the `tasks/` folder (but
+this is configurable in library mode). Please note that our syntax is not 100%
+compatible with cron's, and our task payload differs. We only handle timestamps
+in UTC. The following diagram details the parts of a Graphile Worker crontab
+schedule:
+
+```
+┌───────────── UTC minute (0 - 59)
+│ ┌───────────── UTC hour (0 - 23)
+│ │ ┌───────────── UTC day of the month (1 - 31)
+│ │ │ ┌───────────── UTC month (1 - 12)
+│ │ │ │ ┌───────────── UTC day of the week (0 - 6) (Sunday to Saturday)
+│ │ │ │ │ ┌───────────── task (identifier) to schedule
+│ │ │ │ │ │    ┌────────── optional scheduling options (see below)
+│ │ │ │ │ │    │     ┌────── optional payload to merge
+│ │ │ │ │ │    │     │
+│ │ │ │ │ │    │     │
+* * * * * task !opts {payload}
+```
+
+Comment lines start with a `#`.
+
+For the first 5 fields we support an explicit numeric value, `*` to represent
+all valid values, `*/n` (where `n` is a positive integer) to represent all valid
+values divisible by `n`, range syntax such as `1-5`, and any combination of
+these separated by commas.
+
+The task identifier should match the following regexp
+`/^[_a-zA-Z][_a-zA-Z0-9:_-]*$/` (namely it should start with an alphabetic
+character and it should only contain alphanumeric characters, colon, underscore
+and hyphen). It should be the name of one of your Graphile Worker tasks.
+
+The `opts` must alway be prefixed with a `!` if provided and details
+configuration for the task such as what should be done in the event that the
+previous event was skipped. Additional options can be specified by concatenating
+more `!` entries, but **do not add spaces**.
+
+Currently we support the following `opts`:
+
+- `!n` where `n` is a small positive integer - back-fill that number of previous
+  executions, for example if the worker was not running when they were due to be
+  executed
+- `!max=n` where `n` is a small positive integer - configure the `max_attempts`
+  of the job
+- `!ex=t` where `t` is a "time phrase" (see below) - do not back-fill if the
+  next job is due within period `t` (mnemonic: "exclude")
+
+Time phrases are comprised of a sequence of number-letter combinations, where
+the number represents a quantity and the letter represents a time period, e.g.
+`5d` for `five days`, or `3h` for `three hours`; e.g. `4w3d2h1m` represents
+`four weeks, three days, 2 hours and 1 minute` (i.e. a period of 44761 minutes).
+The following time periods are supported:
+
+- `s` - one second (1000 milliseconds)
+- `m` - one minute (60 seconds)
+- `h` - one hour (60 minutes)
+- `d` - on day (24 hours)
+- `w` - one week (7 days)
+
+The `payload` is a JSON5 object; it must start with a `{`, must not contain
+newlines or carriage returns (`\n` or `\r`), and must not contain trailing
+whitespace. It will be merged into the default crontab payload properties.
+
+Each crontab job will have a JSON object payload containing the key `_cron` with
+the value being an object with the following entries:
+
+- `ts` - ISO8601 timestamp representing when this job was due to execute
+- `backfilled` - true if the task was "backfilled" (i.e. it wasn't scheduled on
+  time), false otherwise
+
+### Crontab examples
+
+The following schedules the `send_weekly_email` task at 4:30am (UTC) every
+Monday
+
+```
+30 4 * * 1 send_weekly_email
+```
+
+The following does similar, but also will back-fill the previous (`1`) task if
+it was missed, sets max attempts to `10` and merges in `{"onboarding": false}`
+into the task payload.
+
+```
+30 4 * * 1 send_weekly_email !1!max=10 {onboarding:false}
+```
+
+The following triggers the `rollup` task every 4 hours on the hour.
+
+```
+0 */4 * * * rollup
+```
 
 ## Forbidden flags
 
