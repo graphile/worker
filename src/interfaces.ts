@@ -380,6 +380,21 @@ export interface RunnerOptions extends WorkerPoolOptions {
    * Each file in this directory will be used as a task handler
    */
   taskDirectory?: string;
+
+  /**
+   * A crontab string to use instead of reading a crontab file
+   */
+  crontab?: string;
+
+  /**
+   * Path to the crontab file. Defaults to `crontab`
+   */
+  crontabFile?: string;
+
+  /**
+   * Programmatically generated cron items.
+   */
+  cronItems?: Array<CronItem>;
 }
 
 export interface WorkerUtilsOptions extends SharedOptions {}
