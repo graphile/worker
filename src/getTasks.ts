@@ -81,7 +81,7 @@ export default async function getTasks(
   taskPath: string,
   watch = false,
 ): Promise<WatchedTaskList> {
-  const { logger } = await processSharedOptions(options);
+  const { logger } = processSharedOptions(options);
   const pathStat = await tryStat(taskPath);
   if (!pathStat) {
     throw new Error(
@@ -179,9 +179,14 @@ export default async function getTasks(
   }
 
   taskNames = Object.keys(tasks).sort();
+  let released = false;
   return {
     tasks,
     release: () => {
+      if (released) {
+        return;
+      }
+      released = true;
       watchers.forEach((watcher) => watcher.close());
     },
   };

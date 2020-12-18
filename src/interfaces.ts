@@ -162,6 +162,11 @@ export interface WatchedTaskList {
   release: () => void;
 }
 
+export interface WatchedCronItems {
+  items: Array<CronItem>;
+  release: () => void;
+}
+
 /**
  * a.k.a. `opts`, this allows you to change the behaviour when scheduling a cron task.
  */

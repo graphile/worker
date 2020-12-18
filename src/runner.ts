@@ -22,23 +22,21 @@ async function assertTaskList(
   options: RunnerOptions,
   releasers: Releasers,
 ): Promise<TaskList> {
-  let taskList: TaskList;
   assert(
     !options.taskDirectory || !options.taskList,
     "Exactly one of either `taskDirectory` or `taskList` should be set",
   );
   if (options.taskList) {
-    taskList = options.taskList;
+    return options.taskList;
   } else if (options.taskDirectory) {
     const watchedTasks = await getTasks(options, options.taskDirectory, false);
     releasers.push(() => watchedTasks.release());
-    taskList = watchedTasks.tasks;
+    return watchedTasks.tasks;
   } else {
     throw new Error(
       "You must specify either `options.taskList` or `options.taskDirectory`",
     );
   }
-  return taskList;
 }
 
 export const runOnce = async (
@@ -84,7 +82,8 @@ export const run = async (
     const taskList =
       overrideTaskList || (await assertTaskList(options, releasers));
 
-    const cronItems = overrideCronItems || (await assertCronItems(options));
+    const cronItems =
+      overrideCronItems || (await assertCronItems(options, releasers));
 
     const cron = runCron(options, cronItems, { pgPool, addJob, events });
     releasers.push(() => cron.release());

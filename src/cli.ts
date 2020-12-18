@@ -2,6 +2,7 @@
 import * as yargs from "yargs";
 
 import { defaults } from "./config";
+import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
 import { run, runOnce } from "./index";
 import { RunnerOptions } from "./interfaces";
@@ -121,11 +122,20 @@ async function main() {
   }
 
   const watchedTasks = await getTasks(options, `${process.cwd()}/tasks`, WATCH);
+  const watchedCronItems = await getCronItems(
+    options,
+    `${process.cwd()}/crontab`,
+    WATCH,
+  );
 
   if (ONCE) {
     await runOnce(options, watchedTasks.tasks);
   } else {
-    const { promise } = await run(options, watchedTasks.tasks);
+    const { promise } = await run(
+      options,
+      watchedTasks.tasks,
+      watchedCronItems.items,
+    );
     // Continue forever(ish)
     await promise;
   }

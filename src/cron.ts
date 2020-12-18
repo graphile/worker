@@ -1,9 +1,9 @@
 import * as assert from "assert";
-import { promises as fsp } from "fs";
 import { Pool } from "pg";
 
 import { parseCrontab } from "./crontab";
 import defer from "./deferred";
+import getCronItems from "./getCronItems";
 import {
   AddJobFunction,
   CronItem,
@@ -56,11 +56,14 @@ export const runCron = (
 
 export async function assertCronItems(
   options: RunnerOptions,
+  releasers: Releasers,
 ): Promise<Array<CronItem>> {
   const { crontabFile, cronItems, crontab } = options;
+
   if (!crontabFile && !cronItems && !crontab) {
     return [];
   }
+
   if (crontab) {
     assert(
       !crontabFile,
@@ -70,16 +73,20 @@ export async function assertCronItems(
       !cronItems,
       "`crontab` and `crontabFile` must not be set at the same time.",
     );
+
     return parseCrontab(crontab);
   } else if (crontabFile) {
     assert(
       !cronItems,
       "`crontab` and `crontabFile` must not be set at the same time.",
     );
-    const crontab = await fsp.readFile(crontabFile, "utf8");
-    return parseCrontab(crontab);
+
+    const watchedCronItems = await getCronItems(options, crontabFile, false);
+    releasers.push(() => watchedCronItems.release());
+    return watchedCronItems.items;
   } else {
     assert(cronItems != null, "Expected `cronItems` to be set.");
+
     return cronItems;
   }
 }
