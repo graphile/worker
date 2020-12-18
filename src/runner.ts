@@ -85,7 +85,7 @@ export const run = async (
     const cronItems =
       overrideCronItems || (await assertCronItems(options, releasers));
 
-    const cron = runCron(options, cronItems, { pgPool, addJob, events });
+    const cron = runCron(options, cronItems, { pgPool, events });
     releasers.push(() => cron.release());
 
     const workerPool = runTaskList(options, taskList, pgPool);

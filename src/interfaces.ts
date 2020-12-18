@@ -176,6 +176,12 @@ export interface CronItemOptions {
 
   /** Override the default job max_attempts */
   maxAttempts?: number;
+
+  /** Optionally set the job queue_name to enforce that the jobs run serially */
+  queueName?: string;
+
+  /** Optionally set the job priority */
+  priority?: number;
 }
 
 /**

@@ -1214,6 +1214,9 @@ Currently we support the following `opts`:
   tasks that were previously known)
 - `!max=n` where `n` is a small positive integer - configure the `max_attempts`
   of the job
+- `!queue=name` where `name` is an alphanumeric queue name - add the job to a
+  named queue so it executes serially
+- `!priority=n` where `n` is a valid priority - set the priority of the job
 
 Time phrases are comprised of a sequence of number-letter combinations, where
 the number represents a quantity and the letter represents a time period, e.g.

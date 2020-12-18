@@ -13,9 +13,11 @@ const CRONTAB_NUMBER = /^([0-9]+)$/;
 const CRONTAB_RANGE = /^([0-9]+)-([0-9]+)$/;
 const CRONTAB_WILDCARD = /^\*(?:\/([0-9]+))?$/;
 const CRONTAB_COMMAND = /^([_a-zA-Z][_a-zA-Z0-9:_-]*)(?:\s+!([^\s]+))?(?:\s+(\{.*\}))?$/;
-const CRONTAB_OPTIONS_BACKFILL = /^fill=((?:[0-9]+[smhdw])+)$/;
 const CRONTAB_OPTIONS_ID = /^id=([a-zA-Z0-9]+)$/;
+const CRONTAB_OPTIONS_BACKFILL = /^fill=((?:[0-9]+[smhdw])+)$/;
 const CRONTAB_OPTIONS_MAX = /^max=([0-9]+)$/;
+const CRONTAB_OPTIONS_QUEUE = /^queue=([-a-zA-Z0-9_:]+)$/;
+const CRONTAB_OPTIONS_PRIORITY = /^max=([0-9]+)$/;
 
 /**
  * Parses a range from a crontab line; a comma separated list of:
@@ -109,7 +111,7 @@ const parseCrontabRange = (
   return uniqueNumbers;
 };
 
-const TIMEPHRASE_PART = /^([0-9]+)([smhdw]/;
+const TIMEPHRASE_PART = /^([0-9]+)([smhdw])/;
 const PERIOD_DURATIONS = {
   s: SECOND,
   m: MINUTE,
@@ -157,6 +159,8 @@ const parseCrontabOptions = (
   let backfillPeriod: number | undefined = undefined;
   let maxAttempts: number | undefined = undefined;
   let identifier: string | undefined = undefined;
+  let queueName: string | undefined = undefined;
+  let priority: number | undefined = undefined;
   for (const part of parts) {
     {
       const matches = CRONTAB_OPTIONS_ID.exec(part);
@@ -191,6 +195,30 @@ const parseCrontabOptions = (
           );
         }
         maxAttempts = parseInt(matches[1], 10);
+        continue;
+      }
+    }
+    {
+      const matches = CRONTAB_OPTIONS_QUEUE.exec(part);
+      if (matches) {
+        if (queueName !== undefined) {
+          throw new Error(
+            `Options on line ${lineNumber} of crontab specifies queue name more than once.`,
+          );
+        }
+        queueName = matches[1];
+        continue;
+      }
+    }
+    {
+      const matches = CRONTAB_OPTIONS_PRIORITY.exec(part);
+      if (matches) {
+        if (priority !== undefined) {
+          throw new Error(
+            `Options on line ${lineNumber} of crontab specifies priority more than once.`,
+          );
+        }
+        priority = parseInt(matches[1], 10);
         continue;
       }
     }
