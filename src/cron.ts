@@ -7,6 +7,7 @@ import getCronItems from "./getCronItems";
 import {
   AddJobFunction,
   CronItem,
+  KnownCrontab,
   RunnerOptions,
   WorkerEvents,
 } from "./interfaces";
@@ -23,11 +24,18 @@ interface CronRequirements {
   events: WorkerEvents;
 }
 
+/**
+ * Executes our scheduled jobs as required.
+ *
+ * @param options - the common options
+ * @param cronItems - MUTABLE list of cron items to monitor. Do not assume this is static.
+ */
 export const runCron = (
   options: RunnerOptions,
   cronItems: CronItem[],
-  { pgPool, addJob, events }: CronRequirements,
+  { pgPool, addJob }: CronRequirements,
 ): Cron => {
+  const { logger, escapedWorkerSchema, events } = processSharedOptions(options);
   // TODO: events
   const promise = defer();
   let stopped = false;
@@ -35,6 +43,10 @@ export const runCron = (
   (async () => {
     // TODO HERE!
     // First, scan the DB to get our starting point.
+    const { rows } = await pgPool.query<KnownCrontab>(
+      `SELECT * FROM ${escapedWorkerSchema}.known_crontabs`,
+    );
+
     // Then, if any jobs are overdue, trigger them.
     // Then set up schedule to run jobs in future.
     // All the while, if stopped, abort.

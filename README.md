@@ -1202,9 +1202,16 @@ more `!` entries, but **do not add spaces**.
 
 Currently we support the following `opts`:
 
-- `!n` where `n` is a small positive integer - back-fill that number of previous
-  executions, for example if the worker was not running when they were due to be
-  executed
+- `!id=UID` where UID is a unique alphanumeric case-sensitive identifier -
+  specify an identifier for this crontab entry; by default this will use the
+  task identifier, but if you want more than one schedule for the same task
+  (e.g. with different payload, or different times) then you will need to supply
+  a unique identifier manually. Changing the identifier can result in duplicate
+  executions, so we recommend that you explicitly set it and never change it.
+- `!n` where `n` is a positive integer - back-fill any entries from the last `n`
+  minutes, for example if the worker was not running when they were due to be
+  executed (note: this will not back-fill new tasks, only tasks that were
+  previously known)
 - `!max=n` where `n` is a small positive integer - configure the `max_attempts`
   of the job
 - `!ex=t` where `t` is a "time phrase" (see below) - do not back-fill if the

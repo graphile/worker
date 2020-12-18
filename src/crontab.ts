@@ -13,7 +13,8 @@ const CRONTAB_NUMBER = /^([0-9]+)$/;
 const CRONTAB_RANGE = /^([0-9]+)-([0-9]+)$/;
 const CRONTAB_WILDCARD = /^\*(?:\/([0-9]+))?$/;
 const CRONTAB_COMMAND = /^([_a-zA-Z][_a-zA-Z0-9:_-]*)(?:\s+!([^\s]+))?(?:\s+(\{.*\}))?$/;
-const CRONTAB_OPTIONS_NUMBER = /^([0-9]+)$/;
+const CRONTAB_OPTIONS_BACKFILL = /^([0-9]+)$/;
+const CRONTAB_OPTIONS_ID = /^id=([a-zA-Z0-9]+)$/;
 const CRONTAB_OPTIONS_MAX = /^max=([0-9]+)$/;
 const CRONTAB_OPTIONS_EXCLUSION = /^ex=((?:[0-9]+[smhdw])+)$/;
 
@@ -152,21 +153,34 @@ const parseTimePhrase = (timePhrase: string): number => {
 const parseCrontabOptions = (
   lineNumber: number,
   optionsString: string,
-): CronItemOptions => {
+): { options: CronItemOptions; identifier: string | undefined } => {
   const parts = optionsString.split("!");
-  let backfillCount: number | undefined = undefined;
+  let backfillMinutes: number | undefined = undefined;
   let maxAttempts: number | undefined = undefined;
   let exclusionPeriod: number | undefined = undefined;
+  let identifier: string | undefined = undefined;
   for (const part of parts) {
     {
-      const matches = CRONTAB_OPTIONS_NUMBER.exec(part);
+      const matches = CRONTAB_OPTIONS_ID.exec(part);
       if (matches) {
-        if (backfillCount !== undefined) {
+        if (identifier !== undefined) {
+          throw new Error(
+            `Options on line ${lineNumber} of crontab specifies identifier more than once.`,
+          );
+        }
+        identifier = matches[1];
+        continue;
+      }
+    }
+    {
+      const matches = CRONTAB_OPTIONS_BACKFILL.exec(part);
+      if (matches) {
+        if (backfillMinutes !== undefined) {
           throw new Error(
             `Options on line ${lineNumber} of crontab specifies backfill count more than once.`,
           );
         }
-        backfillCount = parseInt(matches[1], 10);
+        backfillMinutes = parseInt(matches[1], 10);
         continue;
       }
     }
@@ -198,10 +212,13 @@ const parseCrontabOptions = (
       `Options on line ${lineNumber} of crontab contains unsupported expression '!${part}'.`,
     );
   }
-  if (!backfillCount) {
-    backfillCount = 0;
+  if (!backfillMinutes) {
+    backfillMinutes = 0;
   }
-  return { backfillCount, maxAttempts, exclusionPeriod };
+  return {
+    options: { backfillMinutes, maxAttempts, exclusionPeriod },
+    identifier,
+  };
 };
 
 const parseCrontabPayload = (
@@ -220,7 +237,7 @@ const parseCrontabPayload = (
 const parseCrontabCommand = (
   lineNumber: number,
   command: string,
-): Pick<CronItem, "task" | "options" | "payload"> => {
+): Pick<CronItem, "task" | "options" | "payload" | "identifier"> => {
   const matches = CRONTAB_COMMAND.exec(command);
   if (!matches) {
     throw new Error(
@@ -228,9 +245,12 @@ const parseCrontabCommand = (
     );
   }
   const [, task, optionsString, payloadString] = matches;
-  const options = parseCrontabOptions(lineNumber, optionsString);
+  const { options, identifier = task } = parseCrontabOptions(
+    lineNumber,
+    optionsString,
+  );
   const payload = parseCrontabPayload(lineNumber, payloadString);
-  return { task, options, payload };
+  return { task, options, payload, identifier };
 };
 
 /**
@@ -277,7 +297,7 @@ export const parseCrontabLine = (
     6,
     true,
   );
-  const { task, options, payload } = parseCrontabCommand(
+  const { task, options, payload, identifier } = parseCrontabCommand(
     lineNumber,
     matches[6],
   );
@@ -291,6 +311,7 @@ export const parseCrontabLine = (
     task,
     options,
     payload,
+    identifier,
   };
 };
 
@@ -309,5 +330,20 @@ export const parseCrontab = (crontab: string): Array<CronItem> => {
     }
     items.push(parseCrontabLine(line, lineNumber));
   }
+
+  // Assert that identifiers are unique
+  const identifiers = items.map((i) => i.identifier);
+  identifiers.sort();
+  const duplicates = identifiers.filter(
+    (id, i) => i > 0 && id === identifiers[i - 1],
+  );
+  if (duplicates.length) {
+    throw new Error(
+      `Invalid crontab; duplicate identifiers found: '${duplicates.join(
+        "', '",
+      )}' - please use '!id=...' to specify unique identifiers for your cron items`,
+    );
+  }
+
   return items;
 };

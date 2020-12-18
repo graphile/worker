@@ -172,7 +172,7 @@ export interface WatchedCronItems {
  */
 export interface CronItemOptions {
   /** How many jobs should we attempt to backfill? 0 to disable backfilling */
-  backfillCount: number;
+  backfillMinutes: number;
 
   /** Override the default job max_attempts */
   maxAttempts?: number;
@@ -189,14 +189,23 @@ export interface CronItemOptions {
  * or may be user configured.
  */
 export interface CronItem {
+  /** Minutes (0-59) on which to run the item; must be unique and ordered ascending. */
   minutes: number[];
+  /** Hours (0-23) on which to run the item; must be unique and ordered ascending. */
   hours: number[];
+  /** Dates (1-31) on which to run the item; must be unique and ordered ascending. */
   dates: number[];
+  /** Months (1-12) on which to run the item; must be unique and ordered ascending. */
   months: number[];
+  /** Days of the week (0-6) on which to run the item; must be unique and ordered ascending. */
   dows: number[];
+
   task: string;
   options: CronItemOptions;
   payload: any;
+
+  /** We need an identifier so that we can prevent double-execution of a task. */
+  identifier: string;
 }
 
 export interface Job {
@@ -216,6 +225,12 @@ export interface Job {
   locked_at: Date | null;
   locked_by: string | null;
   flags: { [flag: string]: true } | null;
+}
+
+export interface KnownCrontab {
+  identifier: string;
+  known_since: Date;
+  last_execution: Date | null;
 }
 
 export interface Worker {
