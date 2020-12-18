@@ -13,10 +13,9 @@ const CRONTAB_NUMBER = /^([0-9]+)$/;
 const CRONTAB_RANGE = /^([0-9]+)-([0-9]+)$/;
 const CRONTAB_WILDCARD = /^\*(?:\/([0-9]+))?$/;
 const CRONTAB_COMMAND = /^([_a-zA-Z][_a-zA-Z0-9:_-]*)(?:\s+!([^\s]+))?(?:\s+(\{.*\}))?$/;
-const CRONTAB_OPTIONS_BACKFILL = /^([0-9]+)$/;
+const CRONTAB_OPTIONS_BACKFILL = /^fill=((?:[0-9]+[smhdw])+)$/;
 const CRONTAB_OPTIONS_ID = /^id=([a-zA-Z0-9]+)$/;
 const CRONTAB_OPTIONS_MAX = /^max=([0-9]+)$/;
-const CRONTAB_OPTIONS_EXCLUSION = /^ex=((?:[0-9]+[smhdw])+)$/;
 
 /**
  * Parses a range from a crontab line; a comma separated list of:
@@ -155,9 +154,8 @@ const parseCrontabOptions = (
   optionsString: string,
 ): { options: CronItemOptions; identifier: string | undefined } => {
   const parts = optionsString.split("!");
-  let backfillMinutes: number | undefined = undefined;
+  let backfillPeriod: number | undefined = undefined;
   let maxAttempts: number | undefined = undefined;
-  let exclusionPeriod: number | undefined = undefined;
   let identifier: string | undefined = undefined;
   for (const part of parts) {
     {
@@ -175,12 +173,12 @@ const parseCrontabOptions = (
     {
       const matches = CRONTAB_OPTIONS_BACKFILL.exec(part);
       if (matches) {
-        if (backfillMinutes !== undefined) {
+        if (backfillPeriod !== undefined) {
           throw new Error(
             `Options on line ${lineNumber} of crontab specifies backfill count more than once.`,
           );
         }
-        backfillMinutes = parseInt(matches[1], 10);
+        backfillPeriod = parseTimePhrase(matches[1]);
         continue;
       }
     }
@@ -196,27 +194,15 @@ const parseCrontabOptions = (
         continue;
       }
     }
-    {
-      const matches = CRONTAB_OPTIONS_EXCLUSION.exec(part);
-      if (matches) {
-        if (exclusionPeriod !== undefined) {
-          throw new Error(
-            `Options on line ${lineNumber} of crontab specifies max attempts more than once.`,
-          );
-        }
-        exclusionPeriod = parseTimePhrase(matches[1]);
-        continue;
-      }
-    }
     throw new Error(
       `Options on line ${lineNumber} of crontab contains unsupported expression '!${part}'.`,
     );
   }
-  if (!backfillMinutes) {
-    backfillMinutes = 0;
+  if (!backfillPeriod) {
+    backfillPeriod = 0;
   }
   return {
-    options: { backfillMinutes, maxAttempts, exclusionPeriod },
+    options: { backfillPeriod, maxAttempts },
     identifier,
   };
 };

@@ -171,17 +171,11 @@ export interface WatchedCronItems {
  * a.k.a. `opts`, this allows you to change the behaviour when scheduling a cron task.
  */
 export interface CronItemOptions {
-  /** How many jobs should we attempt to backfill? 0 to disable backfilling */
-  backfillMinutes: number;
+  /** How far back should we backfill jobs when worker starts? (Only backfills since when the identifier was first used.) */
+  backfillPeriod: number;
 
   /** Override the default job max_attempts */
   maxAttempts?: number;
-
-  /**
-   * Do not back-fill if the next job is due within this many milliseconds (or
-   * overdue). If undefined, jobs will always be backfilled.
-   */
-  exclusionPeriod?: number;
 }
 
 /**
