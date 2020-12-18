@@ -153,9 +153,9 @@ const parseTimePhrase = (timePhrase: string): number => {
 
 const parseCrontabOptions = (
   lineNumber: number,
-  optionsString: string,
+  optionsString: string | undefined,
 ): { options: CronItemOptions; identifier: string | undefined } => {
-  const parts = optionsString.split("!");
+  const parts = optionsString != null ? optionsString.split("!") : [];
   let backfillPeriod: number | undefined = undefined;
   let maxAttempts: number | undefined = undefined;
   let identifier: string | undefined = undefined;
@@ -237,8 +237,11 @@ const parseCrontabOptions = (
 
 const parseCrontabPayload = (
   lineNumber: number,
-  payloadString: string,
+  payloadString: string | undefined,
 ): any => {
+  if (!payloadString) {
+    return null;
+  }
   try {
     return JSON5.parse(payloadString);
   } catch (e) {
