@@ -1,4 +1,5 @@
 import * as JSON5 from "json5";
+import { parse } from "querystring";
 
 import { CronItem, CronItemOptions } from "./interfaces";
 
@@ -27,19 +28,19 @@ const CRONTAB_WILDCARD = /^\*(?:\/([0-9]+))?$/;
 
 // The command from the crontab line
 /** Splits the command from the crontab line into the task, options and payload. */
-const CRONTAB_COMMAND = /^([_a-zA-Z][_a-zA-Z0-9:_-]*)(?:\s+!([^\s]+))?(?:\s+(\{.*\}))?$/;
+const CRONTAB_COMMAND = /^([_a-zA-Z][_a-zA-Z0-9:_-]*)(?:\s+\?([^\s]+))?(?:\s+(\{.*\}))?$/;
 
 // Crontab command options
 /** Matches the id=UID option, capturing the unique identifier */
-const CRONTAB_OPTIONS_ID = /^id=([_a-zA-Z][-_a-zA-Z0-9]*)$/;
+const CRONTAB_OPTIONS_ID = /^([_a-zA-Z][-_a-zA-Z0-9]*)$/;
 /** Matches the fill=t option, capturing the time phrase  */
-const CRONTAB_OPTIONS_BACKFILL = /^fill=((?:[0-9]+[smhdw])+)$/;
+const CRONTAB_OPTIONS_BACKFILL = /^((?:[0-9]+[smhdw])+)$/;
 /** Matches the max=n option, capturing the max executions number */
-const CRONTAB_OPTIONS_MAX = /^max=([0-9]+)$/;
+const CRONTAB_OPTIONS_MAX = /^([0-9]+)$/;
 /** Matches the queue=name option, capturing the queue name */
-const CRONTAB_OPTIONS_QUEUE = /^queue=([-a-zA-Z0-9_:]+)$/;
+const CRONTAB_OPTIONS_QUEUE = /^([-a-zA-Z0-9_:]+)$/;
 /** Matches the priority=n option, capturing the priority value */
-const CRONTAB_OPTIONS_PRIORITY = /^priority=(-?[0-9]+)$/;
+const CRONTAB_OPTIONS_PRIORITY = /^(-?[0-9]+)$/;
 
 /**
  * Parses a range from a crontab line; a comma separated list of:
@@ -180,92 +181,86 @@ const parseCrontabOptions = (
   lineNumber: number,
   optionsString: string | undefined,
 ): { options: CronItemOptions; identifier: string | undefined } => {
-  const parts = optionsString != null ? optionsString.split("!") : [];
+  const parsed = optionsString != null ? parse(optionsString) : {};
   let backfillPeriod: number | undefined = undefined;
   let maxAttempts: number | undefined = undefined;
   let identifier: string | undefined = undefined;
   let queueName: string | undefined = undefined;
   let priority: number | undefined = undefined;
 
-  type MatcherTuple = [
-    RegExp,
-    string,
-    () => number | string | undefined,
-    (matches: RegExpExecArray) => void,
-  ];
+  type MatcherTuple = [RegExp, (matches: RegExpExecArray) => void];
 
-  const matchers: MatcherTuple[] = [
-    [
+  const matchers: { [key: string]: MatcherTuple } = {
+    id: [
       CRONTAB_OPTIONS_ID,
-      "identifier",
-      () => identifier,
       (matches) => {
         identifier = matches[1];
       },
     ],
-    [
+    fill: [
       CRONTAB_OPTIONS_BACKFILL,
-      "backfillPeriod",
-      () => backfillPeriod,
       (matches) => {
         backfillPeriod = parseTimePhrase(matches[1]);
       },
     ],
-    [
+    max: [
       CRONTAB_OPTIONS_MAX,
-      "maxAttempts",
-      () => maxAttempts,
       (matches) => {
         maxAttempts = parseInt(matches[1], 10);
       },
     ],
-    [
+    queue: [
       CRONTAB_OPTIONS_QUEUE,
-      "queueName",
-      () => queueName,
       (matches) => {
         queueName = matches[1];
       },
     ],
-    [
+    priority: [
       CRONTAB_OPTIONS_PRIORITY,
-      "priority",
-      () => priority,
       (matches) => {
         priority = parseInt(matches[1], 10);
       },
     ],
-  ];
+  };
 
-  function match(matchers: MatcherTuple[], part: string) {
-    for (const matcher of matchers) {
-      const [regex, name, get, set] = matcher;
-      const matches = regex.exec(part);
-      if (matches) {
-        if (get() !== undefined) {
-          throw new Error(
-            `Options on line ${lineNumber} of crontab specifies ${name} more than once.`,
-          );
-        }
-        set(matches);
-        return;
-      }
+  function match(matcher: MatcherTuple, key: string, value: string) {
+    const [regex, set] = matcher;
+    const matches = regex.exec(value);
+    if (matches) {
+      set(matches);
+    } else {
+      throw new Error(
+        `Options on line ${lineNumber} of crontab contains invalid value for '${key}', value '${value}' is not compatible with this option.`,
+      );
     }
-    throw new Error(
-      `Options on line ${lineNumber} of crontab contains unsupported expression '!${part}'.`,
-    );
   }
 
-  for (const part of parts) {
-    match(matchers, part);
-  }
+  Object.entries(parsed).forEach(([key, value]) => {
+    if (typeof value !== "string") {
+      throw new Error(
+        `Options on line ${lineNumber} of crontab contains invalid value for '${key}', did you specify it more than once?`,
+      );
+    }
+    const matcher = Object.prototype.hasOwnProperty.call(matchers, key)
+      ? matchers[key]
+      : null;
+    if (matcher) {
+      match(matcher, key, value);
+    } else {
+      throw new Error(
+        `Options on line ${lineNumber} of crontab contains unsupported key '${key}'; supported keys are: '${Object.keys(
+          matchers,
+        ).join("', '")}'.`,
+      );
+    }
+  });
 
   if (!backfillPeriod) {
     backfillPeriod = 0;
   }
 
   return {
-    options: { backfillPeriod, maxAttempts },
+    options: { backfillPeriod, maxAttempts, queueName, priority },
     identifier,
   };
 };

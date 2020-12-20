@@ -1181,7 +1181,7 @@ schedule:
 # │ │ │ │ │ │    │     ┌────── optional payload to merge
 # │ │ │ │ │ │    │     │
 # │ │ │ │ │ │    │     │
-# * * * * * task !opts {payload}
+# * * * * * task ?opts {payload}
 ```
 
 Comment lines start with a `#`.
@@ -1196,28 +1196,27 @@ The task identifier should match the following regexp
 character and it should only contain alphanumeric characters, colon, underscore
 and hyphen). It should be the name of one of your Graphile Worker tasks.
 
-The `opts` must alway be prefixed with a `!` if provided and details
+The `opts` must alway be prefixed with a `?` if provided and details
 configuration for the task such as what should be done in the event that the
 previous event was not scheduled (e.g. because the Worker wasn't running).
-Additional options can be specified by concatenating more `!` entries, but **do
-not add spaces**.
+Options are specified using a HTTP query string.
 
 Currently we support the following `opts`:
 
-- `!id=UID` where UID is a unique alphanumeric case-sensitive identifier
-  starting with a letter - specify an identifier for this crontab entry; by
-  default this will use the task identifier, but if you want more than one
-  schedule for the same task (e.g. with different payload, or different times)
-  then you will need to supply a unique identifier explicitly.
-- `!fill=t` where `t` is a "time phrase" (see below) - back-fill any entries
-  from the last time period `t`, for example if the worker was not running when
-  they were due to be executed.
-- `!max=n` where `n` is a small positive integer - configure the `max_attempts`
+- `id=UID` where UID is a unique alphanumeric case-sensitive identifier starting
+  with a letter - specify an identifier for this crontab entry; by default this
+  will use the task identifier, but if you want more than one schedule for the
+  same task (e.g. with different payload, or different times) then you will need
+  to supply a unique identifier explicitly.
+- `fill=t` where `t` is a "time phrase" (see below) - back-fill any entries from
+  the last time period `t`, for example if the worker was not running when they
+  were due to be executed.
+- `max=n` where `n` is a small positive integer - configure the `max_attempts`
   of the job.
-- `!queue=name` where `name` is an alphanumeric queue name - add the job to a
+- `queue=name` where `name` is an alphanumeric queue name - add the job to a
   named queue so it executes serially.
-- `!priority=n` where `n` is a relatively small integer - set the priority of
-  the job.
+- `priority=n` where `n` is a relatively small integer - set the priority of the
+  job.
 
 **NOTE**: changing the identifier (e.g. via `id`) can result in duplicate
 executions, so we recommend that you explicitly set it and never change it.
@@ -1266,7 +1265,7 @@ it was missed, sets max attempts to `10` and merges in `{"onboarding": false}`
 into the task payload.
 
 ```
-30 4 * * 1 send_weekly_email !fill=1!max=10 {onboarding:false}
+30 4 * * 1 send_weekly_email ?fill=1&max=10 {onboarding:false}
 ```
 
 The following triggers the `rollup` task every 4 hours on the hour.
