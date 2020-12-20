@@ -330,7 +330,10 @@ export const runCron = (
       }
       // + 1 millisecond to try and ensure this happens in the next minute
       // rather than at the end of the previous.
-      timeout = setTimeout(loop, Math.max(+nextTimestamp - Date.now() + 1, 0));
+      timeout = setTimeout(() => {
+        timeout = null;
+        loop();
+      }, Math.max(+nextTimestamp - Date.now() + 1, 0));
     };
 
     async function loop() {
@@ -417,6 +420,10 @@ export const runCron = (
     release() {
       if (!released) {
         released = true;
+        if (timeout) {
+          // Next loop is queued; lets cancel it early
+          stop();
+        }
       }
       return promise;
     },
