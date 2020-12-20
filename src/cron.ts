@@ -207,6 +207,11 @@ async function registerAndBackfillItems(
     // Round up to the nearest minute.
     unsafeRoundToMinute(unsafeTs, true);
 
+    // We're `await`-ing inside this loop: serialization is desired. If we were
+    // to parallelize this (e.g. with `Promise.all`) then race conditions could
+    // mean that backfilling of earlier tasks is skipped because
+    // known_crontabs.last_execution may be advanced for a later backfill
+    // before an earlier backfill occurs.
     while (unsafeTs < startTime) {
       const timeAgo = +startTime - +unsafeTs;
       // Note: `ts` and `digest` are both safe.
@@ -240,26 +245,36 @@ async function registerAndBackfillItems(
         await executeCronJobs(pgPool, escapedWorkerSchema, itemsToBackfill, ts);
       }
 
+      // Advance our counter (or risk infinite loop!).
       unsafeTs.setUTCMinutes(unsafeTs.getUTCMinutes() + 1);
     }
   }
 }
 
+/** One minute in milliseconds */
 const ONE_MINUTE = 60 * 1000;
 
 /**
  * Executes our scheduled jobs as required.
  *
+ * This is not currently intended for usage directly; use `run` instead.
+ *
+ * @internal
+ *
  * @param options - the common options
  * @param cronItems - MUTABLE list of cron items to monitor. Do not assume this is static.
+ * @param requirements - the helpers that this task needs
  */
 export const runCron = (
   options: RunnerOptions,
   cronItems: CronItem[],
-  { pgPool }: CronRequirements,
+  requirements: CronRequirements,
 ): Cron => {
+  const { pgPool } = requirements;
   const { logger, escapedWorkerSchema } = processSharedOptions(options);
-  // TODO: events
+
+  // TODO: add events
+
   const promise = defer();
   let released = false;
   let timeout: NodeJS.Timer | null = null;
@@ -396,9 +411,7 @@ export const runCron = (
     scheduleNextLoop();
   }
 
-  setTimeout(() => {
-    cronMain().catch(stop);
-  }, 0);
+  cronMain().catch(stop);
 
   return {
     release() {
@@ -428,14 +441,14 @@ export async function assertCronItems(
     );
     assert(
       !cronItems,
-      "`crontab` and `crontabFile` must not be set at the same time.",
+      "`crontab` and `crontabItems` must not be set at the same time.",
     );
 
     return parseCrontab(crontab);
   } else if (crontabFile) {
     assert(
       !cronItems,
-      "`crontab` and `crontabFile` must not be set at the same time.",
+      "`crontabFile` and `crontabItems` must not be set at the same time.",
     );
 
     const watchedCronItems = await getCronItems(options, crontabFile, false);
@@ -448,6 +461,9 @@ export async function assertCronItems(
   }
 }
 
+/**
+ * The digest of a timestamp into the component parts that a cron schedule cares about.
+ */
 interface TimestampDigest {
   min: number;
   hour: number;
@@ -473,6 +489,10 @@ function digestTimestamp(ts: Date): TimestampDigest {
   return { min, hour, date, month, dow };
 }
 
+/**
+ * Returns true if the cronItem should fire for the given timestamp digest,
+ * false otherwise.
+ */
 export function cronItemMatches(
   cronItem: CronItem,
   digest: TimestampDigest,
@@ -480,15 +500,16 @@ export function cronItemMatches(
   const { min, hour, date, month, dow } = digest;
 
   if (
+    // If minute, hour and month match
     cronItem.minutes.includes(min) &&
     cronItem.hours.includes(hour) &&
     cronItem.months.includes(month)
   ) {
-    // Cron has a special behaviour: if both date and day of week are
-    // exclusionary (i.e. not "*") then a match for *either* passes.
     const dateIsExclusionary = cronItem.dates.length !== 31;
     const dowIsExclusionary = cronItem.dows.length !== 7;
     if (dateIsExclusionary && dowIsExclusionary) {
+      // Cron has a special behaviour: if both date and day of week are
+      // exclusionary (i.e. not "*") then a match for *either* passes.
       return cronItem.dates.includes(date) || cronItem.dows.includes(dow);
     } else if (dateIsExclusionary) {
       return cronItem.dates.includes(date);
