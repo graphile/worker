@@ -237,12 +237,13 @@ export const runCron = (
   const { logger, escapedWorkerSchema } = processSharedOptions(options);
   // TODO: events
   const promise = defer();
-  let stopped = false;
+  let released = false;
   let timeout: NodeJS.Timer | null = null;
 
+  let stopCalled = false;
   function stop(e?: Error) {
-    if (!stopped) {
-      stopped = true;
+    if (!stopCalled) {
+      stopCalled = true;
       if (timeout) {
         clearTimeout(timeout);
         timeout = null;
@@ -252,14 +253,42 @@ export const runCron = (
       } else {
         promise.resolve();
       }
+    } else {
+      logger.error(
+        "Graphile Worker internal bug in src/cron.ts: calling `stop()` more than once shouldn't be possible. Please report this.",
+      );
     }
   }
 
-  (async () => {
+  async function cronMain() {
+    if (released) {
+      return stop();
+    }
+
     const start = new Date();
+
+    // We must backfill BEFORE scheduling any new jobs otherwise backfill won't
+    // work due to known_crontabs.last_execution having been updated.
+    await registerAndBackfillItems(
+      pgPool,
+      escapedWorkerSchema,
+      cronItems,
+      new Date(+start),
+    );
+
+    if (released) {
+      return stop();
+    }
+
+    // The backfill may have taken a moment, we should continue from where the
+    // worker started and catch up as quickly as we can. This does **NOT**
+    // count as a backfill.
     let nextTimestamp = roundToMinute(new Date(+start), true);
 
     const scheduleNextLoop = () => {
+      if (released) {
+        return stop();
+      }
       // + 1 millisecond to try and ensure this happens in the next minute
       // rather than at the end of the previous.
       timeout = setTimeout(loop, Math.max(+nextTimestamp - Date.now() + 1, 0));
@@ -267,8 +296,8 @@ export const runCron = (
 
     async function loop() {
       try {
-        if (stopped) {
-          return;
+        if (released) {
+          return stop();
         }
 
         // THIS MUST COME BEFORE nextTimestamp IS MUTATED
@@ -324,11 +353,10 @@ export const runCron = (
             jobAndIdentifier,
             ts,
           );
-        }
 
-        // If we stopped during the previous await, exit
-        if (stopped) {
-          return;
+          if (released) {
+            return stop();
+          }
         }
 
         // This must come at the very end (otherwise we might accidentally skip
@@ -341,20 +369,17 @@ export const runCron = (
       }
     }
 
-    await registerAndBackfillItems(
-      pgPool,
-      escapedWorkerSchema,
-      cronItems,
-      new Date(+start),
-    );
-
     scheduleNextLoop();
-  })().catch(stop);
+  }
+
+  setTimeout(() => {
+    cronMain().catch(stop);
+  }, 0);
 
   return {
     release() {
-      if (!stopped) {
-        stop();
+      if (!released) {
+        released = true;
       }
       return promise;
     },
