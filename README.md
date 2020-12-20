@@ -1204,11 +1204,11 @@ not add spaces**.
 
 Currently we support the following `opts`:
 
-- `!id=UID` where UID is a unique alphanumeric case-sensitive identifier -
-  specify an identifier for this crontab entry; by default this will use the
-  task identifier, but if you want more than one schedule for the same task
-  (e.g. with different payload, or different times) then you will need to supply
-  a unique identifier explicitly.
+- `!id=UID` where UID is a unique alphanumeric case-sensitive identifier
+  starting with a letter - specify an identifier for this crontab entry; by
+  default this will use the task identifier, but if you want more than one
+  schedule for the same task (e.g. with different payload, or different times)
+  then you will need to supply a unique identifier explicitly.
 - `!fill=t` where `t` is a "time phrase" (see below) - back-fill any entries
   from the last time period `t`, for example if the worker was not running when
   they were due to be executed.
