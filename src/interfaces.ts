@@ -171,10 +171,10 @@ export interface WatchedCronItems {
  * a.k.a. `opts`, this allows you to change the behaviour when scheduling a cron task.
  */
 export interface CronItemOptions {
-  /** How far back should we backfill jobs when worker starts? (Only backfills since when the identifier was first used.) */
+  /** How far back (in milliseconds) should we backfill jobs when worker starts? (Only backfills since when the identifier was first used.) */
   backfillPeriod: number;
 
-  /** Override the default job max_attempts */
+  /** Optionally override the default job max_attempts */
   maxAttempts?: number;
 
   /** Optionally set the job queue_name to enforce that the jobs run serially */
@@ -186,28 +186,34 @@ export interface CronItemOptions {
 
 /**
  * A recurring task schedule; this may represent a line in the `crontab` file,
- * or may be user configured.
+ * or may be user configured. If it's configured manually, please be certain
+ * the adhere to the constraints in the comments otherwise you'll get
+ * unexpected behaviours.
  */
 export interface CronItem {
-  /** Minutes (0-59) on which to run the item; must be unique and ordered ascending. */
+  /** Minutes (0-59) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
   minutes: number[];
-  /** Hours (0-23) on which to run the item; must be unique and ordered ascending. */
+  /** Hours (0-23) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
   hours: number[];
-  /** Dates (1-31) on which to run the item; must be unique and ordered ascending. */
+  /** Dates (1-31) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
   dates: number[];
-  /** Months (1-12) on which to run the item; must be unique and ordered ascending. */
+  /** Months (1-12) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
   months: number[];
-  /** Days of the week (0-6) on which to run the item; must be unique and ordered ascending. */
+  /** Days of the week (0-6) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
   dows: number[];
 
+  /** The identifier of the task to execute */
   task: string;
+  /** Options influencing backfilling and properties of the scheduled job */
   options: CronItemOptions;
-  payload: any;
+  /** A payload object to merge into the default cron payload object for the scheduled job */
+  payload: { [key: string]: any };
 
-  /** We need an identifier so that we can prevent double-execution of a task. */
+  /** An identifier so that we can prevent double-scheduling of a task and determine whether or not to backfill. */
   identifier: string;
 }
 
+/** Represents records in the `jobs` table */
 export interface Job {
   id: string;
   queue_name: string | null;
@@ -227,6 +233,7 @@ export interface Job {
   flags: { [flag: string]: true } | null;
 }
 
+/** Represents records in the `known_crontabs` table */
 export interface KnownCrontab {
   identifier: string;
   known_since: Date;
@@ -412,7 +419,10 @@ export interface RunnerOptions extends WorkerPoolOptions {
   crontabFile?: string;
 
   /**
-   * Programmatically generated cron items.
+   * Programmatically generated cron items. **BE VERY CAREFUL** if you use this
+   * manually, there are requirements on this type that TypeScript cannot
+   * express, and if you don't adhere to them then you'll get unexpected
+   * behaviours.
    */
   cronItems?: Array<CronItem>;
 }
