@@ -186,74 +186,84 @@ const parseCrontabOptions = (
   let identifier: string | undefined = undefined;
   let queueName: string | undefined = undefined;
   let priority: number | undefined = undefined;
-  for (const part of parts) {
-    {
-      const matches = CRONTAB_OPTIONS_ID.exec(part);
-      if (matches) {
-        if (identifier !== undefined) {
-          throw new Error(
-            `Options on line ${lineNumber} of crontab specifies identifier more than once.`,
-          );
-        }
+
+  type MatcherTuple = [
+    RegExp,
+    string,
+    () => number | string | undefined,
+    (matches: RegExpExecArray) => void,
+  ];
+
+  const matchers: MatcherTuple[] = [
+    [
+      CRONTAB_OPTIONS_ID,
+      "identifier",
+      () => identifier,
+      (matches) => {
         identifier = matches[1];
-        continue;
-      }
-    }
-    {
-      const matches = CRONTAB_OPTIONS_BACKFILL.exec(part);
-      if (matches) {
-        if (backfillPeriod !== undefined) {
-          throw new Error(
-            `Options on line ${lineNumber} of crontab specifies backfill count more than once.`,
-          );
-        }
+      },
+    ],
+    [
+      CRONTAB_OPTIONS_BACKFILL,
+      "backfillPeriod",
+      () => backfillPeriod,
+      (matches) => {
         backfillPeriod = parseTimePhrase(matches[1]);
-        continue;
-      }
-    }
-    {
-      const matches = CRONTAB_OPTIONS_MAX.exec(part);
-      if (matches) {
-        if (maxAttempts !== undefined) {
-          throw new Error(
-            `Options on line ${lineNumber} of crontab specifies max attempts more than once.`,
-          );
-        }
+      },
+    ],
+    [
+      CRONTAB_OPTIONS_MAX,
+      "maxAttempts",
+      () => maxAttempts,
+      (matches) => {
         maxAttempts = parseInt(matches[1], 10);
-        continue;
-      }
-    }
-    {
-      const matches = CRONTAB_OPTIONS_QUEUE.exec(part);
-      if (matches) {
-        if (queueName !== undefined) {
-          throw new Error(
-            `Options on line ${lineNumber} of crontab specifies queue name more than once.`,
-          );
-        }
+      },
+    ],
+    [
+      CRONTAB_OPTIONS_QUEUE,
+      "queueName",
+      () => queueName,
+      (matches) => {
         queueName = matches[1];
-        continue;
-      }
-    }
-    {
-      const matches = CRONTAB_OPTIONS_PRIORITY.exec(part);
+      },
+    ],
+    [
+      CRONTAB_OPTIONS_PRIORITY,
+      "priority",
+      () => priority,
+      (matches) => {
+        priority = parseInt(matches[1], 10);
+      },
+    ],
+  ];
+
+  function match(matchers: MatcherTuple[], part: string) {
+    for (const matcher of matchers) {
+      const [regex, name, get, set] = matcher;
+      const matches = regex.exec(part);
       if (matches) {
-        if (priority !== undefined) {
+        if (get() !== undefined) {
           throw new Error(
-            `Options on line ${lineNumber} of crontab specifies priority more than once.`,
+            `Options on line ${lineNumber} of crontab specifies ${name} more than once.`,
           );
         }
-        priority = parseInt(matches[1], 10);
-        continue;
+        set(matches);
+        return;
       }
     }
     throw new Error(
       `Options on line ${lineNumber} of crontab contains unsupported expression '!${part}'.`,
     );
   }
+
+  for (const part of parts) {
+    match(matchers, part);
+  }
+
   if (!backfillPeriod) {
     backfillPeriod = 0;
   }
+
   return {
     options: { backfillPeriod, maxAttempts },
     identifier,
