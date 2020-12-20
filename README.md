@@ -1196,10 +1196,10 @@ The task identifier should match the following regexp
 character and it should only contain alphanumeric characters, colon, underscore
 and hyphen). It should be the name of one of your Graphile Worker tasks.
 
-The `opts` must alway be prefixed with a `?` if provided and details
+The `opts` must always be prefixed with a `?` if provided and details
 configuration for the task such as what should be done in the event that the
 previous event was not scheduled (e.g. because the Worker wasn't running).
-Options are specified using a HTTP query string.
+Options are specified using HTTP query string syntax (with `&` separator).
 
 Currently we support the following `opts`:
 
@@ -1208,20 +1208,20 @@ Currently we support the following `opts`:
   will use the task identifier, but if you want more than one schedule for the
   same task (e.g. with different payload, or different times) then you will need
   to supply a unique identifier explicitly.
-- `fill=t` where `t` is a "time phrase" (see below) - back-fill any entries from
+- `fill=t` where `t` is a "time phrase" (see below) - backfill any entries from
   the last time period `t`, for example if the worker was not running when they
-  were due to be executed.
-- `max=n` where `n` is a small positive integer - configure the `max_attempts`
+  were due to be executed (by default, no backfilling).
+- `max=n` where `n` is a small positive integer - override the `max_attempts`
   of the job.
 - `queue=name` where `name` is an alphanumeric queue name - add the job to a
   named queue so it executes serially.
-- `priority=n` where `n` is a relatively small integer - set the priority of the
-  job.
+- `priority=n` where `n` is a relatively small integer - override the priority
+  of the job.
 
 **NOTE**: changing the identifier (e.g. via `id`) can result in duplicate
 executions, so we recommend that you explicitly set it and never change it.
 
-**NOTE**: using `fill` will not back-fill new tasks, only tasks that were
+**NOTE**: using `fill` will not backfill new tasks, only tasks that were
 previously known.
 
 **NOTE**: the higher you set the `fill` parameter, the longer the worker startup
@@ -1231,8 +1231,8 @@ period of downtime you expect for your worker.
 Time phrases are comprised of a sequence of number-letter combinations, where
 the number represents a quantity and the letter represents a time period, e.g.
 `5d` for `five days`, or `3h` for `three hours`; e.g. `4w3d2h1m` represents
-`four weeks, three days, 2 hours and 1 minute` (i.e. a period of 44761 minutes).
-The following time periods are supported:
+`4 weeks, 3 days, 2 hours and 1 minute` (i.e. a period of 44761 minutes). The
+following time periods are supported:
 
 - `s` - one second (1000 milliseconds)
 - `m` - one minute (60 seconds)
@@ -1254,21 +1254,21 @@ the value being an object with the following entries:
 ### Crontab examples
 
 The following schedules the `send_weekly_email` task at 4:30am (UTC) every
-Monday
+Monday:
 
 ```
 30 4 * * 1 send_weekly_email
 ```
 
-The following does similar, but also will back-fill the previous (`1`) task if
+The following does similar, but also will backfill the previous (`1`) task if
 it was missed, sets max attempts to `10` and merges in `{"onboarding": false}`
-into the task payload.
+into the task payload:
 
 ```
 30 4 * * 1 send_weekly_email ?fill=1&max=10 {onboarding:false}
 ```
 
-The following triggers the `rollup` task every 4 hours on the hour.
+The following triggers the `rollup` task every 4 hours on the hour:
 
 ```
 0 */4 * * * rollup
