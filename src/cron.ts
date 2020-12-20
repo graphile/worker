@@ -101,6 +101,11 @@ interface JobAndIdentifier {
   identifier: string;
 }
 
+/**
+ * Schedules a list of cron jobs all due at the same timestamp. Jobs that were
+ * already scheduled (e.g. via a different Worker instance) will be skipped
+ * automatically.
+ */
 async function executeCronJobs(
   pgPool: Pool,
   escapedWorkerSchema: string,
@@ -152,6 +157,10 @@ async function executeCronJobs(
   );
 }
 
+/**
+ * Marks any previously unknown crontab identifiers as now being known. Then
+ * performs backfilling on any crontab tasks that need it.
+ */
 async function registerAndBackfillItems(
   pgPool: Pool,
   escapedWorkerSchema: string,
@@ -163,15 +172,13 @@ async function registerAndBackfillItems(
     `SELECT * FROM ${escapedWorkerSchema}.known_crontabs`,
   );
 
-  // Compile this into a useful list
-
   const {
     backfillItemsAndDates,
     unknownIdentifiers,
   } = getBackfillAndUnknownItems(cronItems, rows);
 
   if (unknownIdentifiers.length) {
-    // They're known startTime
+    // They're known now.
     await pgPool.query(
       `
       INSERT INTO ${escapedWorkerSchema}.known_crontabs (identifier)
@@ -183,18 +190,26 @@ async function registerAndBackfillItems(
     );
   }
 
-  // Then, if any jobs are overdue, trigger them.
+  // If any jobs are overdue, trigger them.
+  // NOTE: this is not the fastest algorithm, we can definitely optimise this later.
+  // First find out the largest backfill period:
   const largestBackfill = cronItems.reduce(
     (largest, item) => Math.max(item.options.backfillPeriod, largest),
     0,
   );
+  // Then go back this period in time and fill forward from there.
   if (largestBackfill > 0) {
-    // Unsafe because we mutate it during the loop (for performance)
+    // Unsafe because we mutate it during the loop (for performance); be sure
+    // to take a copy of it (or convert to string) when used in places where
+    // later mutation would cause issues.
     const unsafeTs = new Date(+startTime - largestBackfill);
+
+    // Round up to the nearest minute.
     unsafeRoundToMinute(unsafeTs, true);
 
     while (unsafeTs < startTime) {
       const timeAgo = +startTime - +unsafeTs;
+      // Note: `ts` and `digest` are both safe.
       const ts = unsafeTs.toISOString();
       const digest = digestTimestamp(unsafeTs);
 
@@ -217,6 +232,11 @@ async function registerAndBackfillItems(
       }
 
       if (itemsToBackfill.length) {
+        // We're currently backfilling once per timestamp (rather than
+        // gathering them all together and doing a single statement) due to
+        // the way the last_execution column of the known_crontabs table works.
+        // At this time it's not expected that backfilling will be sufficiently
+        // expensive to justify optimising this further.
         await executeCronJobs(pgPool, escapedWorkerSchema, itemsToBackfill, ts);
       }
 
@@ -436,6 +456,14 @@ interface TimestampDigest {
   dow: number;
 }
 
+/**
+ * Digests a timestamp into its min/hour/date/month/dow components that are
+ * needed for cron matching.
+ *
+ * WARNING: the timestamp passed into this function might be mutated later, so
+ * **do not memoize** using the value itself. If memoization is necessary, it
+ * could be done using `+ts` as the key.
+ */
 function digestTimestamp(ts: Date): TimestampDigest {
   const min = ts.getUTCMinutes();
   const hour = ts.getUTCHours();
