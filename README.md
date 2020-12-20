@@ -1275,6 +1275,22 @@ The following triggers the `rollup` task every 4 hours on the hour.
 0 */4 * * * rollup
 ```
 
+### Limiting backfill
+
+When you ask Graphile Worker to backfill jobs, it will do so for all jobs
+matching that specification that should have been scheduled over the backfill
+period. Other than the period itself, you cannot place limits on the backfilling
+(for example, you cannot say "backfill at most one job" or "only backfill if the
+next job isn't due within the next 3 hours"); this is because we've determined
+that there's many situations (back-off, overloaded worker, serially executed
+jobs, etc.) in which the result of this behaviour might result in outcomes that
+the user did not expect.
+
+If you need these kinds of constraints on backfilled jobs, you should implement
+them _at runtime_ (rather than at scheduling time) in the task executor itself,
+which could use the `payload._cron.ts` property to determine whether execution
+should continue or not.
+
 ## Forbidden flags
 
 When a job is created (or updated via `job_key`), you may set its `flags` to a
