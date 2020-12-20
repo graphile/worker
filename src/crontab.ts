@@ -388,7 +388,7 @@ export const parseCrontab = (crontab: string): Array<CronItem> => {
     throw new Error(
       `Invalid crontab; duplicate identifiers found: '${duplicates.join(
         "', '",
-      )}' - please use '!id=...' to specify unique identifiers for your cron items`,
+      )}' - please use '?id=...' to specify unique identifiers for your cron items`,
     );
   }
 
