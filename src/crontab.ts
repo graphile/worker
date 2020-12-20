@@ -2,22 +2,44 @@ import * as JSON5 from "json5";
 
 import { CronItem, CronItemOptions } from "./interfaces";
 
-const SECOND = 1000; /*milliseconds*/
+/** One second in milliseconds */
+const SECOND = 1000;
+/** One minute in milliseconds */
 const MINUTE = 60 * SECOND;
+/** One hour in milliseconds */
 const HOUR = 60 * MINUTE;
+/** One day in milliseconds */
 const DAY = 24 * HOUR;
+/** One week in milliseconds */
 const WEEK = 7 * DAY;
 
+// A (non-comment, non-empty) line in the crontab file
+/** Separates crontab line into the minute, hour, day of month, month, day of week and command parts. */
 const CRONTAB_LINE_PARTS = /^([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+(.*)$/;
+
+// Crontab ranges from the minute, hour, day of month, month and day of week parts of the crontab line
+/** Matches an explicit numeric value */
 const CRONTAB_NUMBER = /^([0-9]+)$/;
+/** Matches a range of numeric values */
 const CRONTAB_RANGE = /^([0-9]+)-([0-9]+)$/;
+/** Matches a numeric wildcard, optionally with a divisor */
 const CRONTAB_WILDCARD = /^\*(?:\/([0-9]+))?$/;
+
+// The command from the crontab line
+/** Splits the command from the crontab line into the task, options and payload. */
 const CRONTAB_COMMAND = /^([_a-zA-Z][_a-zA-Z0-9:_-]*)(?:\s+!([^\s]+))?(?:\s+(\{.*\}))?$/;
+
+// Crontab command options
+/** Matches the id=UID option, capturing the unique identifier */
 const CRONTAB_OPTIONS_ID = /^id=([_a-zA-Z][-_a-zA-Z0-9]*)$/;
+/** Matches the fill=t option, capturing the time phrase  */
 const CRONTAB_OPTIONS_BACKFILL = /^fill=((?:[0-9]+[smhdw])+)$/;
+/** Matches the max=n option, capturing the max executions number */
 const CRONTAB_OPTIONS_MAX = /^max=([0-9]+)$/;
+/** Matches the queue=name option, capturing the queue name */
 const CRONTAB_OPTIONS_QUEUE = /^queue=([-a-zA-Z0-9_:]+)$/;
-const CRONTAB_OPTIONS_PRIORITY = /^max=(-?[0-9]+)$/;
+/** Matches the priority=n option, capturing the priority value */
+const CRONTAB_OPTIONS_PRIORITY = /^priority=(-?[0-9]+)$/;
 
 /**
  * Parses a range from a crontab line; a comma separated list of:
@@ -111,6 +133,7 @@ const parseCrontabRange = (
   return uniqueNumbers;
 };
 
+/** Matches the quantity and period string at the beginning of a timephrase */
 const TIMEPHRASE_PART = /^([0-9]+)([smhdw])/;
 const PERIOD_DURATIONS = {
   s: SECOND,
@@ -141,7 +164,9 @@ const parseTimePhrase = (timePhrase: string): number => {
   while (remaining.length) {
     const matches = TIMEPHRASE_PART.exec(remaining);
     if (!matches) {
-      throw new Error(`Invalid time phrase '${timePhrase}'`);
+      throw new Error(
+        `Invalid time phrase '${timePhrase}', did not understand '${remaining}'`,
+      );
     }
     const [wholeMatch, quantity, period] = matches;
     const periodDuration = PERIOD_DURATIONS[period] || 0;
