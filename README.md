@@ -170,7 +170,7 @@ https://graphile.org/support/
 - Adding jobs to same named queue runs them in series
 - Automatically re-attempts failed jobs with exponential back-off
 - Customisable retry count (default: 25 attempts over ~3 days)
-- Crontab-like scheduling feature for recurring tasks
+- Crontab-like scheduling feature for recurring tasks (with optional backfill)
 - Task de-duplication via unique `job_key`
 - Flexible runtime controls that can be used for complex rate limiting (e.g. via
   (graphile-worker-rate-limiter)[https://github.com/politics-rewired/graphile-worker-rate-limiter])
@@ -1152,7 +1152,8 @@ downloading external data every 20 minutes, etc.
 
 Graphile Worker's crontab support:
 
-- guarantees (thanks to PostgreSQL) that no duplicate task schedules will occur
+- guarantees (thanks to ACID-compliant transactions) that no duplicate task
+  schedules will occur
 - can backfill missed jobs if desired (e.g. if the Worker wasn't running when
   the job was due to be scheduled)
 - schedules tasks using Graphile Worker's regular job queue, so you get all the
@@ -1160,8 +1161,8 @@ Graphile Worker's crontab support:
 
 **NOTE**: It is not intended that you add recurring tasks for each of your
 individual application users, instead you should have relatively few recurring
-tasks, and those tasks can create additional jobs for the individual users if
-necessary.
+tasks, and those tasks can create additional jobs for the individual users (or
+process multiple users) if necessary.
 
 Tasks are by default read from a `crontab` file next to the `tasks/` folder (but
 this is configurable in library mode). Please note that our syntax is not 100%
@@ -1170,17 +1171,17 @@ in UTC. The following diagram details the parts of a Graphile Worker crontab
 schedule:
 
 ```
-┌───────────── UTC minute (0 - 59)
-│ ┌───────────── UTC hour (0 - 23)
-│ │ ┌───────────── UTC day of the month (1 - 31)
-│ │ │ ┌───────────── UTC month (1 - 12)
-│ │ │ │ ┌───────────── UTC day of the week (0 - 6) (Sunday to Saturday)
-│ │ │ │ │ ┌───────────── task (identifier) to schedule
-│ │ │ │ │ │    ┌────────── optional scheduling options (see below)
-│ │ │ │ │ │    │     ┌────── optional payload to merge
-│ │ │ │ │ │    │     │
-│ │ │ │ │ │    │     │
-* * * * * task !opts {payload}
+# ┌───────────── UTC minute (0 - 59)
+# │ ┌───────────── UTC hour (0 - 23)
+# │ │ ┌───────────── UTC day of the month (1 - 31)
+# │ │ │ ┌───────────── UTC month (1 - 12)
+# │ │ │ │ ┌───────────── UTC day of the week (0 - 6) (Sunday to Saturday)
+# │ │ │ │ │ ┌───────────── task (identifier) to schedule
+# │ │ │ │ │ │    ┌────────── optional scheduling options (see below)
+# │ │ │ │ │ │    │     ┌────── optional payload to merge
+# │ │ │ │ │ │    │     │
+# │ │ │ │ │ │    │     │
+# * * * * * task !opts {payload}
 ```
 
 Comment lines start with a `#`.
@@ -1197,8 +1198,9 @@ and hyphen). It should be the name of one of your Graphile Worker tasks.
 
 The `opts` must alway be prefixed with a `!` if provided and details
 configuration for the task such as what should be done in the event that the
-previous event was skipped. Additional options can be specified by concatenating
-more `!` entries, but **do not add spaces**.
+previous event was not scheduled (e.g. because the Worker wasn't running).
+Additional options can be specified by concatenating more `!` entries, but **do
+not add spaces**.
 
 Currently we support the following `opts`:
 
@@ -1206,17 +1208,26 @@ Currently we support the following `opts`:
   specify an identifier for this crontab entry; by default this will use the
   task identifier, but if you want more than one schedule for the same task
   (e.g. with different payload, or different times) then you will need to supply
-  a unique identifier manually. Changing the identifier can result in duplicate
-  executions, so we recommend that you explicitly set it and never change it.
+  a unique identifier explicitly.
 - `!fill=t` where `t` is a "time phrase" (see below) - back-fill any entries
   from the last time period `t`, for example if the worker was not running when
-  they were due to be executed (note: this will not back-fill new tasks, only
-  tasks that were previously known)
+  they were due to be executed.
 - `!max=n` where `n` is a small positive integer - configure the `max_attempts`
-  of the job
+  of the job.
 - `!queue=name` where `name` is an alphanumeric queue name - add the job to a
-  named queue so it executes serially
-- `!priority=n` where `n` is a valid priority - set the priority of the job
+  named queue so it executes serially.
+- `!priority=n` where `n` is a relatively small integer - set the priority of
+  the job.
+
+**NOTE**: changing the identifier (e.g. via `id`) can result in duplicate
+executions, so we recommend that you explicitly set it and never change it.
+
+**NOTE**: using `fill` will not back-fill new tasks, only tasks that were
+previously known.
+
+**NOTE**: the higher you set the `fill` parameter, the longer the worker startup
+time will be; when used you should set it to be slightly larger than the longest
+period of downtime you expect for your worker.
 
 Time phrases are comprised of a sequence of number-letter combinations, where
 the number represents a quantity and the letter represents a time period, e.g.
@@ -1227,7 +1238,7 @@ The following time periods are supported:
 - `s` - one second (1000 milliseconds)
 - `m` - one minute (60 seconds)
 - `h` - one hour (60 minutes)
-- `d` - on day (24 hours)
+- `d` - one day (24 hours)
 - `w` - one week (7 days)
 
 The `payload` is a JSON5 object; it must start with a `{`, must not contain
@@ -1255,7 +1266,7 @@ it was missed, sets max attempts to `10` and merges in `{"onboarding": false}`
 into the task payload.
 
 ```
-30 4 * * 1 send_weekly_email !1!max=10 {onboarding:false}
+30 4 * * 1 send_weekly_email !fill=1!max=10 {onboarding:false}
 ```
 
 The following triggers the `rollup` task every 4 hours on the hour.
