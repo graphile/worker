@@ -46,8 +46,12 @@ function getBackfillAndUnknownItems(
   return { backfillItemsAndDates, unknownIdentifiers };
 }
 
-/** WARNING: mutates input date */
-function roundToMinute(ts: Date, roundUp = false): Date {
+/**
+ * Rounds the incoming date to the nearest minute (either rounding up or down).
+ * Tagged "unsafe" because it mutates the argument, this is desired for
+ * performance but may be unexpected.
+ */
+function unsafeRoundToMinute(ts: Date, roundUp = false): Date {
   if (ts.getUTCSeconds() > 0 || ts.getUTCMilliseconds() > 0) {
     ts.setUTCSeconds(0);
     ts.setUTCMilliseconds(0);
@@ -187,7 +191,7 @@ async function registerAndBackfillItems(
   if (largestBackfill > 0) {
     // Unsafe because we mutate it during the loop (for performance)
     const unsafeTs = new Date(+startTime - largestBackfill);
-    roundToMinute(unsafeTs, true);
+    unsafeRoundToMinute(unsafeTs, true);
 
     while (unsafeTs < startTime) {
       const timeAgo = +startTime - +unsafeTs;
@@ -283,7 +287,7 @@ export const runCron = (
     // The backfill may have taken a moment, we should continue from where the
     // worker started and catch up as quickly as we can. This does **NOT**
     // count as a backfill.
-    let nextTimestamp = roundToMinute(new Date(+start), true);
+    let nextTimestamp = unsafeRoundToMinute(new Date(+start), true);
 
     const scheduleNextLoop = () => {
       if (released) {
