@@ -1260,12 +1260,12 @@ Monday:
 30 4 * * 1 send_weekly_email
 ```
 
-The following does similar, but also will backfill the previous (`1`) task if
-it was missed, sets max attempts to `10` and merges in `{"onboarding": false}`
+The following does similar, but also will backfill any tasks over the last two
+days (`2d`), sets max attempts to `10` and merges in `{"onboarding": false}`
 into the task payload:
 
 ```
-30 4 * * 1 send_weekly_email ?fill=1&max=10 {onboarding:false}
+30 4 * * 1 send_weekly_email ?fill=2d&max=10 {onboarding:false}
 ```
 
 The following triggers the `rollup` task every 4 hours on the hour:
