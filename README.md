@@ -126,6 +126,10 @@ async function main() {
     // Payload
     { name: "Bobby Tables" },
   );
+
+  // If the worker exits (whether through fatal error or otherwise), this
+  // promise will resolve/reject:
+  await runner.promise;
 }
 
 main().catch((err) => {
