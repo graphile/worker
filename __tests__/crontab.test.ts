@@ -30,10 +30,15 @@ test("parses crontab file correctly", () => {
 # │ │ │ │ │ │    │     │
 # │ │ │ │ │ │    │     │
 # * * * * * task ?opts {payload}
+
 * * * * * simple
 0 4 * * * every_day_at_4_am
 0 4 * * 0 every_sunday_at_4_am
 0 4 * * 7 every_sunday_at_4_am ?id=sunday_7
+
+
+
+
 0 4 * * 2 every_tuesday_at_4_am {isTuesday: true}
 */10,7,56-59 1 1 1 1 one ?id=stuff&fill=4w3d2h1m&max=3&queue=my_queue&priority=3 {myExtraPayload:{stuff:"here with # hash char"}}
     *     *      *       *       *      lots_of_spaces     
