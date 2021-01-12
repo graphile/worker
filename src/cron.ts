@@ -22,6 +22,16 @@ interface CronRequirements {
   events: WorkerEvents;
 }
 
+/**
+ * This function looks through all the cron items we have (e.g. from our
+ * crontab file) and compares them to the items we already know about. If the
+ * item is not previously know, we add it to the list `unknownIdentifiers` so
+ * that it can be recorded in the database (i.e. it will be "known" from now
+ * on). If the item was previously known, we add an entry to
+ * `backfillItemsAndDates` indicating the `item` and earliest time
+ * (`notBefore`) that a backfill should operate from. This is later compared
+ * to the configuration to see how much backfilling to do.
+ */
 function getBackfillAndUnknownItems(
   cronItems: CronItem[],
   knownCrontabs: KnownCrontab[],
@@ -146,7 +156,7 @@ async function executeCronJobs(
           specs.queue_name,
           specs.run_at,
           specs.max_attempts,
-          null,
+          null, -- job key
           specs.priority
         )
       from specs
