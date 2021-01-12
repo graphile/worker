@@ -343,7 +343,7 @@ export const runCron = (
       timeout = setTimeout(() => {
         timeout = null;
         loop();
-      }, Math.max(+nextTimestamp - Date.now() + 1, 0));
+      }, Math.max(+nextTimestamp - Date.now() + 1, 1));
     };
 
     async function loop() {
@@ -356,9 +356,6 @@ export const runCron = (
         const digest = digestTimestamp(nextTimestamp);
         const ts = nextTimestamp.toISOString();
         const expectedTimestamp = +nextTimestamp;
-
-        // MUTATE nextTimestamp
-        nextTimestamp.setUTCMinutes(nextTimestamp.getUTCMinutes() + 1);
 
         let currentTimestamp = Date.now();
         // Round to beginning of current minute
@@ -373,7 +370,10 @@ export const runCron = (
          * is never expected to be a large period.
          */
         if (currentTimestamp < expectedTimestamp) {
-          logger.warn("Graphile Worker Cron fired too early; rescheduling");
+          logger.warn(
+            "Graphile Worker Cron fired too early (clock skew?); rescheduling",
+          );
+          // NOTE: we must NOT have mutated nextTimestamp before here in `loop()`.
           scheduleNextLoop();
           return;
         } else if (currentTimestamp > expectedTimestamp) {
@@ -410,6 +410,9 @@ export const runCron = (
             return stop();
           }
         }
+
+        // MUTATE nextTimestamp: advance by a minute ready for the next run.
+        nextTimestamp.setUTCMinutes(nextTimestamp.getUTCMinutes() + 1);
 
         // This must come at the very end (otherwise we might accidentally skip
         // timestamps on error).
