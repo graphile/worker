@@ -1178,14 +1178,14 @@ compatible with cron's, and our task payload differs. We only handle timestamps
 in UTC. The following diagram details the parts of a Graphile Worker crontab
 schedule:
 
-```
+```crontab
 # ┌───────────── UTC minute (0 - 59)
 # │ ┌───────────── UTC hour (0 - 23)
 # │ │ ┌───────────── UTC day of the month (1 - 31)
 # │ │ │ ┌───────────── UTC month (1 - 12)
 # │ │ │ │ ┌───────────── UTC day of the week (0 - 6) (Sunday to Saturday)
 # │ │ │ │ │ ┌───────────── task (identifier) to schedule
-# │ │ │ │ │ │    ┌────────── optional scheduling options (see below)
+# │ │ │ │ │ │    ┌────────── optional scheduling options
 # │ │ │ │ │ │    │     ┌────── optional payload to merge
 # │ │ │ │ │ │    │     │
 # │ │ │ │ │ │    │     │
