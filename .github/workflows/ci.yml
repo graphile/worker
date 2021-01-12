@@ -79,7 +79,7 @@ jobs:
         with:
           node-version: 12.x
       - run: yarn --frozen-lockfile
-      - run: yarn lint
+      # - run: yarn lint # No need to lint altschema
       - run: yarn jest -i --ci
 
   database_updated:
