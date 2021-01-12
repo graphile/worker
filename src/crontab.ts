@@ -1,7 +1,7 @@
 import * as JSON5 from "json5";
 import { parse } from "querystring";
 
-import { CronItem, CronItemOptions } from "./interfaces";
+import { CronItem, CronItemOptions, RawCronItem } from "./interfaces";
 
 /** One second in milliseconds */
 const SECOND = 1000;
@@ -17,6 +17,8 @@ const WEEK = 7 * DAY;
 // A (non-comment, non-empty) line in the crontab file
 /** Separates crontab line into the minute, hour, day of month, month, day of week and command parts. */
 const CRONTAB_LINE_PARTS = /^([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+(.*)$/;
+/** Just the time expression from CRONTAB_LINE_PARTS */
+const CRONTAB_TIME_PARTS = /^([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)$/;
 
 // Crontab ranges from the minute, hour, day of month, month and day of week parts of the crontab line
 /** Matches an explicit numeric value */
@@ -306,6 +308,21 @@ const parseCrontabCommand = (
   return { task, options, payload, identifier };
 };
 
+function parseCrontabRanges(matches: string[], source: string) {
+  const minutes = parseCrontabRange(`range 1 in ${source}`, matches[1], 0, 59);
+  const hours = parseCrontabRange(`range 2 in ${source}`, matches[2], 0, 23);
+  const dates = parseCrontabRange(`range 3 in ${source}`, matches[3], 1, 31);
+  const months = parseCrontabRange(`range 4 in ${source}`, matches[4], 1, 12);
+  const dows = parseCrontabRange(
+    `range 5 in ${source}`,
+    matches[5],
+    0,
+    6,
+    true,
+  );
+  return { minutes, hours, dates, months, dows };
+}
+
 /**
  * Parses a line from a crontab file, such as `* * * * * my_task`
  */
@@ -319,36 +336,9 @@ export const parseCrontabLine = (
       `Could not process line '${lineNumber}' of crontab: '${crontabLine}'`,
     );
   }
-  const minutes = parseCrontabRange(
-    `range 1 in line ${lineNumber} of crontab`,
-    matches[1],
-    0,
-    59,
-  );
-  const hours = parseCrontabRange(
-    `range 2 in line ${lineNumber} of crontab`,
-    matches[2],
-    0,
-    23,
-  );
-  const dates = parseCrontabRange(
-    `range 3 in line ${lineNumber} of crontab`,
-    matches[3],
-    1,
-    31,
-  );
-  const months = parseCrontabRange(
-    `range 4 in line ${lineNumber} of crontab`,
-    matches[4],
-    1,
-    12,
-  );
-  const dows = parseCrontabRange(
-    `range 5 in line ${lineNumber} of crontab`,
-    matches[5],
-    0,
-    6,
-    true,
+  const { minutes, hours, dates, months, dows } = parseCrontabRanges(
+    matches,
+    `line ${lineNumber} of crontab`,
   );
   const { task, options, payload, identifier } = parseCrontabCommand(
     lineNumber,
@@ -399,4 +389,45 @@ export const parseCrontab = (crontab: string): Array<CronItem> => {
   }
 
   return items;
+};
+
+/**
+ * Convenience function for developers programatically generating `cronItems`.
+ */
+export const cronify = (items: RawCronItem[]): CronItem[] => {
+  return items.map(
+    (
+      {
+        pattern,
+        task,
+        options = {} as CronItemOptions,
+        payload = {},
+        identifier = task,
+      },
+      idx,
+    ) => {
+      const matches = CRONTAB_TIME_PARTS.exec(pattern);
+      if (!matches) {
+        throw new Error(
+          `Invalid cron pattern '${pattern}' in item ${idx} of cronify call`,
+        );
+      }
+      const { minutes, hours, dates, months, dows } = parseCrontabRanges(
+        matches,
+        `item ${idx} of cronify call`,
+      );
+      const item: CronItem = {
+        minutes,
+        hours,
+        dates,
+        months,
+        dows,
+        task,
+        options,
+        payload,
+        identifier,
+      };
+      return item;
+    },
+  );
 };

@@ -213,6 +213,25 @@ export interface CronItem {
   identifier: string;
 }
 
+/**
+ * A more convenient CronItem-like object, designed to be written by humans
+ * directly (unlike CronItem which has strict rules and should only be
+ * programmatically constructed).
+ */
+export interface RawCronItem {
+  pattern: string;
+
+  /** The identifier of the task to execute */
+  task: string;
+  /** Options influencing backfilling and properties of the scheduled job */
+  options?: CronItemOptions;
+  /** A payload object to merge into the default cron payload object for the scheduled job */
+  payload?: { [key: string]: any };
+
+  /** An identifier so that we can prevent double-scheduling of a task and determine whether or not to backfill. */
+  identifier?: string;
+}
+
 /** Represents records in the `jobs` table */
 export interface Job {
   id: string;
