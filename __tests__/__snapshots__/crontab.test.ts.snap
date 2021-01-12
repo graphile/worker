@@ -428,7 +428,9 @@ Array [
       "priority": undefined,
       "queueName": undefined,
     },
-    "payload": null,
+    "payload": Object {
+      "isTuesday": true,
+    },
     "task": "every_tuesday_at_4_am",
   },
   Object {

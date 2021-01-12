@@ -34,7 +34,7 @@ test("parses crontab file correctly", () => {
 0 4 * * * every_day_at_4_am
 0 4 * * 0 every_sunday_at_4_am
 0 4 * * 7 every_sunday_at_4_am ?id=sunday_7
-0 4 * * 2 every_tuesday_at_4_am
+0 4 * * 2 every_tuesday_at_4_am {isTuesday: true}
 */10,7,56-59 1 1 1 1 one ?id=stuff&fill=4w3d2h1m&max=3&queue=my_queue&priority=3 {myExtraPayload:{stuff:"here with # hash char"}}
     *     *      *       *       *      lots_of_spaces     
 `;
@@ -88,7 +88,7 @@ test("parses crontab file correctly", () => {
   expect(parsed[4].months).toEqual(ALL_MONTHS);
   expect(parsed[4].dows).toEqual([2]);
   expect(parsed[4].options).toEqual({ backfillPeriod: 0 });
-  expect(parsed[4].payload).toEqual(null);
+  expect(parsed[4].payload).toEqual({ isTuesday: true });
 
   // */10,7,56-59 1 1 1 1 one ?id=stuff&fill=4w3d2h1m&max=3&queue=my_queue&priority=3 {myExtraPayload:{stuff:"here with # hash char"}}
   expect(parsed[5].task).toEqual("one");
@@ -119,4 +119,66 @@ test("parses crontab file correctly", () => {
   expect(parsed[6].payload).toEqual(null);
 
   expect(parsed).toMatchSnapshot();
+});
+
+describe("gives error on syntax error", () => {
+  test("too few parameters", () => {
+    expect(() =>
+      parseCrontab(`\
+* * * * too_few_parameters
+`),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Could not process line '1' of crontab: '* * * * too_few_parameters'"`,
+    );
+  });
+
+  test("invalid command (two parts)", () => {
+    expect(() =>
+      parseCrontab(`\
+* * * * * two tasks
+`),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Invalid command specification in line 1 of crontab."`,
+    );
+  });
+
+  test("range exceeded", () => {
+    expect(() =>
+      parseCrontab(`\
+1,60 * * * * out_of_range
+`),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Too large value '60' in range 1 in line 1 of crontab: expected values in the range 0-59."`,
+    );
+  });
+
+  test("invalid wildcard divisor", () => {
+    expect(() =>
+      parseCrontab(`\
+*/0 * * * * division_by_zero
+`),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Invalid wildcard expression '*/0' in range 1 in line 1 of crontab: divisor '0' expected to be greater than zero"`,
+    );
+  });
+
+  test("unknown option", () => {
+    expect(() =>
+      parseCrontab(`\
+* * * * * invalid_options ?unknown=3
+`),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Options on line 1 of crontab contains unsupported key 'unknown'; supported keys are: 'id', 'fill', 'max', 'queue', 'priority'."`,
+    );
+  });
+
+  test("invalid JSON5 syntax", () => {
+    expect(() =>
+      parseCrontab(`\
+* * * * * json_syntax_error {invalidJson=true}
+`),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `"Failed to parse JSON5 payload on line 1 of crontab: JSON5: invalid character '=' at 1:13"`,
+    );
+  });
 });

@@ -111,10 +111,16 @@ const parseCrontabRange = (
     {
       const matches = CRONTAB_WILDCARD.exec(part);
       if (matches) {
-        const divisor = parseInt(matches[1], 10) || 1;
-        for (let i = min; i <= max; i += divisor) {
-          // We know this is fine, so no need to call `add`
-          numbers.push(i);
+        const divisor = matches[1] ? parseInt(matches[1], 10) : 1;
+        if (divisor >= 1) {
+          for (let i = min; i <= max; i += divisor) {
+            // We know this is fine, so no need to call `add`
+            numbers.push(i);
+          }
+        } else {
+          throw new Error(
+            `Invalid wildcard expression '${part}' in ${locationForError}: divisor '${matches[1]}' expected to be greater than zero`,
+          );
         }
         continue;
       }
