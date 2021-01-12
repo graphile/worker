@@ -1215,8 +1215,8 @@ Currently we support the following `opts`:
 - `fill=t` where `t` is a "time phrase" (see below) - backfill any entries from
   the last time period `t`, for example if the worker was not running when they
   were due to be executed (by default, no backfilling).
-- `max=n` where `n` is a small positive integer - override the `max_attempts`
-  of the job.
+- `max=n` where `n` is a small positive integer - override the `max_attempts` of
+  the job.
 - `queue=name` where `name` is an alphanumeric queue name - add the job to a
   named queue so it executes serially.
 - `priority=n` where `n` is a relatively small integer - override the priority
