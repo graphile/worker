@@ -6,6 +6,6 @@ dropuser graphile_worker_role || true
 psql template1 -c "CREATE USER graphile_worker_role WITH SUPERUSER PASSWORD 'password';"
 createdb graphile_worker_dump -O graphile_worker_role
 PGUSER=graphile_worker_role PGPASSWORD=password PGHOST=localhost ts-node src/cli.ts -c graphile_worker_dump --schema-only
-pg_dump --schema-only graphile_worker_dump | sed -e '/^--/d' -e '/^\s*$/d' -e '/^SET /d' > __tests__/schema.sql
+pg_dump --schema-only --no-owner graphile_worker_dump | sed -e '/^--/d' -e '/^\s*$/d' -e '/^SET /d' > __tests__/schema.sql
 dropdb graphile_worker_dump
 dropuser graphile_worker_role
