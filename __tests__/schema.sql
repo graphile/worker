@@ -1,6 +1,5 @@
 SELECT pg_catalog.set_config('search_path', '', false);
 CREATE SCHEMA graphile_worker;
-ALTER SCHEMA graphile_worker OWNER TO graphile_worker_role;
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
 CREATE TABLE graphile_worker.jobs (
@@ -22,7 +21,6 @@ CREATE TABLE graphile_worker.jobs (
     flags jsonb,
     CONSTRAINT jobs_key_check CHECK ((length(key) > 0))
 );
-ALTER TABLE graphile_worker.jobs OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
@@ -171,7 +169,6 @@ begin
   return v_job;
 end;
 $$;
-ALTER FUNCTION graphile_worker.add_job(identifier text, payload json, queue_name text, run_at timestamp with time zone, max_attempts integer, job_key text, priority integer, flags text[], job_key_mode text) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.complete_job(worker_id text, job_id bigint) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
@@ -189,7 +186,6 @@ begin
   return v_row;
 end;
 $$;
-ALTER FUNCTION graphile_worker.complete_job(worker_id text, job_id bigint) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.complete_jobs(job_ids bigint[]) RETURNS SETOF graphile_worker.jobs
     LANGUAGE sql
     AS $$
@@ -202,7 +198,6 @@ CREATE FUNCTION graphile_worker.complete_jobs(job_ids bigint[]) RETURNS SETOF gr
     )
     returning *;
 $$;
-ALTER FUNCTION graphile_worker.complete_jobs(job_ids bigint[]) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.fail_job(worker_id text, job_id bigint, error_message text) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql STRICT
     AS $$
@@ -225,7 +220,6 @@ begin
   return v_row;
 end;
 $$;
-ALTER FUNCTION graphile_worker.fail_job(worker_id text, job_id bigint, error_message text) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[] DEFAULT NULL::text[], job_expiry interval DEFAULT '04:00:00'::interval, forbidden_flags text[] DEFAULT NULL::text[]) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
@@ -281,7 +275,6 @@ begin
   return v_row;
 end;
 $$;
-ALTER FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[], job_expiry interval, forbidden_flags text[]) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.jobs__decrease_job_queue_count() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -298,7 +291,6 @@ begin
   return old;
 end;
 $$;
-ALTER FUNCTION graphile_worker.jobs__decrease_job_queue_count() OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.jobs__increase_job_queue_count() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -311,7 +303,6 @@ begin
   return new;
 end;
 $$;
-ALTER FUNCTION graphile_worker.jobs__increase_job_queue_count() OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.permanently_fail_jobs(job_ids bigint[], error_message text DEFAULT NULL::text) RETURNS SETOF graphile_worker.jobs
     LANGUAGE sql
     AS $$
@@ -327,7 +318,6 @@ CREATE FUNCTION graphile_worker.permanently_fail_jobs(job_ids bigint[], error_me
     )
     returning *;
 $$;
-ALTER FUNCTION graphile_worker.permanently_fail_jobs(job_ids bigint[], error_message text) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.remove_job(job_key text) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql STRICT
     AS $$
@@ -350,7 +340,6 @@ begin
   return v_job;
 end;
 $$;
-ALTER FUNCTION graphile_worker.remove_job(job_key text) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.reschedule_jobs(job_ids bigint[], run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, priority integer DEFAULT NULL::integer, attempts integer DEFAULT NULL::integer, max_attempts integer DEFAULT NULL::integer) RETURNS SETOF graphile_worker.jobs
     LANGUAGE sql
     AS $$
@@ -368,7 +357,6 @@ CREATE FUNCTION graphile_worker.reschedule_jobs(job_ids bigint[], run_at timesta
     )
     returning *;
 $$;
-ALTER FUNCTION graphile_worker.reschedule_jobs(job_ids bigint[], run_at timestamp with time zone, priority integer, attempts integer, max_attempts integer) OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.tg__update_timestamp() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -377,7 +365,6 @@ begin
   return new;
 end;
 $$;
-ALTER FUNCTION graphile_worker.tg__update_timestamp() OWNER TO graphile_worker_role;
 CREATE FUNCTION graphile_worker.tg_jobs__notify_new_jobs() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -386,33 +373,28 @@ begin
   return new;
 end;
 $$;
-ALTER FUNCTION graphile_worker.tg_jobs__notify_new_jobs() OWNER TO graphile_worker_role;
 CREATE TABLE graphile_worker.job_queues (
     queue_name text NOT NULL,
     job_count integer NOT NULL,
     locked_at timestamp with time zone,
     locked_by text
 );
-ALTER TABLE graphile_worker.job_queues OWNER TO graphile_worker_role;
 CREATE SEQUENCE graphile_worker.jobs_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
-ALTER TABLE graphile_worker.jobs_id_seq OWNER TO graphile_worker_role;
 ALTER SEQUENCE graphile_worker.jobs_id_seq OWNED BY graphile_worker.jobs.id;
 CREATE TABLE graphile_worker.known_crontabs (
     identifier text NOT NULL,
     known_since timestamp with time zone DEFAULT now() NOT NULL,
     last_execution timestamp with time zone
 );
-ALTER TABLE graphile_worker.known_crontabs OWNER TO graphile_worker_role;
 CREATE TABLE graphile_worker.migrations (
     id integer NOT NULL,
     ts timestamp with time zone DEFAULT now() NOT NULL
 );
-ALTER TABLE graphile_worker.migrations OWNER TO graphile_worker_role;
 ALTER TABLE ONLY graphile_worker.jobs ALTER COLUMN id SET DEFAULT nextval('graphile_worker.jobs_id_seq'::regclass);
 ALTER TABLE ONLY graphile_worker.job_queues
     ADD CONSTRAINT job_queues_pkey PRIMARY KEY (queue_name);
