@@ -370,8 +370,8 @@ export const parseCrontab = (crontab: string): Array<CronItem> => {
     lineNumber <= numberOfLines;
     lineNumber++
   ) {
-    const line = lines[lineNumber - 1];
-    if (line.startsWith("#") || line.trim() === "") {
+    const line = lines[lineNumber - 1].trim();
+    if (line.startsWith("#") || line === "") {
       // Ignore comment lines and empty lines
       continue;
     }
