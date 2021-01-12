@@ -5,6 +5,6 @@ export { runTaskList, runTaskListOnce } from "./main";
 export { run, runOnce, runMigrations } from "./runner";
 export { makeWorkerUtils, quickAddJob } from "./workerUtils";
 export { Logger, LogFunctionFactory, consoleLogFactory } from "./logger";
-export { cronify } from "./crontab";
+export { cronify, parseCrontab } from "./crontab";
 
 export { getTasks };
