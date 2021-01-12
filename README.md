@@ -1149,6 +1149,10 @@ be returned (note that this may be fewer jobs than you requested).
 
 ## Recurring tasks (crontab)
 
+**Stability: _experimental_**; we may make breaking changes to this
+functionality in a minor release, so pay close attention to the changelog when
+upgrading.
+
 Graphile Worker supports triggering recurring tasks according to a cron-like
 schedule. This is designed for recurring tasks such as sending a weekly email,
 running database maintenance tasks every day, performing data roll-ups hourly,
