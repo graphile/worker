@@ -1,0 +1,122 @@
+import { CronItemOptions } from "../src";
+import { parseCrontab } from "../src/crontab";
+
+// 0...59
+const ALL_MINUTES = Array.from(Array(60).keys());
+// 0...23
+const ALL_HOURS = Array.from(Array(24).keys());
+// 1...31
+const ALL_DATES = Array.from(Array(32).keys()).slice(1);
+// 1...12
+const ALL_MONTHS = Array.from(Array(13).keys()).slice(1);
+// 0...6
+const ALL_DOWS = [0, 1, 2, 3, 4, 5, 6];
+
+const MINUTE = 60000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const WEEK = 7 * DAY;
+
+test("parses crontab file correctly", () => {
+  const exampleCrontab = `\
+# ┌───────────── UTC minute (0 - 59)
+# │ ┌───────────── UTC hour (0 - 23)
+# │ │ ┌───────────── UTC day of the month (1 - 31)
+# │ │ │ ┌───────────── UTC month (1 - 12)
+# │ │ │ │ ┌───────────── UTC day of the week (0 - 6) (Sunday to Saturday)
+# │ │ │ │ │ ┌───────────── task (identifier) to schedule
+# │ │ │ │ │ │    ┌────────── optional scheduling options
+# │ │ │ │ │ │    │     ┌────── optional payload to merge
+# │ │ │ │ │ │    │     │
+# │ │ │ │ │ │    │     │
+# * * * * * task ?opts {payload}
+* * * * * simple
+0 4 * * * every_day_at_4_am
+0 4 * * 0 every_sunday_at_4_am
+0 4 * * 7 every_sunday_at_4_am ?id=sunday_7
+0 4 * * 2 every_tuesday_at_4_am
+*/10,7,56-59 1 1 1 1 one ?id=stuff&fill=4w3d2h1m&max=3&queue=my_queue&priority=3 {myExtraPayload:{stuff:"here with # hash char"}}
+    *     *      *       *       *      lots_of_spaces     
+`;
+  const parsed = parseCrontab(exampleCrontab);
+
+  expect(parsed[0].task).toEqual("simple");
+  expect(parsed[0].identifier).toEqual("simple");
+  expect(parsed[0].minutes).toEqual(ALL_MINUTES);
+  expect(parsed[0].hours).toEqual(ALL_HOURS);
+  expect(parsed[0].dates).toEqual(ALL_DATES);
+  expect(parsed[0].months).toEqual(ALL_MONTHS);
+  expect(parsed[0].dows).toEqual(ALL_DOWS);
+  expect(parsed[0].options).toEqual({ backfillPeriod: 0 });
+  expect(parsed[0].payload).toEqual(null);
+
+  expect(parsed[1].task).toEqual("every_day_at_4_am");
+  expect(parsed[1].identifier).toEqual("every_day_at_4_am");
+  expect(parsed[1].minutes).toEqual([0]);
+  expect(parsed[1].hours).toEqual([4]);
+  expect(parsed[1].dates).toEqual(ALL_DATES);
+  expect(parsed[1].months).toEqual(ALL_MONTHS);
+  expect(parsed[1].dows).toEqual(ALL_DOWS);
+  expect(parsed[1].options).toEqual({ backfillPeriod: 0 });
+  expect(parsed[1].payload).toEqual(null);
+
+  expect(parsed[2].task).toEqual("every_sunday_at_4_am");
+  expect(parsed[2].identifier).toEqual("every_sunday_at_4_am");
+  expect(parsed[2].minutes).toEqual([0]);
+  expect(parsed[2].hours).toEqual([4]);
+  expect(parsed[2].dates).toEqual(ALL_DATES);
+  expect(parsed[2].months).toEqual(ALL_MONTHS);
+  expect(parsed[2].dows).toEqual([0]);
+  expect(parsed[2].options).toEqual({ backfillPeriod: 0 });
+  expect(parsed[2].payload).toEqual(null);
+
+  expect(parsed[3].task).toEqual("every_sunday_at_4_am");
+  expect(parsed[3].identifier).toEqual("sunday_7");
+  expect(parsed[3].minutes).toEqual([0]);
+  expect(parsed[3].hours).toEqual([4]);
+  expect(parsed[3].dates).toEqual(ALL_DATES);
+  expect(parsed[3].months).toEqual(ALL_MONTHS);
+  expect(parsed[3].dows).toEqual([0]);
+  expect(parsed[3].options).toEqual({ backfillPeriod: 0 });
+  expect(parsed[3].payload).toEqual(null);
+
+  expect(parsed[4].task).toEqual("every_tuesday_at_4_am");
+  expect(parsed[4].identifier).toEqual("every_tuesday_at_4_am");
+  expect(parsed[4].minutes).toEqual([0]);
+  expect(parsed[4].hours).toEqual([4]);
+  expect(parsed[4].dates).toEqual(ALL_DATES);
+  expect(parsed[4].months).toEqual(ALL_MONTHS);
+  expect(parsed[4].dows).toEqual([2]);
+  expect(parsed[4].options).toEqual({ backfillPeriod: 0 });
+  expect(parsed[4].payload).toEqual(null);
+
+  // */10,7,56-59 1 1 1 1 one ?id=stuff&fill=4w3d2h1m&max=3&queue=my_queue&priority=3 {myExtraPayload:{stuff:"here with # hash char"}}
+  expect(parsed[5].task).toEqual("one");
+  expect(parsed[5].identifier).toEqual("stuff");
+  expect(parsed[5].minutes).toEqual([0, 7, 10, 20, 30, 40, 50, 56, 57, 58, 59]);
+  expect(parsed[5].hours).toEqual([1]);
+  expect(parsed[5].dates).toEqual([1]);
+  expect(parsed[5].months).toEqual([1]);
+  expect(parsed[5].dows).toEqual([1]);
+  expect(parsed[5].options).toEqual({
+    backfillPeriod: 4 * WEEK + 3 * DAY + 2 * HOUR + 1 * MINUTE,
+    maxAttempts: 3,
+    priority: 3,
+    queueName: "my_queue",
+  } as CronItemOptions);
+  expect(parsed[5].payload).toEqual({
+    myExtraPayload: { stuff: "here with # hash char" },
+  });
+
+  expect(parsed[6].task).toEqual("lots_of_spaces");
+  expect(parsed[6].identifier).toEqual("lots_of_spaces");
+  expect(parsed[6].minutes).toEqual(ALL_MINUTES);
+  expect(parsed[6].hours).toEqual(ALL_HOURS);
+  expect(parsed[6].dates).toEqual(ALL_DATES);
+  expect(parsed[6].months).toEqual(ALL_MONTHS);
+  expect(parsed[6].dows).toEqual(ALL_DOWS);
+  expect(parsed[6].options).toEqual({ backfillPeriod: 0 });
+  expect(parsed[6].payload).toEqual(null);
+
+  expect(parsed).toMatchSnapshot();
+});
