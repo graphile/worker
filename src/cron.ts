@@ -5,17 +5,15 @@ import { parseCrontab } from "./crontab";
 import defer from "./deferred";
 import getCronItems from "./getCronItems";
 import {
+  Cron,
+  CronJob,
+  JobAndCronIdentifier,
   KnownCrontab,
   ParsedCronItem,
   RunnerOptions,
   WorkerEvents,
 } from "./interfaces";
 import { processSharedOptions, Releasers } from "./lib";
-
-export interface Cron {
-  release(): Promise<void>;
-  promise: Promise<void>;
-}
 
 interface CronRequirements {
   pgPool: Pool;
@@ -75,19 +73,6 @@ function unsafeRoundToMinute(ts: Date, roundUp = false): Date {
   return ts;
 }
 
-/** Spec for a job created from cron */
-interface CronJob {
-  task: string;
-  payload: {
-    _cron: { ts: string; backfilled?: boolean };
-    [key: string]: unknown;
-  };
-  queueName?: string;
-  runAt: string;
-  maxAttempts?: number;
-  priority?: number;
-}
-
 function makeJobForItem(
   item: ParsedCronItem,
   ts: string,
@@ -109,11 +94,6 @@ function makeJobForItem(
   };
 }
 
-interface JobAndIdentifier {
-  job: CronJob;
-  identifier: string;
-}
-
 /**
  * Schedules a list of cron jobs all due at the same timestamp. Jobs that were
  * already scheduled (e.g. via a different Worker instance) will be skipped
@@ -122,7 +102,7 @@ interface JobAndIdentifier {
 async function executeCronJobs(
   pgPool: Pool,
   escapedWorkerSchema: string,
-  jobsAndIdentifiers: JobAndIdentifier[],
+  jobsAndIdentifiers: JobAndCronIdentifier[],
   ts: string,
 ) {
   // Note that `identifier` is guaranteed to be unique for every record
@@ -175,7 +155,7 @@ async function executeCronJobs(
  * performs backfilling on any crontab tasks that need it.
  */
 async function registerAndBackfillItems(
-  pgPool: Pool,
+  { pgPool, events, cron }: { pgPool: Pool; events: WorkerEvents; cron: Cron },
   escapedWorkerSchema: string,
   parsedCronItems: ParsedCronItem[],
   startTime: Date,
@@ -233,7 +213,7 @@ async function registerAndBackfillItems(
 
       // The identifiers in this array are guaranteed to be unique, since cron
       // items are guaranteed to have unique identifiers.
-      const itemsToBackfill: Array<JobAndIdentifier> = [];
+      const itemsToBackfill: Array<JobAndCronIdentifier> = [];
 
       // See if anything needs backfilling for this timestamp
       for (const { item, notBefore } of backfillItemsAndDates) {
@@ -255,6 +235,11 @@ async function registerAndBackfillItems(
         // the way the last_execution column of the known_crontabs table works.
         // At this time it's not expected that backfilling will be sufficiently
         // expensive to justify optimising this further.
+        events.emit("cron:backfill", {
+          cron,
+          itemsToBackfill,
+          timestamp: ts,
+        });
         await executeCronJobs(pgPool, escapedWorkerSchema, itemsToBackfill, ts);
       }
 
@@ -284,9 +269,7 @@ export const runCron = (
   requirements: CronRequirements,
 ): Cron => {
   const { pgPool } = requirements;
-  const { logger, escapedWorkerSchema } = processSharedOptions(options);
-
-  // TODO: add events
+  const { logger, escapedWorkerSchema, events } = processSharedOptions(options);
 
   const promise = defer();
   let released = false;
@@ -318,15 +301,18 @@ export const runCron = (
     }
 
     const start = new Date();
+    events.emit("cron:starting", { cron: this, start });
 
     // We must backfill BEFORE scheduling any new jobs otherwise backfill won't
     // work due to known_crontabs.last_execution having been updated.
     await registerAndBackfillItems(
-      pgPool,
+      { pgPool, events, cron: this },
       escapedWorkerSchema,
       parsedCronItems,
       new Date(+start),
     );
+
+    events.emit("cron:started", { cron: this, start });
 
     if (released) {
       return stop();
@@ -388,7 +374,7 @@ export const runCron = (
         }
 
         // The identifiers in this array are guaranteed to be unique.
-        const jobAndIdentifier: Array<JobAndIdentifier> = [];
+        const jobAndIdentifier: Array<JobAndCronIdentifier> = [];
 
         // Gather the relevant jobs
         for (const item of parsedCronItems) {

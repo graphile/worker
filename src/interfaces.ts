@@ -301,6 +301,11 @@ export interface Runner {
   events: WorkerEvents;
 }
 
+export interface Cron {
+  release(): Promise<void>;
+  promise: Promise<void>;
+}
+
 export interface TaskSpec {
   /**
    * The queue to run this task under (only specify if you want jobs in this
@@ -467,6 +472,24 @@ export interface RunnerOptions extends WorkerPoolOptions {
   parsedCronItems?: Array<ParsedCronItem>;
 }
 
+/** Spec for a job created from cron */
+export interface CronJob {
+  task: string;
+  payload: {
+    _cron: { ts: string; backfilled?: boolean };
+    [key: string]: unknown;
+  };
+  queueName?: string;
+  runAt: string;
+  maxAttempts?: number;
+  priority?: number;
+}
+
+export interface JobAndCronIdentifier {
+  job: CronJob;
+  identifier: string;
+}
+
 export interface WorkerUtilsOptions extends SharedOptions {}
 
 type BaseEventMap = Record<string, any>;
@@ -607,6 +630,19 @@ export type WorkerEvents = TypedEventEmitter<{
    * been written back to the database
    */
   "job:complete": { worker: Worker; job: Job; error: any };
+
+  /** **Experimental** When the cron starts working (before backfilling) */
+  "cron:starting": { cron: Cron; start: Date };
+
+  /** **Experimental** When the cron starts working (after backfilling completes) */
+  "cron:started": { cron: Cron; start: Date };
+
+  /** **Experimental** When a number of jobs need backfilling for a particular timestamp. */
+  "cron:backfill": {
+    cron: Cron;
+    itemsToBackfill: JobAndCronIdentifier[];
+    timestamp: string;
+  };
 
   /**
    * When the runner is terminated by a signal
