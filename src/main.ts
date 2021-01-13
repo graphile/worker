@@ -127,10 +127,12 @@ export function runTaskList(
       await client.release();
     }
   };
+  let active = true;
 
   // This is a representation of us that can be interacted with externally
   const workerPool: WorkerPool = {
     release: async () => {
+      active = false;
       events.emit("pool:release", { pool: this });
       unlistenForChanges();
       promise.resolve();
@@ -189,6 +191,11 @@ export function runTaskList(
     client: PoolClient,
     release: () => void,
   ) => {
+    if (!active) {
+      // We were released, release this new client and abort
+      release();
+      return;
+    }
     if (err) {
       events.emit("pool:listen:error", { workerPool, client, error: err });
       logger.error(
