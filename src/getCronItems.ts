@@ -2,13 +2,13 @@ import * as chokidar from "chokidar";
 import { promises as fsp } from "fs";
 
 import { parseCrontab } from "./crontab";
-import { CronItem, SharedOptions, WatchedCronItems } from "./interfaces";
+import { ParsedCronItem, SharedOptions, WatchedCronItems } from "./interfaces";
 import { processSharedOptions } from "./lib";
 import { Logger } from "./logger";
 
 async function loadCrontabIntoCronItems(
   logger: Logger,
-  items: Array<CronItem>,
+  items: Array<ParsedCronItem>,
   filename: string,
 ) {
   const contents = await fsp.readFile(filename, "utf8").catch((e) => {
@@ -33,7 +33,7 @@ export default async function getCronItems(
   const { logger } = processSharedOptions(options);
 
   let watcher: chokidar.FSWatcher | null = null;
-  const items: Array<CronItem> = [];
+  const items: Array<ParsedCronItem> = [];
 
   if (watch) {
     const watchLogger = logger.scope({ label: "watch" });

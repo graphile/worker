@@ -1,7 +1,7 @@
 import * as JSON5 from "json5";
 import { parse } from "querystring";
 
-import { CronItem, CronItemOptions, RawCronItem } from "./interfaces";
+import { CronItem, CronItemOptions, ParsedCronItem } from "./interfaces";
 
 /** One second in milliseconds */
 const SECOND = 1000;
@@ -292,7 +292,7 @@ const parseCrontabPayload = (
 const parseCrontabCommand = (
   lineNumber: number,
   command: string,
-): Pick<CronItem, "task" | "options" | "payload" | "identifier"> => {
+): Pick<ParsedCronItem, "task" | "options" | "payload" | "identifier"> => {
   const matches = CRONTAB_COMMAND.exec(command);
   if (!matches) {
     throw new Error(
@@ -329,7 +329,7 @@ function parseCrontabRanges(matches: string[], source: string) {
 export const parseCrontabLine = (
   crontabLine: string,
   lineNumber: number,
-): CronItem => {
+): ParsedCronItem => {
   const matches = CRONTAB_LINE_PARTS.exec(crontabLine);
   if (!matches) {
     throw new Error(
@@ -358,9 +358,9 @@ export const parseCrontabLine = (
   };
 };
 
-export const parseCrontab = (crontab: string): Array<CronItem> => {
+export const parseCrontab = (crontab: string): Array<ParsedCronItem> => {
   const lines = crontab.split(/\r?\n/);
-  const items: CronItem[] = [];
+  const items: ParsedCronItem[] = [];
   for (
     let lineNumber = 1, numberOfLines = lines.length;
     lineNumber <= numberOfLines;
@@ -392,9 +392,11 @@ export const parseCrontab = (crontab: string): Array<CronItem> => {
 };
 
 /**
- * Convenience function for developers programatically generating `cronItems`.
+ * Parses a list of `CronItem`s into a list of `ParsedCronItem`s, ensuring the
+ * results comply with all the expectations of the `ParsedCronItem` type
+ * (including those that cannot be encoded in TypeScript).
  */
-export const cronify = (items: RawCronItem[]): CronItem[] => {
+export const parseCronItems = (items: CronItem[]): ParsedCronItem[] => {
   return items.map(
     (
       {
@@ -416,7 +418,7 @@ export const cronify = (items: RawCronItem[]): CronItem[] => {
         matches,
         `item ${idx} of cronify call`,
       );
-      const item: CronItem = {
+      const item: ParsedCronItem = {
         minutes,
         hours,
         dates,

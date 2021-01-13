@@ -5,8 +5,8 @@ import { parseCrontab } from "./crontab";
 import defer from "./deferred";
 import getCronItems from "./getCronItems";
 import {
-  CronItem,
   KnownCrontab,
+  ParsedCronItem,
   RunnerOptions,
   WorkerEvents,
 } from "./interfaces";
@@ -33,12 +33,15 @@ interface CronRequirements {
  * to the configuration to see how much backfilling to do.
  */
 function getBackfillAndUnknownItems(
-  cronItems: CronItem[],
+  parsedCronItems: ParsedCronItem[],
   knownCrontabs: KnownCrontab[],
 ) {
-  const backfillItemsAndDates: Array<{ item: CronItem; notBefore: Date }> = [];
+  const backfillItemsAndDates: Array<{
+    item: ParsedCronItem;
+    notBefore: Date;
+  }> = [];
   const unknownIdentifiers: string[] = [];
-  for (const item of cronItems) {
+  for (const item of parsedCronItems) {
     const known = knownCrontabs.find(
       (record) => record.identifier === item.identifier,
     );
@@ -86,7 +89,7 @@ interface CronJob {
 }
 
 function makeJobForItem(
-  item: CronItem,
+  item: ParsedCronItem,
   ts: string,
   backfilled = false,
 ): CronJob {
@@ -174,7 +177,7 @@ async function executeCronJobs(
 async function registerAndBackfillItems(
   pgPool: Pool,
   escapedWorkerSchema: string,
-  cronItems: CronItem[],
+  parsedCronItems: ParsedCronItem[],
   startTime: Date,
 ) {
   // First, scan the DB to get our starting point.
@@ -185,7 +188,7 @@ async function registerAndBackfillItems(
   const {
     backfillItemsAndDates,
     unknownIdentifiers,
-  } = getBackfillAndUnknownItems(cronItems, rows);
+  } = getBackfillAndUnknownItems(parsedCronItems, rows);
 
   if (unknownIdentifiers.length) {
     // They're known now.
@@ -203,7 +206,7 @@ async function registerAndBackfillItems(
   // If any jobs are overdue, trigger them.
   // NOTE: this is not the fastest algorithm, we can definitely optimise this later.
   // First find out the largest backfill period:
-  const largestBackfill = cronItems.reduce(
+  const largestBackfill = parsedCronItems.reduce(
     (largest, item) => Math.max(item.options.backfillPeriod, largest),
     0,
   );
@@ -272,12 +275,12 @@ const ONE_MINUTE = 60 * 1000;
  * @internal
  *
  * @param options - the common options
- * @param cronItems - MUTABLE list of cron items to monitor. Do not assume this is static.
+ * @param parsedCronItems - MUTABLE list of _parsed_ cron items to monitor. Do not assume this is static.
  * @param requirements - the helpers that this task needs
  */
 export const runCron = (
   options: RunnerOptions,
-  cronItems: CronItem[],
+  parsedCronItems: ParsedCronItem[],
   requirements: CronRequirements,
 ): Cron => {
   const { pgPool } = requirements;
@@ -321,7 +324,7 @@ export const runCron = (
     await registerAndBackfillItems(
       pgPool,
       escapedWorkerSchema,
-      cronItems,
+      parsedCronItems,
       new Date(+start),
     );
 
@@ -388,7 +391,7 @@ export const runCron = (
         const jobAndIdentifier: Array<JobAndIdentifier> = [];
 
         // Gather the relevant jobs
-        for (const item of cronItems) {
+        for (const item of parsedCronItems) {
           if (cronItemMatches(item, digest)) {
             jobAndIdentifier.push({
               identifier: item.identifier,
@@ -444,13 +447,13 @@ export const runCron = (
   };
 };
 
-export async function assertCronItems(
+export async function assertParsedCronItems(
   options: RunnerOptions,
   releasers: Releasers,
-): Promise<Array<CronItem>> {
-  const { crontabFile, cronItems, crontab } = options;
+): Promise<Array<ParsedCronItem>> {
+  const { crontabFile, parsedCronItems, crontab } = options;
 
-  if (!crontabFile && !cronItems && !crontab) {
+  if (!crontabFile && !parsedCronItems && !crontab) {
     return [];
   }
 
@@ -460,24 +463,24 @@ export async function assertCronItems(
       "`crontab` and `crontabFile` must not be set at the same time.",
     );
     assert(
-      !cronItems,
-      "`crontab` and `crontabItems` must not be set at the same time.",
+      !parsedCronItems,
+      "`crontab` and `parsedCronItems` must not be set at the same time.",
     );
 
     return parseCrontab(crontab);
   } else if (crontabFile) {
     assert(
-      !cronItems,
-      "`crontabFile` and `crontabItems` must not be set at the same time.",
+      !parsedCronItems,
+      "`crontabFile` and `parsedCronItems` must not be set at the same time.",
     );
 
     const watchedCronItems = await getCronItems(options, crontabFile, false);
     releasers.push(() => watchedCronItems.release());
     return watchedCronItems.items;
   } else {
-    assert(cronItems != null, "Expected `cronItems` to be set.");
+    assert(parsedCronItems != null, "Expected `parsedCronItems` to be set.");
 
-    return cronItems;
+    return parsedCronItems;
   }
 }
 
@@ -514,7 +517,7 @@ function digestTimestamp(ts: Date): TimestampDigest {
  * false otherwise.
  */
 export function cronItemMatches(
-  cronItem: CronItem,
+  cronItem: ParsedCronItem,
   digest: TimestampDigest,
 ): boolean {
   const { min, hour, date, month, dow } = digest;

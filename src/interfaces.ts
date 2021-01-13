@@ -163,7 +163,7 @@ export interface WatchedTaskList {
 }
 
 export interface WatchedCronItems {
-  items: Array<CronItem>;
+  items: Array<ParsedCronItem>;
   release: () => void;
 }
 
@@ -186,11 +186,25 @@ export interface CronItemOptions {
 
 /**
  * A recurring task schedule; this may represent a line in the `crontab` file,
- * or may be user configured. If it's configured manually, please be certain
- * the adhere to the constraints in the comments otherwise you'll get
- * unexpected behaviours.
+ * or may be the result of calling `parseCronItems` on a list of `CronItem`s
+ * the user has specified.
+ *
+ * You should use this as an opaque type; you should **not** read values from
+ * inside it, and you should not construct it manually, use `parseCrontab` or
+ * `parseCronItems` instead. The definition of this type may change
+ * dramatically between minor releases of Graphile Worker, these changes are
+ * not seen as breaking changes.
+ *
+ * @internal
+ *
+ * **WARNING**: it is assumed that values of this type adhere to the constraints in
+ * the comments below (many of these cannot be asserted by TypeScript). If you
+ * construct this type manually and do not adhere to these constraints then you
+ * may get unexpected behaviours. Graphile Worker enforces these rules when
+ * constructing `ParsedCronItem`s internally, you should use the Graphile
+ * Worker helpers to construct this type.
  */
-export interface CronItem {
+export interface ParsedCronItem {
   /** Minutes (0-59) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
   minutes: number[];
   /** Hours (0-23) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
@@ -204,8 +218,10 @@ export interface CronItem {
 
   /** The identifier of the task to execute */
   task: string;
+
   /** Options influencing backfilling and properties of the scheduled job */
   options: CronItemOptions;
+
   /** A payload object to merge into the default cron payload object for the scheduled job */
   payload: { [key: string]: any };
 
@@ -214,17 +230,22 @@ export interface CronItem {
 }
 
 /**
- * A more convenient CronItem-like object, designed to be written by humans
- * directly (unlike CronItem which has strict rules and should only be
- * programmatically constructed).
+ * A description of a cron item detailing a task to run, when to run it, and
+ * any additional options necessary. This is the human-writable form, it must
+ * be parsed via `parseCronItems` before being fed to a worker. (ParsedCronItem
+ * has strict rules and should only be constructed via Graphile Worker's
+ * helpers to ensure compliance.)
  */
-export interface RawCronItem {
-  pattern: string;
-
+export interface CronItem {
   /** The identifier of the task to execute */
   task: string;
+
+  /** Cron pattern (e.g. `* * * * *`) to detail when the task should be executed */
+  pattern: string;
+
   /** Options influencing backfilling and properties of the scheduled job */
   options?: CronItemOptions;
+
   /** A payload object to merge into the default cron payload object for the scheduled job */
   payload?: { [key: string]: any };
 
@@ -443,7 +464,7 @@ export interface RunnerOptions extends WorkerPoolOptions {
    * express, and if you don't adhere to them then you'll get unexpected
    * behaviours.
    */
-  cronItems?: Array<CronItem>;
+  parsedCronItems?: Array<ParsedCronItem>;
 }
 
 export interface WorkerUtilsOptions extends SharedOptions {}

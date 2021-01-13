@@ -1,8 +1,8 @@
 import * as assert from "assert";
 
-import { assertCronItems, runCron } from "./cron";
+import { assertParsedCronItems, runCron } from "./cron";
 import getTasks from "./getTasks";
-import { CronItem, Runner, RunnerOptions, TaskList } from "./interfaces";
+import { ParsedCronItem, Runner, RunnerOptions, TaskList } from "./interfaces";
 import { getUtilsAndReleasersFromOptions, Releasers } from "./lib";
 import { runTaskList, runTaskListOnce } from "./main";
 import { migrate } from "./migrate";
@@ -68,7 +68,7 @@ export const runOnce = async (
 export const run = async (
   options: RunnerOptions,
   overrideTaskList?: TaskList,
-  overrideCronItems?: Array<CronItem>,
+  overrideParsedCronItems?: Array<ParsedCronItem>,
 ): Promise<Runner> => {
   const {
     pgPool,
@@ -82,10 +82,11 @@ export const run = async (
     const taskList =
       overrideTaskList || (await assertTaskList(options, releasers));
 
-    const cronItems =
-      overrideCronItems || (await assertCronItems(options, releasers));
+    const parsedCronItems =
+      overrideParsedCronItems ||
+      (await assertParsedCronItems(options, releasers));
 
-    const cron = runCron(options, cronItems, { pgPool, events });
+    const cron = runCron(options, parsedCronItems, { pgPool, events });
     releasers.push(() => cron.release());
 
     const workerPool = runTaskList(options, taskList, pgPool);

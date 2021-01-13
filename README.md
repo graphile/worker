@@ -1298,6 +1298,50 @@ them _at runtime_ (rather than at scheduling time) in the task executor itself,
 which could use the `payload._cron.ts` property to determine whether execution
 should continue or not.
 
+### Specifying cron items in library mode
+
+You've three options for specifying cron tasks in library mode:
+
+1. `crontab`: a crontab string (like the contents of a crontab file)
+2. `crontabFile`: the (string) path to a crontab file, from which to read the
+   rules
+3. `parsedCronItems`: explicit parsed cron items (see below)
+
+#### parsedCronItems
+
+The Graphile Worker internal format for cron items lists all the matching
+minutes/hours/etc uniquely and in numerically ascending order. It also has other
+requirements and is to be treated as an opaque type, so you must not construct
+this value manually.
+
+Instead, you may specify the parsedCronItems using one of the helper functions:
+
+1. `parseCrontab`: pass a crontab string and it will be converted into a list of
+   `ParsedCronItem`s
+2. `parseCronItems`: pass a list of `CronItem`s and it will be converted into a
+   list of `ParsedCronItem`s
+
+The `CronItem` type is designed to be written by humans (and their scripts) and
+has the following properties:
+
+- `task` (required): the string identifier of the task that should be executed
+  (same as the first argument to `add_job`)
+- `pattern` (required): a cron pattern (e.g. `* * * * *`) describing when to run
+  this task
+- `options`: optional options influencing backfilling, etc
+  - `backfillPeriod`: how long (in milliseconds) to backfill (see above)
+  - `maxAttempts`: the maximum number of attempts we'll give the job
+  - `queueName`: if you want the job to run serially, you can add it to a named
+    queue
+  - `priority`: optionally override the priority of the job
+- `payload`: an optional payload object to merge into the generated payload for
+  the job
+- `identifier`: an optional string to give this cron item a permanent
+  identifier; if not given we will use the `task`. This is particularly useful
+  if you want to schedule the same task multiple times, perhaps on different
+  time patterns or with different payloads or other options (since every cron
+  item must have a unique identifier).
+
 ## Forbidden flags
 
 When a job is created (or updated via `job_key`), you may set its `flags` to a
