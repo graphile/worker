@@ -208,10 +208,42 @@ export function withOptions<T>(
 export function setupFakeTimers() {
   jest.useFakeTimers();
 
-  const originalDateNow = global.Date.now;
+  const OriginalDate = global.Date;
 
   /** The offset, in milliseconds, to apply to results from `Date.now()` */
   let offset = 0;
+
+  function fakeNow() {
+    return OriginalDate.now() + offset;
+  }
+
+  // Copy of `Date`, but overrides `new Date()` to return `new Date(fakeNow())`
+  const FakeDate: typeof Date = function (...args: any[]) {
+    // `new Date()` becomes `new Date(fakeNow())`
+    if (args.length === 0) {
+      return new OriginalDate(fakeNow());
+    } else {
+      return new OriginalDate(
+        args[0],
+        args[1],
+        args[2],
+        args[3],
+        args[4],
+        args[5],
+        args[6],
+      );
+    }
+  } as any;
+
+  // Copy static methods of Date
+  for (const key in Date) {
+    if (Object.prototype.hasOwnProperty.call(Date, key)) {
+      FakeDate[key] = Date[key];
+    }
+  }
+
+  // Override Date.now()
+  FakeDate.now = () => fakeNow();
 
   /**
    * Sets the `offset` such that a call to `Date.now()` would return this
@@ -220,7 +252,7 @@ export function setupFakeTimers() {
    * `offset`, if positive.
    */
   function setTime(ts: number) {
-    const newOffset = ts - originalDateNow.call(global.Date);
+    const newOffset = ts - OriginalDate.now();
     const advancement = newOffset - offset;
     offset = newOffset;
     if (advancement > 0) {
@@ -230,13 +262,11 @@ export function setupFakeTimers() {
 
   beforeEach(() => {
     offset = 0;
-    global.Date.now = () => {
-      return originalDateNow.call(global.Date) + offset;
-    };
+    global.Date = FakeDate;
   });
   afterEach(() => {
-    global.Date.now = originalDateNow;
+    global.Date = OriginalDate;
   });
 
-  return { setTime, realNow: () => originalDateNow.call(global.Date) };
+  return { setTime, realNow: () => OriginalDate.now() };
 }

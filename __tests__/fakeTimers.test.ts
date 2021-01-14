@@ -18,17 +18,31 @@ test("Date.now() starts at the right time", () => {
   expect(difference).toBeLessThanOrEqual(10);
 });
 
-test("Date.now() returns the expected time when setTime is used", () => {
+test("Date.now() and +new Date() return the expected time when setTime is used", () => {
   setTime(REFERENCE_TIMESTAMP);
   const nowAccordingToDateNow = Date.now();
+  const nowAccordingToNewDate = +new Date();
   const nowAccordingToRealNow = realNow();
+
   // This is a check to make sure that realNow is giving a reasonable value
   expect(nowAccordingToRealNow).toBeGreaterThan(
     1610623893028 /* 14th Jan 2021, 11:31am UTC */,
   );
-  const difference = Math.abs(REFERENCE_TIMESTAMP - nowAccordingToDateNow);
+
+  const differenceDateNow = Math.abs(
+    REFERENCE_TIMESTAMP - nowAccordingToDateNow,
+  );
+  const differenceNewDate = Math.abs(
+    REFERENCE_TIMESTAMP - nowAccordingToNewDate,
+  );
   // Expect the difference between these two to be less than 10 milliseconds
-  expect(difference).toBeLessThanOrEqual(10);
+  expect(differenceDateNow).toBeLessThanOrEqual(10);
+  expect(differenceNewDate).toBeLessThanOrEqual(10);
+});
+
+test("new Date().toISOString() returns the expected timestamp when setTime is used", () => {
+  setTime(REFERENCE_TIMESTAMP);
+  expect(new Date().toISOString()).toMatch(/^2008-08-02T13:00:0.*Z$/);
 });
 
 test("Advancing timers works as expected", () => {
