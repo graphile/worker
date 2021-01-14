@@ -388,7 +388,7 @@ CREATE SEQUENCE graphile_worker.jobs_id_seq
 ALTER SEQUENCE graphile_worker.jobs_id_seq OWNED BY graphile_worker.jobs.id;
 CREATE TABLE graphile_worker.known_crontabs (
     identifier text NOT NULL,
-    known_since timestamp with time zone DEFAULT now() NOT NULL,
+    known_since timestamp with time zone NOT NULL,
     last_execution timestamp with time zone
 );
 CREATE TABLE graphile_worker.migrations (
