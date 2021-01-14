@@ -529,7 +529,7 @@ interface TypedEventEmitter<TEventMap extends BaseEventMap>
 /**
  * These are the events that a worker instance supports.
  */
-export type WorkerEvents = TypedEventEmitter<{
+export type WorkerEventMap = {
   /**
    * When a worker pool is created
    */
@@ -645,6 +645,49 @@ export type WorkerEvents = TypedEventEmitter<{
   };
 
   /**
+   * **Experimental** When it seems that time went backwards (e.g. the system
+   * clock was adjusted) and we try again a little later.
+   */
+  "cron:prematureTimer": {
+    cron: Cron;
+    currentTimestamp: number;
+    expectedTimestamp: number;
+  };
+
+  /**
+   * **Experimental** When it seems that time jumped forwards (e.g. the system
+   * was overloaded and couldn't fire the timer on time, or perhaps the system
+   * went to sleep) and we need to catch up.
+   */
+  "cron:overdueTimer": {
+    cron: Cron;
+    currentTimestamp: number;
+    expectedTimestamp: number;
+  };
+
+  /**
+   * **Experimental** When 1 or more cron items match the current timestamp and
+   * will be scheduled into the database. (Like cron:scheduled but before the
+   * database write.)
+   */
+  "cron:schedule": {
+    cron: Cron;
+    timestamp: number;
+    jobsAndIdentifiers: JobAndCronIdentifier[];
+  };
+
+  /**
+   * **Experimental** When 1 or more cron items match the current timestamp and
+   * were scheduled into the database. (Like cron:schedule but after the
+   * database write.)
+   */
+  "cron:scheduled": {
+    cron: Cron;
+    timestamp: number;
+    jobsAndIdentifiers: JobAndCronIdentifier[];
+  };
+
+  /**
    * When the runner is terminated by a signal
    */
   gracefulShutdown: { signal: Signal };
@@ -653,4 +696,6 @@ export type WorkerEvents = TypedEventEmitter<{
    * When the runner is stopped
    */
   stop: {};
-}>;
+};
+
+export type WorkerEvents = TypedEventEmitter<WorkerEventMap>;

@@ -5,11 +5,16 @@ import { parse } from "pg-connection-string";
 import defer from "../src/deferred";
 import {
   Job,
+  KnownCrontab,
   RunnerOptions,
+  WorkerEventMap,
   WorkerPoolOptions,
   WorkerUtils,
 } from "../src/interfaces";
 import { migrate } from "../src/migrate";
+
+// Grab the setTimeout from global before jest overwrites it with useFakeTimers
+const setTimeoutBypassingFakes = global.setTimeout;
 
 // Sometimes CI's clock can get interrupted (it is shared infra!) so this
 // extends the default timeout just in case.
@@ -89,7 +94,7 @@ export async function reset(
     try {
       await migrate(options, client);
     } finally {
-      await client.release();
+      client.release();
     }
   }
 }
@@ -103,6 +108,20 @@ export async function jobCount(
     `select count(*)::int from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
   );
   return row ? row.count || 0 : 0;
+}
+
+export async function getKnown(pgPool: pg.Pool) {
+  const { rows } = await pgPool.query<KnownCrontab>(
+    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.known_crontabs`,
+  );
+  return rows;
+}
+
+export async function getJobs(pgPool: pg.Pool) {
+  const { rows } = await pgPool.query<Job>(
+    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
+  );
+  return rows;
 }
 
 export function makeMockJob(taskIdentifier: string): Job {
@@ -127,8 +146,9 @@ export function makeMockJob(taskIdentifier: string): Job {
   };
 }
 
+/** Wait a number of milliseconds */
 export const sleep = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+  new Promise((resolve) => setTimeoutBypassingFakes(resolve, ms));
 
 export async function sleepUntil(condition: () => boolean, maxDuration = 2000) {
   const start = Date.now();
@@ -175,18 +195,36 @@ export async function makeSelectionOfJobs(
   };
 }
 
-export class EventAwaiter {
+interface EventCounter<TEventName extends keyof WorkerEventMap> {
+  count: number;
+  lastEvent: null | WorkerEventMap[TEventName];
+}
+
+export class EventMonitor {
   public events: EventEmitter;
 
   constructor(eventEmitter = new EventEmitter()) {
     this.events = eventEmitter;
   }
 
-  awaitNext(eventName: string): Promise<void> {
+  awaitNext(eventName: keyof WorkerEventMap): Promise<void> {
     const d = defer();
     this.events.once(eventName, () => d.resolve());
     return d;
   }
+
+  count<TEventName extends keyof WorkerEventMap>(
+    eventName: TEventName,
+  ): EventCounter<TEventName> {
+    const counter: EventCounter<TEventName> = { count: 0, lastEvent: null };
+    this.events.on(eventName, (payload) => {
+      counter.count++;
+      counter.lastEvent = payload;
+    });
+    return counter;
+  }
+
+  release() {}
 }
 
 export function withOptions<T>(
@@ -203,6 +241,16 @@ export function withOptions<T>(
       },
     }),
   );
+}
+
+/**
+ * This is for letting the Node.js event loop advance, e.g. when `setTimeout`
+ * has `await` in the chain.
+ */
+async function aFewRunLoops(count = 5) {
+  for (let i = 0; i < count; i++) {
+    await sleep(0);
+  }
 }
 
 export function setupFakeTimers() {
@@ -222,6 +270,8 @@ export function setupFakeTimers() {
     // `new Date()` becomes `new Date(fakeNow())`
     if (args.length === 0) {
       return new OriginalDate(fakeNow());
+    } else if (args.length === 1) {
+      return new OriginalDate(args[0]);
     } else {
       return new OriginalDate(
         args[0],
@@ -236,14 +286,9 @@ export function setupFakeTimers() {
   } as any;
 
   // Copy static methods of Date
-  for (const key in Date) {
-    if (Object.prototype.hasOwnProperty.call(Date, key)) {
-      FakeDate[key] = Date[key];
-    }
-  }
-
-  // Override Date.now()
-  FakeDate.now = () => fakeNow();
+  FakeDate.now = () => fakeNow(); // Override Date.now()
+  FakeDate.parse = Date.parse;
+  FakeDate.UTC = Date.UTC;
 
   /**
    * Sets the `offset` such that a call to `Date.now()` would return this
@@ -251,12 +296,24 @@ export function setupFakeTimers() {
    * after this). Also advances the timers by the difference from the previous
    * `offset`, if positive.
    */
-  function setTime(ts: number) {
-    const newOffset = ts - OriginalDate.now();
-    const advancement = newOffset - offset;
-    offset = newOffset;
-    if (advancement > 0) {
-      jest.advanceTimersByTime(advancement);
+  async function setTime(ts: number, increment = MINUTE) {
+    const finalOffset = ts - OriginalDate.now();
+    const advancement = finalOffset - offset;
+    if (advancement < 0) {
+      offset = finalOffset;
+    } else {
+      let previousOffset = offset;
+      while (previousOffset + increment < finalOffset) {
+        offset = previousOffset + increment;
+        previousOffset = offset;
+        jest.advanceTimersByTime(increment);
+        await aFewRunLoops();
+      }
+      if (previousOffset < finalOffset) {
+        offset = finalOffset;
+        jest.advanceTimersByTime(finalOffset - previousOffset);
+        await aFewRunLoops();
+      }
     }
   }
 
@@ -270,3 +327,9 @@ export function setupFakeTimers() {
 
   return { setTime, realNow: () => OriginalDate.now() };
 }
+
+export const SECOND = 1000;
+export const MINUTE = 60 * SECOND;
+export const HOUR = 60 * MINUTE;
+export const DAY = 24 * HOUR;
+export const WEEK = 7 * DAY;

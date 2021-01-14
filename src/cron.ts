@@ -99,7 +99,7 @@ function makeJobForItem(
  * already scheduled (e.g. via a different Worker instance) will be skipped
  * automatically.
  */
-async function executeCronJobs(
+async function scheduleCronJobs(
   pgPool: Pool,
   escapedWorkerSchema: string,
   jobsAndIdentifiers: JobAndCronIdentifier[],
@@ -122,14 +122,15 @@ async function executeCronJobs(
         from json_array_elements($1::json) with ordinality AS entries (json, index)
       ),
       locks as (
-        insert into ${escapedWorkerSchema}.known_crontabs (identifier, last_execution)
+        insert into ${escapedWorkerSchema}.known_crontabs (identifier, known_since, last_execution)
         select
           specs.identifier,
+          $2 as known_since,
           $2 as last_execution
         from specs
         on conflict (identifier)
         do update set last_execution = excluded.last_execution
-        where coalesce(known_crontabs.last_execution, known_crontabs.known_since) < excluded.last_execution
+        where (known_crontabs.last_execution is null or known_crontabs.last_execution < excluded.last_execution)
         returning known_crontabs.identifier
       )
       select
@@ -174,12 +175,12 @@ async function registerAndBackfillItems(
     // They're known now.
     await pgPool.query(
       `
-      INSERT INTO ${escapedWorkerSchema}.known_crontabs (identifier)
-      SELECT identifier
+      INSERT INTO ${escapedWorkerSchema}.known_crontabs (identifier, known_since)
+      SELECT identifier, $2
       FROM unnest($1::text[]) AS unnest (identifier)
       ON CONFLICT DO NOTHING
       `,
-      [unknownIdentifiers],
+      [unknownIdentifiers, startTime.toISOString()],
     );
   }
 
@@ -240,7 +241,12 @@ async function registerAndBackfillItems(
           itemsToBackfill,
           timestamp: ts,
         });
-        await executeCronJobs(pgPool, escapedWorkerSchema, itemsToBackfill, ts);
+        await scheduleCronJobs(
+          pgPool,
+          escapedWorkerSchema,
+          itemsToBackfill,
+          ts,
+        );
       }
 
       // Advance our counter (or risk infinite loop!).
@@ -360,8 +366,16 @@ export const runCron = (
          */
         if (currentTimestamp < expectedTimestamp) {
           logger.warn(
-            "Graphile Worker Cron fired too early (clock skew?); rescheduling",
+            `Graphile Worker Cron fired ${(
+              (expectedTimestamp - currentTimestamp) /
+              1000
+            ).toFixed(3)}s too early (clock skew?); rescheduling`,
           );
+          events.emit("cron:prematureTimer", {
+            cron: this,
+            currentTimestamp,
+            expectedTimestamp,
+          });
           // NOTE: we must NOT have mutated nextTimestamp before here in `loop()`.
           scheduleNextLoop();
           return;
@@ -371,15 +385,20 @@ export const runCron = (
               (currentTimestamp - expectedTimestamp) / ONE_MINUTE
             } minutes behind)`,
           );
+          events.emit("cron:overdueTimer", {
+            cron: this,
+            currentTimestamp,
+            expectedTimestamp,
+          });
         }
 
         // The identifiers in this array are guaranteed to be unique.
-        const jobAndIdentifier: Array<JobAndCronIdentifier> = [];
+        const jobsAndIdentifiers: Array<JobAndCronIdentifier> = [];
 
         // Gather the relevant jobs
         for (const item of parsedCronItems) {
           if (cronItemMatches(item, digest)) {
-            jobAndIdentifier.push({
+            jobsAndIdentifiers.push({
               identifier: item.identifier,
               job: makeJobForItem(item, ts),
             });
@@ -387,13 +406,23 @@ export const runCron = (
         }
 
         // Finally actually run the jobs.
-        if (jobAndIdentifier.length) {
-          await executeCronJobs(
+        if (jobsAndIdentifiers.length) {
+          events.emit("cron:schedule", {
+            cron: this,
+            timestamp: expectedTimestamp,
+            jobsAndIdentifiers,
+          });
+          await scheduleCronJobs(
             pgPool,
             escapedWorkerSchema,
-            jobAndIdentifier,
+            jobsAndIdentifiers,
             ts,
           );
+          events.emit("cron:scheduled", {
+            cron: this,
+            timestamp: expectedTimestamp,
+            jobsAndIdentifiers,
+          });
 
           if (released) {
             return stop();

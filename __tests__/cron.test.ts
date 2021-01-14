@@ -3,7 +3,9 @@ import { Pool } from "pg";
 import { Job, KnownCrontab, run } from "../src";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
-  EventAwaiter,
+  EventMonitor,
+  getJobs,
+  getKnown,
   reset,
   withOptions,
 } from "./helpers";
@@ -12,20 +14,6 @@ const CRONTAB_DO_IT = `
 0 */4 * * * do_it ?fill=1d
 `;
 const FOUR_HOURS = 4 * 60 * 60 * 1000;
-
-async function getKnown(pgPool: Pool) {
-  const { rows } = await pgPool.query<KnownCrontab>(
-    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.known_crontabs`,
-  );
-  return rows;
-}
-
-async function getJobs(pgPool: Pool) {
-  const { rows } = await pgPool.query<Job>(
-    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-  );
-  return rows;
-}
 
 test("registers identifiers", () =>
   withOptions(async (options) => {
@@ -71,12 +59,12 @@ test("backfills if identifier already registered (5h)", () =>
         )
       `,
     );
-    const eventAwaiter = new EventAwaiter();
-    const cronFinishedBackfilling = eventAwaiter.awaitNext("cron:started");
+    const eventMonitor = new EventMonitor();
+    const cronFinishedBackfilling = eventMonitor.awaitNext("cron:started");
     const runner = await run({
       ...options,
       crontab: CRONTAB_DO_IT,
-      events: eventAwaiter.events,
+      events: eventMonitor.events,
     });
     await cronFinishedBackfilling;
     await runner.stop();
@@ -125,12 +113,12 @@ test("backfills if identifier already registered (25h)", () =>
         )
       `,
     );
-    const eventAwaiter = new EventAwaiter();
-    const cronFinishedBackfilling = eventAwaiter.awaitNext("cron:started");
+    const eventMonitor = new EventMonitor();
+    const cronFinishedBackfilling = eventMonitor.awaitNext("cron:started");
     const runner = await run({
       ...options,
       crontab: CRONTAB_DO_IT,
-      events: eventAwaiter.events,
+      events: eventMonitor.events,
     });
     await cronFinishedBackfilling;
     await runner.stop();
