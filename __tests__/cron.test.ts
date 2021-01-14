@@ -1,39 +1,12 @@
-import { EventEmitter } from "events";
 import { Pool } from "pg";
 
-import { Job, KnownCrontab, run, RunnerOptions } from "../src";
-import defer from "../src/deferred";
-import { ESCAPED_GRAPHILE_WORKER_SCHEMA, reset, withPgPool } from "./helpers";
-
-class EventAwaiter {
-  public events: EventEmitter;
-
-  constructor(eventEmitter = new EventEmitter()) {
-    this.events = eventEmitter;
-  }
-
-  awaitNext(eventName: string): Promise<void> {
-    const d = defer();
-    this.events.once(eventName, () => d.resolve());
-    return d;
-  }
-}
-
-function withOptions<T>(
-  callback: (options: RunnerOptions & { pgPool: Pool }) => Promise<T>,
-) {
-  return withPgPool((pgPool) =>
-    callback({
-      pgPool,
-      taskList: {
-        /* DO NOT ADD do_it HERE! */
-        do_something_else(payload, helpers) {
-          helpers.logger.debug("do_something_else called", { payload });
-        },
-      },
-    }),
-  );
-}
+import { Job, KnownCrontab, run } from "../src";
+import {
+  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  EventAwaiter,
+  reset,
+  withOptions,
+} from "./helpers";
 
 const CRONTAB_DO_IT = `
 0 */4 * * * do_it ?fill=1d

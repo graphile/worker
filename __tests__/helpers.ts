@@ -1,7 +1,14 @@
+import { EventEmitter } from "events";
 import * as pg from "pg";
 import { parse } from "pg-connection-string";
 
-import { Job, WorkerPoolOptions, WorkerUtils } from "../src/interfaces";
+import defer from "../src/deferred";
+import {
+  Job,
+  RunnerOptions,
+  WorkerPoolOptions,
+  WorkerUtils,
+} from "../src/interfaces";
 import { migrate } from "../src/migrate";
 
 // Sometimes CI's clock can get interrupted (it is shared infra!) so this
@@ -166,4 +173,34 @@ export async function makeSelectionOfJobs(
     regularJob2,
     untouchedJob,
   };
+}
+
+export class EventAwaiter {
+  public events: EventEmitter;
+
+  constructor(eventEmitter = new EventEmitter()) {
+    this.events = eventEmitter;
+  }
+
+  awaitNext(eventName: string): Promise<void> {
+    const d = defer();
+    this.events.once(eventName, () => d.resolve());
+    return d;
+  }
+}
+
+export function withOptions<T>(
+  callback: (options: RunnerOptions & { pgPool: pg.Pool }) => Promise<T>,
+) {
+  return withPgPool((pgPool) =>
+    callback({
+      pgPool,
+      taskList: {
+        /* DO NOT ADD do_it HERE! */
+        do_something_else(payload, helpers) {
+          helpers.logger.debug("do_something_else called", { payload });
+        },
+      },
+    }),
+  );
 }
