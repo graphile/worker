@@ -1,6 +1,4 @@
-import { Pool } from "pg";
-
-import { Job, KnownCrontab, run } from "../src";
+import { run } from "../src";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   EventMonitor,
