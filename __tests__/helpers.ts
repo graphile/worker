@@ -204,3 +204,39 @@ export function withOptions<T>(
     }),
   );
 }
+
+export function setupFakeTimers() {
+  jest.useFakeTimers();
+
+  const originalDateNow = global.Date.now;
+
+  /** The offset, in milliseconds, to apply to results from `Date.now()` */
+  let offset = 0;
+
+  /**
+   * Sets the `offset` such that a call to `Date.now()` would return this
+   * timestamp if called immediately (but time continues to progress as expected
+   * after this). Also advances the timers by the difference from the previous
+   * `offset`, if positive.
+   */
+  function setTime(ts: number) {
+    const newOffset = ts - originalDateNow.call(global.Date);
+    const advancement = newOffset - offset;
+    offset = newOffset;
+    if (advancement > 0) {
+      jest.advanceTimersByTime(advancement);
+    }
+  }
+
+  beforeEach(() => {
+    offset = 0;
+    global.Date.now = () => {
+      return originalDateNow.call(global.Date) + offset;
+    };
+  });
+  afterEach(() => {
+    global.Date.now = originalDateNow;
+  });
+
+  return { setTime, realNow: () => originalDateNow.call(global.Date) };
+}
