@@ -63,6 +63,7 @@
     "eslint-plugin-simple-import-sort": "^5.0.2",
     "eslint_d": "^8.1.1",
     "jest": "^25.4.0",
+    "jest-time-helpers": "^0.1.0",
     "pg-connection-string": "^2.2.0",
     "prettier": "^2.0.5",
     "ts-jest": "^25.4.0",

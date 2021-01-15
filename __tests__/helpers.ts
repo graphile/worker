@@ -13,8 +13,16 @@ import {
 } from "../src/interfaces";
 import { migrate } from "../src/migrate";
 
-// Grab the setTimeout from global before jest overwrites it with useFakeTimers
-const setTimeoutBypassingFakes = global.setTimeout;
+export {
+  sleep,
+  sleepUntil,
+  SECOND,
+  MINUTE,
+  HOUR,
+  DAY,
+  WEEK,
+  setupFakeTimers,
+} from "jest-time-helpers";
 
 // Sometimes CI's clock can get interrupted (it is shared infra!) so this
 // extends the default timeout just in case.
@@ -146,23 +154,6 @@ export function makeMockJob(taskIdentifier: string): Job {
   };
 }
 
-/** Wait a number of milliseconds */
-export const sleep = (ms: number) =>
-  new Promise((resolve) => setTimeoutBypassingFakes(resolve, ms));
-
-export async function sleepUntil(condition: () => boolean, maxDuration = 2000) {
-  const start = Date.now();
-  // Wait up to a second for the job to be executed
-  while (!condition() && Date.now() - start < maxDuration) {
-    await sleep(2);
-  }
-  if (!condition()) {
-    throw new Error(
-      `Slept for ${Date.now() - start}ms but condition never passed`,
-    );
-  }
-}
-
 export async function makeSelectionOfJobs(
   utils: WorkerUtils,
   pgClient: pg.PoolClient,
@@ -242,94 +233,3 @@ export function withOptions<T>(
     }),
   );
 }
-
-/**
- * This is for letting the Node.js event loop advance, e.g. when `setTimeout`
- * has `await` in the chain.
- */
-async function aFewRunLoops(count = 5) {
-  for (let i = 0; i < count; i++) {
-    await sleep(0);
-  }
-}
-
-export function setupFakeTimers() {
-  jest.useFakeTimers();
-
-  const OriginalDate = global.Date;
-
-  /** The offset, in milliseconds, to apply to results from `Date.now()` */
-  let offset = 0;
-
-  function fakeNow() {
-    return OriginalDate.now() + offset;
-  }
-
-  // Copy of `Date`, but overrides `new Date()` to return `new Date(fakeNow())`
-  const FakeDate: typeof Date = function (...args: any[]) {
-    // `new Date()` becomes `new Date(fakeNow())`
-    if (args.length === 0) {
-      return new OriginalDate(fakeNow());
-    } else if (args.length === 1) {
-      return new OriginalDate(args[0]);
-    } else {
-      return new OriginalDate(
-        args[0],
-        args[1],
-        args[2],
-        args[3],
-        args[4],
-        args[5],
-        args[6],
-      );
-    }
-  } as any;
-
-  // Copy static methods of Date
-  FakeDate.now = () => fakeNow(); // Override Date.now()
-  FakeDate.parse = Date.parse;
-  FakeDate.UTC = Date.UTC;
-
-  /**
-   * Sets the `offset` such that a call to `Date.now()` would return this
-   * timestamp if called immediately (but time continues to progress as expected
-   * after this). Also advances the timers by the difference from the previous
-   * `offset`, if positive.
-   */
-  async function setTime(ts: number, increment = MINUTE) {
-    const finalOffset = ts - OriginalDate.now();
-    const advancement = finalOffset - offset;
-    if (advancement < 0) {
-      offset = finalOffset;
-    } else {
-      let previousOffset = offset;
-      while (previousOffset + increment < finalOffset) {
-        offset = previousOffset + increment;
-        previousOffset = offset;
-        jest.advanceTimersByTime(increment);
-        await aFewRunLoops();
-      }
-      if (previousOffset < finalOffset) {
-        offset = finalOffset;
-        jest.advanceTimersByTime(finalOffset - previousOffset);
-        await aFewRunLoops();
-      }
-    }
-  }
-
-  beforeEach(() => {
-    offset = 0;
-    global.Date = FakeDate;
-  });
-  afterEach(() => {
-    global.Date = OriginalDate;
-  });
-
-  return { setTime, realNow: () => OriginalDate.now() };
-}
-
-export const SECOND = 1000;
-export const MINUTE = 60 * SECOND;
-export const HOUR = 60 * MINUTE;
-export const DAY = 24 * HOUR;
-export const WEEK = 7 * DAY;
