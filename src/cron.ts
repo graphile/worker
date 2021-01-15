@@ -498,6 +498,30 @@ export async function getParsedCronItemsFromOptions(
     return watchedCronItems.items;
   } else {
     assert(parsedCronItems != null, "Expected `parsedCronItems` to be set.");
+    // Basic check to ensure that users remembered to call
+    // `parseCronItems`/`parseCrontab`; not intended to be a full check, just a
+    // quick one to catch the obvious errors. Keep in mind that
+    // `parsedCronItems` is mutable so it may be changed later to contain more
+    // entries; we can't keep performing these checks everywhere for
+    // performance reasons.
+    assert(
+      Array.isArray(parsedCronItems),
+      "Expected `parsedCronItems` to be an array; you must use a helper e.g. `parseCrontab()` or `parseCronItems()` to produce this value.",
+    );
+    const firstItem = parsedCronItems[0];
+    if (firstItem) {
+      if (
+        !Array.isArray(firstItem.minutes) ||
+        !Array.isArray(firstItem.hours) ||
+        !Array.isArray(firstItem.dates) ||
+        !Array.isArray(firstItem.months) ||
+        !Array.isArray(firstItem.dows)
+      ) {
+        throw new Error(
+          "Invalid `parsedCronItems`; you must use a helper e.g. `parseCrontab()` or `parseCronItems()` to produce this value.",
+        );
+      }
+    }
 
     return parsedCronItems;
   }
