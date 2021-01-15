@@ -352,19 +352,21 @@ export const runCron = (
         const ts = nextTimestamp.toISOString();
         const expectedTimestamp = +nextTimestamp;
 
-        let currentTimestamp = Date.now();
-        // Round to beginning of current minute
-        currentTimestamp -= currentTimestamp % ONE_MINUTE;
+        // With seconds and milliseconds
+        const currentTimestamp = Date.now();
+        // Round to beginning of current minute; should match expectedTimestamp
+        const roundedCurrentTimestamp =
+          currentTimestamp - (currentTimestamp % ONE_MINUTE);
 
         /*
          * In the event of clock skew, or overloaded runloop causing delays,
-         * it's possible that expectedTimestamp and currentTimestamp might not
-         * match up. If we've not hit expectedTimestamp yet, we should just
-         * reschedule. If we've gone past expectedTimestamp then we should do as
-         * much work as is necessary to catch up, ignoring backfill since this
-         * is never expected to be a large period.
+         * it's possible that expectedTimestamp and roundedCurrentTimestamp
+         * might not match up. If we've not hit expectedTimestamp yet, we
+         * should just reschedule. If we've gone past expectedTimestamp then we
+         * should do as much work as is necessary to catch up, ignoring
+         * backfill since this is never expected to be a large period.
          */
-        if (currentTimestamp < expectedTimestamp) {
+        if (roundedCurrentTimestamp < expectedTimestamp) {
           logger.warn(
             `Graphile Worker Cron fired ${(
               (expectedTimestamp - currentTimestamp) /
@@ -379,7 +381,7 @@ export const runCron = (
           // NOTE: we must NOT have mutated nextTimestamp before here in `loop()`.
           scheduleNextLoop();
           return;
-        } else if (currentTimestamp > expectedTimestamp) {
+        } else if (roundedCurrentTimestamp > expectedTimestamp) {
           logger.warn(
             `Graphile Worker Cron fired too late; catching up (${
               (currentTimestamp - expectedTimestamp) / ONE_MINUTE
