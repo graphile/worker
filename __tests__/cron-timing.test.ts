@@ -135,7 +135,7 @@ test("clock skew doesn't prevent task from being scheduled at the right time", (
       expect(cronScheduleCalls.count).toEqual(0);
     }
 
-    // Finally advane the clock to cron firing
+    // Finally advance the clock to cron firing
     await setTime(REFERENCE_TIMESTAMP + 4 * HOUR + 1 * SECOND); // 4:00:01am
     expect(cronScheduleCalls.count).toEqual(1);
   }));
