@@ -411,12 +411,12 @@ export const parseCronItems = (items: CronItem[]): ParsedCronItem[] => {
       const matches = CRONTAB_TIME_PARTS.exec(pattern);
       if (!matches) {
         throw new Error(
-          `Invalid cron pattern '${pattern}' in item ${idx} of cronify call`,
+          `Invalid cron pattern '${pattern}' in item ${idx} of parseCronItems call`,
         );
       }
       const { minutes, hours, dates, months, dows } = parseCrontabRanges(
         matches,
-        `item ${idx} of cronify call`,
+        `item ${idx} of parseCronItems call`,
       );
       const item: ParsedCronItem = {
         minutes,
