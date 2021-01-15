@@ -385,10 +385,9 @@ export const runCron = (
           logger.warn(
             `Graphile Worker Cron fired too late; catching up (${Math.floor(
               (currentTimestamp - expectedTimestamp) / ONE_MINUTE,
-            )}m${(
-              ((currentTimestamp - expectedTimestamp) % ONE_MINUTE) /
-              1000
-            ).toFixed(2)}s behind)`,
+            )}m${Math.floor(
+              ((currentTimestamp - expectedTimestamp) % ONE_MINUTE) / 1000,
+            )}s behind)`,
           );
           events.emit("cron:overdueTimer", {
             cron: this,
