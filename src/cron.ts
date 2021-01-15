@@ -383,9 +383,12 @@ export const runCron = (
           return;
         } else if (roundedCurrentTimestamp > expectedTimestamp) {
           logger.warn(
-            `Graphile Worker Cron fired too late; catching up (${
-              (currentTimestamp - expectedTimestamp) / ONE_MINUTE
-            } minutes behind)`,
+            `Graphile Worker Cron fired too late; catching up (${Math.floor(
+              (currentTimestamp - expectedTimestamp) / ONE_MINUTE,
+            )}m${(
+              ((currentTimestamp - expectedTimestamp) % ONE_MINUTE) /
+              1000
+            ).toFixed(2)}s behind)`,
           );
           events.emit("cron:overdueTimer", {
             cron: this,
