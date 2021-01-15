@@ -466,7 +466,7 @@ export const runCron = (
   };
 };
 
-export async function assertParsedCronItems(
+export async function getParsedCronItemsFromOptions(
   options: RunnerOptions,
   releasers: Releasers,
 ): Promise<Array<ParsedCronItem>> {

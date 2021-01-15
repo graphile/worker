@@ -1,6 +1,6 @@
 import * as assert from "assert";
 
-import { assertParsedCronItems, runCron } from "./cron";
+import { getParsedCronItemsFromOptions, runCron } from "./cron";
 import getTasks from "./getTasks";
 import { ParsedCronItem, Runner, RunnerOptions, TaskList } from "./interfaces";
 import { getUtilsAndReleasersFromOptions, Releasers } from "./lib";
@@ -84,7 +84,7 @@ export const run = async (
 
     const parsedCronItems =
       overrideParsedCronItems ||
-      (await assertParsedCronItems(options, releasers));
+      (await getParsedCronItemsFromOptions(options, releasers));
 
     const cron = runCron(options, parsedCronItems, { pgPool, events });
     releasers.push(() => cron.release());
