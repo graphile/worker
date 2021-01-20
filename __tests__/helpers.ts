@@ -1,8 +1,28 @@
+import { EventEmitter } from "events";
 import * as pg from "pg";
 import { parse } from "pg-connection-string";
 
-import { Job, WorkerPoolOptions, WorkerUtils } from "../src/interfaces";
+import defer from "../src/deferred";
+import {
+  Job,
+  KnownCrontab,
+  RunnerOptions,
+  WorkerEventMap,
+  WorkerPoolOptions,
+  WorkerUtils,
+} from "../src/interfaces";
 import { migrate } from "../src/migrate";
+
+export {
+  sleep,
+  sleepUntil,
+  SECOND,
+  MINUTE,
+  HOUR,
+  DAY,
+  WEEK,
+  setupFakeTimers,
+} from "jest-time-helpers";
 
 // Sometimes CI's clock can get interrupted (it is shared infra!) so this
 // extends the default timeout just in case.
@@ -82,7 +102,7 @@ export async function reset(
     try {
       await migrate(options, client);
     } finally {
-      await client.release();
+      client.release();
     }
   }
 }
@@ -96,6 +116,20 @@ export async function jobCount(
     `select count(*)::int from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
   );
   return row ? row.count || 0 : 0;
+}
+
+export async function getKnown(pgPool: pg.Pool) {
+  const { rows } = await pgPool.query<KnownCrontab>(
+    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.known_crontabs`,
+  );
+  return rows;
+}
+
+export async function getJobs(pgPool: pg.Pool) {
+  const { rows } = await pgPool.query<Job>(
+    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
+  );
+  return rows;
 }
 
 export function makeMockJob(taskIdentifier: string): Job {
@@ -118,22 +152,6 @@ export function makeMockJob(taskIdentifier: string): Job {
     key: null,
     flags: null,
   };
-}
-
-export const sleep = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
-
-export async function sleepUntil(condition: () => boolean, maxDuration = 2000) {
-  const start = Date.now();
-  // Wait up to a second for the job to be executed
-  while (!condition() && Date.now() - start < maxDuration) {
-    await sleep(2);
-  }
-  if (!condition()) {
-    throw new Error(
-      `Slept for ${Date.now() - start}ms but condition never passed`,
-    );
-  }
 }
 
 export async function makeSelectionOfJobs(
@@ -166,4 +184,52 @@ export async function makeSelectionOfJobs(
     regularJob2,
     untouchedJob,
   };
+}
+
+interface EventCounter<TEventName extends keyof WorkerEventMap> {
+  count: number;
+  lastEvent: null | WorkerEventMap[TEventName];
+}
+
+export class EventMonitor {
+  public events: EventEmitter;
+
+  constructor(eventEmitter = new EventEmitter()) {
+    this.events = eventEmitter;
+  }
+
+  awaitNext(eventName: keyof WorkerEventMap): Promise<void> {
+    const d = defer();
+    this.events.once(eventName, () => d.resolve());
+    return d;
+  }
+
+  count<TEventName extends keyof WorkerEventMap>(
+    eventName: TEventName,
+  ): EventCounter<TEventName> {
+    const counter: EventCounter<TEventName> = { count: 0, lastEvent: null };
+    this.events.on(eventName, (payload) => {
+      counter.count++;
+      counter.lastEvent = payload;
+    });
+    return counter;
+  }
+
+  release() {}
+}
+
+export function withOptions<T>(
+  callback: (options: RunnerOptions & { pgPool: pg.Pool }) => Promise<T>,
+) {
+  return withPgPool((pgPool) =>
+    callback({
+      pgPool,
+      taskList: {
+        /* DO NOT ADD do_it HERE! */
+        do_something_else(payload, helpers) {
+          helpers.logger.debug("do_something_else called", { payload });
+        },
+      },
+    }),
+  );
 }

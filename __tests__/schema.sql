@@ -386,6 +386,11 @@ CREATE SEQUENCE graphile_worker.jobs_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE graphile_worker.jobs_id_seq OWNED BY graphile_worker.jobs.id;
+CREATE TABLE graphile_worker.known_crontabs (
+    identifier text NOT NULL,
+    known_since timestamp with time zone NOT NULL,
+    last_execution timestamp with time zone
+);
 CREATE TABLE graphile_worker.migrations (
     id integer NOT NULL,
     ts timestamp with time zone DEFAULT now() NOT NULL
@@ -397,6 +402,8 @@ ALTER TABLE ONLY graphile_worker.jobs
     ADD CONSTRAINT jobs_key_key UNIQUE (key);
 ALTER TABLE ONLY graphile_worker.jobs
     ADD CONSTRAINT jobs_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY graphile_worker.known_crontabs
+    ADD CONSTRAINT known_crontabs_pkey PRIMARY KEY (identifier);
 ALTER TABLE ONLY graphile_worker.migrations
     ADD CONSTRAINT migrations_pkey PRIMARY KEY (id);
 CREATE INDEX jobs_priority_run_at_id_locked_at_without_failures_idx ON graphile_worker.jobs USING btree (priority, run_at, id, locked_at) WHERE (attempts < max_attempts);
@@ -408,3 +415,4 @@ CREATE TRIGGER _500_increase_job_queue_count_update AFTER UPDATE OF queue_name O
 CREATE TRIGGER _900_notify_worker AFTER INSERT ON graphile_worker.jobs FOR EACH STATEMENT EXECUTE PROCEDURE graphile_worker.tg_jobs__notify_new_jobs();
 ALTER TABLE graphile_worker.job_queues ENABLE ROW LEVEL SECURITY;
 ALTER TABLE graphile_worker.jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE graphile_worker.known_crontabs ENABLE ROW LEVEL SECURITY;

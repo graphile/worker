@@ -1,7 +1,8 @@
 import * as assert from "assert";
 
+import { getParsedCronItemsFromOptions, runCron } from "./cron";
 import getTasks from "./getTasks";
-import { Runner, RunnerOptions, TaskList } from "./interfaces";
+import { ParsedCronItem, Runner, RunnerOptions, TaskList } from "./interfaces";
 import { getUtilsAndReleasersFromOptions, Releasers } from "./lib";
 import { runTaskList, runTaskListOnce } from "./main";
 import { migrate } from "./migrate";
@@ -21,23 +22,21 @@ async function assertTaskList(
   options: RunnerOptions,
   releasers: Releasers,
 ): Promise<TaskList> {
-  let taskList: TaskList;
   assert(
     !options.taskDirectory || !options.taskList,
     "Exactly one of either `taskDirectory` or `taskList` should be set",
   );
   if (options.taskList) {
-    taskList = options.taskList;
+    return options.taskList;
   } else if (options.taskDirectory) {
     const watchedTasks = await getTasks(options, options.taskDirectory, false);
     releasers.push(() => watchedTasks.release());
-    taskList = watchedTasks.tasks;
+    return watchedTasks.tasks;
   } else {
     throw new Error(
       "You must specify either `options.taskList` or `options.taskDirectory`",
     );
   }
-  return taskList;
 }
 
 export const runOnce = async (
@@ -69,6 +68,7 @@ export const runOnce = async (
 export const run = async (
   options: RunnerOptions,
   overrideTaskList?: TaskList,
+  overrideParsedCronItems?: Array<ParsedCronItem>,
 ): Promise<Runner> => {
   const {
     pgPool,
@@ -81,6 +81,13 @@ export const run = async (
   try {
     const taskList =
       overrideTaskList || (await assertTaskList(options, releasers));
+
+    const parsedCronItems =
+      overrideParsedCronItems ||
+      (await getParsedCronItemsFromOptions(options, releasers));
+
+    const cron = runCron(options, parsedCronItems, { pgPool, events });
+    releasers.push(() => cron.release());
 
     const workerPool = runTaskList(options, taskList, pgPool);
     releasers.push(() => workerPool.release());

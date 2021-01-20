@@ -162,6 +162,98 @@ export interface WatchedTaskList {
   release: () => void;
 }
 
+export interface WatchedCronItems {
+  items: Array<ParsedCronItem>;
+  release: () => void;
+}
+
+/**
+ * a.k.a. `opts`, this allows you to change the behaviour when scheduling a cron task.
+ */
+export interface CronItemOptions {
+  /** How far back (in milliseconds) should we backfill jobs when worker starts? (Only backfills since when the identifier was first used.) */
+  backfillPeriod: number;
+
+  /** Optionally override the default job max_attempts */
+  maxAttempts?: number;
+
+  /** Optionally set the job queue_name to enforce that the jobs run serially */
+  queueName?: string;
+
+  /** Optionally set the job priority */
+  priority?: number;
+}
+
+/**
+ * A recurring task schedule; this may represent a line in the `crontab` file,
+ * or may be the result of calling `parseCronItems` on a list of `CronItem`s
+ * the user has specified.
+ *
+ * You should use this as an opaque type; you should **not** read values from
+ * inside it, and you should not construct it manually, use `parseCrontab` or
+ * `parseCronItems` instead. The definition of this type may change
+ * dramatically between minor releases of Graphile Worker, these changes are
+ * not seen as breaking changes.
+ *
+ * @internal
+ *
+ * **WARNING**: it is assumed that values of this type adhere to the constraints in
+ * the comments below (many of these cannot be asserted by TypeScript). If you
+ * construct this type manually and do not adhere to these constraints then you
+ * may get unexpected behaviours. Graphile Worker enforces these rules when
+ * constructing `ParsedCronItem`s internally, you should use the Graphile
+ * Worker helpers to construct this type.
+ */
+export interface ParsedCronItem {
+  /** Minutes (0-59) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  minutes: number[];
+  /** Hours (0-23) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  hours: number[];
+  /** Dates (1-31) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  dates: number[];
+  /** Months (1-12) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  months: number[];
+  /** Days of the week (0-6) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  dows: number[];
+
+  /** The identifier of the task to execute */
+  task: string;
+
+  /** Options influencing backfilling and properties of the scheduled job */
+  options: CronItemOptions;
+
+  /** A payload object to merge into the default cron payload object for the scheduled job */
+  payload: { [key: string]: any };
+
+  /** An identifier so that we can prevent double-scheduling of a task and determine whether or not to backfill. */
+  identifier: string;
+}
+
+/**
+ * A description of a cron item detailing a task to run, when to run it, and
+ * any additional options necessary. This is the human-writable form, it must
+ * be parsed via `parseCronItems` before being fed to a worker. (ParsedCronItem
+ * has strict rules and should only be constructed via Graphile Worker's
+ * helpers to ensure compliance.)
+ */
+export interface CronItem {
+  /** The identifier of the task to execute */
+  task: string;
+
+  /** Cron pattern (e.g. `* * * * *`) to detail when the task should be executed */
+  pattern: string;
+
+  /** Options influencing backfilling and properties of the scheduled job */
+  options?: CronItemOptions;
+
+  /** A payload object to merge into the default cron payload object for the scheduled job */
+  payload?: { [key: string]: any };
+
+  /** An identifier so that we can prevent double-scheduling of a task and determine whether or not to backfill. */
+  identifier?: string;
+}
+
+/** Represents records in the `jobs` table */
 export interface Job {
   id: string;
   queue_name: string | null;
@@ -179,6 +271,13 @@ export interface Job {
   locked_at: Date | null;
   locked_by: string | null;
   flags: { [flag: string]: true } | null;
+}
+
+/** Represents records in the `known_crontabs` table */
+export interface KnownCrontab {
+  identifier: string;
+  known_since: Date;
+  last_execution: Date | null;
 }
 
 export interface Worker {
@@ -200,6 +299,11 @@ export interface Runner {
   addJob: AddJobFunction;
   promise: Promise<void>;
   events: WorkerEvents;
+}
+
+export interface Cron {
+  release(): Promise<void>;
+  promise: Promise<void>;
 }
 
 export interface TaskSpec {
@@ -348,6 +452,42 @@ export interface RunnerOptions extends WorkerPoolOptions {
    * Each file in this directory will be used as a task handler
    */
   taskDirectory?: string;
+
+  /**
+   * A crontab string to use instead of reading a crontab file
+   */
+  crontab?: string;
+
+  /**
+   * Path to the crontab file. Defaults to `crontab`
+   */
+  crontabFile?: string;
+
+  /**
+   * Programmatically generated cron items. **BE VERY CAREFUL** if you use this
+   * manually, there are requirements on this type that TypeScript cannot
+   * express, and if you don't adhere to them then you'll get unexpected
+   * behaviours.
+   */
+  parsedCronItems?: Array<ParsedCronItem>;
+}
+
+/** Spec for a job created from cron */
+export interface CronJob {
+  task: string;
+  payload: {
+    _cron: { ts: string; backfilled?: boolean };
+    [key: string]: unknown;
+  };
+  queueName?: string;
+  runAt: string;
+  maxAttempts?: number;
+  priority?: number;
+}
+
+export interface JobAndCronIdentifier {
+  job: CronJob;
+  identifier: string;
 }
 
 export interface WorkerUtilsOptions extends SharedOptions {}
@@ -389,7 +529,7 @@ interface TypedEventEmitter<TEventMap extends BaseEventMap>
 /**
  * These are the events that a worker instance supports.
  */
-export type WorkerEvents = TypedEventEmitter<{
+export type WorkerEventMap = {
   /**
    * When a worker pool is created
    */
@@ -491,6 +631,62 @@ export type WorkerEvents = TypedEventEmitter<{
    */
   "job:complete": { worker: Worker; job: Job; error: any };
 
+  /** **Experimental** When the cron starts working (before backfilling) */
+  "cron:starting": { cron: Cron; start: Date };
+
+  /** **Experimental** When the cron starts working (after backfilling completes) */
+  "cron:started": { cron: Cron; start: Date };
+
+  /** **Experimental** When a number of jobs need backfilling for a particular timestamp. */
+  "cron:backfill": {
+    cron: Cron;
+    itemsToBackfill: JobAndCronIdentifier[];
+    timestamp: string;
+  };
+
+  /**
+   * **Experimental** When it seems that time went backwards (e.g. the system
+   * clock was adjusted) and we try again a little later.
+   */
+  "cron:prematureTimer": {
+    cron: Cron;
+    currentTimestamp: number;
+    expectedTimestamp: number;
+  };
+
+  /**
+   * **Experimental** When it seems that time jumped forwards (e.g. the system
+   * was overloaded and couldn't fire the timer on time, or perhaps the system
+   * went to sleep) and we need to catch up.
+   */
+  "cron:overdueTimer": {
+    cron: Cron;
+    currentTimestamp: number;
+    expectedTimestamp: number;
+  };
+
+  /**
+   * **Experimental** When 1 or more cron items match the current timestamp and
+   * will be scheduled into the database. (Like cron:scheduled but before the
+   * database write.)
+   */
+  "cron:schedule": {
+    cron: Cron;
+    timestamp: number;
+    jobsAndIdentifiers: JobAndCronIdentifier[];
+  };
+
+  /**
+   * **Experimental** When 1 or more cron items match the current timestamp and
+   * were scheduled into the database. (Like cron:schedule but after the
+   * database write.)
+   */
+  "cron:scheduled": {
+    cron: Cron;
+    timestamp: number;
+    jobsAndIdentifiers: JobAndCronIdentifier[];
+  };
+
   /**
    * When the runner is terminated by a signal
    */
@@ -500,4 +696,6 @@ export type WorkerEvents = TypedEventEmitter<{
    * When the runner is stopped
    */
   stop: {};
-}>;
+};
+
+export type WorkerEvents = TypedEventEmitter<WorkerEventMap>;
