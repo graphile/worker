@@ -42,6 +42,10 @@ const argv = yargs
     default: false,
   })
   .boolean("watch")
+  .option("crontab", {
+    description: "override path to crontab file",
+  })
+  .string("crontab")
   .option("jobs", {
     description: "number of jobs to run concurrently",
     alias: "j",
@@ -124,7 +128,7 @@ async function main() {
   const watchedTasks = await getTasks(options, `${process.cwd()}/tasks`, WATCH);
   const watchedCronItems = await getCronItems(
     options,
-    `${process.cwd()}/crontab`,
+    argv.crontab || `${process.cwd()}/crontab`,
     WATCH,
   );
 

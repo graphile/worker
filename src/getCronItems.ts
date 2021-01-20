@@ -11,13 +11,28 @@ async function loadCrontabIntoCronItems(
   items: Array<ParsedCronItem>,
   filename: string,
 ) {
-  const contents = await fsp.readFile(filename, "utf8").catch((e) => {
-    if (e.code !== "ENOENT") {
-      // Only log error if it's not a "file doesn't exist" error
-      logger.error(`Failed to read crontab file '${filename}': ${e}`);
-    }
-    return "";
-  });
+  let didntExist = false;
+  const contents = await fsp
+    .readFile(filename, "utf8")
+    .then((t) => {
+      if (didntExist) {
+        didntExist = false;
+        logger.info(`Found crontab file '${filename}'; cron is now enabled`);
+      }
+      return t;
+    })
+    .catch((e) => {
+      if (e.code !== "ENOENT") {
+        // Only log error if it's not a "file doesn't exist" error
+        logger.error(`Failed to read crontab file '${filename}': ${e}`);
+      } else {
+        didntExist = true;
+        logger.info(
+          `Failed to read crontab file '${filename}'; cron is disabled`,
+        );
+      }
+      return "";
+    });
   if (contents != null) {
     const parsed = parseCrontab(contents);
     // Overwrite items' contents with the new cron items
