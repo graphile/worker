@@ -153,7 +153,7 @@ describe("gives error on syntax error", () => {
 1,60 * * * * out_of_range
 `),
     ).toThrowErrorMatchingInlineSnapshot(
-      `"Too large value '60' in range 1 in line 1 of crontab: expected values in the range 0-59."`,
+      `"Too large value '60' in minutes range in line 1 of crontab: expected values in the range 0-59."`,
     );
   });
 
@@ -163,7 +163,7 @@ describe("gives error on syntax error", () => {
 */0 * * * * division_by_zero
 `),
     ).toThrowErrorMatchingInlineSnapshot(
-      `"Invalid wildcard expression '*/0' in range 1 in line 1 of crontab: divisor '0' expected to be greater than zero"`,
+      `"Invalid wildcard expression '*/0' in minutes range in line 1 of crontab: divisor '0' expected to be greater than zero"`,
     );
   });
 

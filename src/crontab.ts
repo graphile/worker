@@ -309,12 +309,32 @@ const parseCrontabCommand = (
 };
 
 function parseCrontabRanges(matches: string[], source: string) {
-  const minutes = parseCrontabRange(`range 1 in ${source}`, matches[1], 0, 59);
-  const hours = parseCrontabRange(`range 2 in ${source}`, matches[2], 0, 23);
-  const dates = parseCrontabRange(`range 3 in ${source}`, matches[3], 1, 31);
-  const months = parseCrontabRange(`range 4 in ${source}`, matches[4], 1, 12);
+  const minutes = parseCrontabRange(
+    `minutes range in ${source}`,
+    matches[1],
+    0,
+    59,
+  );
+  const hours = parseCrontabRange(
+    `hours range in ${source}`,
+    matches[2],
+    0,
+    23,
+  );
+  const dates = parseCrontabRange(
+    `dates range in ${source}`,
+    matches[3],
+    1,
+    31,
+  );
+  const months = parseCrontabRange(
+    `months range in ${source}`,
+    matches[4],
+    1,
+    12,
+  );
   const dows = parseCrontabRange(
-    `range 5 in ${source}`,
+    `days of week range in ${source}`,
     matches[5],
     0,
     6,
