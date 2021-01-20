@@ -2,6 +2,7 @@
 
 ### v0.9.0
 
+- New (experimental) "cron" functionality for regularly scheduled jobs
 - Replace jobs ordering index for improved performance (thanks @ben-pr-p)
   - NOTE: this migration might take a moment if you have a large jobs table
 - New events system lets you monitor what's going on inside Graphile Worker
@@ -13,6 +14,7 @@
     job with that job key exists, even if that job is already running
 - `remove_job` now prevents locked jobs from running again on error (and removes
   their key)
+- Dependency updates
 
 ### v0.8.1
 
