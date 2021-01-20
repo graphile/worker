@@ -1,10 +1,10 @@
 export interface Deferred<T = void> extends Promise<T> {
-  resolve: (result?: T) => void;
+  resolve: (result?: T | PromiseLike<T>) => void;
   reject: (error: Error) => void;
 }
 
 export default function defer<T = void>(): Deferred<T> {
-  let resolve: (result?: T) => void;
+  let resolve: (result?: T | PromiseLike<T>) => void;
   let reject: (error: Error) => void;
   return Object.assign(
     new Promise<T>((_resolve, _reject) => {
