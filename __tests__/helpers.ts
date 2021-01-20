@@ -14,14 +14,14 @@ import {
 import { migrate } from "../src/migrate";
 
 export {
+  DAY,
+  HOUR,
+  MINUTE,
+  SECOND,
+  setupFakeTimers,
   sleep,
   sleepUntil,
-  SECOND,
-  MINUTE,
-  HOUR,
-  DAY,
   WEEK,
-  setupFakeTimers,
 } from "jest-time-helpers";
 
 // Sometimes CI's clock can get interrupted (it is shared infra!) so this
