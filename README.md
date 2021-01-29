@@ -712,6 +712,20 @@ export interface TaskSpec {
 
 ## Logger
 
+By default we log to the `console`, and debug-level messages are not output
+unless you have the environmental variable `GRAPHILE_WORKER_DEBUG=1`.
+
+It's recommended that your tasks always use the methods on `helpers.logger` for
+logging so that you can later route your messages to a different log store if
+you want to. There are 4 methods, one for each level of severity (error, warn,
+info, debug), and each accept a string as the first argument and optionally an
+arbitrary object as the second argument:
+
+- `helpers.logger.error(message: string, meta?: LogMeta)`
+- `helpers.logger.warn(message: string, meta?: LogMeta)`
+- `helpers.logger.info(message: string, meta?: LogMeta)`
+- `helpers.logger.debug(message: string, meta?: LogMeta)`
+
 You may customise where log messages from `graphile-worker` (and your tasks) go
 by supplying a custom `Logger` instance using your own `logFactory`.
 
