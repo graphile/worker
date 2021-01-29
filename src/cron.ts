@@ -367,11 +367,15 @@ export const runCron = (
          * backfill since this is never expected to be a large period.
          */
         if (roundedCurrentTimestamp < expectedTimestamp) {
-          logger.warn(
+          logger.debug(
             `Graphile Worker Cron fired ${(
               (expectedTimestamp - currentTimestamp) /
               1000
             ).toFixed(3)}s too early (clock skew?); rescheduling`,
+            {
+              expectedTimestamp,
+              currentTimestamp,
+            },
           );
           events.emit("cron:prematureTimer", {
             cron: this,
@@ -382,7 +386,7 @@ export const runCron = (
           scheduleNextLoop();
           return;
         } else if (roundedCurrentTimestamp > expectedTimestamp) {
-          logger.warn(
+          logger.debug(
             `Graphile Worker Cron fired too late; catching up (${Math.floor(
               (currentTimestamp - expectedTimestamp) / ONE_MINUTE,
             )}m${Math.floor(
