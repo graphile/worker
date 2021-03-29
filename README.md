@@ -224,7 +224,7 @@ yarn add graphile-worker
 
 ## Running
 
-`graphile-worker` manages it's own database schema (`graphile_worker`). Just
+`graphile-worker` manages its own database schema (`graphile_worker`). Just
 point graphile-worker at your database and we handle our own migrations:
 
 ```
@@ -276,7 +276,7 @@ the APIs for running jobs.
 Runs until either stopped by a signal event like `SIGINT` or by calling the
 `stop()` method on the resolved object.
 
-The the resolved 'Runner' object has a number of helpers on it, see
+The resolved 'Runner' object has a number of helpers on it, see
 [Runner object](#runner-object) for more information.
 
 ### `runOnce(options: RunnerOptions): Promise<void>`
@@ -1054,7 +1054,7 @@ The full `job_key_mode` algorithm is roughly as follows:
 - Otherwise, if `job_key_mode` is `unsafe_dedupe`:
   - stop and return the existing job.
 - Otherwise, if the existing job is locked:
-  - it will have it's `key` cleared
+  - it will have its `key` cleared
   - it will have its attempts set to `max_attempts` to avoid it running again
   - a new job will be created with the new attributes.
 - Otherwise, if the existing job has previously failed:
