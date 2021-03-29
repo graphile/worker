@@ -95,7 +95,7 @@ export async function assertPool(
     );
   }
 
-  const handlePoolError = (err) => {
+  const handlePoolError = (err: Error) => {
     /*
      * This handler is required so that client connection errors don't bring
      * the server down (via `unhandledError`).
