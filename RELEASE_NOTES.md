@@ -1,5 +1,11 @@
 # Release notes
 
+### v0.10.0
+
+- No longer exit on SIGPIPE (Node will swallow this error code)
+- Fix issue with error handling on PostgreSQL restart or `pg_terminate_backend`
+- Fix a potential unhandled promise rejection
+
 ### v0.9.0
 
 - New (experimental) "cron" functionality for regularly scheduled jobs

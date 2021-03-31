@@ -78,20 +78,24 @@ export async function assertPool(
       connectionString,
       max: options.maxPoolSize,
     });
-    releasers.push(() => pgPool.end());
+    releasers.push(() => {
+      pgPool.end();
+    });
   } else if (process.env.PGDATABASE) {
     pgPool = new Pool({
       /* Pool automatically pulls settings from envvars */
       max: options.maxPoolSize,
     });
-    releasers.push(() => pgPool.end());
+    releasers.push(() => {
+      pgPool.end();
+    });
   } else {
     throw new Error(
       "You must either specify `pgPool` or `connectionString`, or you must make the `DATABASE_URL` or `PG*` environmental variables available.",
     );
   }
 
-  pgPool.on("error", (err) => {
+  const handlePoolError = (err: Error) => {
     /*
      * This handler is required so that client connection errors don't bring
      * the server down (via `unhandledError`).
@@ -103,6 +107,10 @@ export async function assertPool(
     logger.error(`PostgreSQL client generated error: ${err.message}`, {
       error: err,
     });
+  };
+  pgPool.on("error", handlePoolError);
+  releasers.push(() => {
+    pgPool.removeListener("error", handlePoolError);
   });
   return pgPool;
 }

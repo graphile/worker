@@ -118,7 +118,7 @@ export function runTaskList(
     if (listenForChangesClient) {
       const client = listenForChangesClient;
       listenForChangesClient = null;
-      // Subscribe to jobs:insert message
+      // Unsubscribe from jobs:insert topic
       try {
         await client.query('UNLISTEN "jobs:insert"');
       } catch (e) {
@@ -189,11 +189,11 @@ export function runTaskList(
   const listenForChanges = (
     err: Error | undefined,
     client: PoolClient,
-    release: () => void,
+    releaseClient: () => void,
   ) => {
     if (!active) {
       // We were released, release this new client and abort
-      release();
+      releaseClient();
       return;
     }
     if (err) {
@@ -208,17 +208,15 @@ export function runTaskList(
       }, 5000);
       return;
     }
-    events.emit("pool:listen:success", { workerPool, client });
-    listenForChangesClient = client;
-    client.on("notification", () => {
-      if (listenForChangesClient === client) {
-        // Find a worker that's available
-        workers.some((worker) => worker.nudge());
-      }
-    });
 
-    // On error, release this client and try again
-    client.on("error", (e: Error) => {
+    //----------------------------------------
+
+    let errorHandled = false;
+    function onErrorReleaseClientAndTryAgain(e: Error) {
+      if (errorHandled) {
+        return;
+      }
+      errorHandled = true;
       events.emit("pool:listen:error", { workerPool, client, error: e });
       logger.error(`Error with database notify listener: ${e.message}`, {
         error: e,
@@ -233,10 +231,35 @@ export function runTaskList(
       }
       events.emit("pool:listen:connecting", { workerPool });
       pgPool.connect(listenForChanges);
-    });
+    }
+
+    function handleNotification() {
+      if (listenForChangesClient === client) {
+        // Find a worker that's available
+        workers.some((worker) => worker.nudge());
+      }
+    }
+
+    function release() {
+      client.removeListener("error", onErrorReleaseClientAndTryAgain);
+      client.removeListener("notification", handleNotification);
+      client.query('UNLISTEN "jobs:insert"').catch(() => {
+        /* ignore errors */
+      });
+      releaseClient();
+    }
+
+    // On error, release this client and try again
+    client.on("error", onErrorReleaseClientAndTryAgain);
+
+    //----------------------------------------
+
+    events.emit("pool:listen:success", { workerPool, client });
+    listenForChangesClient = client;
+    client.on("notification", handleNotification);
 
     // Subscribe to jobs:insert message
-    client.query('LISTEN "jobs:insert"');
+    client.query('LISTEN "jobs:insert"').catch(onErrorReleaseClientAndTryAgain);
 
     const supportedTaskNames = Object.keys(tasks);
 
