@@ -233,8 +233,19 @@ export function runTaskList(
       pgPool.connect(listenForChanges);
     }
 
+    function handleNotification() {
+      if (listenForChangesClient === client) {
+        // Find a worker that's available
+        workers.some((worker) => worker.nudge());
+      }
+    }
+
     function release() {
       client.removeListener("error", onErrorReleaseClientAndTryAgain);
+      client.removeListener("notification", handleNotification);
+      client.query('UNLISTEN "jobs:insert"').catch(() => {
+        /* ignore errors */
+      });
       releaseClient();
     }
 
@@ -245,12 +256,7 @@ export function runTaskList(
 
     events.emit("pool:listen:success", { workerPool, client });
     listenForChangesClient = client;
-    client.on("notification", () => {
-      if (listenForChangesClient === client) {
-        // Find a worker that's available
-        workers.some((worker) => worker.nudge());
-      }
-    });
+    client.on("notification", handleNotification);
 
     // Subscribe to jobs:insert message
     client.query('LISTEN "jobs:insert"').catch(onErrorReleaseClientAndTryAgain);
