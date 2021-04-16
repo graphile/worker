@@ -1,5 +1,10 @@
 # Release notes
 
+### Pending
+
+- Replace `Logger` with new
+  [`@graphile/logger`](https://github.com/graphile/logger) module
+
 ### v0.10.0
 
 - No longer exit on SIGPIPE (Node will swallow this error code)

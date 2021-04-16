@@ -712,14 +712,17 @@ export interface TaskSpec {
 
 ## Logger
 
-By default we log to the `console`, and debug-level messages are not output
-unless you have the environmental variable `GRAPHILE_WORKER_DEBUG=1`.
+We use [`@graphile/logger`](https://github.com/graphile/logger) as a log
+abstraction so that you can log to whatever logging facilities you like. By
+default this will log to `console`, and debug-level messages are not output
+unless you have the environmental variable `GRAPHILE_LOGGER_DEBUG=1`. You can
+override this by passing a custom `logger`.
 
 It's recommended that your tasks always use the methods on `helpers.logger` for
 logging so that you can later route your messages to a different log store if
-you want to. There are 4 methods, one for each level of severity (error, warn,
-info, debug), and each accept a string as the first argument and optionally an
-arbitrary object as the second argument:
+you want to. There are 4 methods, one for each level of severity (`error`,
+`warn`, `info`, `debug`), and each accept a string as the first argument and
+optionally an arbitrary object as the second argument:
 
 - `helpers.logger.error(message: string, meta?: LogMeta)`
 - `helpers.logger.warn(message: string, meta?: LogMeta)`
@@ -768,8 +771,8 @@ The return result of the logger function is currently ignored; but we strongly
 recommend that for future compatibility you do not return anything from your
 logger function.
 
-See `consoleLogFactory` in [src/logger.ts](src/logger.ts) for an example
-logFactory.
+See the [`@graphile/logger`](https://github.com/graphile/logger) documentation
+for more information.
 
 **NOTE**: you do not need to (and should not) customise, inherit or extend the
 `Logger` class at all.
@@ -839,8 +842,9 @@ Each task function is passed two arguments:
 
 So that you may redirect logs to your preferred logging provider, we have
 enabled you to supply your own logging provider. Overriding this is currently
-only available in library mode. We then wrap this logging provider with a helper
-class to ease debugging; the helper class has the following methods:
+only available in library mode (see [Logger](#logger)). We then wrap this
+logging provider with a helper class to ease debugging; the helper class has the
+following methods:
 
 - `error(message, meta?)`: for logging errors, similar to `console.error`
 - `warn(message, meta?)`: for logging warnings, similar to `console.warn`
