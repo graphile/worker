@@ -1,10 +1,13 @@
+// For backwards compatibility
+if (process.env.GRAPHILE_WORKER_DEBUG) {
+  process.env.GRAPHILE_LOGGER_DEBUG = process.env.GRAPHILE_WORKER_DEBUG;
+}
+
 import {
   LogFunctionFactory as GraphileLogFunctionFactory,
   Logger as GraphileLogger,
   makeConsoleLogFactory,
 } from "@graphile/logger";
-
-export { consoleLogFactory } from "@graphile/logger";
 
 export interface LogScope {
   label?: string;
@@ -16,6 +19,7 @@ export interface LogScope {
 // For backwards compatibility
 export type Logger = GraphileLogger<LogScope>;
 export type LogFunctionFactory = GraphileLogFunctionFactory<LogScope>;
+export const consoleLogFactory = makeConsoleLogFactory<LogScope>();
 
 export const defaultLogger = new GraphileLogger<LogScope>(
   makeConsoleLogFactory({

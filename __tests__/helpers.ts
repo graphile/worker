@@ -28,7 +28,7 @@ export {
 // extends the default timeout just in case.
 jest.setTimeout(15000);
 
-// process.env.GRAPHILE_WORKER_DEBUG = "1";
+// process.env.GRAPHILE_LOGGER_DEBUG = "1";
 
 export const TEST_CONNECTION_STRING =
   process.env.TEST_CONNECTION_STRING || "graphile_worker_test";
