@@ -1,7 +1,8 @@
 # Release notes
 
-### Pending
+### v0.11.0
 
+- Export `getCronItems` so library-mode users can watch the crontab file
 - Replace `Logger` with new
   [`@graphile/logger`](https://github.com/graphile/logger) module
 
