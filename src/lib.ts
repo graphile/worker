@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import { EventEmitter } from "events";
-import { Client, Pool } from "pg";
+import { Client, Pool, PoolClient } from "pg";
 
 import { defaults } from "./config";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
@@ -97,20 +97,40 @@ export async function assertPool(
 
   const handlePoolError = (err: Error) => {
     /*
-     * This handler is required so that client connection errors don't bring
-     * the server down (via `unhandledError`).
+     * This handler is required so that client connection errors on clients
+     * that are alive but not checked out don't bring the server down (via
+     * `unhandledError`).
      *
      * `pg` will automatically terminate the client and remove it from the
      * pool, so we don't actually need to take any action here, just ensure
      * that the event listener is registered.
      */
-    logger.error(`PostgreSQL client generated error: ${err.message}`, {
+    logger.error(`PostgreSQL idle client generated error: ${err.message}`, {
+      error: err,
+    });
+  };
+  const handleClientError = (err: Error) => {
+    /*
+     * This handler is required so that client connection errors on clients
+     * that are checked out of the pool don't bring the server down (via
+     * `unhandledError`).
+     *
+     * `pg` will automatically raise the error from the client the next time it
+     * attempts a query, so we don't actually need to take any action here,
+     * just ensure that the event listener is registered.
+     */
+    logger.error(`PostgreSQL active client generated error: ${err.message}`, {
       error: err,
     });
   };
   pgPool.on("error", handlePoolError);
+  const handlePoolConnect = (client: PoolClient) => {
+    client.on("error", handleClientError);
+  };
+  pgPool.on("connect", handlePoolConnect);
   releasers.push(() => {
     pgPool.removeListener("error", handlePoolError);
+    pgPool.removeListener("connect", handlePoolConnect);
   });
   return pgPool;
 }
