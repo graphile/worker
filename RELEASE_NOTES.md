@@ -1,5 +1,9 @@
 # Release notes
 
+### v0.11.1
+
+- Handles unexpected errors whilst PostgreSQL client is idle
+
 ### v0.11.0
 
 - Export `getCronItems` so library-mode users can watch the crontab file
