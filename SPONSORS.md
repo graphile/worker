@@ -54,8 +54,10 @@ Graphile ecosystem. Find out
 - qoby
 - Paul Melnikow
 - Stéphane Klein
+- Kadi Kraman
 - Dani Kenan
 - Vinzenz Weber
 - Jimmy Liu
+- OnThisSpot
 - Splitgraph
 - Zippr.io
