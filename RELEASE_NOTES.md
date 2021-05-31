@@ -1,5 +1,9 @@
 # Release notes
 
+### v0.11.2
+
+- Added support for wider range of `@types/pg` dependency
+
 ### v0.11.1
 
 - Handles unexpected errors whilst PostgreSQL client is idle
