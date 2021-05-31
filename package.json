@@ -42,7 +42,7 @@
   "dependencies": {
     "@graphile/logger": "^0.2.0",
     "@types/debug": "^4.1.2",
-    "@types/pg": "^7.14.3",
+    "@types/pg": ">=6 <9",
     "chokidar": "^3.4.0",
     "cosmiconfig": "^7.0.0",
     "json5": "^2.1.3",
