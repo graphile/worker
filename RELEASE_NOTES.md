@@ -1,5 +1,9 @@
 # Release notes
 
+### v0.11.3
+
+- Restores `Logger` export accidentally removed in v0.11.0
+
 ### v0.11.2
 
 - Added support for wider range of `@types/pg` dependency
