@@ -17,11 +17,11 @@ export interface LogScope {
 }
 
 // For backwards compatibility
-export type Logger = GraphileLogger<LogScope>;
+export class Logger extends GraphileLogger<LogScope> {}
 export type LogFunctionFactory = GraphileLogFunctionFactory<LogScope>;
 export const consoleLogFactory = makeConsoleLogFactory<LogScope>();
 
-export const defaultLogger = new GraphileLogger<LogScope>(
+export const defaultLogger = new Logger(
   makeConsoleLogFactory({
     format: `[%s%s] %s: %s`,
     formatParameters(level, message, scope) {
