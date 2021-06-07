@@ -177,7 +177,7 @@ https://graphile.org/support/
 - Crontab-like scheduling feature for recurring tasks (with optional backfill)
 - Task de-duplication via unique `job_key`
 - Flexible runtime controls that can be used for complex rate limiting (e.g. via
-  (graphile-worker-rate-limiter)[https://github.com/politics-rewired/graphile-worker-rate-limiter])
+  [graphile-worker-rate-limiter](https://github.com/politics-rewired/graphile-worker-rate-limiter))
 - Open source; liberal MIT license
 - Executes tasks written in Node.js (these can call out to any other language or
   networked service)
