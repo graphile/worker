@@ -401,6 +401,11 @@ export interface SharedOptions {
    * An EventEmitter instance to which we'll emit events.
    */
   events?: WorkerEvents;
+
+  /**
+   * A time source for getting "now", can be helpful in tests to artificially expire jobs
+   */
+  now?: () => Date;
 }
 
 /**

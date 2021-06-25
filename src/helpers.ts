@@ -15,7 +15,7 @@ export function makeAddJob(
   options: WorkerSharedOptions,
   withPgClient: WithPgClient,
 ) {
-  const { escapedWorkerSchema } = processSharedOptions(options);
+  const { escapedWorkerSchema, now } = processSharedOptions(options);
   return (identifier: string, payload: unknown = {}, spec: TaskSpec = {}) => {
     return withPgClient(async (pgClient) => {
       const { rows } = await pgClient.query(
@@ -29,7 +29,12 @@ export function makeAddJob(
           job_key => $6::text,
           priority => $7::int,
           flags => $8::text[],
-          job_key_mode => $9::text
+          job_key_mode => $9::text${
+            !now
+              ? ""
+              : `,
+          now => $10::timestamptz`
+          }
         );
         `,
         [
@@ -42,6 +47,7 @@ export function makeAddJob(
           spec.priority || null,
           spec.flags || null,
           spec.jobKeyMode || null,
+          ...(!now ? [] : [now().toISOString()]),
         ],
       );
       const job: Job = rows[0];
