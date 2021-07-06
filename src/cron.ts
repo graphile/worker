@@ -104,6 +104,7 @@ async function scheduleCronJobs(
   escapedWorkerSchema: string,
   jobsAndIdentifiers: JobAndCronIdentifier[],
   ts: string,
+  useNodeTime: boolean,
 ) {
   // Note that `identifier` is guaranteed to be unique for every record
   // in `specs`.
@@ -141,13 +142,18 @@ async function scheduleCronJobs(
           specs.run_at,
           specs.max_attempts,
           null, -- job key
-          specs.priority
+          specs.priority,
+          now => coalesce($3::timestamptz, now())
         )
       from specs
       inner join locks on (locks.identifier = specs.identifier)
       order by specs.index asc
     `,
-    [JSON.stringify(jobsAndIdentifiers), ts],
+    [
+      JSON.stringify(jobsAndIdentifiers),
+      ts,
+      useNodeTime ? new Date().toISOString() : null,
+    ],
   );
 }
 
@@ -160,6 +166,7 @@ async function registerAndBackfillItems(
   escapedWorkerSchema: string,
   parsedCronItems: ParsedCronItem[],
   startTime: Date,
+  useNodeTime: boolean,
 ) {
   // First, scan the DB to get our starting point.
   const { rows } = await pgPool.query<KnownCrontab>(
@@ -246,6 +253,7 @@ async function registerAndBackfillItems(
           escapedWorkerSchema,
           itemsToBackfill,
           ts,
+          useNodeTime,
         );
       }
 
@@ -275,7 +283,12 @@ export const runCron = (
   requirements: CronRequirements,
 ): Cron => {
   const { pgPool } = requirements;
-  const { logger, escapedWorkerSchema, events } = processSharedOptions(options);
+  const {
+    logger,
+    escapedWorkerSchema,
+    events,
+    useNodeTime,
+  } = processSharedOptions(options);
 
   const promise = defer();
   let released = false;
@@ -316,6 +329,7 @@ export const runCron = (
       escapedWorkerSchema,
       parsedCronItems,
       new Date(+start),
+      useNodeTime,
     );
 
     events.emit("cron:started", { cron: this, start });
@@ -425,6 +439,7 @@ export const runCron = (
             escapedWorkerSchema,
             jobsAndIdentifiers,
             ts,
+            useNodeTime,
           );
           events.emit("cron:scheduled", {
             cron: this,

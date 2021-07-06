@@ -5,4 +5,5 @@ module.exports = {
   },
   testRegex: "(/__tests__/.*\\.(test|spec))\\.[tj]sx?$",
   moduleFileExtensions: ["ts", "js", "json"],
+  testEnvironment: "node",
 };

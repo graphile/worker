@@ -20,7 +20,7 @@ interface CompiledSharedOptions {
   workerSchema: string;
   escapedWorkerSchema: string;
   maxContiguousErrors: number;
-  now: (() => Date) | undefined;
+  useNodeTime: boolean;
 }
 
 interface ProcessSharedOptionsSettings {
@@ -38,7 +38,7 @@ export function processSharedOptions(
       logger = defaultLogger,
       schema: workerSchema = defaults.schema,
       events = new EventEmitter(),
-      now,
+      useNodeTime = false,
     } = options;
     const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
     compiled = {
@@ -47,7 +47,7 @@ export function processSharedOptions(
       workerSchema,
       escapedWorkerSchema,
       maxContiguousErrors: defaults.maxContiguousErrors,
-      now,
+      useNodeTime,
     };
     _sharedOptionsCache.set(options, compiled);
   }

@@ -31,7 +31,7 @@ export function makeNewWorker(
     logger,
     maxContiguousErrors,
     events,
-    now,
+    useNodeTime,
   } = processSharedOptions(options, {
     scope: {
       label: "worker",
@@ -134,14 +134,12 @@ export function makeNewWorker(
           text:
             // TODO: breaking change; change this to more optimal:
             // `SELECT id, queue_name, task_identifier, payload FROM ...`,
-            `SELECT * FROM ${escapedWorkerSchema}.get_job($1, $2, forbidden_flags := $3::text[]${
-              !now ? "" : ", now :=> $4::timestamptz"
-            }); `,
+            `SELECT * FROM ${escapedWorkerSchema}.get_job($1, $2, forbidden_flags := $3::text[], now := coalesce($4::timestamptz, now())); `,
           values: [
             workerId,
             supportedTaskNames,
             flagsToSkip && flagsToSkip.length ? flagsToSkip : null,
-            ...(!now ? [] : [now().toISOString()]),
+            useNodeTime ? new Date().toISOString() : null,
           ],
           name: noPreparedStatements ? undefined : `get_job/${workerSchema}`,
         }),

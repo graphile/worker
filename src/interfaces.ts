@@ -403,9 +403,13 @@ export interface SharedOptions {
   events?: WorkerEvents;
 
   /**
-   * A time source for getting "now", can be helpful in tests to artificially expire jobs
+   * By default we use PostgreSQL's time source; in general this should be pretty close
+   * (if not identical) to the time source your Node server is using, but in the case
+   * that it isn't or you want to change it (e.g. in tests with fake date/time) you can
+   * tell Worker to use Node's time source rather than Postgres' time source. (Default:
+   * false.)
    */
-  now?: () => Date;
+  useNodeTime?: boolean;
 }
 
 /**
