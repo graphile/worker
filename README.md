@@ -295,7 +295,7 @@ The following options for these methods are available.
 
 - `concurrency`: The equivalent of the CLI `--jobs` option with the same default
   value.
-- `nohandleSignals`: If set true, we won't install signal handlers and it'll be
+- `noHandleSignals`: If set true, we won't install signal handlers and it'll be
   up to you to handle graceful shutdown of the worker if the process receives a
   signal.
 - `pollInterval`: The equivalent of the CLI `--poll-interval` option with the
