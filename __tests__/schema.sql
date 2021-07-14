@@ -21,7 +21,7 @@ CREATE TABLE graphile_worker.jobs (
     flags jsonb,
     CONSTRAINT jobs_key_check CHECK ((length(key) > 0))
 );
-CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text) RETURNS graphile_worker.jobs
+CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text, now timestamp with time zone DEFAULT now()) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
 declare
@@ -60,7 +60,7 @@ begin
         identifier,
         coalesce(payload, '{}'::json),
         queue_name,
-        coalesce(run_at, now()),
+        coalesce(run_at, now),
         coalesce(max_attempts, 25),
         job_key,
         coalesce(priority, 0),
@@ -122,7 +122,7 @@ begin
         identifier,
         coalesce(payload, '{}'::json),
         queue_name,
-        coalesce(run_at, now()),
+        coalesce(run_at, now),
         coalesce(max_attempts, 25),
         job_key,
         coalesce(priority, 0),
@@ -155,7 +155,7 @@ begin
       identifier,
       coalesce(payload, '{}'::json),
       queue_name,
-      coalesce(run_at, now()),
+      coalesce(run_at, now),
       coalesce(max_attempts, 25),
       job_key,
       coalesce(priority, 0),
@@ -220,21 +220,20 @@ begin
   return v_row;
 end;
 $$;
-CREATE FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[] DEFAULT NULL::text[], job_expiry interval DEFAULT '04:00:00'::interval, forbidden_flags text[] DEFAULT NULL::text[]) RETURNS graphile_worker.jobs
+CREATE FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[] DEFAULT NULL::text[], job_expiry interval DEFAULT '04:00:00'::interval, forbidden_flags text[] DEFAULT NULL::text[], now timestamp with time zone DEFAULT now()) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
 declare
   v_job_id bigint;
   v_queue_name text;
   v_row "graphile_worker".jobs;
-  v_now timestamptz = now();
 begin
   if worker_id is null or length(worker_id) < 10 then
     raise exception 'invalid worker id';
   end if;
   select jobs.queue_name, jobs.id into v_queue_name, v_job_id
     from "graphile_worker".jobs
-    where (jobs.locked_at is null or jobs.locked_at < (v_now - job_expiry))
+    where (jobs.locked_at is null or jobs.locked_at < (now - job_expiry))
     and (
       jobs.queue_name is null
     or
@@ -242,12 +241,12 @@ begin
         select 1
         from "graphile_worker".job_queues
         where job_queues.queue_name = jobs.queue_name
-        and (job_queues.locked_at is null or job_queues.locked_at < (v_now - job_expiry))
+        and (job_queues.locked_at is null or job_queues.locked_at < (now - job_expiry))
         for update
         skip locked
       )
     )
-    and run_at <= v_now
+    and run_at <= now
     and attempts < max_attempts
     and (task_identifiers is null or task_identifier = any(task_identifiers))
     and (forbidden_flags is null or (flags ?| forbidden_flags) is not true)
@@ -262,14 +261,14 @@ begin
     update "graphile_worker".job_queues
       set
         locked_by = worker_id,
-        locked_at = v_now
+        locked_at = now
       where job_queues.queue_name = v_queue_name;
   end if;
   update "graphile_worker".jobs
     set
       attempts = attempts + 1,
       locked_by = worker_id,
-      locked_at = v_now
+      locked_at = now
     where id = v_job_id
     returning * into v_row;
   return v_row;
@@ -407,12 +406,12 @@ ALTER TABLE ONLY graphile_worker.known_crontabs
 ALTER TABLE ONLY graphile_worker.migrations
     ADD CONSTRAINT migrations_pkey PRIMARY KEY (id);
 CREATE INDEX jobs_priority_run_at_id_locked_at_without_failures_idx ON graphile_worker.jobs USING btree (priority, run_at, id, locked_at) WHERE (attempts < max_attempts);
-CREATE TRIGGER _100_timestamps BEFORE UPDATE ON graphile_worker.jobs FOR EACH ROW EXECUTE PROCEDURE graphile_worker.tg__update_timestamp();
-CREATE TRIGGER _500_decrease_job_queue_count AFTER DELETE ON graphile_worker.jobs FOR EACH ROW WHEN ((old.queue_name IS NOT NULL)) EXECUTE PROCEDURE graphile_worker.jobs__decrease_job_queue_count();
-CREATE TRIGGER _500_decrease_job_queue_count_update AFTER UPDATE OF queue_name ON graphile_worker.jobs FOR EACH ROW WHEN (((new.queue_name IS DISTINCT FROM old.queue_name) AND (old.queue_name IS NOT NULL))) EXECUTE PROCEDURE graphile_worker.jobs__decrease_job_queue_count();
-CREATE TRIGGER _500_increase_job_queue_count AFTER INSERT ON graphile_worker.jobs FOR EACH ROW WHEN ((new.queue_name IS NOT NULL)) EXECUTE PROCEDURE graphile_worker.jobs__increase_job_queue_count();
-CREATE TRIGGER _500_increase_job_queue_count_update AFTER UPDATE OF queue_name ON graphile_worker.jobs FOR EACH ROW WHEN (((new.queue_name IS DISTINCT FROM old.queue_name) AND (new.queue_name IS NOT NULL))) EXECUTE PROCEDURE graphile_worker.jobs__increase_job_queue_count();
-CREATE TRIGGER _900_notify_worker AFTER INSERT ON graphile_worker.jobs FOR EACH STATEMENT EXECUTE PROCEDURE graphile_worker.tg_jobs__notify_new_jobs();
+CREATE TRIGGER _100_timestamps BEFORE UPDATE ON graphile_worker.jobs FOR EACH ROW EXECUTE FUNCTION graphile_worker.tg__update_timestamp();
+CREATE TRIGGER _500_decrease_job_queue_count AFTER DELETE ON graphile_worker.jobs FOR EACH ROW WHEN ((old.queue_name IS NOT NULL)) EXECUTE FUNCTION graphile_worker.jobs__decrease_job_queue_count();
+CREATE TRIGGER _500_decrease_job_queue_count_update AFTER UPDATE OF queue_name ON graphile_worker.jobs FOR EACH ROW WHEN (((new.queue_name IS DISTINCT FROM old.queue_name) AND (old.queue_name IS NOT NULL))) EXECUTE FUNCTION graphile_worker.jobs__decrease_job_queue_count();
+CREATE TRIGGER _500_increase_job_queue_count AFTER INSERT ON graphile_worker.jobs FOR EACH ROW WHEN ((new.queue_name IS NOT NULL)) EXECUTE FUNCTION graphile_worker.jobs__increase_job_queue_count();
+CREATE TRIGGER _500_increase_job_queue_count_update AFTER UPDATE OF queue_name ON graphile_worker.jobs FOR EACH ROW WHEN (((new.queue_name IS DISTINCT FROM old.queue_name) AND (new.queue_name IS NOT NULL))) EXECUTE FUNCTION graphile_worker.jobs__increase_job_queue_count();
+CREATE TRIGGER _900_notify_worker AFTER INSERT ON graphile_worker.jobs FOR EACH STATEMENT EXECUTE FUNCTION graphile_worker.tg_jobs__notify_new_jobs();
 ALTER TABLE graphile_worker.job_queues ENABLE ROW LEVEL SECURITY;
 ALTER TABLE graphile_worker.jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE graphile_worker.known_crontabs ENABLE ROW LEVEL SECURITY;
