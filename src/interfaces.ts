@@ -349,6 +349,13 @@ export interface TaskSpec {
    * cannot run at runtime. (Default: null)
    */
   flags?: string[];
+
+  /**
+   * Interval before which the job unlocks and is picked up by a worker again.
+   * Should be of INTERVAL type
+   * Default: "4 hours"
+   */
+  jobExpiryDuration?: string;
 }
 
 export type ForbiddenFlagsFn = () => null | string[] | Promise<null | string[]>;
