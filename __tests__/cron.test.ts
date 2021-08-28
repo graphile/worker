@@ -1,4 +1,5 @@
-import { run } from "../src";
+import { parseCronItem, run } from "../src";
+import { cronItemMatches, TimestampDigest } from "../src/cron";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   EventMonitor,
@@ -144,3 +145,46 @@ test("backfills if identifier already registered (25h)", () =>
       expect(jobs.every((j) => j.task_identifier === "do_it")).toBe(true);
     }
   }));
+
+describe("matches datetime", () => {
+  const _0_0_1_1_0 = { min: 0, hour: 0, date: 1, month: 1, dow: 0 };
+  const _0_0_1_1_5 = { ..._0_0_1_1_0, dow: 5 };
+  const _0_0_1_1_4 = { ..._0_0_1_1_0, dow: 4 };
+  const _0_15_1_7_0 = { ..._0_0_1_1_0, hour: 15, month: 7 };
+  const _0_15_4_7_5 = { ..._0_0_1_1_0, hour: 15, date: 4, month: 7, dow: 5 };
+  const _6_15_4_7_5 = { min: 6, hour: 15, date: 4, month: 7, dow: 5 };
+
+  const testMatch = (pattern: string, digest: TimestampDigest) => {
+    return cronItemMatches(
+      parseCronItem({ pattern, task: "" }, "test"),
+      digest,
+    );
+  };
+  test("every minute", () => {
+    const pattern = "* * * * *";
+    expect(testMatch(pattern, _0_0_1_1_0)).toBeTruthy();
+    expect(testMatch(pattern, _0_0_1_1_5)).toBeTruthy();
+    expect(testMatch(pattern, _0_0_1_1_4)).toBeTruthy();
+    expect(testMatch(pattern, _0_15_1_7_0)).toBeTruthy();
+    expect(testMatch(pattern, _0_15_4_7_5)).toBeTruthy();
+    expect(testMatch(pattern, _6_15_4_7_5)).toBeTruthy();
+  });
+  test("dow range", () => {
+    const pattern = "* * * * 5-6";
+    expect(testMatch(pattern, _0_0_1_1_0)).toBeFalsy();
+    expect(testMatch(pattern, _0_0_1_1_5)).toBeTruthy();
+    expect(testMatch(pattern, _0_0_1_1_4)).toBeFalsy();
+    expect(testMatch(pattern, _0_15_1_7_0)).toBeFalsy();
+    expect(testMatch(pattern, _0_15_4_7_5)).toBeTruthy();
+    expect(testMatch(pattern, _6_15_4_7_5)).toBeTruthy();
+  });
+  test("dow and date range", () => {
+    const pattern = "0-5 15 3-4 7 0-2";
+    expect(testMatch(pattern, _0_0_1_1_0)).toBeFalsy();
+    expect(testMatch(pattern, _0_0_1_1_5)).toBeFalsy();
+    expect(testMatch(pattern, _0_0_1_1_4)).toBeFalsy();
+    expect(testMatch(pattern, _0_15_1_7_0)).toBeTruthy();
+    expect(testMatch(pattern, _0_15_4_7_5)).toBeTruthy();
+    expect(testMatch(pattern, _6_15_4_7_5)).toBeFalsy();
+  });
+});

@@ -534,7 +534,7 @@ export async function getParsedCronItemsFromOptions(
 /**
  * The digest of a timestamp into the component parts that a cron schedule cares about.
  */
-interface TimestampDigest {
+export interface TimestampDigest {
   min: number;
   hour: number;
   date: number;
@@ -569,25 +569,20 @@ export function cronItemMatches(
 ): boolean {
   const { min, hour, date, month, dow } = digest;
 
-  if (
-    // If minute, hour and month match
+  const dateIsExclusionary = cronItem.dates.length !== 31;
+  const dowIsExclusionary = cronItem.dows.length !== 7;
+
+  const dateMatches = !dateIsExclusionary || cronItem.dates.includes(date);
+  const dowMatches = !dowIsExclusionary || cronItem.dows.includes(dow);
+
+  return (
     cronItem.minutes.includes(min) &&
     cronItem.hours.includes(hour) &&
-    cronItem.months.includes(month)
-  ) {
-    const dateIsExclusionary = cronItem.dates.length !== 31;
-    const dowIsExclusionary = cronItem.dows.length !== 7;
-    if (dateIsExclusionary && dowIsExclusionary) {
-      // Cron has a special behaviour: if both date and day of week are
-      // exclusionary (i.e. not "*") then a match for *either* passes.
-      return cronItem.dates.includes(date) || cronItem.dows.includes(dow);
-    } else if (dateIsExclusionary) {
-      return cronItem.dates.includes(date);
-    } else if (dowIsExclusionary) {
-      return cronItem.dows.includes(date);
-    } else {
-      return true;
-    }
-  }
-  return false;
+    cronItem.months.includes(month) &&
+    // Cron has a special behaviour: if both date and day of week are
+    // exclusionary (i.e. not "*") then a match for *either* passes.
+    (dateIsExclusionary && dowIsExclusionary
+      ? dateMatches || dowMatches
+      : dateMatches && dowMatches)
+  );
 }
