@@ -569,20 +569,25 @@ export function cronItemMatches(
 ): boolean {
   const { min, hour, date, month, dow } = digest;
 
-  const dateIsExclusionary = cronItem.dates.length !== 31;
-  const dowIsExclusionary = cronItem.dows.length !== 7;
-
-  const dateMatches = !dateIsExclusionary || cronItem.dates.includes(date);
-  const dowMatches = !dowIsExclusionary || cronItem.dows.includes(dow);
-
-  return (
+  if (
+    // If minute, hour and month match
     cronItem.minutes.includes(min) &&
     cronItem.hours.includes(hour) &&
-    cronItem.months.includes(month) &&
-    // Cron has a special behaviour: if both date and day of week are
-    // exclusionary (i.e. not "*") then a match for *either* passes.
-    (dateIsExclusionary && dowIsExclusionary
-      ? dateMatches || dowMatches
-      : dateMatches && dowMatches)
-  );
+    cronItem.months.includes(month)
+  ) {
+    const dateIsExclusionary = cronItem.dates.length !== 31;
+    const dowIsExclusionary = cronItem.dows.length !== 7;
+    if (dateIsExclusionary && dowIsExclusionary) {
+      // Cron has a special behaviour: if both date and day of week are
+      // exclusionary (i.e. not "*") then a match for *either* passes.
+      return cronItem.dates.includes(date) || cronItem.dows.includes(dow);
+    } else if (dateIsExclusionary) {
+      return cronItem.dates.includes(date);
+    } else if (dowIsExclusionary) {
+      return cronItem.dows.includes(dow);
+    } else {
+      return true;
+    }
+  }
+  return false;
 }
