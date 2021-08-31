@@ -1,5 +1,9 @@
 # Release notes
 
+### Pending
+
+- Fixes bug in crontab day-of-week check
+
 ### v0.11.3
 
 - Restores `Logger` export accidentally removed in v0.11.0
