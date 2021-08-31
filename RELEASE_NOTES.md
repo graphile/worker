@@ -1,8 +1,9 @@
 # Release notes
 
-### Pending
+### v0.11.4
 
 - Fixes bug in crontab day-of-week check
+- Exposes `parseCronItem` helper
 
 ### v0.11.3
 
