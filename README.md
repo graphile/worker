@@ -1284,7 +1284,9 @@ the value being an object with the following entries:
 
 - `ts` - ISO8601 timestamp representing when this job was due to execute
 - `backfilled` - true if the task was "backfilled" (i.e. it wasn't scheduled on
-  time), false otherwise
+- `knownSince` - the ISO-8601 string representation of the date this job was
+  first registered
+- `lastExecution` - the ISO-8601 string representation of last execution date
 
 ### Distributed crontab
 

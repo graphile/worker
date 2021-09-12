@@ -476,11 +476,9 @@ export interface RunnerOptions extends WorkerPoolOptions {
 export interface CronJob {
   task: string;
   payload: {
-    _cron: { ts: string; backfilled?: boolean };
     [key: string]: unknown;
   };
   queueName?: string;
-  runAt: string;
   maxAttempts?: number;
   priority?: number;
 }

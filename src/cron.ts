@@ -73,22 +73,11 @@ function unsafeRoundToMinute(ts: Date, roundUp = false): Date {
   return ts;
 }
 
-function makeJobForItem(
-  item: ParsedCronItem,
-  ts: string,
-  backfilled = false,
-): CronJob {
+function makeJobForItem(item: ParsedCronItem): CronJob {
   return {
     task: item.task,
-    payload: {
-      ...item.payload,
-      _cron: {
-        ts,
-        backfilled,
-      },
-    },
+    payload: item.payload ?? {},
     queueName: item.options.queueName,
-    runAt: ts,
     maxAttempts: item.options.maxAttempts,
     priority: item.options.priority,
   };
@@ -104,22 +93,39 @@ async function scheduleCronJobs(
   escapedWorkerSchema: string,
   jobsAndIdentifiers: JobAndCronIdentifier[],
   ts: string,
+  backfilled: boolean,
 ) {
   // Note that `identifier` is guaranteed to be unique for every record
   // in `specs`.
   await pgPool.query(
     `
-      with specs as (
+      with known_crontabs as (
+
+      ),
+      specs as (
         select
           index,
           (json->>'identifier')::text as identifier,
           ((json->'job')->>'task')::text as task,
-          ((json->'job')->'payload')::json as payload,
+          (((json->'job')->'payload')::jsonb || jsonb_build_object(
+              '_cron', jsonb_build_object(
+                'ts', $3::text,
+                'backfilled', $4::boolean,
+                'lastOnTimeExecution', to_char(
+                  known_crontabs.last_execution at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'
+                ),
+                'knownSince', to_char(
+                  known_crontabs.known_since at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'
+                )
+              )
+            )
+          )::json as payload,
           ((json->'job')->>'queueName')::text as queue_name,
-          ((json->'job')->>'runAt')::timestamptz as run_at,
           ((json->'job')->>'maxAttempts')::int as max_attempts,
           ((json->'job')->>'priority')::int as priority
-        from json_array_elements($1::json) with ordinality AS entries (json, index)
+        from 
+        	json_array_elements($1::json) with ordinality AS entries (json, index)
+        left join ${escapedWorkerSchema}.known_crontabs as known_crontabs ON (known_crontabs.identifier = (json->>'identifier')::text)
       ),
       locks as (
         insert into ${escapedWorkerSchema}.known_crontabs (identifier, known_since, last_execution)
@@ -138,7 +144,7 @@ async function scheduleCronJobs(
           specs.task,
           specs.payload,
           specs.queue_name,
-          specs.run_at,
+          $2::timestamptz,
           specs.max_attempts,
           null, -- job key
           specs.priority
@@ -147,7 +153,7 @@ async function scheduleCronJobs(
       inner join locks on (locks.identifier = specs.identifier)
       order by specs.index asc
     `,
-    [JSON.stringify(jobsAndIdentifiers), ts],
+    [JSON.stringify(jobsAndIdentifiers), ts, ts, backfilled],
   );
 }
 
@@ -225,7 +231,7 @@ async function registerAndBackfillItems(
         ) {
           itemsToBackfill.push({
             identifier: item.identifier,
-            job: makeJobForItem(item, ts, true),
+            job: makeJobForItem(item),
           });
         }
       }
@@ -246,6 +252,7 @@ async function registerAndBackfillItems(
           escapedWorkerSchema,
           itemsToBackfill,
           ts,
+          true,
         );
       }
 
@@ -408,7 +415,7 @@ export const runCron = (
           if (cronItemMatches(item, digest)) {
             jobsAndIdentifiers.push({
               identifier: item.identifier,
-              job: makeJobForItem(item, ts),
+              job: makeJobForItem(item),
             });
           }
         }
@@ -425,6 +432,7 @@ export const runCron = (
             escapedWorkerSchema,
             jobsAndIdentifiers,
             ts,
+            false,
           );
           events.emit("cron:scheduled", {
             cron: this,

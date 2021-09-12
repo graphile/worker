@@ -98,7 +98,11 @@ test("backfills if identifier already registered (25h)", () =>
     await reset(pgPool, options);
     const now = Date.now();
     const expectedTime = now - (now % FOUR_HOURS);
-    await pgPool.query(
+    const {
+      rows: {
+        0: { last_execution: lastOnTimeExecution, known_since: knownSince },
+      },
+    } = await pgPool.query(
       `
         insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.known_crontabs (
           identifier,
@@ -110,6 +114,7 @@ test("backfills if identifier already registered (25h)", () =>
           NOW() - interval '14 days',
           NOW() - interval '25 hours'
         )
+        returning last_execution, known_since
       `,
     );
     const eventMonitor = new EventMonitor();
@@ -143,6 +148,20 @@ test("backfills if identifier already registered (25h)", () =>
       expect(jobs.length).toBeGreaterThanOrEqual(6);
       expect(jobs.length).toBeLessThanOrEqual(7);
       expect(jobs.every((j) => j.task_identifier === "do_it")).toBe(true);
+      expect(
+        jobs.every(
+          (j) =>
+            (j.payload as any)["_cron"]["knownSince"] ==
+            knownSince.toISOString(),
+        ),
+      ).toBe(true);
+      expect(
+        jobs.every(
+          (j) =>
+            (j.payload as any)["_cron"]["lastOnTimeExecution"] ==
+            lastOnTimeExecution.toISOString(),
+        ),
+      ).toBe(true);
     }
   }));
 
