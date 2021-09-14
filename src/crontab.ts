@@ -12,9 +12,13 @@ import {
   PERIOD_DURATIONS,
   TIMEPHRASE_PART,
 } from "./cronConstants";
-import { parseCronString, parseCrontabRanges } from "./cronMatcher";
-import { CronItem, CronItemOptions, ParsedCronItem } from "./interfaces";
-
+import { createCronMatcher, createCronMatcherFromRanges } from "./cronMatcher";
+import {
+  CronItem,
+  CronItemOptions,
+  CronSchedule,
+  ParsedCronItem,
+} from "./interfaces";
 /**
  * Returns a period of time in milliseconds representing the time phrase given.
  *
@@ -184,21 +188,18 @@ export const parseCrontabLine = (
       `Could not process line '${lineNumber}' of crontab: '${crontabLine}'`,
     );
   }
-  const { minutes, hours, dates, months, dows } = parseCrontabRanges(
+  const match = createCronMatcherFromRanges(
     matches,
     `line ${lineNumber} of crontab`,
   );
+
   const { task, options, payload, identifier } = parseCrontabCommand(
     lineNumber,
     matches[6],
   );
 
   return {
-    minutes,
-    hours,
-    dates,
-    months,
-    dows,
+    match,
     task,
     options,
     payload,
@@ -260,22 +261,28 @@ export const parseCronItem = (
   source: string = "parseCronItem call",
 ) => {
   const {
+    // @ts-ignore: Ignore deprecated warning
     pattern,
+    match,
     task,
     options = {} as CronItemOptions,
     payload = {},
     identifier = task,
   } = cronItem;
-  const { minutes, hours, dates, months, dows } = parseCronString(
-    pattern,
-    source,
-  );
+  let matchFunction: CronSchedule;
+  if (pattern) {
+    matchFunction = createCronMatcher(pattern, source);
+  } else if (match) {
+    if (typeof match === "string") {
+      matchFunction = createCronMatcher(match, source);
+    } else {
+      matchFunction = match;
+    }
+  } else {
+    throw new Error(`Neither pattern nor match is provided in ${source}`);
+  }
   const item: ParsedCronItem = {
-    minutes,
-    hours,
-    dates,
-    months,
-    dows,
+    match: matchFunction,
     task,
     options,
     payload,

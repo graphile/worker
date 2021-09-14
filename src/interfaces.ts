@@ -185,6 +185,11 @@ export interface CronItemOptions {
 }
 
 /**
+ * Returns true if a cron job should run given a TimestampDigest
+ */
+export type CronSchedule = (digest: TimestampDigest) => boolean;
+
+/**
  * A recurring task schedule; this may represent a line in the `crontab` file,
  * or may be the result of calling `parseCronItems` on a list of `CronItem`s
  * the user has specified.
@@ -205,16 +210,8 @@ export interface CronItemOptions {
  * Worker helpers to construct this type.
  */
 export interface ParsedCronItem {
-  /** Minutes (0-59) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  minutes: number[];
-  /** Hours (0-23) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  hours: number[];
-  /** Dates (1-31) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  dates: number[];
-  /** Months (1-12) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  months: number[];
-  /** Days of the week (0-6) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  dows: number[];
+  /** Returns true if a task should be executed on a given time */
+  match: CronSchedule;
 
   /** The identifier of the task to execute */
   task: string;
@@ -240,8 +237,13 @@ export interface CronItem {
   /** The identifier of the task to execute */
   task: string;
 
-  /** Cron pattern (e.g. `* * * * *`) to detail when the task should be executed */
-  pattern: string;
+  /**
+   * @deprecated
+   * Cron pattern (e.g. `* * * * *`) to detail when the task should be executed */
+  pattern?: string;
+
+  /** Cron pattern (e.g. `* * * * *`) or a function to detail when the task should be executed */
+  match?: string | CronSchedule;
 
   /** Options influencing backfilling and properties of the scheduled job */
   options?: CronItemOptions;

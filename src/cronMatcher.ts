@@ -188,3 +188,26 @@ export const parseCronString = (pattern: string, source: string = "") => {
   }
   return parseCrontabRanges(matches, source);
 };
+
+/**
+ * Creates a CronSchedule based on a cron expression
+ */
+export const createCronMatcherFromRanges = (
+  matches: string[],
+  source: string = "",
+) => {
+  const cronItem = parseCrontabRanges(matches, source);
+
+  return (digest: TimestampDigest) => {
+    return cronItemMatches(cronItem, digest);
+  };
+};
+
+export const createCronMatcher = (pattern: string, source: string = "") => {
+  const matches = CRONTAB_TIME_PARTS.exec(pattern);
+  if (!matches) {
+    throw new Error(`Invalid cron pattern '${pattern}' in ${source}`);
+  }
+
+  return createCronMatcherFromRanges(matches, source);
+};
