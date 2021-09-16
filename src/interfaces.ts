@@ -708,3 +708,14 @@ export type WorkerEventMap = {
 };
 
 export type WorkerEvents = TypedEventEmitter<WorkerEventMap>;
+
+/**
+ * The digest of a timestamp into the component parts that a cron schedule cares about.
+ */
+export interface TimestampDigest {
+  min: number;
+  hour: number;
+  date: number;
+  month: number;
+  dow: number;
+}

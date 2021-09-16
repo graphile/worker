@@ -11,6 +11,7 @@ import {
   KnownCrontab,
   ParsedCronItem,
   RunnerOptions,
+  TimestampDigest,
   WorkerEvents,
 } from "./interfaces";
 import { processSharedOptions, Releasers } from "./lib";
@@ -543,17 +544,6 @@ export async function getParsedCronItemsFromOptions(
 
     return parsedCronItems;
   }
-}
-
-/**
- * The digest of a timestamp into the component parts that a cron schedule cares about.
- */
-export interface TimestampDigest {
-  min: number;
-  hour: number;
-  date: number;
-  month: number;
-  dow: number;
 }
 
 /**
