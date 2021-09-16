@@ -29,21 +29,26 @@ export function makeAddJob(
           job_key => $6::text,
           priority => $7::int,
           flags => $8::text[],
-          job_key_mode => $9::text,
-          now => coalesce($10::timestamptz, now())
+          job_key_mode => $9::text
         );
         `,
         [
           identifier,
           JSON.stringify(payload),
           spec.queueName || null,
-          spec.runAt ? spec.runAt.toISOString() : null,
+          // If there's an explicit run at, use that. Otherwise, if we've been
+          // told to use Node time, use the current timestamp. Otherwise we'll
+          // pass null and the function will use `now()` internally.
+          spec.runAt
+            ? spec.runAt.toISOString()
+            : useNodeTime
+            ? new Date().toISOString()
+            : null,
           spec.maxAttempts || null,
           spec.jobKey || null,
           spec.priority || null,
           spec.flags || null,
           spec.jobKeyMode || null,
-          useNodeTime ? new Date().toISOString() : null,
         ],
       );
       const job: Job = rows[0];

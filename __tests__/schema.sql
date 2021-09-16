@@ -21,7 +21,7 @@ CREATE TABLE graphile_worker.jobs (
     flags jsonb,
     CONSTRAINT jobs_key_check CHECK ((length(key) > 0))
 );
-CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text, now timestamp with time zone DEFAULT now()) RETURNS graphile_worker.jobs
+CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
 declare
@@ -60,7 +60,7 @@ begin
         identifier,
         coalesce(payload, '{}'::json),
         queue_name,
-        coalesce(run_at, now),
+        coalesce(run_at, now()),
         coalesce(max_attempts, 25),
         job_key,
         coalesce(priority, 0),
@@ -122,7 +122,7 @@ begin
         identifier,
         coalesce(payload, '{}'::json),
         queue_name,
-        coalesce(run_at, now),
+        coalesce(run_at, now()),
         coalesce(max_attempts, 25),
         job_key,
         coalesce(priority, 0),
@@ -155,7 +155,7 @@ begin
       identifier,
       coalesce(payload, '{}'::json),
       queue_name,
-      coalesce(run_at, now),
+      coalesce(run_at, now()),
       coalesce(max_attempts, 25),
       job_key,
       coalesce(priority, 0),

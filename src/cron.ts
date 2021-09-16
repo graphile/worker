@@ -139,11 +139,10 @@ async function scheduleCronJobs(
           specs.task,
           specs.payload,
           specs.queue_name,
-          specs.run_at,
+          coalesce(specs.run_at, $3::timestamptz, now()),
           specs.max_attempts,
           null, -- job key
-          specs.priority,
-          now => coalesce($3::timestamptz, now())
+          specs.priority
         )
       from specs
       inner join locks on (locks.identifier = specs.identifier)
