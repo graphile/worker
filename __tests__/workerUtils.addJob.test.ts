@@ -7,10 +7,15 @@ import {
 } from "../src/index";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  HOUR,
   reset,
+  setupFakeTimers,
   TEST_CONNECTION_STRING,
   withPgClient,
 } from "./helpers";
+
+const { setTime } = setupFakeTimers();
+const REFERENCE_TIMESTAMP = 1609459200000; /* 1st January 2021, 00:00:00 UTC */
 
 const options: WorkerSharedOptions = {};
 
@@ -151,4 +156,31 @@ test("runs a job added through the addJob shortcut function", () =>
     const task: Task = jest.fn();
     const taskList = { task };
     await runTaskListOnce(options, taskList, pgClient);
+  }));
+
+test("adding job respects useNodeTime", () =>
+  withPgClient(async (pgClient) => {
+    await setTime(REFERENCE_TIMESTAMP);
+    await reset(pgClient, options);
+
+    // Schedule a job
+    const utils = await makeWorkerUtils({
+      connectionString: TEST_CONNECTION_STRING,
+      useNodeTime: true,
+    });
+    const timeOfAddJob = REFERENCE_TIMESTAMP + 1 * HOUR;
+    await setTime(timeOfAddJob);
+    await utils.addJob("job1", { a: 1 });
+    await utils.release();
+
+    // Assert that it has an entry in jobs / job_queues
+    const { rows: jobs } = await pgClient.query(
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
+    );
+    expect(jobs).toHaveLength(1);
+    // Assert the run_at is within a couple of seconds of timeOfAddJob, even
+    // though PostgreSQL has a NOW() that's many months later.
+    const runAt = jobs[0].run_at;
+    expect(+runAt).toBeGreaterThan(timeOfAddJob - 2000);
+    expect(+runAt).toBeLessThan(timeOfAddJob + 2000);
   }));

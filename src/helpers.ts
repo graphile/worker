@@ -15,7 +15,7 @@ export function makeAddJob(
   options: WorkerSharedOptions,
   withPgClient: WithPgClient,
 ) {
-  const { escapedWorkerSchema } = processSharedOptions(options);
+  const { escapedWorkerSchema, useNodeTime } = processSharedOptions(options);
   return (identifier: string, payload: unknown = {}, spec: TaskSpec = {}) => {
     return withPgClient(async (pgClient) => {
       const { rows } = await pgClient.query(
@@ -36,7 +36,14 @@ export function makeAddJob(
           identifier,
           JSON.stringify(payload),
           spec.queueName || null,
-          spec.runAt ? spec.runAt.toISOString() : null,
+          // If there's an explicit run at, use that. Otherwise, if we've been
+          // told to use Node time, use the current timestamp. Otherwise we'll
+          // pass null and the function will use `now()` internally.
+          spec.runAt
+            ? spec.runAt.toISOString()
+            : useNodeTime
+            ? new Date().toISOString()
+            : null,
           spec.maxAttempts || null,
           spec.jobKey || null,
           spec.priority || null,

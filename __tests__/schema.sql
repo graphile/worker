@@ -220,21 +220,20 @@ begin
   return v_row;
 end;
 $$;
-CREATE FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[] DEFAULT NULL::text[], job_expiry interval DEFAULT '04:00:00'::interval, forbidden_flags text[] DEFAULT NULL::text[]) RETURNS graphile_worker.jobs
+CREATE FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[] DEFAULT NULL::text[], job_expiry interval DEFAULT '04:00:00'::interval, forbidden_flags text[] DEFAULT NULL::text[], now timestamp with time zone DEFAULT now()) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
 declare
   v_job_id bigint;
   v_queue_name text;
   v_row "graphile_worker".jobs;
-  v_now timestamptz = now();
 begin
   if worker_id is null or length(worker_id) < 10 then
     raise exception 'invalid worker id';
   end if;
   select jobs.queue_name, jobs.id into v_queue_name, v_job_id
     from "graphile_worker".jobs
-    where (jobs.locked_at is null or jobs.locked_at < (v_now - job_expiry))
+    where (jobs.locked_at is null or jobs.locked_at < (now - job_expiry))
     and (
       jobs.queue_name is null
     or
@@ -242,12 +241,12 @@ begin
         select 1
         from "graphile_worker".job_queues
         where job_queues.queue_name = jobs.queue_name
-        and (job_queues.locked_at is null or job_queues.locked_at < (v_now - job_expiry))
+        and (job_queues.locked_at is null or job_queues.locked_at < (now - job_expiry))
         for update
         skip locked
       )
     )
-    and run_at <= v_now
+    and run_at <= now
     and attempts < max_attempts
     and (task_identifiers is null or task_identifier = any(task_identifiers))
     and (forbidden_flags is null or (flags ?| forbidden_flags) is not true)
@@ -262,14 +261,14 @@ begin
     update "graphile_worker".job_queues
       set
         locked_by = worker_id,
-        locked_at = v_now
+        locked_at = now
       where job_queues.queue_name = v_queue_name;
   end if;
   update "graphile_worker".jobs
     set
       attempts = attempts + 1,
       locked_by = worker_id,
-      locked_at = v_now
+      locked_at = now
     where id = v_job_id
     returning * into v_row;
   return v_row;
