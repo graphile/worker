@@ -1,5 +1,5 @@
 import { parseCronItem, run, TimestampDigest } from "../src";
-import { cronItemMatches } from "../src/cron";
+import { cronItemMatches } from "../src/cronMatcher";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   EventMonitor,
