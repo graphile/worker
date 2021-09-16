@@ -295,7 +295,7 @@ The following options for these methods are available.
 
 - `concurrency`: The equivalent of the CLI `--jobs` option with the same default
   value.
-- `nohandleSignals`: If set true, we won't install signal handlers and it'll be
+- `noHandleSignals`: If set true, we won't install signal handlers and it'll be
   up to you to handle graceful shutdown of the worker if the process receives a
   signal.
 - `pollInterval`: The equivalent of the CLI `--poll-interval` option with the
@@ -1191,6 +1191,8 @@ Graphile Worker's crontab support:
   the job was due to be scheduled)
 - schedules tasks using Graphile Worker's regular job queue, so you get all the
   regular features such as exponential back-off on failure.
+- works reliably even if you're running multiple workers (see "Distributed
+  crontab" below)
 
 **NOTE**: It is not intended that you add recurring tasks for each of your
 individual application users, instead you should have relatively few recurring
@@ -1283,6 +1285,22 @@ the value being an object with the following entries:
 - `ts` - ISO8601 timestamp representing when this job was due to execute
 - `backfilled` - true if the task was "backfilled" (i.e. it wasn't scheduled on
   time), false otherwise
+
+### Distributed crontab
+
+**TL;DR**: when running identical crontabs on multiple workers no special action
+is necessary - it Just Works :tm:
+
+When you run multiple workers with the same crontab files then the first worker
+that attempts to queue a particular cron job will succeed and the other workers
+will take no action - this is thanks to SQL ACID-compliant transactions and our
+`known_crontabs` lock table.
+
+If your workers have different crontabs then you must be careful to ensure that
+the cron items each have unique identifiers; the easiest way to do this is to
+specify the identifiers yourself (see the `id=` option above). Should you forget
+to do this then for any overlapping timestamps for items that have the same
+derived identifier one of the cron tasks will schedule but the others will not.
 
 ### Crontab examples
 

@@ -1,6 +1,6 @@
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
-export { parseCronItems, parseCrontab } from "./crontab";
+export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
 export * from "./interfaces";
 export { consoleLogFactory, LogFunctionFactory, Logger } from "./logger";
 export { runTaskList, runTaskListOnce } from "./main";

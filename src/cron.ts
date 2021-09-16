@@ -549,7 +549,7 @@ export async function getParsedCronItemsFromOptions(
 /**
  * The digest of a timestamp into the component parts that a cron schedule cares about.
  */
-interface TimestampDigest {
+export interface TimestampDigest {
   min: number;
   hour: number;
   date: number;
@@ -599,7 +599,7 @@ export function cronItemMatches(
     } else if (dateIsExclusionary) {
       return cronItem.dates.includes(date);
     } else if (dowIsExclusionary) {
-      return cronItem.dows.includes(date);
+      return cronItem.dows.includes(dow);
     } else {
       return true;
     }

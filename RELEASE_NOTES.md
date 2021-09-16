@@ -1,5 +1,10 @@
 # Release notes
 
+### v0.11.4
+
+- Fixes bug in crontab day-of-week check
+- Exposes `parseCronItem` helper
+
 ### v0.11.3
 
 - Restores `Logger` export accidentally removed in v0.11.0

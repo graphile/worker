@@ -417,39 +417,45 @@ export const parseCrontab = (crontab: string): Array<ParsedCronItem> => {
  * (including those that cannot be encoded in TypeScript).
  */
 export const parseCronItems = (items: CronItem[]): ParsedCronItem[] => {
-  return items.map(
-    (
-      {
-        pattern,
-        task,
-        options = {} as CronItemOptions,
-        payload = {},
-        identifier = task,
-      },
-      idx,
-    ) => {
-      const matches = CRONTAB_TIME_PARTS.exec(pattern);
-      if (!matches) {
-        throw new Error(
-          `Invalid cron pattern '${pattern}' in item ${idx} of parseCronItems call`,
-        );
-      }
-      const { minutes, hours, dates, months, dows } = parseCrontabRanges(
-        matches,
-        `item ${idx} of parseCronItems call`,
-      );
-      const item: ParsedCronItem = {
-        minutes,
-        hours,
-        dates,
-        months,
-        dows,
-        task,
-        options,
-        payload,
-        identifier,
-      };
-      return item;
-    },
+  return items.map((item, idx) =>
+    parseCronItem(item, `item ${idx} of parseCronItems call`),
   );
+};
+
+/**
+ * Parses an individual `CronItem` into a `ParsedCronItem`, ensuring the
+ * results comply with all the expectations of the `ParsedCronItem` type
+ * (including those that cannot be encoded in TypeScript).
+ */
+export const parseCronItem = (
+  cronItem: CronItem,
+  source: string = "parseCronItem call",
+) => {
+  const {
+    pattern,
+    task,
+    options = {} as CronItemOptions,
+    payload = {},
+    identifier = task,
+  } = cronItem;
+  const matches = CRONTAB_TIME_PARTS.exec(pattern);
+  if (!matches) {
+    throw new Error(`Invalid cron pattern '${pattern}' in ${source}`);
+  }
+  const { minutes, hours, dates, months, dows } = parseCrontabRanges(
+    matches,
+    source,
+  );
+  const item: ParsedCronItem = {
+    minutes,
+    hours,
+    dates,
+    months,
+    dows,
+    task,
+    options,
+    payload,
+    identifier,
+  };
+  return item;
 };
