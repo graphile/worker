@@ -10,7 +10,7 @@ import {
 } from "./interfaces";
 import { processSharedOptions } from "./lib";
 import { Logger } from "./logger";
-import { fauxRequire } from "./module";
+import { fauxImport, fauxRequire } from "./module";
 
 function validTasks(
   logger: Logger,
@@ -44,7 +44,14 @@ async function loadFileIntoTasks(
   name: string | null = null,
   watch: boolean = false,
 ) {
-  const replacementModule = watch ? fauxRequire(filename) : require(filename);
+  const isNode12OrAbove = Number(process.versions.node.split(".")[0]) >= 12;
+  const replacementModule = isNode12OrAbove
+    ? watch
+      ? await fauxImport(filename)
+      : await import(filename)
+    : watch
+    ? fauxRequire(filename)
+    : require(filename);
 
   if (!replacementModule) {
     throw new Error(`Module '${filename}' doesn't have an export`);

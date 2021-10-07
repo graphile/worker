@@ -10,6 +10,11 @@ function stripBOM(str: string) {
   return str;
 }
 
+export function fauxImport(spec: string) {
+  // Add a timestamp parameter to bust cache
+  return import(`${spec}?ts=${Date.now()}`);
+}
+
 /**
  * This function emulates the behavior of `require()`, enabling us to call it
  * multiple times without worrying about having to clear out the cache (useful
