@@ -145,7 +145,9 @@ export async function withReleasers<T>(
 ): Promise<T> {
   const releasers: Releasers = [];
   const release: Release = async () => {
-    await Promise.all(releasers.map((fn) => fn()));
+    for (let i = 1; i <= releasers.length; i++) {
+      await releasers[releasers.length - i]();
+    }
   };
   try {
     return await callback(releasers, release);

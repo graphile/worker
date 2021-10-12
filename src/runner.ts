@@ -87,8 +87,10 @@ export const run = async (
       (await getParsedCronItemsFromOptions(options, releasers));
 
     const cron = runCron(options, parsedCronItems, { pgPool, events });
+    releasers.push(() => cron.release());
 
     const workerPool = runTaskList(options, taskList, pgPool);
+    releasers.push(() => workerPool.release());
 
     let running = true;
     return {
@@ -96,7 +98,6 @@ export const run = async (
         if (running) {
           running = false;
           events.emit("stop", {});
-          await Promise.all([cron.release(), workerPool.release()])
           await release();
         } else {
           throw new Error("Runner is already stopped");
