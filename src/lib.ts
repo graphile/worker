@@ -145,8 +145,16 @@ export async function withReleasers<T>(
 ): Promise<T> {
   const releasers: Releasers = [];
   const release: Release = async () => {
-    for (let i = 1; i <= releasers.length; i++) {
-      await releasers[releasers.length - i]();
+    let firstError: Error | null = null;
+    for (let i = releasers.length - 1; i >= 0; i--) {
+      try {
+        await releasers[i]();
+      } catch (e) {
+        firstError = firstError || e;
+      }
+    }
+    if (firstError) {
+      throw firstError;
     }
   };
   try {
