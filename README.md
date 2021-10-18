@@ -316,6 +316,8 @@ The following options for these methods are available.
 - `events`: pass your own `new EventEmitter()` if you want to customize the
   options, get earlier events (before the runner object resolves), or want to
   get events from alternative Graphile Worker entrypoints.
+- `noPreparedStatements`: Set true if you want to prevent the use of prepared statements. 
+  For example if you wish to use Graphile Worker with pgBouncer or similar.
 
 Exactly one of either `taskDirectory` or `taskList` must be provided (except for
 `runMigrations` which doesn't require a task list).
