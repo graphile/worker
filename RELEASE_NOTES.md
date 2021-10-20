@@ -1,5 +1,10 @@
 # Release notes
 
+### Pending
+
+- When an error occurs with the new job listener, reconnection attempts now
+  follow an exponential back-off pattern
+
 ### v0.11.4
 
 - Fixes bug in crontab day-of-week check
