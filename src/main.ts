@@ -200,39 +200,9 @@ export function runTaskList(
       releaseClient();
       return;
     }
-    if (err) {
+
+    const reconnect = (err: Error) => {
       events.emit("pool:listen:error", { workerPool, client, error: err });
-      logger.error(
-        `Error connecting with notify listener (trying again in 5 seconds): ${err.message}`,
-        { error: err },
-      );
-      // Try again in 5 seconds
-      setTimeout(() => {
-        pgPool.connect(listenForChanges);
-      }, 5000);
-      return;
-    }
-
-    //----------------------------------------
-
-    let errorHandled = false;
-    function onErrorReleaseClientAndTryAgain(e: Error) {
-      if (errorHandled) {
-        return;
-      }
-      errorHandled = true;
-      events.emit("pool:listen:error", { workerPool, client, error: e });
-      logger.error(`Error with database notify listener: ${e.message}`, {
-        error: e,
-      });
-      listenForChangesClient = null;
-      try {
-        release();
-      } catch (e) {
-        logger.error(`Error occurred releasing client: ${e.stack}`, {
-          error: e,
-        });
-      }
 
       attempts++;
 
@@ -247,10 +217,42 @@ export function runTaskList(
         jitter * Math.min(MAX_DELAY, Math.exp(attempts) * 10),
       );
 
+      logger.error(
+        `Error with notify listener (trying again in ${delay}ms): ${err.message}`,
+        { error: err },
+      );
+
       setTimeout(() => {
         events.emit("pool:listen:connecting", { workerPool, attempts });
         pgPool.connect(listenForChanges);
       }, delay);
+    };
+
+    let errorHandled = false;
+    if (err) {
+      errorHandled = true;
+      // Try again
+      reconnect(err);
+      return;
+    }
+
+    //----------------------------------------
+
+    function onErrorReleaseClientAndTryAgain(e: Error) {
+      if (errorHandled) {
+        return;
+      }
+      errorHandled = true;
+      listenForChangesClient = null;
+      try {
+        release();
+      } catch (e) {
+        logger.error(`Error occurred releasing client: ${e.stack}`, {
+          error: e,
+        });
+      }
+
+      reconnect(e);
     }
 
     function handleNotification() {
