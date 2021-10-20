@@ -238,13 +238,15 @@ export function runTaskList(
 
       // When figuring the next delay we want exponential back-off, but we also
       // want to avoid the thundering herd problem. For now, we'll add some
-      // randomness to it, but thanks to the sqrt the randomness is weighted
-      // towards the higher end.
-      //
+      // randomness to it via the `jitter` variable, this variable is
+      // deliberately weighted towards the higher end of the duration.
+      const jitter = 0.5 + Math.sqrt(Math.random()) / 2;
+
       // Backoff (ms): 3, 8, 21, 55, 149, 404, 1097, 2981, 8104, 22027, 59875
       const delay = Math.ceil(
-        Math.sqrt(Math.random()) * Math.min(MAX_DELAY, Math.exp(attempts) * 10),
+        jitter * Math.min(MAX_DELAY, Math.exp(attempts) * 10),
       );
+
       setTimeout(() => {
         events.emit("pool:listen:connecting", { workerPool, attempts });
         pgPool.connect(listenForChanges);
