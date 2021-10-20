@@ -212,9 +212,9 @@ export function runTaskList(
       // deliberately weighted towards the higher end of the duration.
       const jitter = 0.5 + Math.sqrt(Math.random()) / 2;
 
-      // Backoff (ms): 3, 8, 21, 55, 149, 404, 1097, 2981, 8104, 22027, 59875
+      // Backoff (ms): 136, 370, 1005, 2730, 7421, 20172, 54832
       const delay = Math.ceil(
-        jitter * Math.min(MAX_DELAY, Math.exp(attempts) * 10),
+        jitter * Math.min(MAX_DELAY, 50 * Math.exp(attempts)),
       );
 
       logger.error(
