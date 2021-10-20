@@ -206,7 +206,7 @@ export function runTaskList(
       return;
     }
 
-    const reconnect = (err: Error) => {
+    const reconnectWithExponentialBackoff = (err: Error) => {
       events.emit("pool:listen:error", { workerPool, client, error: err });
 
       attempts++;
@@ -236,7 +236,7 @@ export function runTaskList(
 
     if (err) {
       // Try again
-      reconnect(err);
+      reconnectWithExponentialBackoff(err);
       return;
     }
 
@@ -257,7 +257,7 @@ export function runTaskList(
         });
       }
 
-      reconnect(e);
+      reconnectWithExponentialBackoff(e);
     }
 
     function handleNotification() {
