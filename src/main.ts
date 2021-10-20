@@ -228,9 +228,7 @@ export function runTaskList(
       }, delay);
     };
 
-    let errorHandled = false;
     if (err) {
-      errorHandled = true;
       // Try again
       reconnect(err);
       return;
@@ -238,6 +236,7 @@ export function runTaskList(
 
     //----------------------------------------
 
+    let errorHandled = false;
     function onErrorReleaseClientAndTryAgain(e: Error) {
       if (errorHandled) {
         return;
