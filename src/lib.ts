@@ -145,7 +145,18 @@ export async function withReleasers<T>(
 ): Promise<T> {
   const releasers: Releasers = [];
   const release: Release = async () => {
-    await Promise.all(releasers.map((fn) => fn()));
+    let firstError: Error | null = null;
+    // Call releasers in reverse order - LIFO queue.
+    for (let i = releasers.length - 1; i >= 0; i--) {
+      try {
+        await releasers[i]();
+      } catch (e) {
+        firstError = firstError || e;
+      }
+    }
+    if (firstError) {
+      throw firstError;
+    }
   };
   try {
     return await callback(releasers, release);
