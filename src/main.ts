@@ -22,6 +22,9 @@ import { Logger } from "./logger";
 import SIGNALS from "./signals";
 import { makeNewWorker } from "./worker";
 
+// Wait at most 60 seconds between connection attempts for LISTEN.
+const MAX_DELAY = 60 * 1000;
+
 const allWorkerPools: Array<WorkerPool> = [];
 
 // Exported for testing only
@@ -128,11 +131,16 @@ export function runTaskList(
     }
   };
   let active = true;
+  let reconnectTimeout: NodeJS.Timer | null = null;
 
   // This is a representation of us that can be interacted with externally
   const workerPool: WorkerPool = {
     release: async () => {
       active = false;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
       events.emit("pool:release", { pool: this });
       unlistenForChanges();
       promise.resolve();
@@ -186,6 +194,7 @@ export function runTaskList(
   allWorkerPools.push(workerPool);
   events.emit("pool:create", { workerPool });
 
+  let attempts = 0;
   const listenForChanges = (
     err: Error | undefined,
     client: PoolClient,
@@ -196,16 +205,38 @@ export function runTaskList(
       releaseClient();
       return;
     }
-    if (err) {
+
+    const reconnectWithExponentialBackoff = (err: Error) => {
       events.emit("pool:listen:error", { workerPool, client, error: err });
+
+      attempts++;
+
+      // When figuring the next delay we want exponential back-off, but we also
+      // want to avoid the thundering herd problem. For now, we'll add some
+      // randomness to it via the `jitter` variable, this variable is
+      // deliberately weighted towards the higher end of the duration.
+      const jitter = 0.5 + Math.sqrt(Math.random()) / 2;
+
+      // Backoff (ms): 136, 370, 1005, 2730, 7421, 20172, 54832
+      const delay = Math.ceil(
+        jitter * Math.min(MAX_DELAY, 50 * Math.exp(attempts)),
+      );
+
       logger.error(
-        `Error connecting with notify listener (trying again in 5 seconds): ${err.message}`,
+        `Error with notify listener (trying again in ${delay}ms): ${err.message}`,
         { error: err },
       );
-      // Try again in 5 seconds
-      setTimeout(() => {
+
+      reconnectTimeout = setTimeout(() => {
+        reconnectTimeout = null;
+        events.emit("pool:listen:connecting", { workerPool, attempts });
         pgPool.connect(listenForChanges);
-      }, 5000);
+      }, delay);
+    };
+
+    if (err) {
+      // Try again
+      reconnectWithExponentialBackoff(err);
       return;
     }
 
@@ -217,10 +248,6 @@ export function runTaskList(
         return;
       }
       errorHandled = true;
-      events.emit("pool:listen:error", { workerPool, client, error: e });
-      logger.error(`Error with database notify listener: ${e.message}`, {
-        error: e,
-      });
       listenForChangesClient = null;
       try {
         release();
@@ -229,8 +256,8 @@ export function runTaskList(
           error: e,
         });
       }
-      events.emit("pool:listen:connecting", { workerPool });
-      pgPool.connect(listenForChanges);
+
+      reconnectWithExponentialBackoff(e);
     }
 
     function handleNotification() {
@@ -259,7 +286,10 @@ export function runTaskList(
     client.on("notification", handleNotification);
 
     // Subscribe to jobs:insert message
-    client.query('LISTEN "jobs:insert"').catch(onErrorReleaseClientAndTryAgain);
+    client.query('LISTEN "jobs:insert"').then(() => {
+      // Successful listen; reset attempts
+      attempts = 0;
+    }, onErrorReleaseClientAndTryAgain);
 
     const supportedTaskNames = Object.keys(tasks);
 
@@ -271,7 +301,7 @@ export function runTaskList(
   };
 
   // Create a client dedicated to listening for new jobs.
-  events.emit("pool:listen:connecting", { workerPool });
+  events.emit("pool:listen:connecting", { workerPool, attempts });
   pgPool.connect(listenForChanges);
 
   // Spawn our workers; they can share clients from the pool.
