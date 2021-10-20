@@ -131,11 +131,16 @@ export function runTaskList(
     }
   };
   let active = true;
+  let reconnectTimeout: NodeJS.Timer | null = null;
 
   // This is a representation of us that can be interacted with externally
   const workerPool: WorkerPool = {
     release: async () => {
       active = false;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
       events.emit("pool:release", { pool: this });
       unlistenForChanges();
       promise.resolve();
@@ -222,7 +227,8 @@ export function runTaskList(
         { error: err },
       );
 
-      setTimeout(() => {
+      reconnectTimeout = setTimeout(() => {
+        reconnectTimeout = null;
         events.emit("pool:listen:connecting", { workerPool, attempts });
         pgPool.connect(listenForChanges);
       }, delay);
