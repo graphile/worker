@@ -548,7 +548,7 @@ export type WorkerEventMap = {
    * When a worker pool attempts to connect to PG ready to issue a LISTEN
    * statement
    */
-  "pool:listen:connecting": { workerPool: WorkerPool };
+  "pool:listen:connecting": { workerPool: WorkerPool; attempts: number };
 
   /**
    * When a worker pool starts listening for jobs via PG LISTEN

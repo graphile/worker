@@ -22,6 +22,9 @@ import { Logger } from "./logger";
 import SIGNALS from "./signals";
 import { makeNewWorker } from "./worker";
 
+// Wait at most 60 seconds between connection attempts for LISTEN.
+const MAX_DELAY = 60 * 1000;
+
 const allWorkerPools: Array<WorkerPool> = [];
 
 // Exported for testing only
@@ -186,6 +189,7 @@ export function runTaskList(
   allWorkerPools.push(workerPool);
   events.emit("pool:create", { workerPool });
 
+  let attempts = 0;
   const listenForChanges = (
     err: Error | undefined,
     client: PoolClient,
@@ -229,8 +233,22 @@ export function runTaskList(
           error: e,
         });
       }
-      events.emit("pool:listen:connecting", { workerPool });
-      pgPool.connect(listenForChanges);
+
+      attempts++;
+
+      // When figuring the next delay we want exponential back-off, but we also
+      // want to avoid the thundering herd problem. For now, we'll add some
+      // randomness to it, but thanks to the sqrt the randomness is weighted
+      // towards the higher end.
+      //
+      // Backoff (ms): 3, 8, 21, 55, 149, 404, 1097, 2981, 8104, 22027, 59875
+      const delay = Math.ceil(
+        Math.sqrt(Math.random()) * Math.min(MAX_DELAY, Math.exp(attempts) * 10),
+      );
+      setTimeout(() => {
+        events.emit("pool:listen:connecting", { workerPool, attempts });
+        pgPool.connect(listenForChanges);
+      }, delay);
     }
 
     function handleNotification() {
@@ -259,7 +277,10 @@ export function runTaskList(
     client.on("notification", handleNotification);
 
     // Subscribe to jobs:insert message
-    client.query('LISTEN "jobs:insert"').catch(onErrorReleaseClientAndTryAgain);
+    client.query('LISTEN "jobs:insert"').then(() => {
+      // Successful listen; reset attempts
+      attempts = 0;
+    }, onErrorReleaseClientAndTryAgain);
 
     const supportedTaskNames = Object.keys(tasks);
 
@@ -271,7 +292,7 @@ export function runTaskList(
   };
 
   // Create a client dedicated to listening for new jobs.
-  events.emit("pool:listen:connecting", { workerPool });
+  events.emit("pool:listen:connecting", { workerPool, attempts });
   pgPool.connect(listenForChanges);
 
   // Spawn our workers; they can share clients from the pool.
