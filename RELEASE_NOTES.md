@@ -1,9 +1,15 @@
 # Release notes
 
-### Pending
+### v0.12.0
 
+- Run shutdown actions in reverse order (rather than parallel) - more stable
+  release
 - When an error occurs with the new job listener, reconnection attempts now
   follow an exponential back-off pattern
+- Allow using Node.js time rather than PostgreSQL time (particularly useful for
+  tests)
+- Refactoring of some cron internals
+- Add `noPreparedStatements` to the docs
 
 ### v0.11.4
 
