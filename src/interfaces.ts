@@ -141,8 +141,8 @@ export interface WorkerUtils extends Helpers {
   ) => Promise<Job[]>;
 }
 
-export type Task = (
-  payload: unknown,
+export type Task<T = undefined> = (
+  payload: T,
   helpers: JobHelpers,
 ) => void | Promise<void>;
 
