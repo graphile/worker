@@ -197,7 +197,7 @@ export function runTaskList(
   const listenForChanges = (
     err: Error | undefined,
     client: PoolClient,
-    releaseClient: () => void,
+    releaseClient: () => void = () => {},
   ) => {
     if (!active) {
       // We were released, release this new client and abort
