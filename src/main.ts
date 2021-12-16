@@ -201,7 +201,7 @@ export function runTaskList(
   ) => {
     if (!active) {
       // We were released, release this new client and abort
-      releaseClient();
+      releaseClient?.();
       return;
     }
 
