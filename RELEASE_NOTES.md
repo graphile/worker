@@ -1,5 +1,10 @@
 # Release notes
 
+### v0.12.2
+
+- Fix issue when a connect error occurs whilst releasing worker (thanks
+  @countcain)
+
 ### v0.12.1
 
 - Jobs with no queue are now released during graceful shutdown (thanks @olexiyb)
