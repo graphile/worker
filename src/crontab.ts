@@ -9,11 +9,10 @@ import {
   CRONTAB_OPTIONS_MAX,
   CRONTAB_OPTIONS_PRIORITY,
   CRONTAB_OPTIONS_QUEUE,
-  CRONTAB_TIME_PARTS,
   PERIOD_DURATIONS,
   TIMEPHRASE_PART,
 } from "./cronConstants";
-import { parseCrontabRanges } from "./cronMatcher";
+import { parseCronString, parseCrontabRanges } from "./cronMatcher";
 import { CronItem, CronItemOptions, ParsedCronItem } from "./interfaces";
 
 /**
@@ -267,12 +266,8 @@ export const parseCronItem = (
     payload = {},
     identifier = task,
   } = cronItem;
-  const matches = CRONTAB_TIME_PARTS.exec(pattern);
-  if (!matches) {
-    throw new Error(`Invalid cron pattern '${pattern}' in ${source}`);
-  }
-  const { minutes, hours, dates, months, dows } = parseCrontabRanges(
-    matches,
+  const { minutes, hours, dates, months, dows } = parseCronString(
+    pattern,
     source,
   );
   const item: ParsedCronItem = {
