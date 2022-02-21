@@ -206,15 +206,32 @@ http://discord.gg/graphile
 
 ## Requirements
 
-PostgreSQL 10+\* and Node 10+\*.
+PostgreSQL 10+[^1] and Node 10+[^1].
 
-If your database doesn't already include the `pgcrypto` extension we'll
-automatically install it into the public schema for you. If the extension is
-installed in a different schema (unlikely) you may face issues. Making alias
-functions in the public schema, should solve this issue (see issue
-[#43](https://github.com/graphile/worker/issues/43) for an example).
+#### Additional requirement for PostgreSQL 12 and below:
 
-\* Might work with older versions, but has not been tested.
+Internally we use the `gen_random_uuid()` function that
+[comes built into PostgreSQL as of v13](https://www.postgresql.org/docs/13/functions-uuid.html).
+If you are using an earlier version, you should supply this function by having
+the `pgcrypto` extension installed into a schema that's present in your search
+path, i.e. you should be able to call `gen_random_uuid()` without qualifying it
+with a schema. For a standard/typical configuration where the `public` schema is
+in the search path (or you're not sure what any of this means), we recommend you
+install it like so:
+
+```sql
+CREATE EXTENSION pgcrypto WITH SCHEMA public;
+```
+
+_Note: `graphile-worker` versions 0.12.2 and earlier installed `pgcrypto` like
+this automatically, even in PostgreSQL 13+. Feel free to remove it if it's no
+longer required._
+
+If other approaches aren't suitable for your configuration, you can try creating
+a proxy function (see issue [#43](https://github.com/graphile/worker/issues/43)
+for an example).
+
+[^1]: Might work with older versions, but has not been tested.
 
 ## Installation
 

@@ -7,7 +7,6 @@ import { processSharedOptions } from "./lib";
 async function installSchema(options: WorkerSharedOptions, client: PoolClient) {
   const { escapedWorkerSchema } = processSharedOptions(options);
   await client.query(`
-    create extension if not exists pgcrypto with schema public;
     create schema ${escapedWorkerSchema};
     create table ${escapedWorkerSchema}.migrations(
       id int primary key,
