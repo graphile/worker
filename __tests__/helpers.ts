@@ -24,10 +24,6 @@ export {
   WEEK,
 } from "jest-time-helpers";
 
-// Sometimes CI's clock can get interrupted (it is shared infra!) so this
-// extends the default timeout just in case.
-jest.setTimeout(15000);
-
 // process.env.GRAPHILE_LOGGER_DEBUG = "1";
 
 export const TEST_CONNECTION_STRING =
