@@ -1,24 +1,17 @@
-import { withPgPool } from "./helpers";
-
-const PG13_VERSION_NUM = 130000;
+import { readFile } from "../src/fs";
+import { withPgClient } from "./helpers";
 
 // Runs once before all test suites.
 // See: https://jestjs.io/docs/configuration#globalsetup-string
 export default async function globalSetup() {
-  return withPgPool(async (pgPool) => {
-    const { rows } = await pgPool.query<[number, string]>({
-      text: `select current_setting('server_version_num')::integer, current_setting('server_version');`,
-      rowMode: "array",
-    });
-    const [serverVersionNum, serverVersion] = rows[0];
-
-    if (serverVersionNum < PG13_VERSION_NUM) {
-      console.log(
-        `\nPostgreSQL ${serverVersion} detected, pgcrypto will be installed.`,
-      );
-      await pgPool.query(
-        `create extension if not exists pgcrypto with schema public;`,
-      );
-    }
+  // Install pgcrypto when using PostgreSQL 12 or below
+  const queryTextPromise = readFile(
+    `${__dirname}/../scripts/ensure_gen_random_uuid_exists.sql`,
+    "utf8",
+  );
+  return withPgClient(async (pgClient) => {
+    pgClient.on("notice", ({ message }) => console.log(`\n${message}`));
+    const queryText = await queryTextPromise;
+    return pgClient.query(queryText);
   });
 }
