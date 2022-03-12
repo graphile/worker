@@ -4,23 +4,14 @@ import {
   CRONTAB_TIME_PARTS,
   CRONTAB_WILDCARD,
 } from "./cronConstants";
-import { TimestampDigest } from "./interfaces";
-
-// Crontab ranges from the minute, hour, day of month, month and day of week parts of the crontab line
-interface CrontabRanges {
-  minutes: number[];
-  hours: number[];
-  dates: number[];
-  months: number[];
-  dows: number[];
-}
+import { ParsedCronMatch, TimestampDigest } from "./interfaces";
 
 /**
  * Returns true if the cronItem should fire for the given timestamp digest,
  * false otherwise.
  */
 export function cronItemMatches(
-  cronItem: CrontabRanges,
+  cronItem: ParsedCronMatch,
   digest: TimestampDigest,
 ): boolean {
   const { min, hour, date, month, dow } = digest;
@@ -146,7 +137,10 @@ const parseCrontabRange = (
   return uniqueNumbers;
 };
 
-export function parseCrontabRanges(matches: string[], source: string) {
+export function parseCrontabRanges(
+  matches: string[],
+  source: string,
+): ParsedCronMatch {
   const minutes = parseCrontabRange(
     `minutes range in ${source}`,
     matches[1],
@@ -181,7 +175,10 @@ export function parseCrontabRanges(matches: string[], source: string) {
   return { minutes, hours, dates, months, dows };
 }
 
-export const parseCronString = (pattern: string, source: string = "") => {
+export const parseCronRangeString = (
+  pattern: string,
+  source: string = "",
+): ParsedCronMatch => {
   const matches = CRONTAB_TIME_PARTS.exec(pattern);
   if (!matches) {
     throw new Error(`Invalid cron pattern '${pattern}' in ${source}`);
