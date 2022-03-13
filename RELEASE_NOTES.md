@@ -1,5 +1,18 @@
 # Release notes
 
+### Pending
+
+- pgcrypto is no longer installed automatically
+  - Pre-existing installations should continue to function as normal (if the
+    schema update _does_ fail it's likely to be related to your search path
+    configuration)
+  - On PostgreSQL 13+, pgcrypto is no longer required/used by graphile-worker,
+    and if desired can be removed _after_ updating to the latest schema by
+    running `DROP EXTENSION pgcrypto;`
+  - New installations on PostgreSQL 12 or below will need to manually ensure
+    that pgcrypto is installed
+    ([see the "Requirements" section of the readme](README.md#requirements))
+
 ### v0.12.2
 
 - Fix issue when a connect error occurs whilst releasing worker (thanks

@@ -227,9 +227,9 @@ _Note: `graphile-worker` versions 0.12.2 and earlier installed `pgcrypto` like
 this automatically, even in PostgreSQL 13+. Feel free to remove it if it's no
 longer required._
 
-If other approaches aren't suitable for your configuration, you can try creating
-a proxy function (see issue [#43](https://github.com/graphile/worker/issues/43)
-for an example).
+If other approaches aren't suitable for your database configuration, you can try
+creating a proxy function (see issue
+[#43](https://github.com/graphile/worker/issues/43) for an example).
 
 [^1]: Might work with older versions, but has not been tested.
 
