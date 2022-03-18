@@ -157,7 +157,7 @@ export default async function getTasks(
     const files = await readdir(taskPath);
     for (const file of files) {
       if (file.endsWith(".js")) {
-        const taskName = file.substr(0, file.length - 3);
+        const taskName = file.slice(0, -3);
         try {
           await loadFileIntoTasks(
             logger,

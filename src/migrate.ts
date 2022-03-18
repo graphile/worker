@@ -73,7 +73,7 @@ export async function migrate(
     .filter((f) => f.match(/^[0-9]{6}\.sql$/))
     .sort();
   for (const migrationFile of migrationFiles) {
-    const migrationNumber = parseInt(migrationFile.substr(0, 6), 10);
+    const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
     if (latestMigration == null || migrationNumber > latestMigration) {
       await runMigration(options, client, migrationFile, migrationNumber);
     }

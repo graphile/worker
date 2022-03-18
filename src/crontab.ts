@@ -44,7 +44,7 @@ const parseTimePhrase = (timePhrase: string): number => {
     const [wholeMatch, quantity, period] = matches;
     const periodDuration = PERIOD_DURATIONS[period] || 0;
     milliseconds += parseInt(quantity, 10) * periodDuration;
-    remaining = remaining.substr(wholeMatch.length);
+    remaining = remaining.slice(wholeMatch.length);
   }
   return milliseconds;
 };
