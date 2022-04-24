@@ -79,7 +79,7 @@ create trigger _900_notify_worker after insert on :GRAPHILE_WORKER_SCHEMA.jobs f
 create function :GRAPHILE_WORKER_SCHEMA.add_job(
   identifier text,
   payload json = '{}',
-  queue_name text = 'PLACEHOLDER',
+  queue_name text = null, -- was gen_random_uuid(), but later removed dependency
   run_at timestamptz = now(),
   max_attempts int = 25
 ) returns :GRAPHILE_WORKER_SCHEMA.jobs as $$
