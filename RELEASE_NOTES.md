@@ -1,5 +1,15 @@
 # Release notes
 
+### Pending
+
+- Remove dependency on `pgcrypto` database extension
+  - If you have a pre-existing installation and wish to uninstall `pgcrypto` you
+    will need to do so manually. This can be done by running
+    `DROP EXTENSION pgcrypto;` _after_ updating to the latest schema.
+  - The `jobs.queue_name` column no longer has a default value (this is only
+    relevant to people inserting into the table directly, which is not
+    recommended - use the `add_job` helper)
+
 ### v0.12.2
 
 - Fix issue when a connect error occurs whilst releasing worker (thanks

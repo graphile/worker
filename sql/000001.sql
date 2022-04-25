@@ -9,7 +9,7 @@ alter table :GRAPHILE_WORKER_SCHEMA.job_queues enable row level security;
 
 create table :GRAPHILE_WORKER_SCHEMA.jobs (
   id bigserial primary key,
-  queue_name text default (public.gen_random_uuid())::text not null,
+  queue_name text not null,
   task_identifier text not null,
   payload json default '{}'::json not null,
   priority int default 0 not null,
@@ -79,7 +79,7 @@ create trigger _900_notify_worker after insert on :GRAPHILE_WORKER_SCHEMA.jobs f
 create function :GRAPHILE_WORKER_SCHEMA.add_job(
   identifier text,
   payload json = '{}',
-  queue_name text = public.gen_random_uuid()::text,
+  queue_name text = null, -- was gen_random_uuid(), but later removed dependency
   run_at timestamptz = now(),
   max_attempts int = 25
 ) returns :GRAPHILE_WORKER_SCHEMA.jobs as $$

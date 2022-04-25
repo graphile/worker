@@ -1,10 +1,8 @@
 SELECT pg_catalog.set_config('search_path', '', false);
 CREATE SCHEMA graphile_worker;
-CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
-COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
 CREATE TABLE graphile_worker.jobs (
     id bigint NOT NULL,
-    queue_name text DEFAULT (public.gen_random_uuid())::text,
+    queue_name text,
     task_identifier text NOT NULL,
     payload json DEFAULT '{}'::json NOT NULL,
     priority integer DEFAULT 0 NOT NULL,
