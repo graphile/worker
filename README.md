@@ -214,7 +214,7 @@ PostgreSQL 10+\* and Node 10+\*.
 _Note: `graphile-worker` versions before 0.13.0 installed the `pgcrypto`
 extension into the public schema of your database (if it wasn't already
 installed). As of version 0.13.0 we no longer use `pgcrypto`. Existing users may
-want to uninstall it - see the [release notes](RELEASE_NOTES.md#pending) for
+want to uninstall it - see the [release notes](RELEASE_NOTES.md#v0130) for
 instructions._
 
 \* Might work with older versions, but has not been tested.
