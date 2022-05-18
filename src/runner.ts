@@ -1,15 +1,8 @@
 import * as assert from "assert";
-import { Pool } from "pg";
 
 import { getParsedCronItemsFromOptions, runCron } from "./cron";
 import getTasks from "./getTasks";
-import {
-  ParsedCronItem,
-  Runner,
-  RunnerOptions,
-  TaskList,
-  WorkerEvents,
-} from "./interfaces";
+import { ParsedCronItem, Runner, RunnerOptions, TaskList } from "./interfaces";
 import {
   CompiledOptions,
   getUtilsAndReleasersFromOptions,
