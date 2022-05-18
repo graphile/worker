@@ -108,17 +108,13 @@ export const run = async (
  *
  * @internal
  */
-function buildRunner({
-  options,
-  compiledOptions,
-  taskList,
-  parsedCronItems,
-}: {
+function buildRunner(input: {
   options: RunnerOptions;
   compiledOptions: CompiledOptions;
   taskList: TaskList;
   parsedCronItems: ParsedCronItem[];
 }): Runner {
+  const { options, compiledOptions, taskList, parsedCronItems } = input;
   const { events, pgPool, releasers, release, addJob } = compiledOptions;
 
   const cron = runCron(options, parsedCronItems, { pgPool, events });
