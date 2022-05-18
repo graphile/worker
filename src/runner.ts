@@ -93,18 +93,34 @@ export const run = async (
     releasers.push(() => workerPool.release());
 
     let running = true;
-    return {
-      async stop() {
-        if (running) {
-          running = false;
-          events.emit("stop", {});
-          await release();
-        } else {
-          throw new Error("Runner is already stopped");
-        }
+    const stop = async () => {
+      if (running) {
+        running = false;
+        events.emit("stop", {});
+        await release();
+      } else {
+        throw new Error("Runner is already stopped");
+      }
+    };
+
+    const promise = Promise.all([cron.promise, workerPool.promise]).then(
+      () => {
+        /* void */
       },
+      (e) => {
+        console.error(`Stopping worker due to an error: ${e}`);
+        stop();
+        return Promise.reject(e);
+      },
+    );
+
+    // On error, don't kill node process.
+    promise.then(null, () => {});
+
+    return {
+      stop,
       addJob,
-      promise: workerPool.promise,
+      promise,
       events,
     };
   } catch (e) {
