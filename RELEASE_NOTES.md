@@ -1,5 +1,9 @@
 # Release notes
 
+### Pending
+
+- Fix error handling of cron issues in 'run' method.
+
 ### v0.13.0
 
 - Remove dependency on `pgcrypto` database extension (thanks @noinkling)
