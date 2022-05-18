@@ -86,6 +86,9 @@ export const run = async (
       overrideParsedCronItems ||
       (await getParsedCronItemsFromOptions(options, releasers));
 
+    // NO AWAIT AFTER THIS POINT! The promise from cron and workerPool must be
+    // returned synchronously.
+
     const cron = runCron(options, parsedCronItems, { pgPool, events });
     releasers.push(() => cron.release());
 
@@ -113,9 +116,6 @@ export const run = async (
         return Promise.reject(e);
       },
     );
-
-    // On error, don't kill node process.
-    promise.then(null, () => {});
 
     return {
       stop,
