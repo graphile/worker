@@ -691,7 +691,8 @@ export interface TaskSpec {
   priority?: number;
 
   /**
-   * How many attempts should this task get? The minimum is 1, in which case the task will only be attempted once and won't be retried. (Default: 25)
+   * How many attempts should this task get? The minimum is 1, in which case the
+   * task will only be attempted once and won't be retried. (Default: 25)
    */
   maxAttempts?: number;
 
