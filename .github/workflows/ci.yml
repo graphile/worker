@@ -11,7 +11,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
@@ -42,7 +42,7 @@ jobs:
       - run: yarn jest -i --ci
 
   lint:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v1
@@ -54,7 +54,7 @@ jobs:
       - run: yarn lint
 
   altschema:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     env:
       GRAPHILE_WORKER_SCHEMA: custom_schema
 
@@ -83,7 +83,7 @@ jobs:
       - run: yarn jest -i --ci
 
   database_updated:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     services:
       postgres:
