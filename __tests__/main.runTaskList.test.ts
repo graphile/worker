@@ -27,7 +27,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
 
     // Build the tasks
     const jobPromises: {
-      [id: string]: Deferred;
+      [id: string]: Deferred | undefined;
     } = {};
     const job1: Task = jest.fn(({ id }: { id: string }) => {
       const jobPromise = deferred();
@@ -57,7 +57,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
       expect(Object.keys(jobPromises).length).toEqual(i + 1);
 
       // Resolve this job so the next can start
-      jobPromises[i].resolve();
+      jobPromises[i]!.resolve();
     }
 
     await sleep(1);
