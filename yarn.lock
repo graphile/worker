@@ -2535,10 +2535,10 @@ jest-snapshot@^28.1.1:
     pretty-format "^28.1.1"
     semver "^7.3.5"
 
-jest-time-helpers@^0.1.0:
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/jest-time-helpers/-/jest-time-helpers-0.1.0.tgz#0d28164b4109035ce5010bfc5375b78700bfe793"
-  integrity sha512-rj3g5CPey4t1n/6HCEWL5epe7b33bPKurGOFmdDG7A6PoO6jtPfaCWNtRangFUCX7Z9aPr7D6nQfga635j1Fuw==
+jest-time-helpers@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/jest-time-helpers/-/jest-time-helpers-0.2.0.tgz#adcae5117e3ec4471dcd8e6cfb2114b63f31f580"
+  integrity sha512-7L9RayMCnLR9DHWADRAp9Q6CQ02RSxYsXW6qgZXzz9TXEIsP15uRj2SKld+DUN4m35jgi/SDE0thMuNgwMivWg==
 
 jest-util@^28.0.0, jest-util@^28.1.1:
   version "28.1.1"
