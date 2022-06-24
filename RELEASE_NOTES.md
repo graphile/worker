@@ -3,6 +3,7 @@
 ### Pending
 
 - Fix error handling of cron issues in 'run' method.
+- Bump minimum Node version to 14 since 12.x is now end-of-life
 
 ### v0.13.0
 
