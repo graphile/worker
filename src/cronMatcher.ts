@@ -4,13 +4,15 @@ import {
   CRONTAB_TIME_PARTS,
   CRONTAB_WILDCARD,
 } from "./cronConstants";
-import { ParsedCronMatch, TimestampDigest } from "./interfaces";
+import { CronMatcher, ParsedCronMatch, TimestampDigest } from "./interfaces";
 
 /**
  * Returns true if the cronItem should fire for the given timestamp digest,
  * false otherwise.
+ *
+ * @internal
  */
-export function cronItemMatches(
+function cronItemMatches(
   cronItem: ParsedCronMatch,
   digest: TimestampDigest,
 ): boolean {
@@ -137,7 +139,13 @@ const parseCrontabRange = (
   return uniqueNumbers;
 };
 
-export function parseCrontabRanges(
+/**
+ * Processes a list of matches from the CRONTAB_LINE_PARTS or
+ * CRONTAB_TIME_PARTS regexps and returns the parsed matches.
+ *
+ * @internal
+ */
+function parseCrontabRanges(
   matches: string[],
   source: string,
 ): ParsedCronMatch {
@@ -184,4 +192,33 @@ export const parseCronRangeString = (
     throw new Error(`Invalid cron pattern '${pattern}' in ${source}`);
   }
   return parseCrontabRanges(matches, source);
+};
+
+/**
+ * Takes a list of matches from the CRONTAB_LINE_PARTS or CRONTAB_TIME_PARTS
+ * regexps a CronMatcher function.
+ *
+ * @internal
+ */
+export const createCronMatcherFromRanges = (
+  matches: string[],
+  source: string,
+): CronMatcher => {
+  const cronItem = parseCrontabRanges(matches, source);
+  return (digest: TimestampDigest) => cronItemMatches(cronItem, digest);
+};
+
+/**
+ * Creates a CronMatcher function from the given cron pattern.
+ */
+export const createCronMatcher = (
+  pattern: string,
+  source: string,
+): CronMatcher => {
+  const matches = CRONTAB_TIME_PARTS.exec(pattern);
+  if (!matches) {
+    throw new Error(`Invalid cron pattern '${pattern}' in ${source}`);
+  }
+
+  return createCronMatcherFromRanges(matches, source);
 };
