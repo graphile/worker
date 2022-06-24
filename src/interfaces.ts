@@ -185,6 +185,23 @@ export interface CronItemOptions {
 }
 
 /**
+ * Crontab ranges from the minute, hour, day of month, month and day of week
+ * parts of the crontab line
+ */
+export interface ParsedCronMatch {
+  /** Minutes (0-59) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  minutes: number[];
+  /** Hours (0-23) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  hours: number[];
+  /** Dates (1-31) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  dates: number[];
+  /** Months (1-12) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  months: number[];
+  /** Days of the week (0-6) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  dows: number[];
+}
+
+/**
  * A recurring task schedule; this may represent a line in the `crontab` file,
  * or may be the result of calling `parseCronItems` on a list of `CronItem`s
  * the user has specified.
@@ -204,18 +221,7 @@ export interface CronItemOptions {
  * constructing `ParsedCronItem`s internally, you should use the Graphile
  * Worker helpers to construct this type.
  */
-export interface ParsedCronItem {
-  /** Minutes (0-59) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  minutes: number[];
-  /** Hours (0-23) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  hours: number[];
-  /** Dates (1-31) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  dates: number[];
-  /** Months (1-12) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  months: number[];
-  /** Days of the week (0-6) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  dows: number[];
-
+export interface ParsedCronItem extends ParsedCronMatch {
   /** The identifier of the task to execute */
   task: string;
 
