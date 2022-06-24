@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { isPromise } from "util/types";
 import * as yargs from "yargs";
 
 import { defaults } from "./config";
@@ -72,6 +71,10 @@ const argv_ = yargs
   })
   .boolean("no-prepared-statements")
   .strict(true).argv;
+
+function isPromise(val: any): val is Promise<any> {
+  return typeof val === "object" && val && typeof val.then === "function";
+}
 
 // Hack TypeScript to stop whinging about argv potentially being a promise
 if (isPromise(argv_)) {
