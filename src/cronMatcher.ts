@@ -177,7 +177,7 @@ export function parseCrontabRanges(
 
 export const parseCronRangeString = (
   pattern: string,
-  source: string = "",
+  source: string,
 ): ParsedCronMatch => {
   const matches = CRONTAB_TIME_PARTS.exec(pattern);
   if (!matches) {
