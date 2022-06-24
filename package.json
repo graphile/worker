@@ -48,27 +48,27 @@
     "json5": "^2.1.3",
     "pg": ">=6.5 <9",
     "tslib": "^2.1.0",
-    "yargs": "^16.2.0"
+    "yargs": "^17.5.1"
   },
   "devDependencies": {
     "@types/jest": "^26.0.20",
-    "@types/json5": "^0.0.30",
-    "@types/node": "^14.14.22",
-    "@typescript-eslint/eslint-plugin": "^4.14.0",
-    "@typescript-eslint/parser": "^4.14.0",
+    "@types/json5": "^2.2.0",
+    "@types/node": "^18.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.29.0",
+    "@typescript-eslint/parser": "^5.29.0",
     "depcheck": "^1.3.1",
-    "eslint": "^7.18.0",
-    "eslint-config-prettier": "^7.2.0",
+    "eslint": "^8.18.0",
+    "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-import": "^2.22.1",
-    "eslint-plugin-jest": "^24.1.3",
+    "eslint-plugin-jest": "^26.5.3",
     "eslint-plugin-simple-import-sort": "^7.0.0",
-    "eslint_d": "^9.1.2",
+    "eslint_d": "^12.2.0",
     "jest": "^26.6.3",
-    "jest-time-helpers": "^0.1.0",
+    "jest-time-helpers": "0.1.0",
     "pg-connection-string": "^2.4.0",
     "prettier": "^2.2.1",
     "ts-jest": "^26.4.4",
-    "ts-node": "^9.1.1",
+    "ts-node": "^10.8.1",
     "typescript": "^4.1.3"
   },
   "files": [
@@ -76,6 +76,6 @@
     "sql"
   ],
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=14.0.0"
   }
 }

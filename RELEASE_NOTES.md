@@ -3,6 +3,7 @@
 ### Pending
 
 - Fix error handling of cron issues in 'run' method.
+- BREAKING: Bump minimum Node version to 14 since 12.x is now end-of-life
 - BREAKING: CronItem.pattern has been renamed to CronItem.match
 - CronItem.match can now accept either a pattern string or a matcher function
 

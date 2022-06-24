@@ -5,7 +5,6 @@ module.exports = {
     "plugin:import/errors",
     "plugin:import/typescript",
     "prettier",
-    "prettier/@typescript-eslint",
   ],
   plugins: ["jest", "@typescript-eslint", "simple-import-sort", "import"],
   parserOptions: {

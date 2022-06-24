@@ -111,17 +111,7 @@ test("parses crontab file correctly", () => {
   const parsedCronMatch5 = (parsed[5].match as any)
     .parsedCronMatch as ParsedCronMatch;
   expect(parsedCronMatch5.minutes).toEqual([
-    0,
-    7,
-    10,
-    20,
-    30,
-    40,
-    50,
-    56,
-    57,
-    58,
-    59,
+    0, 7, 10, 20, 30, 40, 50, 56, 57, 58, 59,
   ]);
   expect(parsedCronMatch5.hours).toEqual([1]);
   expect(parsedCronMatch5.dates).toEqual([1]);

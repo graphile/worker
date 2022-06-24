@@ -8,7 +8,7 @@ import { run, runOnce } from "./index";
 import { RunnerOptions } from "./interfaces";
 import { runMigrations } from "./runner";
 
-const argv = yargs
+const argv_ = yargs
   .parserConfiguration({
     "boolean-negation": false,
   })
@@ -72,12 +72,15 @@ const argv = yargs
   .boolean("no-prepared-statements")
   .strict(true).argv;
 
-if (argv._.length > 0) {
-  console.error(`Unrecognized additional arguments: '${argv._.join("', '")}'`);
-  console.error();
-  yargs.showHelp();
-  process.exit(1);
+function isPromise(val: any): val is Promise<any> {
+  return typeof val === "object" && val && typeof val.then === "function";
 }
+
+// Hack TypeScript to stop whinging about argv potentially being a promise
+if (isPromise(argv_)) {
+  throw new Error("yargs returned a promise");
+}
+const argv = argv_ as Awaited<typeof argv_>;
 
 const isInteger = (n: number): boolean => {
   return isFinite(n) && Math.round(n) === n;

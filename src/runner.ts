@@ -48,11 +48,8 @@ export const runOnce = async (
   overrideTaskList?: TaskList,
 ): Promise<void> => {
   const { concurrency = 1 } = options;
-  const {
-    withPgClient,
-    release,
-    releasers,
-  } = await getUtilsAndReleasersFromOptions(options);
+  const { withPgClient, release, releasers } =
+    await getUtilsAndReleasersFromOptions(options);
   try {
     const taskList =
       overrideTaskList || (await assertTaskList(options, releasers));

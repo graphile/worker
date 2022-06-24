@@ -11,11 +11,11 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node-version: [10.x, 12.x, 14.x]
+        node-version: [14.x, 16.x, 18.x]
         postgres-version: [9.6, 10, 11, 12]
 
     services:
@@ -33,16 +33,16 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
       - run: yarn jest -i --ci
 
   lint:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v1
@@ -54,7 +54,7 @@ jobs:
       - run: yarn lint
 
   altschema:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     env:
       GRAPHILE_WORKER_SCHEMA: custom_schema
 
@@ -77,13 +77,13 @@ jobs:
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
-          node-version: 12.x
+          node-version: 16.x
       - run: yarn --frozen-lockfile
       # - run: yarn lint # No need to lint altschema
       - run: yarn jest -i --ci
 
   database_updated:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     services:
       postgres:
@@ -104,7 +104,7 @@ jobs:
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
-          node-version: 12.x
+          node-version: 16.x
       - run: yarn --frozen-lockfile
       - name: Install pg_dump
         run: |

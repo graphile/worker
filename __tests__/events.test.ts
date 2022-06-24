@@ -51,7 +51,7 @@ test("emits the expected events", () =>
 
     // Build the tasks
     const jobPromises: {
-      [id: string]: Deferred;
+      [id: string]: Deferred | undefined;
     } = {};
     const job1: Task = jest.fn(({ id }: { id: string }) => {
       const jobPromise = deferred();
@@ -112,7 +112,7 @@ test("emits the expected events", () =>
       expect(eventCount("job:start")).toEqual(i + 1);
       expect(eventCount("job:success")).toEqual(i);
       expect(eventCount("job:complete")).toEqual(i);
-      jobPromises[i].resolve();
+      jobPromises[i]!.resolve();
       await sleepUntil(() => eventCount("job:complete") === i + 1);
       expect(eventCount("job:success")).toEqual(i + 1);
     }

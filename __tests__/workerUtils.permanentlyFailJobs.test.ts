@@ -22,13 +22,8 @@ test("completes the jobs, leaves others unaffected", () =>
       connectionString: TEST_CONNECTION_STRING,
     });
 
-    const {
-      failedJob,
-      regularJob1,
-      lockedJob,
-      regularJob2,
-      untouchedJob,
-    } = await makeSelectionOfJobs(utils, pgClient);
+    const { failedJob, regularJob1, lockedJob, regularJob2, untouchedJob } =
+      await makeSelectionOfJobs(utils, pgClient);
 
     const jobs = [failedJob, regularJob1, lockedJob, regularJob2];
     const jobIds = jobs.map((j) => j.id).sort(numerically);
@@ -44,9 +39,7 @@ test("completes the jobs, leaves others unaffected", () =>
       expect(j.attempts).toBeGreaterThan(0);
     }
 
-    const {
-      rows: remaining,
-    } = await pgClient.query(
+    const { rows: remaining } = await pgClient.query(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs where not (id = any($1)) order by id asc`,
       [failedJobIds],
     );
