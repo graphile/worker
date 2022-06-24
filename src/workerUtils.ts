@@ -8,17 +8,12 @@ import { migrate } from "./migrate";
 export async function makeWorkerUtils(
   options: WorkerUtilsOptions,
 ): Promise<WorkerUtils> {
-  const {
-    logger,
-    escapedWorkerSchema,
-    release,
-    withPgClient,
-    addJob,
-  } = await getUtilsAndReleasersFromOptions(options, {
-    scope: {
-      label: "WorkerUtils",
-    },
-  });
+  const { logger, escapedWorkerSchema, release, withPgClient, addJob } =
+    await getUtilsAndReleasersFromOptions(options, {
+      scope: {
+        label: "WorkerUtils",
+      },
+    });
 
   return {
     withPgClient,

@@ -174,10 +174,8 @@ async function registerAndBackfillItems(
     `SELECT * FROM ${escapedWorkerSchema}.known_crontabs`,
   );
 
-  const {
-    backfillItemsAndDates,
-    unknownIdentifiers,
-  } = getBackfillAndUnknownItems(parsedCronItems, rows);
+  const { backfillItemsAndDates, unknownIdentifiers } =
+    getBackfillAndUnknownItems(parsedCronItems, rows);
 
   if (unknownIdentifiers.length) {
     // They're known now.
@@ -284,12 +282,8 @@ export const runCron = (
   requirements: CronRequirements,
 ): Cron => {
   const { pgPool } = requirements;
-  const {
-    logger,
-    escapedWorkerSchema,
-    events,
-    useNodeTime,
-  } = processSharedOptions(options);
+  const { logger, escapedWorkerSchema, events, useNodeTime } =
+    processSharedOptions(options);
 
   const promise = defer();
   let released = false;

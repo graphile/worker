@@ -188,31 +188,29 @@ export const getUtilsAndReleasersFromOptions = async (
 ): Promise<CompiledOptions> => {
   const shared = processSharedOptions(options, settings);
   const { concurrency = defaults.concurrentJobs } = options;
-  return withReleasers(
-    async (releasers, release): Promise<CompiledOptions> => {
-      const pgPool: Pool = await assertPool(options, releasers);
-      // @ts-ignore
-      const max = pgPool?.options?.max || 10;
-      if (max < concurrency) {
-        console.warn(
-          `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`,
-        );
-      }
+  return withReleasers(async (releasers, release): Promise<CompiledOptions> => {
+    const pgPool: Pool = await assertPool(options, releasers);
+    // @ts-ignore
+    const max = pgPool?.options?.max || 10;
+    if (max < concurrency) {
+      console.warn(
+        `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`,
+      );
+    }
 
-      const withPgClient = makeWithPgClientFromPool(pgPool);
+    const withPgClient = makeWithPgClientFromPool(pgPool);
 
-      // Migrate
-      await withPgClient((client) => migrate(options, client));
-      const addJob = makeAddJob(options, withPgClient);
+    // Migrate
+    await withPgClient((client) => migrate(options, client));
+    const addJob = makeAddJob(options, withPgClient);
 
-      return {
-        ...shared,
-        pgPool,
-        withPgClient,
-        addJob,
-        release,
-        releasers,
-      };
-    },
-  );
+    return {
+      ...shared,
+      pgPool,
+      withPgClient,
+      addJob,
+      release,
+      releasers,
+    };
+  });
 };
