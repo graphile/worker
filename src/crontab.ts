@@ -12,8 +12,13 @@ import {
   PERIOD_DURATIONS,
   TIMEPHRASE_PART,
 } from "./cronConstants";
-import { parseCronRangeString, parseCrontabRanges } from "./cronMatcher";
-import { CronItem, CronItemOptions, ParsedCronItem } from "./interfaces";
+import { createCronMatcher, createCronMatcherFromRanges } from "./cronMatcher";
+import {
+  $$isParsed,
+  CronItem,
+  CronItemOptions,
+  ParsedCronItem,
+} from "./interfaces";
 
 /**
  * Returns a period of time in milliseconds representing the time phrase given.
@@ -184,7 +189,7 @@ export const parseCrontabLine = (
       `Could not process line '${lineNumber}' of crontab: '${crontabLine}'`,
     );
   }
-  const { minutes, hours, dates, months, dows } = parseCrontabRanges(
+  const match = createCronMatcherFromRanges(
     matches,
     `line ${lineNumber} of crontab`,
   );
@@ -194,11 +199,8 @@ export const parseCrontabLine = (
   );
 
   return {
-    minutes,
-    hours,
-    dates,
-    months,
-    dows,
+    [$$isParsed]: true,
+    match,
     task,
     options,
     payload,
@@ -258,28 +260,30 @@ export const parseCronItems = (items: CronItem[]): ParsedCronItem[] => {
 export const parseCronItem = (
   cronItem: CronItem,
   source: string = "parseCronItem call",
-) => {
+): ParsedCronItem => {
   const {
-    pattern,
+    match: rawMatch,
     task,
     options = {} as CronItemOptions,
     payload = {},
     identifier = task,
   } = cronItem;
-  const { minutes, hours, dates, months, dows } = parseCronRangeString(
-    pattern,
-    source,
-  );
-  const item: ParsedCronItem = {
-    minutes,
-    hours,
-    dates,
-    months,
-    dows,
+  if (cronItem.pattern) {
+    throw new Error("Please rename the 'pattern' property to 'match'");
+  }
+  const match =
+    typeof rawMatch === "string"
+      ? createCronMatcher(rawMatch, source)
+      : rawMatch;
+  if (typeof match !== "function") {
+    throw new Error("Invalid 'match' configuration");
+  }
+  return {
+    [$$isParsed]: true,
+    match,
     task,
     options,
     payload,
     identifier,
   };
-  return item;
 };
