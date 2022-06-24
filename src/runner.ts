@@ -3,7 +3,11 @@ import * as assert from "assert";
 import { getParsedCronItemsFromOptions, runCron } from "./cron";
 import getTasks from "./getTasks";
 import { ParsedCronItem, Runner, RunnerOptions, TaskList } from "./interfaces";
-import { getUtilsAndReleasersFromOptions, Releasers } from "./lib";
+import {
+  CompiledOptions,
+  getUtilsAndReleasersFromOptions,
+  Releasers,
+} from "./lib";
 import { runTaskList, runTaskListOnce } from "./main";
 import { migrate } from "./migrate";
 
@@ -70,13 +74,8 @@ export const run = async (
   overrideTaskList?: TaskList,
   overrideParsedCronItems?: Array<ParsedCronItem>,
 ): Promise<Runner> => {
-  const {
-    pgPool,
-    release,
-    releasers,
-    addJob,
-    events,
-  } = await getUtilsAndReleasersFromOptions(options);
+  const compiledOptions = await getUtilsAndReleasersFromOptions(options);
+  const { release, releasers } = compiledOptions;
 
   try {
     const taskList =
@@ -86,29 +85,70 @@ export const run = async (
       overrideParsedCronItems ||
       (await getParsedCronItemsFromOptions(options, releasers));
 
-    const cron = runCron(options, parsedCronItems, { pgPool, events });
-    releasers.push(() => cron.release());
-
-    const workerPool = runTaskList(options, taskList, pgPool);
-    releasers.push(() => workerPool.release());
-
-    let running = true;
-    return {
-      async stop() {
-        if (running) {
-          running = false;
-          events.emit("stop", {});
-          await release();
-        } else {
-          throw new Error("Runner is already stopped");
-        }
-      },
-      addJob,
-      promise: workerPool.promise,
-      events,
-    };
+    // The result of 'buildRunner' must be returned immediately, so that the
+    // user can await its promise property immediately. If this is broken then
+    // unhandled promise rejections could occur in some circumstances, causing
+    // a process crash in Node v16+.
+    return buildRunner({
+      options,
+      compiledOptions,
+      taskList,
+      parsedCronItems,
+    });
   } catch (e) {
     await release();
     throw e;
   }
 };
+
+/**
+ * This _synchronous_ function exists to ensure that the promises are built and
+ * returned synchronously, such that an unhandled promise rejection error does
+ * not have time to occur.
+ *
+ * @internal
+ */
+function buildRunner(input: {
+  options: RunnerOptions;
+  compiledOptions: CompiledOptions;
+  taskList: TaskList;
+  parsedCronItems: ParsedCronItem[];
+}): Runner {
+  const { options, compiledOptions, taskList, parsedCronItems } = input;
+  const { events, pgPool, releasers, release, addJob } = compiledOptions;
+
+  const cron = runCron(options, parsedCronItems, { pgPool, events });
+  releasers.push(() => cron.release());
+
+  const workerPool = runTaskList(options, taskList, pgPool);
+  releasers.push(() => workerPool.release());
+
+  let running = true;
+  const stop = async () => {
+    if (running) {
+      running = false;
+      events.emit("stop", {});
+      await release();
+    } else {
+      throw new Error("Runner is already stopped");
+    }
+  };
+
+  const promise = Promise.all([cron.promise, workerPool.promise]).then(
+    () => {
+      /* void */
+    },
+    (e) => {
+      console.error(`Stopping worker due to an error: ${e}`);
+      stop();
+      return Promise.reject(e);
+    },
+  );
+
+  return {
+    stop,
+    addJob,
+    promise,
+    events,
+  };
+}

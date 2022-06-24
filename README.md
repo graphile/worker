@@ -100,7 +100,7 @@ Instead of running `graphile-worker` via the CLI, you may use it directly in
 your Node.js code. The following is equivalent to the CLI example above:
 
 ```js
-const { run, quickAddJob } = require("graphile-worker");
+const { run } = require("graphile-worker");
 
 async function main() {
   // Run a worker to execute jobs:
@@ -121,21 +121,13 @@ async function main() {
     //   taskDirectory: `${__dirname}/tasks`,
   });
 
-  // Or add a job to be executed:
-  await quickAddJob(
-    // makeWorkerUtils options
-    { connectionString: "postgres:///my_db" },
-
-    // Task identifier
-    "hello",
-
-    // Payload
-    { name: "Bobby Tables" },
-  );
-
-  // If the worker exits (whether through fatal error or otherwise), this
-  // promise will resolve/reject:
+  // Immediately await (or otherwise handled) the resulting promise, to avoid
+  // "unhandled rejection" errors causing a process crash in the event of
+  // something going wrong.
   await runner.promise;
+
+  // If the worker exits (whether through fatal error or otherwise), the above
+  // promise will resolve/reject.
 }
 
 main().catch((err) => {
@@ -144,7 +136,27 @@ main().catch((err) => {
 });
 ```
 
-Running this example should output something like:
+You can also use the library to quickly add a job:
+
+```js
+const { quickAddJob } = require("graphile-worker");
+
+quickAddJob(
+  // makeWorkerUtils options
+  { connectionString: "postgres:///my_db" },
+
+  // Task identifier
+  "hello",
+
+  // Payload
+  { name: "Bobby Tables" },
+).catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+```
+
+Running these two examples should output something like:
 
 ```
 [core] INFO: Worker connected and looking for jobs... (task names: 'hello')
