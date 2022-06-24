@@ -3,6 +3,8 @@
 ### Pending
 
 - Fix error handling of cron issues in 'run' method.
+- BREAKING: CronItem.pattern has been renamed to CronItem.match
+- CronItem.match can now accept either a pattern string or a matcher function
 
 ### v0.13.0
 

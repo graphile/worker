@@ -1,11 +1,11 @@
 import * as assert from "assert";
 import { Pool } from "pg";
 
-import { cronItemMatches } from "./cronMatcher";
 import { parseCrontab } from "./crontab";
 import defer from "./deferred";
 import getCronItems from "./getCronItems";
 import {
+  $$isParsed,
   Cron,
   CronJob,
   JobAndCronIdentifier,
@@ -229,7 +229,7 @@ async function registerAndBackfillItems(
         if (
           item.options.backfillPeriod >= timeAgo &&
           unsafeTs >= notBefore &&
-          cronItemMatches(item, digest)
+          item.match(digest)
         ) {
           itemsToBackfill.push({
             identifier: item.identifier,
@@ -420,7 +420,7 @@ export const runCron = (
 
         // Gather the relevant jobs
         for (const item of parsedCronItems) {
-          if (cronItemMatches(item, digest)) {
+          if (item.match(digest)) {
             jobsAndIdentifiers.push({
               identifier: item.identifier,
               job: makeJobForItem(item, ts),
@@ -530,13 +530,7 @@ export async function getParsedCronItemsFromOptions(
     );
     const firstItem = parsedCronItems[0];
     if (firstItem) {
-      if (
-        !Array.isArray(firstItem.minutes) ||
-        !Array.isArray(firstItem.hours) ||
-        !Array.isArray(firstItem.dates) ||
-        !Array.isArray(firstItem.months) ||
-        !Array.isArray(firstItem.dows)
-      ) {
+      if (!firstItem[$$isParsed]) {
         throw new Error(
           "Invalid `parsedCronItems`; you must use a helper e.g. `parseCrontab()` or `parseCronItems()` to produce this value.",
         );

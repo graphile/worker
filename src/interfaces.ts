@@ -187,6 +187,20 @@ export interface CronItemOptions {
 /**
  * Crontab ranges from the minute, hour, day of month, month and day of week
  * parts of the crontab line
+ *
+ * @internal
+ *
+ * You should use this as an opaque type; you should **not** read values from
+ * inside it, and you should not construct it manually. The definition of this
+ * type may change dramatically between minor releases of Graphile Worker,
+ * these changes are not seen as breaking changes.
+ *
+ * **WARNING**: it is assumed that values of this type adhere to the constraints in
+ * the comments below (many of these cannot be asserted by TypeScript). If you
+ * construct this type manually and do not adhere to these constraints then you
+ * may get unexpected behaviours. Graphile Worker enforces these rules when
+ * constructing `ParsedCronMatch`s internally, you should use the Graphile
+ * Worker helpers to construct this type.
  */
 export interface ParsedCronMatch {
   /** Minutes (0-59) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
@@ -202,6 +216,19 @@ export interface ParsedCronMatch {
 }
 
 /**
+ * A function which determines if a particular item should be executed for a
+ * given TimestampDigest.
+ */
+export type CronMatcher = (digest: TimestampDigest) => boolean;
+
+/**
+ * Symbol to determine that the item was indeed fed through a parser function.
+ *
+ * @internal
+ */
+export const $$isParsed = Symbol("isParsed");
+
+/**
  * A recurring task schedule; this may represent a line in the `crontab` file,
  * or may be the result of calling `parseCronItems` on a list of `CronItem`s
  * the user has specified.
@@ -211,17 +238,14 @@ export interface ParsedCronMatch {
  * `parseCronItems` instead. The definition of this type may change
  * dramatically between minor releases of Graphile Worker, these changes are
  * not seen as breaking changes.
- *
- * @internal
- *
- * **WARNING**: it is assumed that values of this type adhere to the constraints in
- * the comments below (many of these cannot be asserted by TypeScript). If you
- * construct this type manually and do not adhere to these constraints then you
- * may get unexpected behaviours. Graphile Worker enforces these rules when
- * constructing `ParsedCronItem`s internally, you should use the Graphile
- * Worker helpers to construct this type.
  */
-export interface ParsedCronItem extends ParsedCronMatch {
+export interface ParsedCronItem {
+  /** @internal Used to guarantee that the item was parsed correctly */
+  [$$isParsed]: true;
+
+  /** Optimised function to determine if this item matches the given TimestampDigest */
+  match: CronMatcher;
+
   /** The identifier of the task to execute */
   task: string;
 
@@ -246,8 +270,11 @@ export interface CronItem {
   /** The identifier of the task to execute */
   task: string;
 
-  /** Cron pattern (e.g. `* * * * *`) to detail when the task should be executed */
-  pattern: string;
+  /** @deprecated Please rename this property to 'match' */
+  pattern?: never;
+
+  /** Cron pattern (e.g. `* * * * *`) or a function to detail when the task should be executed */
+  match: string | CronMatcher;
 
   /** Options influencing backfilling and properties of the scheduled job */
   options?: CronItemOptions;
