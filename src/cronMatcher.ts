@@ -204,8 +204,12 @@ export const createCronMatcherFromRanges = (
   matches: string[],
   source: string,
 ): CronMatcher => {
-  const cronItem = parseCrontabRanges(matches, source);
-  return (digest: TimestampDigest) => cronItemMatches(cronItem, digest);
+  const parsedCronMatch = parseCrontabRanges(matches, source);
+  const matcher = (digest: TimestampDigest) =>
+    cronItemMatches(parsedCronMatch, digest);
+  Object.assign(matcher, { parsedCronMatch });
+
+  return matcher;
 };
 
 /**
