@@ -1,9 +1,9 @@
-import { cronItemMatches, parseCronString } from "../src/cronMatcher";
+import { cronItemMatches, parseCronRangeString } from "../src/cronMatcher";
 import { TimestampDigest } from "../src/interfaces";
 
 describe("matches datetime", () => {
   const makeMatcher = (pattern: string) => (digest: TimestampDigest) => {
-    return cronItemMatches(parseCronString(pattern, "test"), digest);
+    return cronItemMatches(parseCronRangeString(pattern, "test"), digest);
   };
 
   const _0_0_1_1_0 = { min: 0, hour: 0, date: 1, month: 1, dow: 0 };

@@ -12,7 +12,7 @@ import {
   PERIOD_DURATIONS,
   TIMEPHRASE_PART,
 } from "./cronConstants";
-import { parseCronString, parseCrontabRanges } from "./cronMatcher";
+import { parseCronRangeString, parseCrontabRanges } from "./cronMatcher";
 import { CronItem, CronItemOptions, ParsedCronItem } from "./interfaces";
 
 /**
@@ -266,7 +266,7 @@ export const parseCronItem = (
     payload = {},
     identifier = task,
   } = cronItem;
-  const { minutes, hours, dates, months, dows } = parseCronString(
+  const { minutes, hours, dates, months, dows } = parseCronRangeString(
     pattern,
     source,
   );
