@@ -54,7 +54,7 @@ jobs:
       - run: yarn lint
 
   altschema:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     env:
       GRAPHILE_WORKER_SCHEMA: custom_schema
 
@@ -77,13 +77,13 @@ jobs:
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
-          node-version: 12.x
+          node-version: 16.x
       - run: yarn --frozen-lockfile
       # - run: yarn lint # No need to lint altschema
       - run: yarn jest -i --ci
 
   database_updated:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
 
     services:
       postgres:
@@ -104,7 +104,7 @@ jobs:
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
-          node-version: 12.x
+          node-version: 16.x
       - run: yarn --frozen-lockfile
       - name: Install pg_dump
         run: |
