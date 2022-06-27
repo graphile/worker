@@ -82,7 +82,7 @@ q as (
       values: [
         workerId,
         supportedTaskNames,
-        ...(hasFlags ? flagsToSkip! : []),
+        ...(hasFlags ? [flagsToSkip!] : []),
         ...(useNodeTime ? [new Date().toISOString()] : []),
       ],
       name: noPreparedStatements
