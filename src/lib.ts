@@ -14,13 +14,14 @@ import {
 import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
 
-interface CompiledSharedOptions {
+export interface CompiledSharedOptions {
   events: WorkerEvents;
   logger: Logger;
   workerSchema: string;
   escapedWorkerSchema: string;
   maxContiguousErrors: number;
   useNodeTime: boolean;
+  options: SharedOptions;
 }
 
 interface ProcessSharedOptionsSettings {
@@ -48,6 +49,7 @@ export function processSharedOptions(
       escapedWorkerSchema,
       maxContiguousErrors: defaults.maxContiguousErrors,
       useNodeTime,
+      options,
     };
     _sharedOptionsCache.set(options, compiled);
   }

@@ -12,6 +12,9 @@ import {
   WorkerOptions,
 } from "./interfaces";
 import { processSharedOptions } from "./lib";
+import { completeJob } from "./sql/completeJob";
+import { failJob } from "./sql/failJob";
+import { getJob } from "./sql/getJob";
 
 export function makeNewWorker(
   options: WorkerOptions,
@@ -25,6 +28,12 @@ export function makeNewWorker(
     noPreparedStatements,
     forbiddenFlags,
   } = options;
+  const compiledSharedOptions = processSharedOptions(options, {
+    scope: {
+      label: "worker",
+      workerId,
+    },
+  });
   const {
     workerSchema,
     escapedWorkerSchema,
@@ -32,12 +41,7 @@ export function makeNewWorker(
     maxContiguousErrors,
     events,
     useNodeTime,
-  } = processSharedOptions(options, {
-    scope: {
-      label: "worker",
-      workerId,
-    },
-  });
+  } = compiledSharedOptions;
   const promise = deferred();
   promise.then(
     () => {
@@ -127,22 +131,13 @@ export function makeNewWorker(
       }
 
       events.emit("worker:getJob:start", { worker });
-      const {
-        rows: [jobRow],
-      } = await withPgClient((client) =>
-        client.query({
-          text:
-            // TODO: breaking change; change this to more optimal:
-            // `SELECT id, queue_name, task_identifier, payload FROM ...`,
-            `SELECT * FROM ${escapedWorkerSchema}.get_job($1, $2, forbidden_flags := $3::text[], now := coalesce($4::timestamptz, now())); `,
-          values: [
-            workerId,
-            supportedTaskNames,
-            flagsToSkip && flagsToSkip.length ? flagsToSkip : null,
-            useNodeTime ? new Date().toISOString() : null,
-          ],
-          name: noPreparedStatements ? undefined : `get_job/${workerSchema}`,
-        }),
+      const jobRow = await getJob(
+        compiledSharedOptions,
+        withPgClient,
+        workerId,
+        supportedTaskNames,
+        useNodeTime,
+        flagsToSkip,
       );
 
       // `doNext` cannot be executed concurrently, so we know this is safe.
@@ -267,13 +262,12 @@ export function makeNewWorker(
           }`,
           { failure: true, job, error: err, duration },
         );
-        // TODO: retry logic, in case of server connection interruption
-        await withPgClient((client) =>
-          client.query({
-            text: `SELECT FROM ${escapedWorkerSchema}.fail_job($1, $2, $3);`,
-            values: [workerId, job.id, message],
-            name: noPreparedStatements ? undefined : `fail_job/${workerSchema}`,
-          }),
+        await failJob(
+          compiledSharedOptions,
+          withPgClient,
+          workerId,
+          job.id,
+          message,
         );
       } else {
         try {
@@ -291,15 +285,12 @@ export function makeNewWorker(
             { job, duration, success: true },
           );
         }
-        // TODO: retry logic, in case of server connection interruption
-        await withPgClient((client) =>
-          client.query({
-            text: `SELECT FROM ${escapedWorkerSchema}.complete_job($1, $2);`,
-            values: [workerId, job.id],
-            name: noPreparedStatements
-              ? undefined
-              : `complete_job/${workerSchema}`,
-          }),
+
+        await completeJob(
+          compiledSharedOptions,
+          withPgClient,
+          workerId,
+          job.id,
         );
       }
       events.emit("job:complete", { worker, job, error: err });
