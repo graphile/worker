@@ -3,6 +3,7 @@ import { EventEmitter } from "events";
 import { Client, Pool, PoolClient } from "pg";
 
 import { defaults } from "./config";
+import { MINUTE } from "./cronConstants";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
 import {
   AddJobFunction,
@@ -21,6 +22,8 @@ export interface CompiledSharedOptions {
   escapedWorkerSchema: string;
   maxContiguousErrors: number;
   useNodeTime: boolean;
+  minResetLockedInterval: number;
+  maxResetLockedInterval: number;
   options: SharedOptions;
 }
 
@@ -49,6 +52,8 @@ export function processSharedOptions(
       escapedWorkerSchema,
       maxContiguousErrors: defaults.maxContiguousErrors,
       useNodeTime,
+      minResetLockedInterval: 8 * MINUTE,
+      maxResetLockedInterval: 10 * MINUTE,
       options,
     };
     _sharedOptionsCache.set(options, compiled);

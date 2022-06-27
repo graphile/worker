@@ -27,7 +27,7 @@ export async function getJob(
 with j as (
   select jobs.queue_name, jobs.id
     from ${escapedWorkerSchema}.jobs
-    where (jobs.locked_at is null or jobs.locked_at < (${now} - interval '4 hours'))
+    where jobs.locked_at is null
     and (
       jobs.queue_name is null
     or
@@ -35,7 +35,7 @@ with j as (
         select 1
         from ${escapedWorkerSchema}.job_queues
         where job_queues.queue_name = jobs.queue_name
-        and (job_queues.locked_at is null or job_queues.locked_at < (${now} - interval '4 hours'))
+        and job_queues.locked_at is null
         for update
         skip locked
       )

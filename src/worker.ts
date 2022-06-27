@@ -15,6 +15,7 @@ import { processSharedOptions } from "./lib";
 import { completeJob } from "./sql/completeJob";
 import { failJob } from "./sql/failJob";
 import { getJob } from "./sql/getJob";
+import { resetLockedAt } from "./sql/resetLocketAt";
 
 export function makeNewWorker(
   options: WorkerOptions,
@@ -33,8 +34,14 @@ export function makeNewWorker(
       workerId,
     },
   });
-  const { logger, maxContiguousErrors, events, useNodeTime } =
-    compiledSharedOptions;
+  const {
+    logger,
+    maxContiguousErrors,
+    events,
+    useNodeTime,
+    minResetLockedInterval,
+    maxResetLockedInterval,
+  } = compiledSharedOptions;
   const promise = deferred();
   promise.then(
     () => {
@@ -57,11 +64,43 @@ export function makeNewWorker(
   };
   let active = true;
 
+  const resetLockedDelay = () =>
+    Math.ceil(
+      minResetLockedInterval +
+        Math.random() * (maxResetLockedInterval - minResetLockedInterval),
+    );
+
+  const resetLocked = () => {
+    resetLockedAt(compiledSharedOptions, withPgClient).then(
+      () => {
+        const delay = resetLockedDelay();
+        resetLockedTimeout = setTimeout(resetLocked, delay);
+      },
+      (e) => {
+        // TODO: push this error out via an event.
+        const delay = resetLockedDelay();
+        resetLockedTimeout = setTimeout(resetLocked, delay);
+        logger.error(`Failed to reset locked; we'll try again in ${delay}ms`, {
+          error: e,
+        });
+      },
+    );
+  };
+
+  // Reset locked in the first 60 seconds, not immediately because we don't
+  // want to cause a thundering herd.
+  let resetLockedTimeout: NodeJS.Timeout | null = setTimeout(
+    resetLocked,
+    Math.random() * 60000,
+  );
+
   const release = () => {
     if (!active) {
       return;
     }
     active = false;
+    clearTimeout(resetLockedTimeout!);
+    resetLockedTimeout = null;
     events.emit("worker:release", { worker });
     if (cancelDoNext()) {
       // Nothing in progress; resolve the promise

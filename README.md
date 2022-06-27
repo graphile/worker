@@ -1581,9 +1581,13 @@ then exits. If you need to restart your worker, you should do so using this
 graceful process.
 
 If the worker completely dies unexpectedly (e.g. `process.exit()`, segfault,
-`SIGKILL`) then those jobs remain locked for 4 hours, after which point they're
-available to be processed again automatically. You can free them up earlier than
-this by clearing the `locked_at` and `locked_by` columns on the relevant tables.
+`SIGKILL`) then the jobs that that worker was executing remain locked for at
+least 4 hours. Every 8-10 minutes a worker will sweep for jobs that have been
+locked for more than 4 hours and will make them available to be processed again
+automatically. If you run many workers, each worker will do this, so it's likely
+that jobs will be released closer to the 4 hour mark. You can unlock jobs
+earlier than this by clearing the `locked_at` and `locked_by` columns on the
+relevant tables.
 
 If the worker schema has not yet been installed into your database, the
 following error may appear in your PostgreSQL server logs. This is completely
