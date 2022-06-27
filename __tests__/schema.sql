@@ -167,23 +167,6 @@ begin
   return v_job;
 end;
 $$;
-CREATE FUNCTION graphile_worker.complete_job(worker_id text, job_id bigint) RETURNS graphile_worker.jobs
-    LANGUAGE plpgsql
-    AS $$
-declare
-  v_row "graphile_worker".jobs;
-begin
-  delete from "graphile_worker".jobs
-    where id = job_id
-    returning * into v_row;
-  if v_row.queue_name is not null then
-    update "graphile_worker".job_queues
-      set locked_by = null, locked_at = null
-      where queue_name = v_row.queue_name and locked_by = worker_id;
-  end if;
-  return v_row;
-end;
-$$;
 CREATE FUNCTION graphile_worker.complete_jobs(job_ids bigint[]) RETURNS SETOF graphile_worker.jobs
     LANGUAGE sql
     AS $$

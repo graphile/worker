@@ -16,7 +16,16 @@ export async function completeJob(
   // TODO: retry logic, in case of server connection interruption
   await withPgClient((client) =>
     client.query({
-      text: `SELECT FROM ${escapedWorkerSchema}.complete_job($1, $2);`,
+      text: `\
+with j as (
+delete from ${escapedWorkerSchema}.jobs
+where id = $2
+returning *
+)
+update ${escapedWorkerSchema}.job_queues
+set locked_by = null, locked_at = null
+from j
+where job_queues.queue_name = j.queue_name and job_queues.locked_by = $1;`,
       values: [workerId, jobId],
       name: noPreparedStatements ? undefined : `complete_job/${workerSchema}`,
     }),

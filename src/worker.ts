@@ -25,7 +25,6 @@ export function makeNewWorker(
   const {
     workerId = `worker-${randomBytes(9).toString("hex")}`,
     pollInterval = defaults.pollInterval,
-    noPreparedStatements,
     forbiddenFlags,
   } = options;
   const compiledSharedOptions = processSharedOptions(options, {
@@ -34,14 +33,8 @@ export function makeNewWorker(
       workerId,
     },
   });
-  const {
-    workerSchema,
-    escapedWorkerSchema,
-    logger,
-    maxContiguousErrors,
-    events,
-    useNodeTime,
-  } = compiledSharedOptions;
+  const { logger, maxContiguousErrors, events, useNodeTime } =
+    compiledSharedOptions;
   const promise = deferred();
   promise.then(
     () => {
