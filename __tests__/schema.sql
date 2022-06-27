@@ -179,28 +179,6 @@ CREATE FUNCTION graphile_worker.complete_jobs(job_ids bigint[]) RETURNS SETOF gr
     )
     returning *;
 $$;
-CREATE FUNCTION graphile_worker.fail_job(worker_id text, job_id bigint, error_message text) RETURNS graphile_worker.jobs
-    LANGUAGE plpgsql STRICT
-    AS $$
-declare
-  v_row "graphile_worker".jobs;
-begin
-  update "graphile_worker".jobs
-    set
-      last_error = error_message,
-      run_at = greatest(now(), run_at) + (exp(least(attempts, 10))::text || ' seconds')::interval,
-      locked_by = null,
-      locked_at = null
-    where id = job_id and locked_by = worker_id
-    returning * into v_row;
-  if v_row.queue_name is not null then
-    update "graphile_worker".job_queues
-      set locked_by = null, locked_at = null
-      where queue_name = v_row.queue_name and locked_by = worker_id;
-  end if;
-  return v_row;
-end;
-$$;
 CREATE FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[] DEFAULT NULL::text[], job_expiry interval DEFAULT '04:00:00'::interval, forbidden_flags text[] DEFAULT NULL::text[], now timestamp with time zone DEFAULT now()) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
