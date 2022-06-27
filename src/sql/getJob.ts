@@ -42,7 +42,7 @@ with j as (
     )
     and run_at <= ${now}
     and attempts < max_attempts
-    and ($2::text[] is null or task_identifier = any($2::text[]))
+    and task_identifier = any($2::text[])
     and ($3::text[] is null or (flags ?| $3::text[]) is not true)
     order by priority asc, run_at asc, id asc
     limit 1
