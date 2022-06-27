@@ -15,7 +15,12 @@ export async function getJob(
     options: { noPreparedStatements },
   } = compiledSharedOptions;
 
-  const now = useNodeTime ? "$4::timestamptz" : "now()";
+  let i = 2;
+  const hasFlags = flagsToSkip && flagsToSkip.length > 0;
+  const flagsClause = hasFlags
+    ? `and ((flags ?| $${++i}::text[]) is not true)`
+    : "";
+  const now = useNodeTime ? `$${++i}::timestamptz` : "now()";
 
   const {
     rows: [jobRow],
@@ -43,7 +48,7 @@ with j as (
     and run_at <= ${now}
     and attempts < max_attempts
     and task_identifier = any($2::text[])
-    and ($3::text[] is null or (flags ?| $3::text[]) is not true)
+    ${flagsClause}
     order by priority asc, run_at asc, id asc
     limit 1
     for update
@@ -68,12 +73,14 @@ q as (
       values: [
         workerId,
         supportedTaskNames,
-        flagsToSkip && flagsToSkip.length ? flagsToSkip : null,
+        ...(hasFlags ? flagsToSkip! : []),
         ...(useNodeTime ? [new Date().toISOString()] : []),
       ],
       name: noPreparedStatements
         ? undefined
-        : `get_job${useNodeTime ? "N" : ""}/${workerSchema}`,
+        : `get_job${hasFlags ? "F" : ""}${
+            useNodeTime ? "N" : ""
+          }/${workerSchema}`,
     }),
   );
   return jobRow;
