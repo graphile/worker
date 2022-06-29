@@ -5,10 +5,10 @@ CREATE TABLE graphile_worker.jobs (
     queue_name text,
     task_identifier text NOT NULL,
     payload json DEFAULT '{}'::json NOT NULL,
-    priority integer DEFAULT 0 NOT NULL,
+    priority smallint DEFAULT 0 NOT NULL,
     run_at timestamp with time zone DEFAULT now() NOT NULL,
-    attempts integer DEFAULT 0 NOT NULL,
-    max_attempts integer DEFAULT 25 NOT NULL,
+    attempts smallint DEFAULT 0 NOT NULL,
+    max_attempts smallint DEFAULT 25 NOT NULL,
     last_error text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -17,6 +17,7 @@ CREATE TABLE graphile_worker.jobs (
     locked_by text,
     revision integer DEFAULT 0 NOT NULL,
     flags jsonb,
+    is_available boolean GENERATED ALWAYS AS (((locked_at IS NULL) AND (attempts < max_attempts))) STORED NOT NULL,
     CONSTRAINT jobs_key_check CHECK ((length(key) > 0))
 );
 CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text) RETURNS graphile_worker.jobs
@@ -281,7 +282,8 @@ CREATE TABLE graphile_worker.job_queues (
     queue_name text NOT NULL,
     job_count integer NOT NULL,
     locked_at timestamp with time zone,
-    locked_by text
+    locked_by text,
+    is_available boolean GENERATED ALWAYS AS ((locked_at IS NULL)) STORED NOT NULL
 );
 CREATE SEQUENCE graphile_worker.jobs_id_seq
     START WITH 1
@@ -310,7 +312,8 @@ ALTER TABLE ONLY graphile_worker.known_crontabs
     ADD CONSTRAINT known_crontabs_pkey PRIMARY KEY (identifier);
 ALTER TABLE ONLY graphile_worker.migrations
     ADD CONSTRAINT migrations_pkey PRIMARY KEY (id);
-CREATE INDEX jobs_priority_run_at_id_locked_at_without_failures_idx ON graphile_worker.jobs USING btree (priority, run_at, id, locked_at) WHERE (attempts < max_attempts);
+CREATE INDEX job_queues_queue_name ON graphile_worker.job_queues USING btree (queue_name) WHERE (is_available = true);
+CREATE INDEX jobs_priority_run_at_id_locked_at_without_failures_idx ON graphile_worker.jobs USING btree (priority, run_at) INCLUDE (id, task_identifier) WHERE (is_available = true);
 CREATE TRIGGER _100_timestamps BEFORE UPDATE ON graphile_worker.jobs FOR EACH ROW EXECUTE PROCEDURE graphile_worker.tg__update_timestamp();
 CREATE TRIGGER _500_decrease_job_queue_count AFTER DELETE ON graphile_worker.jobs FOR EACH ROW WHEN ((old.queue_name IS NOT NULL)) EXECUTE PROCEDURE graphile_worker.jobs__decrease_job_queue_count();
 CREATE TRIGGER _500_decrease_job_queue_count_update AFTER UPDATE OF queue_name ON graphile_worker.jobs FOR EACH ROW WHEN (((new.queue_name IS DISTINCT FROM old.queue_name) AND (old.queue_name IS NOT NULL))) EXECUTE PROCEDURE graphile_worker.jobs__decrease_job_queue_count();
