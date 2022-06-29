@@ -28,7 +28,7 @@ export async function getJob(
         select 1
         from ${escapedWorkerSchema}.job_queues
         where job_queues.queue_name = jobs.queue_name
-        and job_queues.locked_at is null
+        and job_queues.is_available = true
         for update
         skip locked
       )
@@ -37,9 +37,8 @@ export async function getJob(
 with j as (
   select jobs.queue_name, jobs.priority, jobs.run_at, jobs.id
     from ${escapedWorkerSchema}.jobs
-    where jobs.locked_at is null
+    where jobs.is_available = true
     and run_at <= ${now}
-    and attempts < max_attempts
     and task_identifier = any($2::text[])
     ${queueClause}
     ${flagsClause}
