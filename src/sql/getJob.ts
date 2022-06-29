@@ -22,7 +22,48 @@ export async function getJob(
     : "";
   const now = useNodeTime ? `$${++i}::timestamptz` : "now()";
 
-  const queueClause = `and (
+  /**
+   * The 'named queue' strategy to use.
+   *
+   * 0 - we're not using named queues; skip them!
+   * 1 - for each matched job, go lock its job queue if you can
+   * 2 - lock the job queues up front, then find a job to do
+   * 3 - explicitly avoid locked job queues, but risk multiple jobs in same queue running at same time
+   *
+   * Strategy 0 is what you should use if you never use named queues; it's the
+   * absolute fastest strategy. But if you use named queues, you must have at
+   * least one worker using a non-zero strategy.
+   *
+   * Strategy 1 is what Worker traditionally used; it's the best strategy if
+   * you have a different queue name for every job (as worker did before we
+   * made queue_name nullable), but these days its a terrible strategy unless
+   * you're still randomly generating queue names (don't do that!). Performance
+   * is abysmal if you have a large jobs table with many higher priority but stuck
+   * jobs.
+   *
+   * Strategy 2 seems to be the fastest strategy for jobs that aren't in a
+   * queue when you have a small number of named queues that can be locked from
+   * time to time.
+   *
+   * Strategy 3 is probably unsafe. Don't use it.
+   *
+   * With 100,000 stuck jobs across two named queues and 50,000 lower
+   * precedence jobs that are not in named queues and are ready to go, I got
+   * the following results from the benchmark:
+   *
+   * Strat 0 (cheating) - 11.8kjps - actually better than the perf if there were no stuck jobs
+   * Strat 1 - roughly 40jps (I got bored waiting for the test to finish)
+   * Strat 2 - 843jps
+   * Strat 3 (unsafe) - 600jps
+   *
+   * I recommend you either use strat 0 if you can, or strat 2 otherwise.
+   */
+  const strategy: number = 2;
+  const queueClause =
+    strategy === 0
+      ? `and jobs.job_queue_id is null`
+      : strategy === 1
+      ? `and (
       jobs.job_queue_id is null
       or exists (
         select 1
@@ -32,9 +73,54 @@ export async function getJob(
         for update
         skip locked
       )
+    )`
+      : strategy === 2
+      ? `and (
+      jobs.job_queue_id is null
+      or
+      jobs.job_queue_id in (
+        select id
+        from ${escapedWorkerSchema}.job_queues
+        where job_queues.is_available = true
+        for update
+        skip locked
+      )
+    )`
+      : `and (
+      jobs.job_queue_id is null
+      or
+      jobs.job_queue_id not in (
+        select id
+        from ${escapedWorkerSchema}.job_queues
+        where job_queues.is_available = false
+      )
     )`;
+  /* This strategy causes incredibly bad performance, presumably due to the
+   * lack of lock/skip locked:
+      `and (
+      jobs.job_queue_id is null
+      or
+      jobs.job_queue_id in (
+        select id
+        from ${escapedWorkerSchema}.job_queues
+        where job_queues.is_available = true
+      )
+    )`
+    */
 
-  // TODO: rewrite the task_id check
+  const updateQueue =
+    strategy === 0
+      ? ""
+      : `,
+q as (
+  update ${escapedWorkerSchema}.job_queues
+    set
+      locked_by = $1::text,
+      locked_at = ${now}
+    from j
+    where job_queues.id = j.job_queue_id
+)`;
+
   const text = `\
 with j as (
   select jobs.job_queue_id, jobs.priority, jobs.run_at, jobs.id
@@ -48,15 +134,7 @@ with j as (
     limit 1
     for update
     skip locked
-),
-q as (
-  update ${escapedWorkerSchema}.job_queues
-    set
-      locked_by = $1::text,
-      locked_at = ${now}
-    from j
-    where job_queues.id = j.job_queue_id
-)
+)${updateQueue}
   update ${escapedWorkerSchema}.jobs
     set
       attempts = jobs.attempts + 1,

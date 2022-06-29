@@ -50,6 +50,12 @@ create index jobs_main_index
   include (id, task_id, job_queue_id)
   where (is_available = true);
 
+create index jobs_no_queue_index
+  on :GRAPHILE_WORKER_SCHEMA.jobs
+  using btree (priority, run_at)
+  include (id, task_id)
+  where (is_available = true and job_queue_id is null);
+
 create type :GRAPHILE_WORKER_SCHEMA.job_spec as (
   identifier text,
   payload json,
