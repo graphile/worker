@@ -50,7 +50,7 @@ with j as (
     and task_identifier = any($2::text[])
     ${queueClause}
     ${flagsClause}
-    order by priority asc, run_at asc, id asc
+    order by priority asc, run_at asc
     limit 1
     for update
     skip locked
