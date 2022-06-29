@@ -33,14 +33,7 @@ export async function getJob(
         skip locked
       )
     )`;
-
-  const {
-    rows: [jobRow],
-  } = await withPgClient((client) =>
-    // TODO: breaking change; change this to more optimal:
-    // `SELECT id, queue_name, task_identifier, payload FROM ...`,
-    client.query<Job>({
-      text: `\
+  const text = `\
 with j as (
   select jobs.queue_name, jobs.priority, jobs.run_at, jobs.id
     from ${escapedWorkerSchema}.jobs
@@ -70,18 +63,26 @@ q as (
       locked_at = ${now}
     from j
     where jobs.id = j.id
-    returning *`,
-      values: [
-        workerId,
-        supportedTaskNames,
-        ...(hasFlags ? [flagsToSkip!] : []),
-        ...(useNodeTime ? [new Date().toISOString()] : []),
-      ],
-      name: noPreparedStatements
-        ? undefined
-        : `get_job${hasFlags ? "F" : ""}${
-            useNodeTime ? "N" : ""
-          }/${workerSchema}`,
+    returning *`;
+  const values = [
+    workerId,
+    supportedTaskNames,
+    ...(hasFlags ? [flagsToSkip!] : []),
+    ...(useNodeTime ? [new Date().toISOString()] : []),
+  ];
+  const name = noPreparedStatements
+    ? undefined
+    : `get_job${hasFlags ? "F" : ""}${useNodeTime ? "N" : ""}/${workerSchema}`;
+
+  const {
+    rows: [jobRow],
+  } = await withPgClient((client) =>
+    // TODO: breaking change; change this to more optimal:
+    // `SELECT id, queue_name, task_identifier, payload FROM ...`,
+    client.query<Job>({
+      text,
+      values,
+      name,
     }),
   );
   return jobRow;
