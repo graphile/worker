@@ -23,23 +23,29 @@ export async function getJob(
   const now = useNodeTime ? `$${++i}::timestamptz` : "now()";
 
   const queueClause = `and (
-      jobs.queue_name is null
+      jobs.job_queue_id is null
       or exists (
         select 1
         from ${escapedWorkerSchema}.job_queues
-        where job_queues.queue_name = jobs.queue_name
+        where job_queues.id = jobs.job_queue_id
         and job_queues.is_available = true
         for update
         skip locked
       )
     )`;
+
+  // TODO: rewrite the task_id check
   const text = `\
 with j as (
-  select jobs.queue_name, jobs.priority, jobs.run_at, jobs.id
+  select jobs.job_queue_id, jobs.priority, jobs.run_at, jobs.id
     from ${escapedWorkerSchema}.jobs
     where jobs.is_available = true
     and run_at <= ${now}
-    and task_identifier = any($2::text[])
+    and task_id in (
+      select id
+      from ${escapedWorkerSchema}.tasks
+      where identifier = any($2::text[])
+    )
     ${queueClause}
     ${flagsClause}
     order by priority asc, run_at asc
@@ -53,7 +59,7 @@ q as (
       locked_by = $1::text,
       locked_at = ${now}
     from j
-    where job_queues.queue_name = j.queue_name
+    where job_queues.id = j.job_queue_id
 )
   update ${escapedWorkerSchema}.jobs
     set
@@ -62,7 +68,9 @@ q as (
       locked_at = ${now}
     from j
     where jobs.id = j.id
-    returning *`;
+    returning *, (select identifier from ${escapedWorkerSchema}.tasks where tasks.id = jobs.task_id) as task_identifier`;
+  // TODO: breaking change; change this to more optimal:
+  // `RETURNING id, job_queue_id, task_id, payload`,
   const values = [
     workerId,
     supportedTaskNames,
@@ -76,8 +84,6 @@ q as (
   const {
     rows: [jobRow],
   } = await withPgClient((client) =>
-    // TODO: breaking change; change this to more optimal:
-    // `SELECT id, queue_name, task_identifier, payload FROM ...`,
     client.query<Job>({
       text,
       values,

@@ -16,11 +16,15 @@ async function main() {
       `
         do $$
         begin
-          perform graphile_worker.add_job(
-            '${taskIdentifier}'
-            ,json_build_object('id', i)
-            --,queue_name := '${taskIdentifier}'
-          ) from generate_series(1, ${jobCount}) i;
+          perform graphile_worker.add_jobs(
+            (
+              select array_agg(json_populate_record(null::graphile_worker.job_spec, json_build_object(
+                'identifier', '${taskIdentifier}',
+                'payload', json_build_object('id', i)
+              )))
+              from generate_series(1, ${jobCount}) i
+            )
+          );
 
           -- update graphile_worker.job_queues
           -- set locked_at = now(), locked_by = 'fakelock'
@@ -34,10 +38,15 @@ async function main() {
       `
         do $$
         begin
-          perform graphile_worker.add_job(
-            '${taskIdentifier}',
-            json_build_object('id', i)
-          ) from generate_series(1, ${jobCount}) i;
+          perform graphile_worker.add_jobs(
+            (
+              select array_agg(json_populate_record(null::graphile_worker.job_spec, json_build_object(
+                'identifier', '${taskIdentifier}',
+                'payload', json_build_object('id', i)
+              )))
+              from generate_series(1, ${jobCount}) i
+            )
+          );
         end;
         $$ language plpgsql;
       `,

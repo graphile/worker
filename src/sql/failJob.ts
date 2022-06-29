@@ -31,7 +31,7 @@ returning *
 update ${escapedWorkerSchema}.job_queues
 set locked_by = null, locked_at = null
 from j
-where job_queues.queue_name = j.queue_name and job_queues.locked_by = $1;`,
+where job_queues.id = j.job_queue_id and job_queues.locked_by = $1;`,
       values: [workerId, jobId, message],
       name: noPreparedStatements ? undefined : `fail_job/${workerSchema}`,
     }),
