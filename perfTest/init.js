@@ -19,12 +19,12 @@ async function main() {
           perform graphile_worker.add_job(
             '${taskIdentifier}'
             ,json_build_object('id', i)
-            --,queue_name := '${taskIdentifier}'
+            ,'queue_name', '${taskIdentifier}' || ((i % 2)::text)
           ) from generate_series(1, ${jobCount}) i;
 
-          -- update graphile_worker.job_queues
-          -- set locked_at = now(), locked_by = 'fakelock'
-          -- where queue_name = '${taskIdentifier}';
+          update graphile_worker.job_queues
+          set locked_at = now(), locked_by = 'fakelock'
+          where queue_name like '${taskIdentifier}%';
         end;
         $$ language plpgsql;
       `,
