@@ -41,6 +41,7 @@ export function makeNewWorker(
     useNodeTime,
     minResetLockedInterval,
     maxResetLockedInterval,
+    escapedWorkerSchema,
   } = compiledSharedOptions;
   const promise = deferred();
   promise.then(
@@ -137,6 +138,34 @@ export function makeNewWorker(
   let contiguousErrors = 0;
   let again = false;
 
+  let lastStr: string | null = null;
+  let lastSTIBTI: { [id: number]: string } | null = null;
+  const makeSupportedTaskIdentifierByTaskId = async (
+    tasks: TaskList,
+  ): Promise<{ [id: number]: string }> => {
+    const supportedTaskNames = Object.keys(tasks);
+    assert(supportedTaskNames.length, "No runnable tasks!");
+    const str = JSON.stringify(supportedTaskNames);
+    if (str !== lastStr) {
+      const { rows } = await withPgClient(async (client) => {
+        await client.query({
+          text: `insert into ${escapedWorkerSchema}.tasks (identifier) select unnest($1::text[]) on conflict do nothing`,
+          values: [supportedTaskNames],
+        });
+        return client.query<{ id: number; identifier: string }>({
+          text: `select id, identifier from ${escapedWorkerSchema}.tasks where identifier = any($1::text[])`,
+          values: [supportedTaskNames],
+        });
+      });
+      lastSTIBTI = {};
+      for (const row of rows) {
+        lastSTIBTI[row.id] = row.identifier;
+      }
+      lastStr = str;
+    }
+    return lastSTIBTI!;
+  };
+
   const doNext = async (): Promise<void> => {
     again = false;
     cancelDoNext();
@@ -145,8 +174,8 @@ export function makeNewWorker(
 
     // Find us a job
     try {
-      const supportedTaskNames = Object.keys(tasks);
-      assert(supportedTaskNames.length, "No runnable tasks!");
+      const supportedTaskIdentifierByTaskId =
+        await makeSupportedTaskIdentifierByTaskId(tasks);
 
       let flagsToSkip: null | string[] = null;
 
@@ -167,7 +196,7 @@ export function makeNewWorker(
         compiledSharedOptions,
         withPgClient,
         workerId,
-        supportedTaskNames,
+        supportedTaskIdentifierByTaskId,
         useNodeTime,
         flagsToSkip,
       );

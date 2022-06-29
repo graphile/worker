@@ -5,7 +5,7 @@ export async function getJob(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: WithPgClient,
   workerId: string,
-  supportedTaskNames: string[],
+  supportedTaskIdentifierByTaskId: { [taskID: number]: string },
   useNodeTime: boolean,
   flagsToSkip: string[] | null,
 ): Promise<Job | undefined> {
@@ -41,11 +41,7 @@ with j as (
     from ${escapedWorkerSchema}.jobs
     where jobs.is_available = true
     and run_at <= ${now}
-    and task_id in (
-      select id
-      from ${escapedWorkerSchema}.tasks
-      where identifier = any($2::text[])
-    )
+    and task_id = any($2::int[])
     ${queueClause}
     ${flagsClause}
     order by priority asc, run_at asc
@@ -68,12 +64,12 @@ q as (
       locked_at = ${now}
     from j
     where jobs.id = j.id
-    returning *, (select identifier from ${escapedWorkerSchema}.tasks where tasks.id = jobs.task_id) as task_identifier`;
+    returning *`;
   // TODO: breaking change; change this to more optimal:
   // `RETURNING id, job_queue_id, task_id, payload`,
   const values = [
     workerId,
-    supportedTaskNames,
+    Object.keys(supportedTaskIdentifierByTaskId),
     ...(hasFlags ? [flagsToSkip!] : []),
     ...(useNodeTime ? [new Date().toISOString()] : []),
   ];
@@ -90,5 +86,9 @@ q as (
       name,
     }),
   );
+  if (jobRow) {
+    jobRow.task_identifier =
+      supportedTaskIdentifierByTaskId[(jobRow as any).task_id];
+  }
   return jobRow;
 }
