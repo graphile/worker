@@ -53,7 +53,7 @@ async function main() {
   console.log();
 
   if (STUCK_JOB_COUNT > 0) {
-    console.log(`Scheduling ${STUCK_JOB_COUNT} jobs`);
+    console.log(`Scheduling ${STUCK_JOB_COUNT} stuck jobs`);
     await time(() => {
       execSync(`node ./init.js ${STUCK_JOB_COUNT} stuck`, execOptions);
     });
