@@ -17,11 +17,6 @@ create table :GRAPHILE_WORKER_SCHEMA.job_queues (
 );
 alter table :GRAPHILE_WORKER_SCHEMA.job_queues enable row level security;
 
-create unique index job_queues_queue_name_uniq
-  on :GRAPHILE_WORKER_SCHEMA.job_queues
-  using btree (name)
-  where (is_available = true);
-
 create table :GRAPHILE_WORKER_SCHEMA.tasks (
   id int primary key generated always as identity,
   identifier text not null unique check (length(identifier) <= 128)
@@ -308,52 +303,6 @@ create trigger _900_after_insert
 after insert on :GRAPHILE_WORKER_SCHEMA.jobs
 for each statement
 execute procedure :GRAPHILE_WORKER_SCHEMA.tg_jobs__after_insert();
-
-create function :GRAPHILE_WORKER_SCHEMA.tg_jobs__after_update() returns trigger
-as $$
-begin
-  with empty_queues as (
-    select distinct job_queue_id
-    from old_table
-    where not exists (
-      select 1
-      from :GRAPHILE_WORKER_SCHEMA.jobs
-      where jobs.job_queue_id = old_table.job_queue_id
-    )
-  )
-  delete from :GRAPHILE_WORKER_SCHEMA.job_queues
-  where id in (select job_queue_id from empty_queues);
-  return null;
-end;
-$$ language plpgsql;
-create trigger _900_after_update
-after update on :GRAPHILE_WORKER_SCHEMA.jobs
-referencing old table as old_table
-for each statement
-execute procedure :GRAPHILE_WORKER_SCHEMA.tg_jobs__after_update();
-
-create function :GRAPHILE_WORKER_SCHEMA.tg_jobs__after_delete() returns trigger
-as $$
-begin
-  with empty_queues as (
-    select distinct job_queue_id
-    from old_table
-    where not exists (
-      select 1
-      from :GRAPHILE_WORKER_SCHEMA.jobs
-      where jobs.job_queue_id = old_table.job_queue_id
-    )
-  )
-  delete from :GRAPHILE_WORKER_SCHEMA.job_queues
-  where id in (select job_queue_id from empty_queues);
-  return null;
-end;
-$$ language plpgsql;
-create trigger _900_after_delete
-after delete on :GRAPHILE_WORKER_SCHEMA.jobs
-referencing old table as old_table
-for each statement
-execute procedure :GRAPHILE_WORKER_SCHEMA.tg_jobs__after_delete();
 
 create function :GRAPHILE_WORKER_SCHEMA.add_job(
   identifier text,
