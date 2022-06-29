@@ -1,3 +1,14 @@
+lock table :GRAPHILE_WORKER_SCHEMA.jobs;
+lock table :GRAPHILE_WORKER_SCHEMA.job_queues;
+
+-- If there's any locked jobs, abort via division by zero
+select 1/(case when exists (
+  select 1
+  from :GRAPHILE_WORKER_SCHEMA.jobs
+  where locked_at is not null
+  and locked_at > NOW() - interval '4 hours'
+) then 0 else 1 end);
+
 drop trigger _900_notify_worker on :GRAPHILE_WORKER_SCHEMA.jobs;
 drop function :GRAPHILE_WORKER_SCHEMA.add_job;
 drop function :GRAPHILE_WORKER_SCHEMA.complete_jobs;
@@ -95,7 +106,8 @@ begin
   update :GRAPHILE_WORKER_SCHEMA.jobs
   set
     key = null,
-    attempts = jobs.max_attempts
+    attempts = jobs.max_attempts,
+    updated_at = now()
   from unnest(specs) spec
   where spec.job_key is not null
   and jobs.key = spec.job_key;
@@ -104,8 +116,8 @@ begin
   -- isolation level?
 
   return query insert into :GRAPHILE_WORKER_SCHEMA.jobs (
-    task_id,
     job_queue_id,
+    task_id,
     payload,
     run_at,
     max_attempts,
@@ -114,8 +126,8 @@ begin
     flags
   )
     select
-      tasks.id,
       job_queues.id,
+      tasks.id,
       coalesce(spec.payload, '{}'::json),
       coalesce(spec.run_at, now()),
       coalesce(spec.max_attempts, 25),
@@ -131,8 +143,8 @@ begin
     left join :GRAPHILE_WORKER_SCHEMA.job_queues
     on job_queues.queue_name = spec.queue_name
   on conflict (key) do update set
-    task_id = excluded.task_id,
     job_queue_id = excluded.job_queue_id,
+    task_id = excluded.task_id,
     payload = excluded.payload,
     max_attempts = excluded.max_attempts,
     run_at = (case
@@ -144,7 +156,8 @@ begin
     flags = excluded.flags,
     -- always reset error/retry state
     attempts = 0,
-    last_error = null
+    last_error = null,
+    updated_at = now()
   where jobs.locked_at is null
   returning *;
 end;
@@ -178,8 +191,8 @@ begin
   -- scheduled), but it is useful in very rare circumstances for
   -- de-duplication. If in doubt, DO NOT USE THIS.
   insert into :GRAPHILE_WORKER_SCHEMA.jobs (
-    task_id,
     job_queue_id,
+    task_id,
     payload,
     run_at,
     max_attempts,
@@ -188,8 +201,8 @@ begin
     flags
   )
     select
-      tasks.id,
       job_queues.id,
+      tasks.id,
       coalesce(spec.payload, '{}'::json),
       coalesce(spec.run_at, now()),
       coalesce(spec.max_attempts, 25),
@@ -205,8 +218,8 @@ begin
     left join :GRAPHILE_WORKER_SCHEMA.job_queues
     on job_queues.queue_name = spec.queue_name
   on conflict (key)
-    -- Bump the revision so that there's something to return
-    do update set revision = jobs.revision + 1
+    -- Bump the updated_at so that there's something to return
+    do update set updated_at = now()
     returning *
     into v_job;
   return v_job;
@@ -236,7 +249,8 @@ as $$
   update :GRAPHILE_WORKER_SCHEMA.jobs
     set
       last_error = coalesce(error_message, 'Manually marked as failed'),
-      attempts = max_attempts
+      attempts = max_attempts,
+      updated_at = now()
     where id = any(job_ids)
     and (
       locked_at is null
@@ -268,7 +282,8 @@ begin
   update :GRAPHILE_WORKER_SCHEMA.jobs
   set
     key = null,
-    attempts = jobs.max_attempts
+    attempts = jobs.max_attempts,
+    updated_at = now()
   where key = job_key
   returning * into v_job;
   return v_job;
@@ -288,7 +303,8 @@ as $$
       run_at = coalesce(reschedule_jobs.run_at, jobs.run_at),
       priority = coalesce(reschedule_jobs.priority, jobs.priority),
       attempts = coalesce(reschedule_jobs.attempts, jobs.attempts),
-      max_attempts = coalesce(reschedule_jobs.max_attempts, jobs.max_attempts)
+      max_attempts = coalesce(reschedule_jobs.max_attempts, jobs.max_attempts),
+      updated_at = now()
     where id = any(job_ids)
     and (
       locked_at is null
@@ -359,3 +375,52 @@ begin
   end if;
 end;
 $$ language plpgsql;
+
+-- Migrate over the old tables
+insert into :GRAPHILE_WORKER_SCHEMA.job_queues (queue_name)
+select distinct queue_name
+from :GRAPHILE_WORKER_SCHEMA.jobs_legacy
+on conflict do nothing;
+
+insert into :GRAPHILE_WORKER_SCHEMA.tasks (identifier)
+select distinct task_identifier
+from :GRAPHILE_WORKER_SCHEMA.jobs_legacy
+on conflict do nothing;
+
+insert into :GRAPHILE_WORKER_SCHEMA.jobs (
+  job_queue_id,
+  task_id,
+  payload,
+  priority,
+  run_at,
+  attempts,
+  max_attempts,
+  last_error,
+  created_at,
+  updated_at,
+  key,
+  revision,
+  flags
+)
+  select
+    job_queues.id,
+    tasks.id,
+    legacy.payload,
+    legacy.priority,
+    legacy.run_at,
+    legacy.attempts,
+    legacy.max_attempts,
+    legacy.last_error,
+    legacy.created_at,
+    legacy.updated_at,
+    legacy.key,
+    legacy.revision,
+    legacy.flags
+  from :GRAPHILE_WORKER_SCHEMA.jobs_legacy legacy
+  inner join :GRAPHILE_WORKER_SCHEMA.tasks
+  on tasks.identifier = legacy.task_identifier
+  left join :GRAPHILE_WORKER_SCHEMA.job_queues
+  on job_queues.queue_name = legacy.queue_name;
+
+drop table :GRAPHILE_WORKER_SCHEMA.jobs_legacy;
+drop table :GRAPHILE_WORKER_SCHEMA.job_queues_legacy;
