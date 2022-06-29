@@ -10,7 +10,7 @@ alter table :GRAPHILE_WORKER_SCHEMA.job_queues rename to job_queues_legacy;
 
 create table :GRAPHILE_WORKER_SCHEMA.job_queues (
   id int primary key generated always as identity,
-  name text not null unique check (length(name) <= 128),
+  queue_name text not null unique check (length(queue_name) <= 128),
   locked_at timestamptz,
   locked_by text,
   is_available boolean generated always as ((locked_at is null)) stored not null
@@ -75,7 +75,7 @@ begin
   on conflict do nothing;
 
   -- Ensure all the queues exist
-  insert into :GRAPHILE_WORKER_SCHEMA.job_queues (name)
+  insert into :GRAPHILE_WORKER_SCHEMA.job_queues (queue_name)
   select distinct spec.queue_name
   from unnest(specs) spec
   where spec.queue_name is not null
@@ -123,7 +123,7 @@ begin
     inner join :GRAPHILE_WORKER_SCHEMA.tasks
     on tasks.identifier = spec.identifier
     left join :GRAPHILE_WORKER_SCHEMA.job_queues
-    on job_queues.name = spec.queue_name
+    on job_queues.queue_name = spec.queue_name
   on conflict (key) do update set
     task_id = excluded.task_id,
     job_queue_id = excluded.job_queue_id,
@@ -159,7 +159,7 @@ begin
 
   -- Ensure all the queues exist
   if spec.queue_name is not null then
-    insert into :GRAPHILE_WORKER_SCHEMA.job_queues (name)
+    insert into :GRAPHILE_WORKER_SCHEMA.job_queues (queue_name)
     select distinct spec.queue_name
     on conflict do nothing;
   end if;
@@ -197,7 +197,7 @@ begin
     inner join :GRAPHILE_WORKER_SCHEMA.tasks
     on tasks.identifier = spec.identifier
     left join :GRAPHILE_WORKER_SCHEMA.job_queues
-    on job_queues.name = spec.queue_name
+    on job_queues.queue_name = spec.queue_name
   on conflict (key)
     -- Bump the revision so that there's something to return
     do update set revision = jobs.revision + 1
