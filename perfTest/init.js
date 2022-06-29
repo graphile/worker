@@ -19,16 +19,17 @@ async function main() {
           perform graphile_worker.add_jobs(
             (
               select array_agg(json_populate_record(null::graphile_worker.job_spec, json_build_object(
-                'identifier', '${taskIdentifier}',
-                'payload', json_build_object('id', i)
+                'identifier', '${taskIdentifier}'
+                ,'payload', json_build_object('id', i)
+                ,'queue_name', '${taskIdentifier}' || ((i % 2)::text)
               )))
               from generate_series(1, ${jobCount}) i
             )
           );
 
-          -- update graphile_worker.job_queues
-          -- set locked_at = now(), locked_by = 'fakelock'
-          -- where queue_name = '${taskIdentifier}';
+          update graphile_worker.job_queues
+          set locked_at = now(), locked_by = 'fakelock'
+          where queue_name like '${taskIdentifier}%';
         end;
         $$ language plpgsql;
       `,
@@ -41,8 +42,9 @@ async function main() {
           perform graphile_worker.add_jobs(
             (
               select array_agg(json_populate_record(null::graphile_worker.job_spec, json_build_object(
-                'identifier', '${taskIdentifier}',
-                'payload', json_build_object('id', i)
+                'identifier', '${taskIdentifier}'
+                ,'payload', json_build_object('id', i)
+                -- , 'queue_name', '${taskIdentifier}' || ((i % 5)::text)
               )))
               from generate_series(1, ${jobCount}) i
             )
