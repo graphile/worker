@@ -70,19 +70,40 @@ export function makeNewWorker(
         Math.random() * (maxResetLockedInterval - minResetLockedInterval),
     );
 
+  let resetLockedAtPromise: Promise<void> | undefined;
+
   const resetLocked = () => {
-    resetLockedAt(compiledSharedOptions, withPgClient).then(
+    resetLockedAtPromise = resetLockedAt(
+      compiledSharedOptions,
+      withPgClient,
+    ).then(
       () => {
-        const delay = resetLockedDelay();
-        resetLockedTimeout = setTimeout(resetLocked, delay);
+        resetLockedAtPromise = undefined;
+        if (active) {
+          const delay = resetLockedDelay();
+          resetLockedTimeout = setTimeout(resetLocked, delay);
+        }
       },
       (e) => {
+        resetLockedAtPromise = undefined;
         // TODO: push this error out via an event.
-        const delay = resetLockedDelay();
-        resetLockedTimeout = setTimeout(resetLocked, delay);
-        logger.error(`Failed to reset locked; we'll try again in ${delay}ms`, {
-          error: e,
-        });
+        if (active) {
+          const delay = resetLockedDelay();
+          resetLockedTimeout = setTimeout(resetLocked, delay);
+          logger.error(
+            `Failed to reset locked; we'll try again in ${delay}ms`,
+            {
+              error: e,
+            },
+          );
+        } else {
+          logger.error(
+            `Failed to reset locked, but we're shutting down so won't try again`,
+            {
+              error: e,
+            },
+          );
+        }
       },
     );
   };
@@ -104,7 +125,7 @@ export function makeNewWorker(
     events.emit("worker:release", { worker });
     if (cancelDoNext()) {
       // Nothing in progress; resolve the promise
-      promise.resolve();
+      promise.resolve(resetLockedAtPromise);
     }
     return promise;
   };
@@ -223,10 +244,10 @@ export function makeNewWorker(
             doNextTimer = setTimeout(() => doNext(), pollInterval);
           }
         } else {
-          promise.resolve();
+          promise.resolve(resetLockedAtPromise);
         }
       } else {
-        promise.resolve();
+        promise.resolve(resetLockedAtPromise);
         release();
       }
       return;
@@ -352,7 +373,7 @@ export function makeNewWorker(
     if (active) {
       doNext();
     } else {
-      promise.resolve();
+      promise.resolve(resetLockedAtPromise);
     }
   };
 
