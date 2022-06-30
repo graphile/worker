@@ -70,11 +70,11 @@ test("emits the expected events", () =>
       const events = new EventEmitter();
 
       const emittedEvents: Array<{ event: string; payload: any }> = [];
-      function createListener(event: string) {
+      const createListener = (event: string) => {
         return (payload: any) => {
           emittedEvents.push({ event, payload });
         };
-      }
+      };
 
       EVENTS.forEach((event) => {
         events.on(event, createListener(event));
