@@ -1,4 +1,5 @@
-import { Job, makeWorkerUtils, WorkerSharedOptions } from "../src/index";
+import { makeWorkerUtils, WorkerSharedOptions } from "../src/index";
+import { DbJob } from "../src/interfaces";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   makeSelectionOfJobs,
@@ -47,7 +48,7 @@ test("completes the jobs, leaves others unaffected", () =>
       expect(+j.run_at).toBeCloseTo(+nowish);
     }
 
-    const { rows: remaining } = await pgClient.query<Job>(
+    const { rows: remaining } = await pgClient.query<DbJob>(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs where not (id = any($1)) order by id asc`,
       [rescheduledJobIds],
     );

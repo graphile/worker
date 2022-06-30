@@ -4,6 +4,7 @@ import { parse } from "pg-connection-string";
 
 import defer from "../src/deferred";
 import {
+  DbJob,
   Job,
   KnownCrontab,
   RunnerOptions,
@@ -125,7 +126,7 @@ export async function getKnown(pgPool: pg.Pool) {
 }
 
 export async function getJobs(pgPool: pg.Pool) {
-  const { rows } = await pgPool.query<Job>(
+  const { rows } = await pgPool.query<DbJob>(
     `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
   );
   return rows;
@@ -165,13 +166,13 @@ export async function makeSelectionOfJobs(
   const untouchedJob = await utils.addJob("job1", { a: 5, runAt: future });
   ({
     rows: [lockedJob],
-  } = await pgClient.query<Job>(
+  } = await pgClient.query<DbJob>(
     `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
     [lockedJob.id],
   ));
   ({
     rows: [failedJob],
-  } = await pgClient.query<Job>(
+  } = await pgClient.query<DbJob>(
     `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
     [failedJob.id],
   ));
