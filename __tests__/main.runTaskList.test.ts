@@ -70,7 +70,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
       await workerPool.promise;
       expect(await jobCount(pgPool)).toEqual(0);
     } finally {
-      Object.values(jobPromises).forEach((p) => p.resolve());
+      Object.values(jobPromises).forEach((p) => p?.resolve());
     }
   }));
 
@@ -93,7 +93,7 @@ test("doesn't bail on deprecated `debug` function", () =>
       await workerPool.release();
     } finally {
       if (jobPromise) {
-        jobPromise.resolve();
+        (jobPromise as Deferred).resolve();
       }
     }
   }));

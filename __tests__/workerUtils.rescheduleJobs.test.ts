@@ -1,7 +1,5 @@
 import { makeWorkerUtils, WorkerSharedOptions } from "../src/index";
-import { DbJob } from "../src/interfaces";
 import {
-  ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobs,
   makeSelectionOfJobs,
   reset,

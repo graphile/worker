@@ -5,7 +5,6 @@ import {
   WorkerSharedOptions,
 } from "../src/index";
 import {
-  ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobs,
   reset,
   TEST_CONNECTION_STRING,

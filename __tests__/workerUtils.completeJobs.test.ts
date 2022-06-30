@@ -1,6 +1,5 @@
 import { makeWorkerUtils, WorkerSharedOptions } from "../src/index";
 import {
-  ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobs,
   makeSelectionOfJobs,
   reset,

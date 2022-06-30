@@ -135,7 +135,7 @@ test("emits the expected events", () =>
       expect(await jobCount(pgPool)).toEqual(0);
     } finally {
       if (jobPromises) {
-        Object.values(jobPromises).forEach((p) => p.resolve());
+        Object.values(jobPromises).forEach((p) => p?.resolve());
       }
     }
   }));

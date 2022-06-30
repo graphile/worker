@@ -6,7 +6,6 @@ import {
   WorkerSharedOptions,
 } from "../src/index";
 import {
-  ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobs,
   HOUR,
   reset,
