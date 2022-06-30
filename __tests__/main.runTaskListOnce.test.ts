@@ -646,7 +646,9 @@ test("jobs in progress cannot be removed", () =>
       expect(tasks.job1).toHaveBeenCalledTimes(1);
       expect(tasks.job1).toHaveBeenCalledWith({ a: 123 }, expect.any(Object));
     } finally {
-      deferred.resolve();
+      if (deferred) {
+        (deferred as Deferred).resolve();
+      }
     }
   }));
 
