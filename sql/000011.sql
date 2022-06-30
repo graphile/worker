@@ -122,7 +122,8 @@ begin
     updated_at = now()
   from unnest(specs) spec
   where spec.job_key is not null
-  and jobs.key = spec.job_key;
+  and jobs.key = spec.job_key
+  and is_available is not true;
 
   -- TODO: is there a risk that a conflict could occur depending on the
   -- isolation level?
