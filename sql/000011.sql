@@ -12,11 +12,6 @@ alter table :GRAPHILE_WORKER_SCHEMA.jobs add column is_available boolean not nul
 alter table :GRAPHILE_WORKER_SCHEMA.job_queues add column is_available boolean not null
   generated always as (locked_at is null) stored;
 
-create index job_queues_queue_name
-on :GRAPHILE_WORKER_SCHEMA.job_queues
-using btree (queue_name)
-where (is_available = true);
-
 drop index :GRAPHILE_WORKER_SCHEMA.jobs_priority_run_at_id_locked_at_without_failures_idx;
 create index jobs_priority_run_at_id_locked_at_without_failures_idx
 on :GRAPHILE_WORKER_SCHEMA.jobs
