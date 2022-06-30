@@ -6,7 +6,7 @@ import {
   WorkerSharedOptions,
 } from "../src/index";
 import {
-  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  getJobs,
   HOUR,
   reset,
   setupFakeTimers,
@@ -31,9 +31,7 @@ test("runs a job added through the worker utils", () =>
     await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
-    const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-    );
+    const jobs = await getJobs(pgClient);
     expect(jobs).toHaveLength(1);
 
     const task: Task = jest.fn();
@@ -56,9 +54,7 @@ test("supports the jobKey API", () =>
     await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
-    const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-    );
+    const jobs = await getJobs(pgClient);
     expect(jobs).toHaveLength(1);
     expect(jobs[0].payload.a).toBe(4);
     expect(jobs[0].revision).toBe(3);
@@ -125,9 +121,7 @@ test("supports the jobKey API with jobKeyMode", () =>
     await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
-    const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-    );
+    const jobs = await getJobs(pgClient);
     expect(jobs).toHaveLength(1);
     expect(jobs[0].revision).toBe(3);
     expect(jobs[0].payload.a).toBe(4);
@@ -148,9 +142,7 @@ test("runs a job added through the addJob shortcut function", () =>
     });
 
     // Assert that it has an entry in jobs / job_queues
-    const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-    );
+    const jobs = await getJobs(pgClient);
     expect(jobs).toHaveLength(1);
 
     const task: Task = jest.fn();
@@ -174,9 +166,7 @@ test("adding job respects useNodeTime", () =>
     await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
-    const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-    );
+    const jobs = await getJobs(pgClient);
     expect(jobs).toHaveLength(1);
     // Assert the run_at is within a couple of seconds of timeOfAddJob, even
     // though PostgreSQL has a NOW() that's many months later.

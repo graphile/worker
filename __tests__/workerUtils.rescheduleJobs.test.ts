@@ -1,6 +1,6 @@
-import { Job, makeWorkerUtils, WorkerSharedOptions } from "../src/index";
+import { makeWorkerUtils, WorkerSharedOptions } from "../src/index";
 import {
-  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  getJobs,
   makeSelectionOfJobs,
   reset,
   TEST_CONNECTION_STRING,
@@ -47,10 +47,10 @@ test("completes the jobs, leaves others unaffected", () =>
       expect(+j.run_at).toBeCloseTo(+nowish);
     }
 
-    const { rows: remaining } = await pgClient.query<Job>(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs where not (id = any($1)) order by id asc`,
-      [rescheduledJobIds],
-    );
+    const remaining = await getJobs(pgClient, {
+      where: `not (jobs.id = any($1))`,
+      values: [rescheduledJobIds],
+    });
     expect(remaining).toHaveLength(2);
     expect(remaining[0]).toMatchObject(lockedJob);
     expect(remaining[1]).toMatchObject(untouchedJob);

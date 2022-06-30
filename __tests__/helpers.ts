@@ -124,9 +124,35 @@ export async function getKnown(pgPool: pg.Pool) {
   return rows;
 }
 
-export async function getJobs(pgPool: pg.Pool) {
-  const { rows } = await pgPool.query<Job>(
-    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
+export async function getJobs(
+  pgClient: pg.Pool | pg.PoolClient,
+  extra: {
+    where?: string;
+    values?: any[];
+  } = {},
+) {
+  const { where, values } = extra;
+  const { rows } = await pgClient.query<Job & { payload: any }>(
+    `\
+select
+  jobs.*
+from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs
+${where ? `where ${where}\n` : ""}\
+order by jobs.id asc`,
+    values,
+  );
+  return rows;
+}
+
+export async function getJobQueues(pgClient: pg.Pool | pg.PoolClient) {
+  const { rows } = await pgClient.query<{
+    id: number;
+    queue_name: string;
+    job_count: number;
+    locked_at: Date;
+    locked_by: string;
+  }>(
+    `select job_queues.* from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues order by job_queues.queue_name asc`,
   );
   return rows;
 }
