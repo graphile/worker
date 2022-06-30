@@ -12,23 +12,35 @@ interface TaskDetails {
   taskIds: number[];
 }
 
-let lastStr: string | Promise<string> = "";
-let lastDigest: TaskDetails | Promise<TaskDetails> = {
-  supportedTaskIdentifierByTaskId: {},
-  taskIds: [],
-};
+interface Cache {
+  lastStr: string | Promise<string>;
+  lastDigest: TaskDetails | Promise<TaskDetails>;
+}
+const cacheByOptions = new Map<CompiledSharedOptions, Cache>();
+
 export function getTaskDetails(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: WithPgClient,
   tasks: TaskList,
 ): TaskDetails | Promise<TaskDetails> {
+  let cache = cacheByOptions.get(compiledSharedOptions);
+  if (!cache) {
+    cache = {
+      lastStr: "",
+      lastDigest: {
+        supportedTaskIdentifierByTaskId: {},
+        taskIds: [],
+      },
+    };
+    cacheByOptions.set(compiledSharedOptions, cache);
+  }
   const supportedTaskNames = Object.keys(tasks);
   const str = JSON.stringify(supportedTaskNames);
-  if (str !== lastStr) {
+  if (str !== cache.lastStr) {
     const { escapedWorkerSchema } = compiledSharedOptions;
     assert(supportedTaskNames.length, "No runnable tasks!");
-    lastStr = str;
-    lastDigest = (async () => {
+    cache.lastStr = str;
+    cache.lastDigest = (async () => {
       const { rows } = await withPgClient(async (client) => {
         await client.query({
           text: `insert into ${escapedWorkerSchema}.tasks (identifier) select unnest($1::text[]) on conflict do nothing`,
@@ -50,15 +62,15 @@ export function getTaskDetails(
       );
 
       // Overwrite promises with concrete values
-      lastDigest = {
+      cache.lastDigest = {
         supportedTaskIdentifierByTaskId,
         taskIds,
       };
-      lastStr = str;
-      return lastDigest;
+      cache.lastStr = str;
+      return cache.lastDigest;
     })();
   }
-  return lastDigest;
+  return cache.lastDigest;
 }
 
 export function getSupportedTaskIdentifierByTaskId(
