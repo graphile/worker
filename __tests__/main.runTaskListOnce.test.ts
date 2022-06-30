@@ -335,60 +335,64 @@ test("schedules a new job if existing is being processed", () =>
 
     const defers: Deferred[] = [];
 
-    const tasks: TaskList = {
-      job1: jest.fn(async () => {
-        const deferred = defer();
-        defers.push(deferred);
-        return deferred;
-      }),
-    };
+    try {
+      const tasks: TaskList = {
+        job1: jest.fn(async () => {
+          const deferred = defer();
+          defers.push(deferred);
+          return deferred;
+        }),
+      };
 
-    // Schedule a job to run immediately
-    await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": "first"}', job_key := 'abc')`,
-    );
+      // Schedule a job to run immediately
+      await pgClient.query(
+        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": "first"}', job_key := 'abc')`,
+      );
 
-    // run the job
-    const promise = runTaskListOnce(options, tasks, pgClient);
+      // run the job
+      const promise = runTaskListOnce(options, tasks, pgClient);
 
-    // wait for it to be picked up for processing
-    await sleepUntil(() => defers.length > 0);
-    expect(tasks.job1).toHaveBeenCalledTimes(1);
+      // wait for it to be picked up for processing
+      await sleepUntil(() => defers.length > 0);
+      expect(tasks.job1).toHaveBeenCalledTimes(1);
 
-    // attempt to update the job - it should schedule a new one instead
-    await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": "second"}',  job_key := 'abc')`,
-    );
+      // attempt to update the job - it should schedule a new one instead
+      await pgClient.query(
+        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": "second"}',  job_key := 'abc')`,
+      );
 
-    // check there are now two jobs scheduled
-    expect(
-      (
-        await pgClient.query(
-          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-        )
-      ).rows,
-    ).toHaveLength(2);
+      // check there are now two jobs scheduled
+      expect(
+        (
+          await pgClient.query(
+            `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
+          )
+        ).rows,
+      ).toHaveLength(2);
 
-    // wait for the original job to complete - note this picks up the new job,
-    // because the worker checks again for pending jobs at the end of each run
-    defers[0].resolve(); // complete first job
-    await sleepUntil(() => defers.length > 1); // wait for second job to be picked up
-    defers[1].resolve(); // complete second job
-    await promise; // wait for all jobs to finish
+      // wait for the original job to complete - note this picks up the new job,
+      // because the worker checks again for pending jobs at the end of each run
+      defers[0].resolve(); // complete first job
+      await sleepUntil(() => defers.length > 1); // wait for second job to be picked up
+      defers[1].resolve(); // complete second job
+      await promise; // wait for all jobs to finish
 
-    expect(tasks.job1).toHaveBeenCalledTimes(2);
+      expect(tasks.job1).toHaveBeenCalledTimes(2);
 
-    // check jobs ran in the right order
-    expect(tasks.job1).toHaveBeenNthCalledWith(
-      1,
-      { a: "first" },
-      expect.any(Object),
-    );
-    expect(tasks.job1).toHaveBeenNthCalledWith(
-      2,
-      { a: "second" },
-      expect.any(Object),
-    );
+      // check jobs ran in the right order
+      expect(tasks.job1).toHaveBeenNthCalledWith(
+        1,
+        { a: "first" },
+        expect.any(Object),
+      );
+      expect(tasks.job1).toHaveBeenNthCalledWith(
+        2,
+        { a: "second" },
+        expect.any(Object),
+      );
+    } finally {
+      defers.forEach((d) => d.resolve());
+    }
   }));
 
 test("schedules a new job if the existing is pending retry", () =>
@@ -596,52 +600,58 @@ test("jobs in progress cannot be removed", () =>
 
     let deferred: Deferred | null = null;
 
-    const tasks: TaskList = {
-      job1: jest.fn(async () => {
-        deferred = defer();
-        return deferred;
-      }),
-    };
+    try {
+      const tasks: TaskList = {
+        job1: jest.fn(async () => {
+          deferred = defer();
+          return deferred;
+        }),
+      };
 
-    // Schedule a job
-    await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 123}', job_key := 'abc')`,
-    );
+      // Schedule a job
+      await pgClient.query(
+        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 123}', job_key := 'abc')`,
+      );
 
-    // check it was inserted
-    expect(
-      (
-        await pgClient.query(
-          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-        )
-      ).rows,
-    ).toHaveLength(1);
+      // check it was inserted
+      expect(
+        (
+          await pgClient.query(
+            `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
+          )
+        ).rows,
+      ).toHaveLength(1);
 
-    const promise = runTaskListOnce(options, tasks, pgClient);
-    // wait for it to be picked up for processing
-    await sleepUntil(() => !!deferred);
-    expect(tasks.job1).toHaveBeenCalledTimes(1);
+      const promise = runTaskListOnce(options, tasks, pgClient);
+      // wait for it to be picked up for processing
+      await sleepUntil(() => !!deferred);
+      expect(tasks.job1).toHaveBeenCalledTimes(1);
 
-    // attempt to remove the job
-    await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.remove_job('abc')`,
-    );
+      // attempt to remove the job
+      await pgClient.query(
+        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.remove_job('abc')`,
+      );
 
-    // check it was not removed
-    expect(
-      (
-        await pgClient.query(
-          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-        )
-      ).rows,
-    ).toHaveLength(1);
+      // check it was not removed
+      expect(
+        (
+          await pgClient.query(
+            `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
+          )
+        ).rows,
+      ).toHaveLength(1);
 
-    // wait for the original job to complete
-    deferred!.resolve();
-    await promise;
+      // wait for the original job to complete
+      deferred!.resolve();
+      await promise;
 
-    expect(tasks.job1).toHaveBeenCalledTimes(1);
-    expect(tasks.job1).toHaveBeenCalledWith({ a: 123 }, expect.any(Object));
+      expect(tasks.job1).toHaveBeenCalledTimes(1);
+      expect(tasks.job1).toHaveBeenCalledWith({ a: 123 }, expect.any(Object));
+    } finally {
+      if (deferred) {
+        (deferred as Deferred).resolve();
+      }
+    }
   }));
 
 test("runs jobs asynchronously", () =>
@@ -656,60 +666,66 @@ test("runs jobs asynchronously", () =>
 
     // Run the task
     let jobPromise: Deferred | null = null;
-    const job1: Task = jest.fn(() => {
-      jobPromise = defer();
-      return jobPromise;
-    });
-    const tasks: TaskList = {
-      job1,
-    };
-    const runPromise = runTaskListOnce(options, tasks, pgClient);
-    const worker: Worker = runPromise["worker"];
-    expect(worker).toBeTruthy();
-    let executed = false;
-    runPromise.then(() => {
-      executed = true;
-    });
+    try {
+      const job1: Task = jest.fn(() => {
+        jobPromise = defer();
+        return jobPromise;
+      });
+      const tasks: TaskList = {
+        job1,
+      };
+      const runPromise = runTaskListOnce(options, tasks, pgClient);
+      const worker: Worker = runPromise["worker"];
+      expect(worker).toBeTruthy();
+      let executed = false;
+      runPromise.then(() => {
+        executed = true;
+      });
 
-    await sleepUntil(() => !!jobPromise);
+      await sleepUntil(() => !!jobPromise);
 
-    // Job should have been called once only
-    expect(jobPromise).toBeTruthy();
-    expect(job1).toHaveBeenCalledTimes(1);
+      // Job should have been called once only
+      expect(jobPromise).toBeTruthy();
+      expect(job1).toHaveBeenCalledTimes(1);
 
-    expect(executed).toBeFalsy();
+      expect(executed).toBeFalsy();
 
-    {
-      const { rows: jobs } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-      );
-      expect(jobs).toHaveLength(1);
-      const job = jobs[0];
-      expect(job.task_identifier).toEqual("job1");
-      expect(job.payload).toEqual({ a: 1 });
-      expect(+job.run_at).toBeGreaterThanOrEqual(+start);
-      expect(+job.run_at).toBeLessThanOrEqual(+new Date());
-      expect(job.attempts).toEqual(1); // It gets increased when the job is checked out
+      {
+        const { rows: jobs } = await pgClient.query(
+          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
+        );
+        expect(jobs).toHaveLength(1);
+        const job = jobs[0];
+        expect(job.task_identifier).toEqual("job1");
+        expect(job.payload).toEqual({ a: 1 });
+        expect(+job.run_at).toBeGreaterThanOrEqual(+start);
+        expect(+job.run_at).toBeLessThanOrEqual(+new Date());
+        expect(job.attempts).toEqual(1); // It gets increased when the job is checked out
 
-      const { rows: jobQueues } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues`,
-      );
-      expect(jobQueues).toHaveLength(1);
-      const q = jobQueues[0];
-      expect(q.queue_name).toEqual(job.queue_name);
-      expect(q.job_count).toEqual(1);
-      expect(+q.locked_at).toBeGreaterThanOrEqual(+start);
-      expect(+q.locked_at).toBeLessThanOrEqual(+new Date());
-      expect(q.locked_by).toEqual(worker.workerId);
+        const { rows: jobQueues } = await pgClient.query(
+          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues`,
+        );
+        expect(jobQueues).toHaveLength(1);
+        const q = jobQueues[0];
+        expect(q.queue_name).toEqual(job.queue_name);
+        expect(q.job_count).toEqual(1);
+        expect(+q.locked_at).toBeGreaterThanOrEqual(+start);
+        expect(+q.locked_at).toBeLessThanOrEqual(+new Date());
+        expect(q.locked_by).toEqual(worker.workerId);
+      }
+
+      jobPromise!.resolve();
+      await runPromise;
+      expect(executed).toBeTruthy();
+
+      // Job should have been called once only
+      expect(job1).toHaveBeenCalledTimes(1);
+      expect(await jobCount(pgClient)).toEqual(0);
+    } finally {
+      if (jobPromise) {
+        (jobPromise as Deferred).resolve();
+      }
     }
-
-    jobPromise!.resolve();
-    await runPromise;
-    expect(executed).toBeTruthy();
-
-    // Job should have been called once only
-    expect(job1).toHaveBeenCalledTimes(1);
-    expect(await jobCount(pgClient)).toEqual(0);
   }));
 
 test("runs jobs in parallel", () =>
@@ -724,72 +740,76 @@ test("runs jobs in parallel", () =>
 
     // Run the task
     const jobPromises: Array<Deferred> = [];
-    const job1: Task = jest.fn(() => {
-      const jobPromise = defer();
-      jobPromises.push(jobPromise);
-      return jobPromise;
-    });
-    const tasks: TaskList = {
-      job1,
-    };
-    const runPromises = [
-      runTaskListOnce(options, tasks, pgClient),
-      runTaskListOnce(options, tasks, pgClient),
-      runTaskListOnce(options, tasks, pgClient),
-      runTaskListOnce(options, tasks, pgClient),
-      runTaskListOnce(options, tasks, pgClient),
-    ];
-    let executed = false;
-    Promise.all(runPromises).then(() => {
-      executed = true;
-    });
-
-    await sleepUntil(() => jobPromises.length >= 5);
-
-    // Job should have been called once for each task
-    expect(jobPromises).toHaveLength(5);
-    expect(job1).toHaveBeenCalledTimes(5);
-
-    expect(executed).toBeFalsy();
-
-    {
-      const { rows: jobs } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-      );
-      expect(jobs).toHaveLength(5);
-      jobs.forEach((job) => {
-        expect(job.task_identifier).toEqual("job1");
-        expect(job.payload).toEqual({ a: 1 });
-        expect(+job.run_at).toBeGreaterThanOrEqual(+start);
-        expect(+job.run_at).toBeLessThanOrEqual(+new Date());
-        expect(job.attempts).toEqual(1); // It gets increased when the job is checked out
+    try {
+      const job1: Task = jest.fn(() => {
+        const jobPromise = defer();
+        jobPromises.push(jobPromise);
+        return jobPromise;
+      });
+      const tasks: TaskList = {
+        job1,
+      };
+      const runPromises = [
+        runTaskListOnce(options, tasks, pgClient),
+        runTaskListOnce(options, tasks, pgClient),
+        runTaskListOnce(options, tasks, pgClient),
+        runTaskListOnce(options, tasks, pgClient),
+        runTaskListOnce(options, tasks, pgClient),
+      ];
+      let executed = false;
+      Promise.all(runPromises).then(() => {
+        executed = true;
       });
 
-      const { rows: jobQueues } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues`,
-      );
-      expect(jobQueues).toHaveLength(5);
-      const locks: Array<string> = [];
-      jobQueues.forEach((q) => {
-        const job = jobs.find((j) => j.queue_name === q.queue_name);
-        expect(job).toBeTruthy();
-        expect(q.job_count).toEqual(1);
-        expect(+q.locked_at).toBeGreaterThanOrEqual(+start);
-        expect(+q.locked_at).toBeLessThanOrEqual(+new Date());
-        expect(locks.indexOf(q.locked_by)).toEqual(-1);
-        locks.push(q.locked_by);
-      });
-      expect(locks.length).toEqual(5);
+      await sleepUntil(() => jobPromises.length >= 5);
+
+      // Job should have been called once for each task
+      expect(jobPromises).toHaveLength(5);
+      expect(job1).toHaveBeenCalledTimes(5);
+
+      expect(executed).toBeFalsy();
+
+      {
+        const { rows: jobs } = await pgClient.query(
+          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
+        );
+        expect(jobs).toHaveLength(5);
+        jobs.forEach((job) => {
+          expect(job.task_identifier).toEqual("job1");
+          expect(job.payload).toEqual({ a: 1 });
+          expect(+job.run_at).toBeGreaterThanOrEqual(+start);
+          expect(+job.run_at).toBeLessThanOrEqual(+new Date());
+          expect(job.attempts).toEqual(1); // It gets increased when the job is checked out
+        });
+
+        const { rows: jobQueues } = await pgClient.query(
+          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues`,
+        );
+        expect(jobQueues).toHaveLength(5);
+        const locks: Array<string> = [];
+        jobQueues.forEach((q) => {
+          const job = jobs.find((j) => j.queue_name === q.queue_name);
+          expect(job).toBeTruthy();
+          expect(q.job_count).toEqual(1);
+          expect(+q.locked_at).toBeGreaterThanOrEqual(+start);
+          expect(+q.locked_at).toBeLessThanOrEqual(+new Date());
+          expect(locks.indexOf(q.locked_by)).toEqual(-1);
+          locks.push(q.locked_by);
+        });
+        expect(locks.length).toEqual(5);
+      }
+
+      expect(executed).toBeFalsy();
+      jobPromises.forEach((jobPromise) => jobPromise!.resolve());
+      await Promise.all(runPromises);
+      expect(executed).toBeTruthy();
+
+      // Job should not have been called any more times
+      expect(job1).toHaveBeenCalledTimes(5);
+      expect(await jobCount(pgClient)).toEqual(0);
+    } finally {
+      jobPromises.forEach((jobPromise) => jobPromise!.resolve());
     }
-
-    expect(executed).toBeFalsy();
-    jobPromises.forEach((jobPromise) => jobPromise!.resolve());
-    await Promise.all(runPromises);
-    expect(executed).toBeTruthy();
-
-    // Job should not have been called any more times
-    expect(job1).toHaveBeenCalledTimes(5);
-    expect(await jobCount(pgClient)).toEqual(0);
   }));
 
 test("single worker runs jobs in series, purges all before exit", () =>
@@ -803,41 +823,45 @@ test("single worker runs jobs in series, purges all before exit", () =>
 
     // Run the task
     const jobPromises: Array<Deferred> = [];
-    const job1: Task = jest.fn(() => {
-      const jobPromise = defer();
-      jobPromises.push(jobPromise);
-      return jobPromise;
-    });
-    const tasks: TaskList = {
-      job1,
-    };
-    const runPromise = runTaskListOnce(options, tasks, pgClient);
-    let executed = false;
-    runPromise.then(() => {
-      executed = true;
-    });
+    try {
+      const job1: Task = jest.fn(() => {
+        const jobPromise = defer();
+        jobPromises.push(jobPromise);
+        return jobPromise;
+      });
+      const tasks: TaskList = {
+        job1,
+      };
+      const runPromise = runTaskListOnce(options, tasks, pgClient);
+      let executed = false;
+      runPromise.then(() => {
+        executed = true;
+      });
 
-    for (let i = 0; i < 5; i++) {
-      await sleepUntil(() => jobPromises.length >= i + 1);
-      expect(jobPromises).toHaveLength(i + 1);
-      expect(job1).toHaveBeenCalledTimes(i + 1);
+      for (let i = 0; i < 5; i++) {
+        await sleepUntil(() => jobPromises.length >= i + 1);
+        expect(jobPromises).toHaveLength(i + 1);
+        expect(job1).toHaveBeenCalledTimes(i + 1);
 
-      // Shouldn't be finished yet
-      expect(executed).toBeFalsy();
+        // Shouldn't be finished yet
+        expect(executed).toBeFalsy();
 
-      // Complete this job, on to the next one
-      jobPromises[i].resolve();
+        // Complete this job, on to the next one
+        jobPromises[i].resolve();
+      }
+
+      expect(jobPromises).toHaveLength(5);
+      expect(job1).toHaveBeenCalledTimes(5);
+
+      await runPromise;
+      expect(executed).toBeTruthy();
+
+      // Job should not have been called any more times
+      expect(job1).toHaveBeenCalledTimes(5);
+      expect(await jobCount(pgClient)).toEqual(0);
+    } finally {
+      jobPromises.forEach((p) => p.resolve());
     }
-
-    expect(jobPromises).toHaveLength(5);
-    expect(job1).toHaveBeenCalledTimes(5);
-
-    await runPromise;
-    expect(executed).toBeTruthy();
-
-    // Job should not have been called any more times
-    expect(job1).toHaveBeenCalledTimes(5);
-    expect(await jobCount(pgClient)).toEqual(0);
   }));
 
 test("jobs added to the same queue will be ran serially (even if multiple workers)", () =>
@@ -851,46 +875,50 @@ test("jobs added to the same queue will be ran serially (even if multiple worker
 
     // Run the task
     const jobPromises: Array<Deferred> = [];
-    const job1: Task = jest.fn(() => {
-      const jobPromise = defer();
-      jobPromises.push(jobPromise);
-      return jobPromise;
-    });
-    const tasks: TaskList = {
-      job1,
-    };
-    const runPromises = [
-      runTaskListOnce(options, tasks, pgClient),
-      runTaskListOnce(options, tasks, pgClient),
-      runTaskListOnce(options, tasks, pgClient),
-    ];
-    let executed = false;
-    Promise.all(runPromises).then(() => {
-      executed = true;
-    });
+    try {
+      const job1: Task = jest.fn(() => {
+        const jobPromise = defer();
+        jobPromises.push(jobPromise);
+        return jobPromise;
+      });
+      const tasks: TaskList = {
+        job1,
+      };
+      const runPromises = [
+        runTaskListOnce(options, tasks, pgClient),
+        runTaskListOnce(options, tasks, pgClient),
+        runTaskListOnce(options, tasks, pgClient),
+      ];
+      let executed = false;
+      Promise.all(runPromises).then(() => {
+        executed = true;
+      });
 
-    for (let i = 0; i < 5; i++) {
-      // Give the other workers a chance to interfere (they shouldn't)
-      await sleep(50);
+      for (let i = 0; i < 5; i++) {
+        // Give the other workers a chance to interfere (they shouldn't)
+        await sleep(50);
 
-      await sleepUntil(() => jobPromises.length >= i + 1);
-      expect(jobPromises).toHaveLength(i + 1);
-      expect(job1).toHaveBeenCalledTimes(i + 1);
+        await sleepUntil(() => jobPromises.length >= i + 1);
+        expect(jobPromises).toHaveLength(i + 1);
+        expect(job1).toHaveBeenCalledTimes(i + 1);
 
-      // Shouldn't be finished yet
-      expect(executed).toBeFalsy();
+        // Shouldn't be finished yet
+        expect(executed).toBeFalsy();
 
-      // Complete this job, on to the next one
-      jobPromises[i].resolve();
+        // Complete this job, on to the next one
+        jobPromises[i].resolve();
+      }
+
+      expect(jobPromises).toHaveLength(5);
+      expect(job1).toHaveBeenCalledTimes(5);
+
+      await Promise.all(runPromises);
+      expect(executed).toBeTruthy();
+
+      // Job should not have been called any more times
+      expect(job1).toHaveBeenCalledTimes(5);
+      expect(await jobCount(pgClient)).toEqual(0);
+    } finally {
+      jobPromises.forEach((p) => p.resolve());
     }
-
-    expect(jobPromises).toHaveLength(5);
-    expect(job1).toHaveBeenCalledTimes(5);
-
-    await Promise.all(runPromises);
-    expect(executed).toBeTruthy();
-
-    // Job should not have been called any more times
-    expect(job1).toHaveBeenCalledTimes(5);
-    expect(await jobCount(pgClient)).toEqual(0);
   }));
