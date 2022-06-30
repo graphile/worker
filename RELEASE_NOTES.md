@@ -2,9 +2,36 @@
 
 ### Pending
 
-- Fix error handling of cron issues in 'run' method.
+**IMPORTANT**: the migration for this release cannot run if there are any locked
+jobs - it will throw a "division by zero" error in this case. Please ensure all
+existing workers are shut down and any locked jobs released before upgrading to
+this version.
+
+**IMPORTANT**: this release is incompatible with previous releases - do not run
+earlier workers against this releases database schema or Bad Things will happen.
+
 - BREAKING: Bump minimum Node version to 14 since 12.x is now end-of-life
+- BREAKING: Bump minimum PG version to 12 for `generated always as (expression)`
+- BREAKING: the 'jobs' table no longer has `queue_name` and `task_identifier`
+  columns; these have been replaced with `job_queue_id` and `task_id` which are
+  both `int`s
+- BREAKING: `jobs.priority`, `attempts` and `max_attempts` are now `int2` rather
+  than `int4`
 - BREAKING: CronItem.pattern has been renamed to CronItem.match
+- BREAKING: database error codes have been removed because we've moved to
+  `CHECK` constraints
+- WARNING: many of the "internal" SQL functions (`get_job`, `fail_job`,
+  `complete_job`) have been moved to JS to allow for dynamic SQL generation for
+  improved performance
+- WARNING: most of the triggers have been removed (for performance reasons), so
+  if you are inserting directly into the jobs table (don't do that!) make sure
+  you update your code to be compatible
+- Significantly improved 'large jobs table' performance (e.g. when a large queue
+  is locked, or there's a lot of jobs queued for task identifiers your worker
+  instance doesn't support, or a lot of failed jobs). Around 20x improvement in
+  this 'worst case' performance for real user workloads.
+- Added new (experimental) much faster `add_jobs` batch API.
+- Fix error handling of cron issues in 'run' method.
 - CronItem.match can now accept either a pattern string or a matcher function
 
 ### v0.13.0

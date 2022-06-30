@@ -223,7 +223,7 @@ http://discord.gg/graphile
 
 ## Requirements
 
-PostgreSQL 10+\* and Node 10+\*.
+PostgreSQL 12+ and Node 14+\*.
 
 _Note: `graphile-worker` versions before 0.13.0 installed the `pgcrypto`
 extension into the public schema of your database (if it wasn't already
@@ -232,6 +232,10 @@ want to uninstall it - see the [release notes](RELEASE_NOTES.md#v0130) for
 instructions._
 
 \* Might work with older versions, but has not been tested.
+
+Note: Postgres 12 is required for the `generated always as (expression)`
+feature; if you need to use earlier versions of Postgres or Node, please use
+version 0.13.x or earlier.
 
 ## Installation
 
@@ -1465,7 +1469,8 @@ dedicated job queues, it's intended to be a very easy way to get a reasonably
 performant job queue up and running with Node.js and PostgreSQL. But this
 doesn't mean it's a slouch by any means - it achieves an average latency from
 triggering a job in one process to executing it in another of under 3ms, and a
-12-core database server can process around 10,000 jobs per second.
+12-core database server can queue around 80,000 jobs per second and can process
+around 11,800 jobs per second.
 
 `graphile-worker` is horizontally scalable. Each instance has a customisable
 worker pool, this pool defaults to size 1 (only one job at a time on this
@@ -1474,7 +1479,9 @@ compute-heavy) you will likely want to set this higher to benefit from Node.js'
 concurrency. If your tasks are compute heavy you may still wish to set it higher
 and then using Node's `child_process` (or Node v11's `worker_threads`) to share
 the compute load over multiple cores without significantly impacting the main
-worker's runloop.
+worker's runloop. Note, however, that Graphile Worker is limited by the
+performance of the underlying Postgres database, and when you hit this limit
+performance will start to go down (rather than up) as you add more workers.
 
 To test performance, you can run `yarn perfTest`. This runs three tests:
 
@@ -1485,7 +1492,8 @@ To test performance, you can run `yarn perfTest`. This runs three tests:
    [trivial](perfTest/tasks/log_if_999.js) jobs with a parallelism of 4 (i.e. 4
    node processes) and a concurrency of 10 (i.e. 10 concurrent jobs running on
    each node process), but you can configure this in `perfTest/run.js`. (These
-   settings were optimised for a 12-core hyperthreading machine.)
+   settings were optimised for a 12-core hyperthreading machine running both the
+   tests and the database locally.)
 3. a latency test - determining how long between issuing an `add_job` command
    and the task itself being executed.
 
@@ -1497,28 +1505,29 @@ not). Jobs=20000, parallelism=4, concurrency=10.
 
 Conclusion:
 
-- Startup/shutdown: 66ms
-- Jobs per second: 10,299
-- Average latency: 2.62ms (min: 2.43ms, max: 11.90ms)
+- Startup/shutdown: 101ms
+- Jobs per second: 11,806
+- Average latency: 2.66ms (min: 2.37ms, max: 13.56ms)
 
 ```
 Timing startup/shutdown time...
-... it took 66ms
+... it took 101ms
 
 Scheduling 20000 jobs
+... it took 255ms
 
 
 Timing 20000 job execution...
 Found 999!
 
-... it took 2008ms
-Jobs per second: 10298.81
+... it took 1795ms
+Jobs per second: 11806.33
 
 
 Testing latency...
 [core] INFO: Worker connected and looking for jobs... (task names: 'latency')
 Beginning latency test
-Latencies - min: 2.43ms, max: 11.90ms, avg: 2.62ms
+Latencies - min: 2.37ms, max: 13.56ms, avg: 2.66ms
 ```
 
 TODO: post perfTest results in a more reasonable configuration, e.g. using an
@@ -1601,12 +1610,8 @@ STATEMENT: select id from "graphile_worker".migrations order by id desc limit 1;
 
 ### Error codes
 
-- `GWBID` - Task identifier is too long (max length: 128).
-- `GWBQN` - Job queue name is too long (max length: 128).
-- `GWBJK` - Job key is too long (max length: 512).
-- `GWBMA` - Job maximum attempts must be at least 1.
-- `GWBKM` - Invalid job_key_mode value, expected 'replace', 'preserve_run_at' or
-  'unsafe_dedupe'.
+- `GWBKM` - Invalid `job_key_mode` value, expected `'replace'`,
+  `'preserve_run_at'` or `'unsafe_dedupe'`.
 
 ## Development
 
@@ -1687,11 +1692,11 @@ docker-compose logs -f app
 ### Database migrations
 
 New database migrations must be accompanied by an updated db dump. This can be
-generated using the command `yarn db:dump`, and requires a running postgres 11
+generated using the command `yarn db:dump`, and requires a running postgres 12
 server. Using docker:
 
 ```
-docker run -e POSTGRES_HOST_AUTH_METHOD=trust -d -p 5432:5432 postgres:11
+docker run -e POSTGRES_HOST_AUTH_METHOD=trust -d -p 5432:5432 postgres:12
 ```
 
 then run
