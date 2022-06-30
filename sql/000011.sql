@@ -231,7 +231,9 @@ begin
     where tasks.identifier = spec.identifier
   on conflict (key)
     -- Bump the updated_at so that there's something to return
-    do update set updated_at = now()
+    do update set
+      revision = jobs.revision + 1,
+      updated_at = now()
     returning *
     into v_job;
   return v_job;
