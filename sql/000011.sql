@@ -225,11 +225,10 @@ begin
         select jsonb_object_agg(flag, true)
         from unnest(spec.flags) as item(flag)
       )
-    from unnest(specs) spec
-    inner join :GRAPHILE_WORKER_SCHEMA.tasks
-    on tasks.identifier = spec.identifier
+    from :GRAPHILE_WORKER_SCHEMA.tasks
     left join :GRAPHILE_WORKER_SCHEMA.job_queues
     on job_queues.queue_name = spec.queue_name
+    where tasks.identifier = spec.identifier
   on conflict (key)
     -- Bump the updated_at so that there's something to return
     do update set updated_at = now()
