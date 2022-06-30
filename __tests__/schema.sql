@@ -117,14 +117,15 @@ begin
         select jsonb_object_agg(flag, true)
         from unnest(spec.flags) as item(flag)
       )
-    from unnest(specs) spec
-    inner join "graphile_worker".tasks
-    on tasks.identifier = spec.identifier
+    from "graphile_worker".tasks
     left join "graphile_worker".job_queues
     on job_queues.queue_name = spec.queue_name
+    where tasks.identifier = spec.identifier
   on conflict (key)
     -- Bump the updated_at so that there's something to return
-    do update set updated_at = now()
+    do update set
+      revision = jobs.revision + 1,
+      updated_at = now()
     returning *
     into v_job;
   return v_job;
@@ -157,7 +158,8 @@ begin
     updated_at = now()
   from unnest(specs) spec
   where spec.job_key is not null
-  and jobs.key = spec.job_key;
+  and jobs.key = spec.job_key
+  and is_available is not true;
   -- TODO: is there a risk that a conflict could occur depending on the
   -- isolation level?
   return query insert into "graphile_worker".jobs (
