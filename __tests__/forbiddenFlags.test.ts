@@ -5,7 +5,7 @@ import {
   WorkerSharedOptions,
 } from "../src/index";
 import {
-  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  getJobs,
   reset,
   TEST_CONNECTION_STRING,
   withPgClient,
@@ -28,9 +28,7 @@ test("supports the flags API", () =>
     await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
-    const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-    );
+    const jobs = await getJobs(pgClient);
     expect(jobs).toHaveLength(1);
     expect(jobs[0]).toHaveProperty("flags");
     expect(jobs[0].flags).toEqual({ a: true, b: true });
@@ -81,9 +79,7 @@ test.each([
     try {
       await runTaskListOnce({ forbiddenFlags }, { "flag-test": job }, pgClient);
 
-      const { rows: jobs } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-      );
+      const jobs = await getJobs(pgClient);
       expect(jobs).toHaveLength(1);
       expect(jobs[0].attempts).toEqual(0);
       expect(jobs[0].flags).toEqual({ c: true, d: true });
@@ -145,9 +141,7 @@ test.each([
     try {
       await runTaskListOnce({ forbiddenFlags }, { "flag-test": job }, pgClient);
 
-      const { rows: jobs } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-      );
+      const jobs = await getJobs(pgClient);
       expect(jobs).toHaveLength(0);
 
       expect(ranWithoutDFlag).toHaveBeenCalledTimes(1);
