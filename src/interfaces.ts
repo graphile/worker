@@ -290,9 +290,9 @@ export interface CronItem {
 export interface DbJob {
   id: string;
   /** FK to job_queues */
-  job_queue_id: string | null;
+  job_queue_id: number | null;
   /** FK to tasks */
-  task_id: string;
+  task_id: number;
   /** The JSON payload of the job */
   payload: unknown;
   /** Lower number means it should run sooner */

@@ -136,7 +136,8 @@ export function makeMockJob(taskIdentifier: string): Job {
   const createdAt = new Date(Date.now() - 12345678);
   return {
     id: String(Math.floor(Math.random() * 4294967296)),
-    queue_name: null,
+    job_queue_id: null,
+    task_id: 123456789,
     task_identifier: taskIdentifier,
     payload: {},
     priority: 0,
@@ -159,9 +160,9 @@ export async function makeSelectionOfJobs(
   pgClient: pg.PoolClient,
 ) {
   const future = new Date(Date.now() + 60 * 60 * 1000);
-  let failedJob = await utils.addJob("job1", { a: 1, runAt: future });
+  let failedJob: DbJob = await utils.addJob("job1", { a: 1, runAt: future });
   const regularJob1 = await utils.addJob("job1", { a: 2, runAt: future });
-  let lockedJob = await utils.addJob("job1", { a: 3, runAt: future });
+  let lockedJob: DbJob = await utils.addJob("job1", { a: 3, runAt: future });
   const regularJob2 = await utils.addJob("job1", { a: 4, runAt: future });
   const untouchedJob = await utils.addJob("job1", { a: 5, runAt: future });
   ({
