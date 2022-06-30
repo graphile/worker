@@ -36,7 +36,7 @@ create table :GRAPHILE_WORKER_SCHEMA.job_queues (
   queue_name text not null unique check (length(queue_name) <= 128),
   locked_at timestamptz,
   locked_by text,
-  is_available boolean generated always as ((locked_at is null)) stored not null
+  is_available boolean not null default true -- generated always as ((locked_at is null)) stored
 );
 alter table :GRAPHILE_WORKER_SCHEMA.job_queues enable row level security;
 
@@ -63,7 +63,7 @@ create table :GRAPHILE_WORKER_SCHEMA.jobs (
   locked_by text,
   revision integer default 0 not null,
   flags jsonb,
-  is_available boolean generated always as (((locked_at is null) and (attempts < max_attempts))) stored not null
+  is_available boolean not null default true -- generated always as (((locked_at is null) and (attempts < max_attempts))) stored
 );
 alter table :GRAPHILE_WORKER_SCHEMA.jobs enable row level security;
 
@@ -119,7 +119,8 @@ begin
   set
     key = null,
     attempts = jobs.max_attempts,
-    updated_at = now()
+    updated_at = now(),
+    is_available = (((jobs.locked_at is null) and (jobs.attempts < jobs.max_attempts)))
   from unnest(specs) spec
   where spec.job_key is not null
   and jobs.key = spec.job_key
@@ -170,7 +171,8 @@ begin
     -- always reset error/retry state
     attempts = 0,
     last_error = null,
-    updated_at = now()
+    updated_at = now(),
+    is_available = true
   where jobs.locked_at is null
   returning *;
 end;
@@ -199,7 +201,8 @@ as $$
     set
       last_error = coalesce(error_message, 'Manually marked as failed'),
       attempts = max_attempts,
-      updated_at = now()
+      updated_at = now(),
+      is_available = false
     where id = any(job_ids)
     and (
       locked_at is null
@@ -232,7 +235,8 @@ begin
   set
     key = null,
     attempts = jobs.max_attempts,
-    updated_at = now()
+    updated_at = now(),
+    is_available = false
   where key = job_key
   returning * into v_job;
   return v_job;
@@ -253,7 +257,10 @@ as $$
       priority = coalesce(reschedule_jobs.priority, jobs.priority),
       attempts = coalesce(reschedule_jobs.attempts, jobs.attempts),
       max_attempts = coalesce(reschedule_jobs.max_attempts, jobs.max_attempts),
-      updated_at = now()
+      updated_at = now(),
+      is_available = (
+        coalesce(reschedule_jobs.attempts, jobs.attempts) < coalesce(reschedule_jobs.max_attempts, jobs.max_attempts)
+      )
     where id = any(job_ids)
     and (
       locked_at is null

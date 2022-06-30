@@ -23,7 +23,7 @@ where id = $2
 returning *
 )
 update ${escapedWorkerSchema}.job_queues
-set locked_by = null, locked_at = null
+set locked_by = null, locked_at = null, is_available = true
 from j
 where job_queues.id = j.job_queue_id and job_queues.locked_by = $1;`,
       values: [workerId, jobId],

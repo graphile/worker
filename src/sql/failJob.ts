@@ -24,12 +24,14 @@ set
 last_error = $3,
 run_at = greatest(now(), run_at) + (exp(least(attempts, 10))::text || ' seconds')::interval,
 locked_by = null,
-locked_at = null
+locked_at = null,
+updated_at = now(),
+is_available = jobs.attempts < jobs.max_attempts
 where id = $2 and locked_by = $1
 returning *
 )
 update ${escapedWorkerSchema}.job_queues
-set locked_by = null, locked_at = null
+set locked_by = null, locked_at = null, is_available = true
 from j
 where job_queues.id = j.job_queue_id and job_queues.locked_by = $1;`,
       values: [workerId, jobId, message],

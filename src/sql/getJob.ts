@@ -122,7 +122,8 @@ q as (
   update ${escapedWorkerSchema}.job_queues
     set
       locked_by = $1::text,
-      locked_at = ${now}
+      locked_at = ${now},
+      is_available = false
     from j
     where job_queues.id = j.job_queue_id
 )`;
@@ -145,7 +146,8 @@ with j as (
     set
       attempts = jobs.attempts + 1,
       locked_by = $1::text,
-      locked_at = ${now}
+      locked_at = ${now},
+      is_available = false
     from j
     where jobs.id = j.id
     returning *`;

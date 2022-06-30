@@ -19,11 +19,11 @@ export async function resetLockedAt(
       text: `\
 with j as (
 update ${escapedWorkerSchema}.jobs
-set locked_at = null, locked_by = null
+set locked_at = null, locked_by = null, is_available = jobs.attempts < jobs.max_attempts
 where locked_at < ${now} - interval '4 hours'
 )
 update ${escapedWorkerSchema}.job_queues
-set locked_at = null, locked_by = null
+set locked_at = null, locked_by = null, is_available = true
 where locked_at < ${now} - interval '4 hours'`,
       values: useNodeTime ? [new Date().toISOString()] : [],
       name: noPreparedStatements
