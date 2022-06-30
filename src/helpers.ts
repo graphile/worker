@@ -3,11 +3,12 @@ import { Pool, PoolClient } from "pg";
 import {
   Job,
   JobHelpers,
+  SharedOptions,
   TaskSpec,
   WithPgClient,
   WorkerSharedOptions,
 } from "./interfaces";
-import { CompiledSharedOptions, processSharedOptions } from "./lib";
+import { processSharedOptions } from "./lib";
 import { Logger } from "./logger";
 
 export function makeAddJob(
@@ -57,20 +58,17 @@ export function makeAddJob(
 }
 
 export function makeJobHelpers(
-  compiledSharedOptions: CompiledSharedOptions,
-  withPgClient: WithPgClient,
+  options: SharedOptions,
   job: Job,
-  taskIdentifier: string,
   {
+    withPgClient,
     logger: overrideLogger,
-  }: {
-    logger?: Logger;
-  },
+  }: { withPgClient: WithPgClient; logger?: Logger },
 ): JobHelpers {
-  const baseLogger = overrideLogger || compiledSharedOptions.logger;
+  const baseLogger = overrideLogger || processSharedOptions(options).logger;
   const logger = baseLogger.scope({
     label: "job",
-    taskIdentifier,
+    taskIdentifier: job.task_identifier,
     jobId: job.id,
   });
   const helpers: JobHelpers = {
@@ -79,7 +77,7 @@ export function makeJobHelpers(
     withPgClient,
     query: (queryText, values) =>
       withPgClient((pgClient) => pgClient.query(queryText, values)),
-    addJob: makeAddJob(compiledSharedOptions.options, withPgClient),
+    addJob: makeAddJob(options, withPgClient),
 
     // TODO: add an API for giving workers more helpers
   };

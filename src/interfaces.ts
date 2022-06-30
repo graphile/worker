@@ -289,27 +289,17 @@ export interface CronItem {
 /** Represents records in the `jobs` table */
 export interface Job {
   id: string;
-  /** FK to job_queues */
-  job_queue_id: string | null;
-  /** FK to tasks */
-  task_id: string;
-  /** The JSON payload of the job */
+  queue_name: string | null;
+  task_identifier: string;
   payload: unknown;
-  /** Lower number means it should run sooner */
   priority: number;
-  /** When it was due to run */
   run_at: Date;
-  /** How many times it has been attempted */
   attempts: number;
-  /** The limit for the number of times it should be attempted */
   max_attempts: number;
-  /** If attempts > 0, why did it fail last? */
   last_error: string | null;
   created_at: Date;
   updated_at: Date;
-  /** "job_key" - unique identifier for easy update from user code */
   key: string | null;
-  /** A count of the revision numbers */
   revision: number;
   locked_at: Date | null;
   locked_by: string | null;
