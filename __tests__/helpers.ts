@@ -125,9 +125,43 @@ export async function getKnown(pgPool: pg.Pool) {
   return rows;
 }
 
-export async function getJobs(pgPool: pg.Pool) {
-  const { rows } = await pgPool.query<DbJob>(
-    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
+export async function getJobs(
+  pgClient: pg.Pool | pg.PoolClient,
+  extra: {
+    where?: string;
+    values?: any[];
+  } = {},
+) {
+  const { where, values } = extra;
+  const { rows } = await pgClient.query<
+    Job & { queue_name: string; payload: any }
+  >(
+    `\
+select
+  *,
+  identifier as task_identifier,
+  job_queues.queue_name as queue_name
+from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs
+left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks
+on (tasks.id = jobs.task_id)
+left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues
+on (job_queues.id = jobs.job_queue_id)
+${where ? `where ${where}\n` : ""}\
+order by jobs.id asc`,
+    values,
+  );
+  return rows;
+}
+
+export async function getJobQueues(pgClient: pg.Pool | pg.PoolClient) {
+  const { rows } = await pgClient.query<{
+    id: number;
+    queue_name: string;
+    job_count: number;
+    locked_at: Date;
+    locked_by: string;
+  }>(
+    `select job_queues.*, count(jobs.*) as job_count from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs on (jobs.job_queue_id = job_queues.id) order by job_queues.queue_name asc`,
   );
   return rows;
 }

@@ -1,6 +1,7 @@
 import { makeWorkerUtils, WorkerSharedOptions } from "../src/index";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  getJobs,
   makeSelectionOfJobs,
   reset,
   TEST_CONNECTION_STRING,
@@ -34,9 +35,7 @@ test("completes the jobs, leaves others unaffected", () =>
       [failedJob.id, regularJob1.id, regularJob2.id].sort(numerically),
     );
 
-    const { rows: remaining } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-    );
+    const remaining = await getJobs(pgClient);
     expect(remaining).toHaveLength(2);
     expect(remaining[0]).toMatchObject(lockedJob);
     expect(remaining[1]).toMatchObject(untouchedJob);

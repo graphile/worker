@@ -2,6 +2,7 @@ import { WorkerSharedOptions } from "../src";
 import { migrate } from "../src/migrate";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  getJobs,
   GRAPHILE_WORKER_SCHEMA,
   withPgClient,
 } from "./helpers";
@@ -42,9 +43,7 @@ test("migration installs schema; second migration does no harm", async () => {
       `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('assert_jobs_work')`,
     );
     {
-      const { rows: jobsRows } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-      );
+      const jobsRows = await getJobs(pgClient);
       expect(jobsRows).toHaveLength(1);
       expect(jobsRows[0].task_identifier).toEqual("assert_jobs_work");
     }
@@ -54,9 +53,7 @@ test("migration installs schema; second migration does no harm", async () => {
     await migrate(options, pgClient);
     await migrate(options, pgClient);
     {
-      const { rows: jobsRows } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-      );
+      const jobsRows = await getJobs(pgClient);
       expect(jobsRows).toHaveLength(1);
       expect(jobsRows[0].task_identifier).toEqual("assert_jobs_work");
     }

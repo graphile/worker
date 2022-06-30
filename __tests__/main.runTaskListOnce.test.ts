@@ -3,6 +3,8 @@ import { Task, TaskList, Worker, WorkerSharedOptions } from "../src/interfaces";
 import { runTaskListOnce } from "../src/main";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  getJobQueues,
+  getJobs,
   jobCount,
   reset,
   sleepUntil,
@@ -24,16 +26,12 @@ test("runs jobs", () =>
     );
 
     // Assert that it has an entry in jobs / job_queues
-    const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-    );
+    const jobs = await getJobs(pgClient);
     expect(jobs).toHaveLength(1);
     const job = jobs[0];
     expect(+job.run_at).toBeGreaterThanOrEqual(+start);
     expect(+job.run_at).toBeLessThanOrEqual(+new Date());
-    const { rows: jobQueues } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues`,
-    );
+    const jobQueues = await getJobQueues(pgClient);
     expect(jobQueues).toHaveLength(1);
     const q = jobQueues[0];
     expect(q.queue_name).toEqual(job.queue_name);
@@ -73,9 +71,7 @@ test("schedules errors for retry", () =>
     );
 
     {
-      const { rows: jobs } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-      );
+      const jobs = await getJobs(pgClient);
       expect(jobs).toHaveLength(1);
       const job = jobs[0];
       expect(job.task_identifier).toEqual("job1");
@@ -83,9 +79,7 @@ test("schedules errors for retry", () =>
       expect(+job.run_at).toBeGreaterThanOrEqual(+start);
       expect(+job.run_at).toBeLessThanOrEqual(+new Date());
 
-      const { rows: jobQueues } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues`,
-      );
+      const jobQueues = await getJobQueues(pgClient);
       expect(jobQueues).toHaveLength(1);
       const q = jobQueues[0];
       expect(q.queue_name).toEqual(job.queue_name);
@@ -106,9 +100,7 @@ test("schedules errors for retry", () =>
 
     // Check that it failed as expected
     {
-      const { rows: jobs } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-      );
+      const jobs = await getJobs(pgClient);
       expect(jobs).toHaveLength(1);
       const job = jobs[0];
       expect(job.task_identifier).toEqual("job1");
@@ -119,9 +111,7 @@ test("schedules errors for retry", () =>
       expect(+job.run_at).toBeGreaterThanOrEqual(+start + 2718);
       expect(+job.run_at).toBeLessThanOrEqual(+new Date() + 2719);
 
-      const { rows: jobQueues } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues`,
-      );
+      const jobQueues = await getJobQueues(pgClient);
       expect(jobQueues).toHaveLength(1);
       const q = jobQueues[0];
       expect(q.queue_name).toEqual(job.queue_name);
@@ -169,9 +159,7 @@ test("retries job", () =>
 
     // And it should have been rejected again
     {
-      const { rows: jobs } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-      );
+      const jobs = await getJobs(pgClient);
       expect(jobs).toHaveLength(1);
       const job = jobs[0];
       expect(job.task_identifier).toEqual("job1");
@@ -182,9 +170,7 @@ test("retries job", () =>
       expect(+job.run_at).toBeGreaterThanOrEqual(+start + 7388);
       expect(+job.run_at).toBeLessThanOrEqual(+new Date() + 7389);
 
-      const { rows: jobQueues } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues`,
-      );
+      const jobQueues = await getJobQueues(pgClient);
       expect(jobQueues).toHaveLength(1);
       const q = jobQueues[0];
       expect(q.queue_name).toEqual(job.queue_name);
@@ -228,13 +214,9 @@ test("supports future-scheduled jobs", () =>
 
     // It should be successful
     {
-      const { rows: jobs } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-      );
+      const jobs = await getJobs(pgClient);
       expect(jobs).toHaveLength(0);
-      const { rows: jobQueues } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues`,
-      );
+      const jobQueues = await getJobQueues(pgClient);
       expect(jobQueues).toHaveLength(0);
     }
   }));
@@ -259,9 +241,7 @@ test("allows update of pending jobs", () =>
     );
 
     // Assert that it has an entry in jobs / job_queues
-    const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-    );
+    const jobs = await getJobs(pgClient);
     expect(jobs).toHaveLength(1);
     const job = jobs[0];
     expect(job.run_at).toEqual(runAt);
@@ -277,9 +257,7 @@ test("allows update of pending jobs", () =>
     );
 
     // Assert that it has updated the existing entry and not created a new one
-    const { rows: updatedJobs } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-    );
+    const updatedJobs = await getJobs(pgClient);
     expect(updatedJobs).toHaveLength(1);
     const updatedJob = updatedJobs[0];
     expect(updatedJob.id).toEqual(job.id);
@@ -361,13 +339,7 @@ test("schedules a new job if existing is being processed", () =>
       );
 
       // check there are now two jobs scheduled
-      expect(
-        (
-          await pgClient.query(
-            `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-          )
-        ).rows,
-      ).toHaveLength(2);
+      expect(await getJobs(pgClient)).toHaveLength(2);
 
       // wait for the original job to complete - note this picks up the new job,
       // because the worker checks again for pending jobs at the end of each run
@@ -418,9 +390,7 @@ test("schedules a new job if the existing is pending retry", () =>
     expect(tasks.job1).toHaveBeenCalledTimes(1);
 
     // Check that it failed as expected and retry has been scheduled
-    const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-    );
+    const jobs = await getJobs(pgClient);
     expect(jobs).toHaveLength(1);
     expect(jobs[0].id).toEqual(initialJob.id);
     expect(jobs[0].attempts).toEqual(1);
@@ -437,9 +407,7 @@ test("schedules a new job if the existing is pending retry", () =>
     );
 
     // Assert that it has updated the existing entry and not created a new one
-    const { rows: updatedJobs } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-    );
+    const updatedJobs = await getJobs(pgClient);
     expect(updatedJobs).toHaveLength(1);
     expect(updatedJobs[0].id).toEqual(initialJob.id);
     expect(updatedJobs[0].attempts).toEqual(0);
@@ -496,9 +464,7 @@ test("job details are reset if not specified in update", () =>
     });
 
     // Assert that it has an entry in jobs
-    const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-    );
+    const jobs = await getJobs(pgClient);
     expect(jobs).toHaveLength(1);
     expect(jobs[0]).toMatchObject(original);
 
@@ -512,9 +478,7 @@ test("job details are reset if not specified in update", () =>
 
     // check omitted details have reverted to the default values, bar queue name
     // which should not change unless explicitly updated
-    const { rows: jobs2 } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-    );
+    const jobs2 = await getJobs(pgClient);
     expect(jobs2).toHaveLength(1);
     expect(jobs2[0]).toMatchObject({
       id: original.id,
@@ -542,9 +506,7 @@ test("job details are reset if not specified in update", () =>
     );
 
     // check details have changed
-    const { rows: jobs3 } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-    );
+    const jobs3 = await getJobs(pgClient);
     expect(jobs3).toHaveLength(1);
     expect(jobs3[0]).toMatchObject({
       id: original.id,
@@ -571,26 +533,14 @@ test("pending jobs can be removed", () =>
     );
 
     // Assert that it has an entry in jobs / job_queues
-    expect(
-      (
-        await pgClient.query(
-          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-        )
-      ).rows,
-    ).toHaveLength(1);
+    expect(await getJobs(pgClient)).toHaveLength(1);
 
     // remove the job
     await pgClient.query(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.remove_job('abc')`,
     );
     // check there are no jobs
-    expect(
-      (
-        await pgClient.query(
-          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-        )
-      ).rows,
-    ).toHaveLength(0);
+    expect(await getJobs(pgClient)).toHaveLength(0);
   }));
 
 test("jobs in progress cannot be removed", () =>
@@ -612,13 +562,7 @@ test("jobs in progress cannot be removed", () =>
       );
 
       // check it was inserted
-      expect(
-        (
-          await pgClient.query(
-            `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-          )
-        ).rows,
-      ).toHaveLength(1);
+      expect(await getJobs(pgClient)).toHaveLength(1);
 
       const promise = runTaskListOnce(options, tasks, pgClient);
       // wait for it to be picked up for processing
@@ -631,13 +575,7 @@ test("jobs in progress cannot be removed", () =>
       );
 
       // check it was not removed
-      expect(
-        (
-          await pgClient.query(
-            `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-          )
-        ).rows,
-      ).toHaveLength(1);
+      expect(await getJobs(pgClient)).toHaveLength(1);
 
       // wait for the original job to complete
       deferred!.resolve();
@@ -689,9 +627,7 @@ test("runs jobs asynchronously", () =>
       expect(executed).toBeFalsy();
 
       {
-        const { rows: jobs } = await pgClient.query(
-          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-        );
+        const jobs = await getJobs(pgClient);
         expect(jobs).toHaveLength(1);
         const job = jobs[0];
         expect(job.task_identifier).toEqual("job1");
@@ -700,9 +636,7 @@ test("runs jobs asynchronously", () =>
         expect(+job.run_at).toBeLessThanOrEqual(+new Date());
         expect(job.attempts).toEqual(1); // It gets increased when the job is checked out
 
-        const { rows: jobQueues } = await pgClient.query(
-          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues`,
-        );
+        const jobQueues = await getJobQueues(pgClient);
         expect(jobQueues).toHaveLength(1);
         const q = jobQueues[0];
         expect(q.queue_name).toEqual(job.queue_name);
@@ -767,9 +701,7 @@ test("runs jobs in parallel", () =>
       expect(executed).toBeFalsy();
 
       {
-        const { rows: jobs } = await pgClient.query(
-          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs order by id asc`,
-        );
+        const jobs = await getJobs(pgClient);
         expect(jobs).toHaveLength(5);
         jobs.forEach((job) => {
           expect(job.task_identifier).toEqual("job1");
@@ -779,9 +711,7 @@ test("runs jobs in parallel", () =>
           expect(job.attempts).toEqual(1); // It gets increased when the job is checked out
         });
 
-        const { rows: jobQueues } = await pgClient.query(
-          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues`,
-        );
+        const jobQueues = await getJobQueues(pgClient);
         expect(jobQueues).toHaveLength(5);
         const locks: Array<string> = [];
         jobQueues.forEach((q) => {
