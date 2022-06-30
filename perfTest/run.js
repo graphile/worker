@@ -4,7 +4,7 @@ const { promisify } = require("util");
 const exec = promisify(rawExec);
 
 const JOB_COUNT = 20000;
-const STUCK_JOB_COUNT = 50000;
+const STUCK_JOB_COUNT = 0;
 const PARALLELISM = 4;
 const CONCURRENCY = 10;
 
