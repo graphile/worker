@@ -666,7 +666,9 @@ test("runs jobs asynchronously", () =>
       expect(job1).toHaveBeenCalledTimes(1);
       expect(await jobCount(pgClient)).toEqual(0);
     } finally {
-      jobPromise!.resolve();
+      if (jobPromise) {
+        (jobPromise as Deferred).resolve();
+      }
     }
   }));
 
