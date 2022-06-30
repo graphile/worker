@@ -16,6 +16,7 @@ import { completeJob } from "./sql/completeJob";
 import { failJob } from "./sql/failJob";
 import { getJob } from "./sql/getJob";
 import { resetLockedAt } from "./sql/resetLocketAt";
+import { getSupportedTaskIdentifierByTaskId } from "./taskIdentifiers";
 
 export function makeNewWorker(
   options: WorkerOptions,
@@ -41,7 +42,6 @@ export function makeNewWorker(
     useNodeTime,
     minResetLockedInterval,
     maxResetLockedInterval,
-    escapedWorkerSchema,
   } = compiledSharedOptions;
   const promise = deferred();
   promise.then(
@@ -137,34 +137,7 @@ export function makeNewWorker(
 
   let contiguousErrors = 0;
   let again = false;
-
-  let lastStr: string | null = null;
-  let lastSTIBTI: { [id: number]: string } | null = null;
-  const makeSupportedTaskIdentifierByTaskId = async (
-    tasks: TaskList,
-  ): Promise<{ [id: number]: string }> => {
-    const supportedTaskNames = Object.keys(tasks);
-    assert(supportedTaskNames.length, "No runnable tasks!");
-    const str = JSON.stringify(supportedTaskNames);
-    if (str !== lastStr) {
-      const { rows } = await withPgClient(async (client) => {
-        await client.query({
-          text: `insert into ${escapedWorkerSchema}.tasks (identifier) select unnest($1::text[]) on conflict do nothing`,
-          values: [supportedTaskNames],
-        });
-        return client.query<{ id: number; identifier: string }>({
-          text: `select id, identifier from ${escapedWorkerSchema}.tasks where identifier = any($1::text[])`,
-          values: [supportedTaskNames],
-        });
-      });
-      lastSTIBTI = {};
-      for (const row of rows) {
-        lastSTIBTI[row.id] = row.identifier;
-      }
-      lastStr = str;
-    }
-    return lastSTIBTI!;
-  };
+  let stibti = Object.create(null);
 
   const doNext = async (): Promise<void> => {
     again = false;
@@ -174,9 +147,6 @@ export function makeNewWorker(
 
     // Find us a job
     try {
-      const supportedTaskIdentifierByTaskId =
-        await makeSupportedTaskIdentifierByTaskId(tasks);
-
       let flagsToSkip: null | string[] = null;
 
       if (Array.isArray(forbiddenFlags)) {
@@ -195,8 +165,8 @@ export function makeNewWorker(
       const jobRow = await getJob(
         compiledSharedOptions,
         withPgClient,
+        tasks,
         workerId,
-        supportedTaskIdentifierByTaskId,
         useNodeTime,
         flagsToSkip,
       );
@@ -267,6 +237,23 @@ export function makeNewWorker(
     // We did get a job then; store it into the current scope.
     const job = activeJob;
 
+    const taskIdentifier =
+      stibti[job.task_id] ||
+      (await (async () => {
+        stibti = await getSupportedTaskIdentifierByTaskId(
+          compiledSharedOptions,
+          withPgClient,
+          tasks,
+        );
+        return stibti[job.task_id];
+      })());
+
+    if (!taskIdentifier) {
+      throw new Error(
+        `Could not determine task identifier for task_id = '${job.task_id}'`,
+      );
+    }
+
     // We may want to know if an error occurred or not
     let err: Error | null = null;
     try {
@@ -276,10 +263,18 @@ export function makeNewWorker(
        */
       const startTimestamp = process.hrtime();
       try {
-        logger.debug(`Found task ${job.id} (${job.task_identifier})`);
-        const task = tasks[job.task_identifier];
-        assert(task, `Unsupported task '${job.task_identifier}'`);
-        const helpers = makeJobHelpers(options, job, { withPgClient, logger });
+        logger.debug(`Found task ${job.id} (${taskIdentifier})`);
+        const task = tasks[taskIdentifier];
+        assert(task, `Unsupported task '${taskIdentifier}'`);
+        const helpers = makeJobHelpers(
+          compiledSharedOptions,
+          withPgClient,
+          job,
+          taskIdentifier,
+          {
+            logger,
+          },
+        );
         await task(job.payload, helpers);
       } catch (error) {
         err = error;
@@ -316,9 +311,11 @@ export function makeNewWorker(
           "Non error or error without message thrown.";
 
         logger.error(
-          `Failed task ${job.id} (${
-            job.task_identifier
-          }) with error ${message} (${duration.toFixed(2)}ms)${
+          `Failed task ${
+            job.id
+          } (${taskIdentifier}) with error ${message} (${duration.toFixed(
+            2,
+          )}ms)${
             stack ? `:\n  ${String(stack).replace(/\n/g, "\n  ").trim()}` : ""
           }`,
           { failure: true, job, error: err, duration },
@@ -340,9 +337,9 @@ export function makeNewWorker(
         }
         if (!process.env.NO_LOG_SUCCESS) {
           logger.info(
-            `Completed task ${job.id} (${
-              job.task_identifier
-            }) with success (${duration.toFixed(2)}ms)`,
+            `Completed task ${
+              job.id
+            } (${taskIdentifier}) with success (${duration.toFixed(2)}ms)`,
             { job, duration, success: true },
           );
         }

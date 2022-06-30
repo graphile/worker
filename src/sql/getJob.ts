@@ -1,11 +1,12 @@
-import { Job, WithPgClient } from "../interfaces";
+import { Job, TaskList, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
+import { getSupportedTaskIds } from "../taskIdentifiers";
 
 export async function getJob(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: WithPgClient,
+  tasks: TaskList,
   workerId: string,
-  supportedTaskIdentifierByTaskId: { [taskID: number]: string },
   useNodeTime: boolean,
   flagsToSkip: string[] | null,
 ): Promise<Job | undefined> {
@@ -14,6 +15,12 @@ export async function getJob(
     workerSchema,
     options: { noPreparedStatements },
   } = compiledSharedOptions;
+
+  const taskIds = await getSupportedTaskIds(
+    compiledSharedOptions,
+    withPgClient,
+    tasks,
+  );
 
   let i = 2;
   const hasFlags = flagsToSkip && flagsToSkip.length > 0;
@@ -147,7 +154,7 @@ with j as (
   // `RETURNING id, job_queue_id, task_id, payload`,
   const values = [
     workerId,
-    Object.keys(supportedTaskIdentifierByTaskId),
+    taskIds,
     ...(hasFlags ? [flagsToSkip!] : []),
     ...(useNodeTime ? [new Date().toISOString()] : []),
   ];
@@ -164,9 +171,5 @@ with j as (
       name,
     }),
   );
-  if (jobRow) {
-    jobRow.task_identifier =
-      supportedTaskIdentifierByTaskId[(jobRow as any).task_id];
-  }
   return jobRow;
 }
