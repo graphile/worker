@@ -176,71 +176,6 @@ begin
 end;
 $$ language plpgsql;
 
-create function :GRAPHILE_WORKER_SCHEMA.add_job_unsafe_dedupe(
-  spec :GRAPHILE_WORKER_SCHEMA.job_spec
-)
-returns :GRAPHILE_WORKER_SCHEMA.jobs
-as $$
-declare
-  v_job :GRAPHILE_WORKER_SCHEMA.jobs;
-begin
-  -- Ensure all the tasks exist
-  insert into :GRAPHILE_WORKER_SCHEMA.tasks (identifier)
-  select distinct spec.identifier
-  on conflict do nothing;
-
-  -- Ensure all the queues exist
-  if spec.queue_name is not null then
-    insert into :GRAPHILE_WORKER_SCHEMA.job_queues (queue_name)
-    select distinct spec.queue_name
-    on conflict do nothing;
-  end if;
-
-  -- Insert job, but if one already exists then do nothing, even if the
-  -- existing job has already started (and thus represents an out-of-date
-  -- world state). This is dangerous because it means that whatever state
-  -- change triggered this add_job may not be acted upon (since it happened
-  -- after the existing job started executing, but no further job is being
-  -- scheduled), but it is useful in very rare circumstances for
-  -- de-duplication. If in doubt, DO NOT USE THIS.
-  insert into :GRAPHILE_WORKER_SCHEMA.jobs (
-    job_queue_id,
-    task_id,
-    payload,
-    run_at,
-    max_attempts,
-    key,
-    priority,
-    flags
-  )
-    select
-      job_queues.id,
-      tasks.id,
-      coalesce(spec.payload, '{}'::json),
-      coalesce(spec.run_at, now()),
-      coalesce(spec.max_attempts, 25),
-      spec.job_key,
-      coalesce(spec.priority, 0),
-      (
-        select jsonb_object_agg(flag, true)
-        from unnest(spec.flags) as item(flag)
-      )
-    from :GRAPHILE_WORKER_SCHEMA.tasks
-    left join :GRAPHILE_WORKER_SCHEMA.job_queues
-    on job_queues.queue_name = spec.queue_name
-    where tasks.identifier = spec.identifier
-  on conflict (key)
-    -- Bump the updated_at so that there's something to return
-    do update set
-      revision = jobs.revision + 1,
-      updated_at = now()
-    returning *
-    into v_job;
-  return v_job;
-end;
-$$ language plpgsql strict;
-
-
 create function :GRAPHILE_WORKER_SCHEMA.complete_jobs(job_ids bigint[])
 returns setof :GRAPHILE_WORKER_SCHEMA.jobs
 as $$
@@ -372,18 +307,59 @@ begin
     limit 1;
     return v_job;
   elsif job_key is not null and job_key_mode = 'unsafe_dedupe' then
-    return :GRAPHILE_WORKER_SCHEMA.add_job_unsafe_dedupe(
-      (
-        identifier,
-        payload,
-        queue_name,
-        run_at,
-        max_attempts,
-        job_key,
-        priority,
-        flags
-      ):::GRAPHILE_WORKER_SCHEMA.job_spec
-    );
+    -- Ensure all the tasks exist
+    insert into :GRAPHILE_WORKER_SCHEMA.tasks (identifier)
+    values (add_job.identifier)
+    on conflict do nothing;
+
+    -- Ensure all the queues exist
+    if add_job.queue_name is not null then
+      insert into :GRAPHILE_WORKER_SCHEMA.job_queues (queue_name)
+      values (add_job.queue_name)
+      on conflict do nothing;
+    end if;
+
+    -- Insert job, but if one already exists then do nothing, even if the
+    -- existing job has already started (and thus represents an out-of-date
+    -- world state). This is dangerous because it means that whatever state
+    -- change triggered this add_job may not be acted upon (since it happened
+    -- after the existing job started executing, but no further job is being
+    -- scheduled), but it is useful in very rare circumstances for
+    -- de-duplication. If in doubt, DO NOT USE THIS.
+    insert into :GRAPHILE_WORKER_SCHEMA.jobs (
+      job_queue_id,
+      task_id,
+      payload,
+      run_at,
+      max_attempts,
+      key,
+      priority,
+      flags
+    )
+      select
+        job_queues.id,
+        tasks.id,
+        coalesce(add_job.payload, '{}'::json),
+        coalesce(add_job.run_at, now()),
+        coalesce(add_job.max_attempts, 25),
+        add_job.job_key,
+        coalesce(add_job.priority, 0),
+        (
+          select jsonb_object_agg(flag, true)
+          from unnest(add_job.flags) as item(flag)
+        )
+      from :GRAPHILE_WORKER_SCHEMA.tasks
+      left join :GRAPHILE_WORKER_SCHEMA.job_queues
+      on job_queues.queue_name = add_job.queue_name
+      where tasks.identifier = add_job.identifier
+    on conflict (key)
+      -- Bump the updated_at so that there's something to return
+      do update set
+        revision = jobs.revision + 1,
+        updated_at = now()
+      returning *
+      into v_job;
+    return v_job;
   elsif job_key is not null then
     raise exception 'Invalid job_key_mode value, expected ''replace'', ''preserve_run_at'' or ''unsafe_dedupe''.' using errcode = 'GWBKM';
   end if;
