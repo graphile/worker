@@ -1,5 +1,11 @@
 import defer, { Deferred } from "../src/deferred";
-import { Task, TaskList, Worker, WorkerSharedOptions } from "../src/interfaces";
+import {
+  DbJob,
+  Task,
+  TaskList,
+  Worker,
+  WorkerSharedOptions,
+} from "../src/interfaces";
 import { runTaskListOnce } from "../src/main";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
@@ -147,7 +153,7 @@ test("retries job", () =>
 
     // Tell the job to be runnable
     await pgClient.query(
-      `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set run_at = now() where task_identifier = 'job1'`,
+      `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set run_at = now() where task_id = (select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks where identifier = 'job1')`,
     );
 
     // Run the job
@@ -203,7 +209,7 @@ test("supports future-scheduled jobs", () =>
 
     // Tell the job to be runnable
     await pgClient.query(
-      `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set run_at = now() where task_identifier = 'future'`,
+      `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set run_at = now() where task_id = (select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks where identifier = 'future')`,
     );
 
     // Run the job
@@ -438,17 +444,22 @@ test("job details are reset if not specified in update", () =>
     const runAt = new Date();
     runAt.setSeconds(runAt.getSeconds() + 3);
     const {
-      rows: [original],
-    } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job(
-        'job1',
-        '{"a": 1}',
-        queue_name := 'queue1',
-        run_at := '${runAt.toISOString()}',
-        max_attempts := 10,
-        job_key := 'abc'
-      )`,
+      rows: [{ id }],
+    } = await pgClient.query<DbJob>(
+      `
+select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job(
+  'job1',
+  '{"a": 1}',
+  queue_name := 'queue1',
+  run_at := '${runAt.toISOString()}',
+  max_attempts := 10,
+  job_key := 'abc'
+) jobs`,
     );
+    const [original] = await getJobs(pgClient, {
+      where: `jobs.id = $1`,
+      values: [id],
+    });
 
     expect(original).toMatchObject({
       attempts: 0,
@@ -469,11 +480,12 @@ test("job details are reset if not specified in update", () =>
     expect(jobs[0]).toMatchObject(original);
 
     // update job, but don't provide any new details
-    await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job(
-        'job1',
-        job_key := 'abc'
-      )`,
+    await pgClient.query<DbJob>(
+      `\
+select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job(
+  'job1',
+  job_key := 'abc'
+)`,
     );
 
     // check omitted details have reverted to the default values, bar queue name
@@ -494,7 +506,7 @@ test("job details are reset if not specified in update", () =>
     // update job with new details
     const runAt2 = new Date();
     runAt2.setSeconds(runAt.getSeconds() + 5);
-    await pgClient.query(
+    await pgClient.query<DbJob>(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job(
         'job2',
         '{"a": 2}',
@@ -528,7 +540,7 @@ test("pending jobs can be removed", () =>
     await reset(pgClient, options);
 
     // Schedule a job
-    await pgClient.query(
+    await pgClient.query<DbJob>(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": "1"}', job_key := 'abc')`,
     );
 
@@ -557,7 +569,7 @@ test("jobs in progress cannot be removed", () =>
     };
     try {
       // Schedule a job
-      await pgClient.query(
+      await pgClient.query<DbJob>(
         `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 123}', job_key := 'abc')`,
       );
 
@@ -596,7 +608,7 @@ test("runs jobs asynchronously", () =>
 
     // Schedule a job
     const start = new Date();
-    await pgClient.query(
+    await pgClient.query<DbJob>(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 1}', queue_name := 'myqueue')`,
     );
 
@@ -664,7 +676,7 @@ test("runs jobs in parallel", () =>
 
     // Schedule 5 jobs
     const start = new Date();
-    await pgClient.query(
+    await pgClient.query<DbJob>(
       `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 1}', queue_name := 'queue_' || s::text) from generate_series(1, 5) s`,
     );
 
@@ -744,7 +756,7 @@ test("single worker runs jobs in series, purges all before exit", () =>
     await reset(pgClient, options);
 
     // Schedule 5 jobs
-    await pgClient.query(
+    await pgClient.query<DbJob>(
       `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 1}') from generate_series(1, 5)`,
     );
 
@@ -796,7 +808,7 @@ test("jobs added to the same queue will be ran serially (even if multiple worker
     await reset(pgClient, options);
 
     // Schedule 5 jobs
-    await pgClient.query(
+    await pgClient.query<DbJob>(
       `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 1}', 'serial') from generate_series(1, 5)`,
     );
 

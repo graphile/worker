@@ -138,7 +138,7 @@ export async function getJobs(
   >(
     `\
 select
-  *,
+  jobs.*,
   identifier as task_identifier,
   job_queues.queue_name as queue_name
 from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs
@@ -161,7 +161,7 @@ export async function getJobQueues(pgClient: pg.Pool | pg.PoolClient) {
     locked_at: Date;
     locked_by: string;
   }>(
-    `select job_queues.*, count(jobs.*) as job_count from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs on (jobs.job_queue_id = job_queues.id) order by job_queues.queue_name asc`,
+    `select job_queues.*, count(jobs.*)::int as job_count from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs on (jobs.job_queue_id = job_queues.id) group by job_queues.id order by job_queues.queue_name asc`,
   );
   return rows;
 }
