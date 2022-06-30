@@ -4,6 +4,7 @@ const { promisify } = require("util");
 const exec = promisify(rawExec);
 
 const JOB_COUNT = 20000;
+const STUCK_JOB_COUNT = 0;
 const PARALLELISM = 4;
 const CONCURRENCY = 10;
 
@@ -50,6 +51,13 @@ async function main() {
     execSync("node ../dist/cli.js --once", execOptions);
   });
   console.log();
+
+  if (STUCK_JOB_COUNT > 0) {
+    console.log(`Scheduling ${STUCK_JOB_COUNT} stuck jobs`);
+    await time(() => {
+      execSync(`node ./init.js ${STUCK_JOB_COUNT} stuck`, execOptions);
+    });
+  }
 
   console.log(`Scheduling ${JOB_COUNT} jobs`);
   await time(() => {
