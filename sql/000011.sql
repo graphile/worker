@@ -370,6 +370,7 @@ $$ language plpgsql;
 insert into :GRAPHILE_WORKER_SCHEMA.job_queues (queue_name)
 select distinct queue_name
 from :GRAPHILE_WORKER_SCHEMA.jobs_legacy
+where queue_name is not null
 on conflict do nothing;
 
 insert into :GRAPHILE_WORKER_SCHEMA.tasks (identifier)
