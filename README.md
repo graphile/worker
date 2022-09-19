@@ -5,6 +5,7 @@
 [![Package on npm](https://img.shields.io/npm/v/graphile-worker.svg?style=flat)](https://www.npmjs.com/package/graphile-worker)
 [![MIT license](https://img.shields.io/npm/l/graphile-worker.svg)](LICENSE.md)
 [![Follow](https://img.shields.io/badge/twitter-@GraphileHQ-blue.svg)](https://twitter.com/GraphileHQ)
+[![kandi X-Ray](https://kandi.openweaver.com/badges/xray.svg)](https://kandi.openweaver.com/typescript/graphile/worker)
 
 Job queue for PostgreSQL running on Node.js - allows you to run jobs (e.g.
 sending emails, performing calculations, generating PDFs, etc) "in the
