@@ -9,6 +9,8 @@ import {
 import { runTaskList } from "../src/main";
 import { ESCAPED_GRAPHILE_WORKER_SCHEMA, reset, withPgPool } from "./helpers";
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const options: WorkerSharedOptions = {};
 
 test("main will execute jobs as they come up, and exits cleanly", () =>
@@ -41,11 +43,11 @@ where task_id = (select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks where id
 `,
     );
 
-    const job1: Task = jest.fn(({ id }: { id: string }) => {
+    const job2: Task = jest.fn(({ id }: { id: string }) => {
       id;
     });
     const tasks: TaskList = {
-      job1,
+      job2,
     };
 
     // Run the worker
@@ -74,6 +76,7 @@ where task_id = (select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks where id
     await workerPool.promise;
 
     expect(states).toEqual(["started", "success"]);
+    await sleep(20);
     const { rows: jobs } = await pgPool.query(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
     );
