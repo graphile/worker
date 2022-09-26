@@ -15,7 +15,6 @@ import { processSharedOptions } from "./lib";
 import { completeJob } from "./sql/completeJob";
 import { failJob } from "./sql/failJob";
 import { getJob } from "./sql/getJob";
-import { resetLockedAt } from "./sql/resetLocketAt";
 
 export function makeNewWorker(
   options: WorkerOptions,
@@ -34,14 +33,8 @@ export function makeNewWorker(
       workerId,
     },
   });
-  const {
-    logger,
-    maxContiguousErrors,
-    events,
-    useNodeTime,
-    minResetLockedInterval,
-    maxResetLockedInterval,
-  } = compiledSharedOptions;
+  const { logger, maxContiguousErrors, events, useNodeTime } =
+    compiledSharedOptions;
   const promise = deferred();
   promise.then(
     () => {
@@ -64,69 +57,16 @@ export function makeNewWorker(
   };
   let active = true;
 
-  const resetLockedDelay = () =>
-    Math.ceil(
-      minResetLockedInterval +
-        Math.random() * (maxResetLockedInterval - minResetLockedInterval),
-    );
-
-  let resetLockedAtPromise: Promise<void> | undefined;
-
-  const resetLocked = () => {
-    resetLockedAtPromise = resetLockedAt(
-      compiledSharedOptions,
-      withPgClient,
-    ).then(
-      () => {
-        resetLockedAtPromise = undefined;
-        if (active) {
-          const delay = resetLockedDelay();
-          resetLockedTimeout = setTimeout(resetLocked, delay);
-        }
-      },
-      (e) => {
-        resetLockedAtPromise = undefined;
-        // TODO: push this error out via an event.
-        if (active) {
-          const delay = resetLockedDelay();
-          resetLockedTimeout = setTimeout(resetLocked, delay);
-          logger.error(
-            `Failed to reset locked; we'll try again in ${delay}ms`,
-            {
-              error: e,
-            },
-          );
-        } else {
-          logger.error(
-            `Failed to reset locked, but we're shutting down so won't try again`,
-            {
-              error: e,
-            },
-          );
-        }
-      },
-    );
-  };
-
-  // Reset locked in the first 60 seconds, not immediately because we don't
-  // want to cause a thundering herd.
-  let resetLockedTimeout: NodeJS.Timeout | null = setTimeout(
-    resetLocked,
-    Math.random() * 60000,
-  );
-
   const release = () => {
     if (!active) {
       return;
     }
     active = false;
-    clearTimeout(resetLockedTimeout!);
-    resetLockedTimeout = null;
     events.emit("worker:release", { worker });
     if (cancelDoNext()) {
-      // Nothing in progress; resolve the promise
-      promise.resolve(resetLockedAtPromise);
+      promise.resolve();
     }
+
     return promise;
   };
 
@@ -244,10 +184,10 @@ export function makeNewWorker(
             doNextTimer = setTimeout(() => doNext(), pollInterval);
           }
         } else {
-          promise.resolve(resetLockedAtPromise);
+          promise.resolve();
         }
       } else {
-        promise.resolve(resetLockedAtPromise);
+        promise.resolve();
         release();
       }
       return;
@@ -373,7 +313,7 @@ export function makeNewWorker(
     if (active) {
       doNext();
     } else {
-      promise.resolve(resetLockedAtPromise);
+      promise.resolve();
     }
   };
 
