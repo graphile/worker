@@ -745,6 +745,45 @@ export type WorkerEventMap = {
   };
 
   /**
+   * **Experimental** When we trigger the 'resetLocked' cleanup process
+   * (currently every 8-10 minutes)
+   */
+  "resetLocked:start": {
+    /** @internal Not sure this'll stay on pool */
+    pool: WorkerPool;
+  };
+
+  /**
+   * **Experimental** When the `resetLocked` process has completed
+   * successfully.
+   */
+  "resetLocked:success": {
+    /**
+     * The number of milliseconds until resetLocked runs again
+     */
+    delay: number;
+
+    /** @internal Not sure this'll stay on pool */
+    pool: WorkerPool;
+  };
+
+  /**
+   * **Experimental** When the `resetLocked` process has failed.
+   */
+  "resetLocked:failure": {
+    error: Error;
+
+    /**
+     * The number of milliseconds until resetLocked runs again (or null if we
+     * won't because the pool is exiting)
+     */
+    delay: number | null;
+
+    /** @internal Not sure this'll stay on pool */
+    pool: WorkerPool;
+  };
+
+  /**
    * When the runner is terminated by a signal
    */
   gracefulShutdown: { signal: Signal };

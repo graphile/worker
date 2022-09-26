@@ -147,6 +147,7 @@ export function runTaskList(
   let resetLockedAtPromise: Promise<void> | undefined;
 
   const resetLocked = () => {
+    events.emit("resetLocked:start", { pool: this });
     resetLockedAtPromise = resetLockedAt(
       compiledSharedOptions,
       withPgClient,
@@ -155,6 +156,7 @@ export function runTaskList(
         resetLockedAtPromise = undefined;
         if (active) {
           const delay = resetLockedDelay();
+          events.emit("resetLocked:success", { pool: this, delay });
           resetLockedTimeout = setTimeout(resetLocked, delay);
         }
       },
@@ -163,6 +165,7 @@ export function runTaskList(
         // TODO: push this error out via an event.
         if (active) {
           const delay = resetLockedDelay();
+          events.emit("resetLocked:failure", { pool: this, error: e, delay });
           resetLockedTimeout = setTimeout(resetLocked, delay);
           logger.error(
             `Failed to reset locked; we'll try again in ${delay}ms`,
@@ -171,6 +174,11 @@ export function runTaskList(
             },
           );
         } else {
+          events.emit("resetLocked:failure", {
+            pool: this,
+            error: e,
+            delay: null,
+          });
           logger.error(
             `Failed to reset locked, but we're shutting down so won't try again`,
             {
