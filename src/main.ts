@@ -385,10 +385,19 @@ export function runTaskList(
   return workerPool;
 }
 
-export const runTaskListOnce = (
+export const runTaskListOnce = async (
   options: WorkerOptions,
   tasks: TaskList,
   client: PoolClient,
-) =>
-  makeNewWorker(options, tasks, makeWithPgClientFromClient(client), false)
-    .promise;
+) => {
+  const withPgClient = makeWithPgClientFromClient(client);
+  const compiledSharedOptions = processSharedOptions(options);
+  await resetLockedAt(compiledSharedOptions, withPgClient);
+  const worker = makeNewWorker(
+    options,
+    tasks,
+    makeWithPgClientFromClient(client),
+    false,
+  );
+  return worker.promise;
+};
