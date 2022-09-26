@@ -20,7 +20,7 @@ import {
 import { processSharedOptions } from "./lib";
 import { Logger } from "./logger";
 import SIGNALS from "./signals";
-import { resetLockedAt } from "./sql/resetLocketAt";
+import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
 
 // Wait at most 60 seconds between connection attempts for LISTEN.
