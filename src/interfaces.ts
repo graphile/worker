@@ -331,7 +331,7 @@ export interface KnownCrontab {
 export interface Worker {
   nudge: () => boolean;
   workerId: string;
-  release: () => void;
+  release: () => void | Promise<void>;
   promise: Promise<void>;
   getActiveJob: () => Job | null;
 }
