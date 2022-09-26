@@ -147,7 +147,6 @@ export function runTaskList(
   let resetLockedAtPromise: Promise<void> | undefined;
 
   const resetLocked = () => {
-    events.emit("resetLocked:start", { pool: this });
     resetLockedAtPromise = resetLockedAt(
       compiledSharedOptions,
       withPgClient,
@@ -158,6 +157,8 @@ export function runTaskList(
           const delay = resetLockedDelay();
           events.emit("resetLocked:success", { pool: this, delay });
           resetLockedTimeout = setTimeout(resetLocked, delay);
+        } else {
+          events.emit("resetLocked:success", { pool: this, delay: null });
         }
       },
       (e) => {
@@ -188,13 +189,14 @@ export function runTaskList(
         }
       },
     );
+    events.emit("resetLocked:started", { pool: this });
   };
 
   // Reset locked in the first 60 seconds, not immediately because we don't
   // want to cause a thundering herd.
   let resetLockedTimeout: NodeJS.Timeout | null = setTimeout(
     resetLocked,
-    Math.random() * 60000,
+    Math.random() * Math.min(60000, maxResetLockedInterval),
   );
 
   // This is a representation of us that can be interacted with externally

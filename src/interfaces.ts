@@ -765,7 +765,7 @@ export type WorkerEventMap = {
    * **Experimental** When we trigger the 'resetLocked' cleanup process
    * (currently every 8-10 minutes)
    */
-  "resetLocked:start": {
+  "resetLocked:started": {
     /** @internal Not sure this'll stay on pool */
     pool: WorkerPool;
   };
@@ -776,9 +776,10 @@ export type WorkerEventMap = {
    */
   "resetLocked:success": {
     /**
-     * The number of milliseconds until resetLocked runs again
+     * The number of milliseconds until resetLocked runs again (or null if we
+     * won't because the pool is exiting)
      */
-    delay: number;
+    delay: number | null;
 
     /** @internal Not sure this'll stay on pool */
     pool: WorkerPool;
