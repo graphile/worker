@@ -59,7 +59,7 @@ export function makeNewWorker(
 
   const release = () => {
     if (!active) {
-      return;
+      return promise;
     }
     active = false;
     events.emit("worker:release", { worker });
