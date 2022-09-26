@@ -458,6 +458,23 @@ export interface SharedOptions {
    * false.)
    */
   useNodeTime?: boolean;
+
+  /**
+   * **Experimental**
+   *
+   * How often should we scan for jobs that have been locked too long and
+   * release them? This is the minimum interval, we'll choose a time between
+   * this and `maxResetLockedInterval`.
+   */
+  minResetLockedInterval?: number;
+
+  /**
+   * **Experimental**
+   *
+   * The upper bound of how long we'll wait between scans for jobs that have
+   * been locked too long. See `minResetLockedInterval`.
+   */
+  maxResetLockedInterval?: number;
 }
 
 /**
