@@ -146,7 +146,7 @@ export type PromiseOrDirect<T> = Promise<T> | T;
 export type Task = (
   payload: unknown,
   helpers: JobHelpers,
-) => PromiseOrDirect<void | PromiseOrDirect<undefined>[]>;
+) => PromiseOrDirect<void | PromiseOrDirect<unknown>[]>;
 
 export function isValidTask(fn: unknown): fn is Task {
   if (typeof fn === "function") {

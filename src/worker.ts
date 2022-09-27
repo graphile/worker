@@ -205,7 +205,7 @@ export function makeNewWorker(
        * **MUST** release the job once we've attempted it (success or error).
        */
       const startTimestamp = process.hrtime();
-      let result: void | PromiseOrDirect<undefined>[];
+      let result: void | PromiseOrDirect<unknown>[];
       try {
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
