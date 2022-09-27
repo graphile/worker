@@ -1,11 +1,11 @@
-import { WithPgClient } from "../interfaces";
+import { DbJob, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
 export async function completeJob(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: WithPgClient,
   workerId: string,
-  jobId: string,
+  job: DbJob,
 ): Promise<void> {
   const {
     escapedWorkerSchema,
@@ -14,20 +14,34 @@ export async function completeJob(
   } = compiledSharedOptions;
 
   // TODO: retry logic, in case of server connection interruption
-  await withPgClient((client) =>
-    client.query({
-      text: `\
+  if (job.job_queue_id != null) {
+    await withPgClient((client) =>
+      client.query({
+        text: `\
 with j as (
 delete from ${escapedWorkerSchema}.jobs
-where id = $2
+where id = $1
 returning *
 )
 update ${escapedWorkerSchema}.job_queues
 set locked_by = null, locked_at = null
 from j
-where job_queues.id = j.job_queue_id and job_queues.locked_by = $1;`,
-      values: [workerId, jobId],
-      name: noPreparedStatements ? undefined : `complete_job/${workerSchema}`,
-    }),
-  );
+where job_queues.id = j.job_queue_id and job_queues.locked_by = $2;`,
+        values: [job.id, workerId],
+        name: noPreparedStatements
+          ? undefined
+          : `complete_job_q/${workerSchema}`,
+      }),
+    );
+  } else {
+    await withPgClient((client) =>
+      client.query({
+        text: `\
+delete from ${escapedWorkerSchema}.jobs
+where id = $1`,
+        values: [job.id],
+        name: noPreparedStatements ? undefined : `complete_job/${workerSchema}`,
+      }),
+    );
+  }
 }

@@ -256,7 +256,7 @@ export function makeNewWorker(
           compiledSharedOptions,
           withPgClient,
           workerId,
-          job.id,
+          job,
           message,
         );
       } else {
@@ -276,12 +276,7 @@ export function makeNewWorker(
           );
         }
 
-        await completeJob(
-          compiledSharedOptions,
-          withPgClient,
-          workerId,
-          job.id,
-        );
+        await completeJob(compiledSharedOptions, withPgClient, workerId, job);
       }
       events.emit("job:complete", { worker, job, error: err });
     } catch (fatalError) {
