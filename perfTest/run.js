@@ -61,7 +61,10 @@ async function main() {
 
   console.log(`Scheduling ${JOB_COUNT} jobs`);
   await time(() => {
-    execSync(`node ./init.js ${JOB_COUNT}`, execOptions);
+    execSync(`node ./init.js ${JOB_COUNT}`, {
+      ...execOptions,
+      stdio: "inherit",
+    });
   });
 
   console.log();

@@ -13,46 +13,48 @@ if (!taskIdentifier.match(/^[a-zA-Z0-9_]+$/)) {
 async function main() {
   if (taskIdentifier === "stuck") {
     await pgPool.query(
-      `
-        do $$
-        begin
-          perform graphile_worker.add_jobs(
-            (
-              select array_agg(json_populate_record(null::graphile_worker.job_spec, json_build_object(
-                'identifier', '${taskIdentifier}'
-                ,'payload', json_build_object('id', i)
-                ,'queue_name', '${taskIdentifier}' || ((i % 2)::text)
-              )))
-              from generate_series(1, ${jobCount}) i
-            )
-          );
+      `\
+do $$
+begin
+  perform graphile_worker.add_jobs(
+    (
+      select array_agg(json_populate_record(null::graphile_worker.job_spec, json_build_object(
+        'identifier', '${taskIdentifier}'
+        ,'payload', json_build_object('id', i)
+        ,'queue_name', '${taskIdentifier}' || ((i % 2)::text)
+      )))
+      from generate_series(1, ${jobCount}) i
+    )
+  );
 
-          update graphile_worker.job_queues
-          set locked_at = now(), locked_by = 'fakelock'
-          where queue_name like '${taskIdentifier}%';
-        end;
-        $$ language plpgsql;
-      `,
+  update graphile_worker.job_queues
+  set locked_at = now(), locked_by = 'fakelock'
+  where queue_name like '${taskIdentifier}%';
+end;
+$$ language plpgsql;`,
     );
   } else {
+    const jobs = [];
+    for (let i = 0; i < jobCount; i++) {
+      jobs.push({
+        identifier: taskIdentifier,
+        payload: { id: i },
+        // queue_name: `${taskIdentifier}${i % 5}`,
+      });
+    }
+    const jobsString = JSON.stringify(jobs);
+    console.time("Adding jobs");
     await pgPool.query(
-      `
-        do $$
-        begin
-          perform graphile_worker.add_jobs(
-            (
-              select array_agg(json_populate_record(null::graphile_worker.job_spec, json_build_object(
-                'identifier', '${taskIdentifier}'
-                ,'payload', json_build_object('id', i)
-                -- , 'queue_name', '${taskIdentifier}' || ((i % 5)::text)
-              )))
-              from generate_series(1, ${jobCount}) i
-            )
-          );
-        end;
-        $$ language plpgsql;
-      `,
+      `\
+select graphile_worker.add_jobs(
+  (
+    select array_agg(json_populate_record(null::graphile_worker.job_spec, el))
+    from json_array_elements($1::json) el
+  )
+);`,
+      [jobsString],
     );
+    console.timeEnd("Adding jobs");
   }
 
   pgPool.end();
