@@ -173,7 +173,7 @@ with j as (
   if (jobRow) {
     return Object.assign(jobRow, {
       task_identifier:
-        taskDetails.supportedTaskIdentifierByTaskId[(jobRow as any).task_id],
+        taskDetails.supportedTaskIdentifierByTaskId[jobRow.task_id],
     });
   } else {
     return undefined;
