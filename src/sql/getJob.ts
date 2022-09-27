@@ -1,3 +1,5 @@
+import { isPromise } from "util/types";
+
 import { DbJob, Job, TaskList, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 import { getTaskDetails } from "../taskIdentifiers";
@@ -15,11 +17,14 @@ export async function getJob(
     workerSchema,
     options: { noPreparedStatements },
   } = compiledSharedOptions;
-  const taskDetails = await getTaskDetails(
+  const taskDetailsPromise = getTaskDetails(
     compiledSharedOptions,
     withPgClient,
     tasks,
   );
+  const taskDetails = isPromise(taskDetailsPromise)
+    ? await taskDetailsPromise
+    : taskDetailsPromise;
 
   let i = 2;
   const hasFlags = flagsToSkip && flagsToSkip.length > 0;
