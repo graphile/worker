@@ -1,8 +1,15 @@
-import { isPromise } from "util/types";
-
 import { DbJob, Job, TaskList, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 import { getTaskDetails } from "../taskIdentifiers";
+
+export function isPromise<T>(t: T | Promise<T>): t is Promise<T> {
+  return (
+    typeof t === "object" &&
+    t !== null &&
+    typeof (t as any).then === "function" &&
+    typeof (t as any).catch === "function"
+  );
+}
 
 export async function getJob(
   compiledSharedOptions: CompiledSharedOptions,
