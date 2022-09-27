@@ -36,22 +36,19 @@ $$ language plpgsql;`,
   } else {
     const jobs = [];
     for (let i = 0; i < jobCount; i++) {
-      jobs.push({
-        identifier: taskIdentifier,
-        payload: { id: i },
-        // queue_name: `${taskIdentifier}${i % 5}`,
-      });
+      jobs.push(
+        `("${taskIdentifier.replace(
+          /["\\]/g,
+          "\\$&",
+        )}","{\\"id\\":${i}}",,,,,,)`,
+      );
     }
-    const jobsString = JSON.stringify(jobs);
+    const jobsString = `{"${jobs
+      .map((j) => j.replace(/["\\]/g, "\\$&"))
+      .join('","')}"}`;
     console.time("Adding jobs");
     await pgPool.query(
-      `\
-select graphile_worker.add_jobs(
-  (
-    select array_agg(json_populate_record(null::graphile_worker.job_spec, el))
-    from json_array_elements($1::json) el
-  )
-);`,
+      `select graphile_worker.add_jobs($1::graphile_worker.job_spec[]);`,
       [jobsString],
     );
     console.timeEnd("Adding jobs");
