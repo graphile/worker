@@ -141,10 +141,12 @@ export interface WorkerUtils extends Helpers {
   ) => Promise<DbJob[]>;
 }
 
+export type PromiseOrDirect<T> = Promise<T> | T;
+
 export type Task = (
   payload: unknown,
   helpers: JobHelpers,
-) => void | Promise<void>;
+) => PromiseOrDirect<void | PromiseOrDirect<unknown>[]>;
 
 export function isValidTask(fn: unknown): fn is Task {
   if (typeof fn === "function") {
@@ -692,12 +694,17 @@ export type WorkerEventMap = {
   /**
    * When a job throws an error
    */
-  "job:error": { worker: Worker; job: Job; error: any };
+  "job:error": { worker: Worker; job: Job; error: any; batchJobErrors?: any[] };
 
   /**
    * When a job fails permanently (emitted after job:error when appropriate)
    */
-  "job:failed": { worker: Worker; job: Job; error: any };
+  "job:failed": {
+    worker: Worker;
+    job: Job;
+    error: any;
+    batchJobErrors?: any[];
+  };
 
   /**
    * When a job has finished executing and the result (success or failure) has

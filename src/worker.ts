@@ -6,6 +6,7 @@ import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
   Job,
+  PromiseOrDirect,
   TaskList,
   WithPgClient,
   Worker,
@@ -204,20 +205,61 @@ export function makeNewWorker(
        * **MUST** release the job once we've attempted it (success or error).
        */
       const startTimestamp = process.hrtime();
+      let result: void | PromiseOrDirect<unknown>[];
       try {
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
         assert(task, `Unsupported task '${job.task_identifier}'`);
         const helpers = makeJobHelpers(options, job, { withPgClient, logger });
-        await task(job.payload, helpers);
+        result = await task(job.payload, helpers);
       } catch (error) {
         err = error;
       }
       const durationRaw = process.hrtime(startTimestamp);
       const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
+
+      // `batchJobFailedPayloads` and `batchJobErrors` should always have the same length
+      const batchJobFailedPayloads: any[] = [];
+      const batchJobErrors: any[] = [];
+
+      if (!err && Array.isArray(job.payload) && Array.isArray(result)) {
+        if (job.payload.length !== result.length) {
+          console.warn(
+            `Task '${job.task_identifier}' has invalid return value - should return either nothing or an array with the same length as the incoming payload to indicate success or otherwise for each entry. We're going to treat this as full success, but this is a bug in your code.`,
+          );
+        } else {
+          // "Batch job" handling of the result list
+          const results = await Promise.allSettled(result);
+          for (let i = 0; i < job.payload.length; i++) {
+            const entryResult = results[i];
+            if (entryResult.status === "rejected") {
+              batchJobFailedPayloads.push(job.payload[i]);
+              batchJobErrors.push(entryResult.reason);
+            } else {
+              // success!
+            }
+          }
+
+          if (batchJobErrors.length > 0) {
+            // Create a "partial" error for the batch
+            err = new Error(
+              `Batch failures:\n${batchJobErrors
+                .map((e) => e.message ?? String(e))
+                .join("\n")}`,
+            );
+          }
+        }
+      }
+
       if (err) {
         try {
-          events.emit("job:error", { worker, job, error: err });
+          events.emit("job:error", {
+            worker,
+            job,
+            error: err,
+            batchJobErrors:
+              batchJobErrors.length > 0 ? batchJobErrors : undefined,
+          });
         } catch (e) {
           logger.error(
             "Error occurred in event emitter for 'job:error'; this is an issue in your application code and you should fix it",
@@ -226,7 +268,13 @@ export function makeNewWorker(
         if (job.attempts >= job.max_attempts) {
           try {
             // Failed forever
-            events.emit("job:failed", { worker, job, error: err });
+            events.emit("job:failed", {
+              worker,
+              job,
+              error: err,
+              batchJobErrors:
+                batchJobErrors.length > 0 ? batchJobErrors : undefined,
+            });
           } catch (e) {
             logger.error(
               "Error occurred in event emitter for 'job:failed'; this is an issue in your application code and you should fix it",
@@ -258,6 +306,10 @@ export function makeNewWorker(
           workerId,
           job,
           message,
+          // "Batch jobs": copy through only the unsuccessful parts of the payload
+          batchJobFailedPayloads.length > 0
+            ? batchJobFailedPayloads
+            : undefined,
         );
       } else {
         try {
