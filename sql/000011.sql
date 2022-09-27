@@ -289,7 +289,7 @@ create function :GRAPHILE_WORKER_SCHEMA.add_job(
 declare
   v_job :GRAPHILE_WORKER_SCHEMA.jobs;
 begin
-  if (job_key_mode is null or job_key_mode in ('replace', 'preserve_run_at')) then
+  if (job_key is null or job_key_mode is null or job_key_mode in ('replace', 'preserve_run_at')) then
     select * into v_job
     from :GRAPHILE_WORKER_SCHEMA.add_jobs(
       ARRAY[(
@@ -306,7 +306,7 @@ begin
     )
     limit 1;
     return v_job;
-  elsif job_key is not null and job_key_mode = 'unsafe_dedupe' then
+  elsif job_key_mode = 'unsafe_dedupe' then
     -- Ensure all the tasks exist
     insert into :GRAPHILE_WORKER_SCHEMA.tasks (identifier)
     values (add_job.identifier)
@@ -360,7 +360,7 @@ begin
       returning *
       into v_job;
     return v_job;
-  elsif job_key is not null then
+  else
     raise exception 'Invalid job_key_mode value, expected ''replace'', ''preserve_run_at'' or ''unsafe_dedupe''.' using errcode = 'GWBKM';
   end if;
 end;
