@@ -829,6 +829,13 @@ for more information.
 **NOTE**: you do not need to (and should not) customise, inherit or extend the
 `Logger` class at all.
 
+**NOTE**: some log messages are gated behind the
+`GRAPHILE_ENABLE_DANGEROUS_LOGS=1` environmental variable - to see them you will
+need to enable that envvar AND enable debug logging (e.g. with
+`GRAPHILE_LOGGER_DEBUG=1` as mentioned above) - do not do this in production as
+these logs may include incredibly sensitive details such as your full database
+connection string including password.
+
 ## Creating task executors
 
 A task executor is a simple async JS function which receives as input the job
