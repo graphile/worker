@@ -194,6 +194,7 @@ https://graphile.org/support/
 - Customisable retry count (default: 25 attempts over ~3 days)
 - Crontab-like scheduling feature for recurring tasks (with optional backfill)
 - Task de-duplication via unique `job_key`
+- Append data to already enqueued jobs with "batch jobs"
 - Flexible runtime controls that can be used for complex rate limiting (e.g. via
   [graphile-worker-rate-limiter](https://github.com/politics-rewired/graphile-worker-rate-limiter))
 - Open source; liberal MIT license
@@ -651,7 +652,7 @@ The `addJob` arguments are as follows:
 
 - `identifier`: the name of the task to be executed
 - `payload`: an optional JSON-compatible object to give the task more context on
-  what it is doing
+  what it is doing, or a list of these objects in "batch job" mode
 - `options`: an optional object specifying:
   - `queueName`: the queue to run this task under
   - `runAt`: a Date to schedule this task to run in the future
@@ -737,6 +738,30 @@ export interface TaskSpec {
 }
 ```
 
+### Batch jobs
+
+Normally a job's `payload` is an object; however we also allow for jobs to have
+a `payload` that is an array of objects. When `payload` is an array of objects,
+we call this a "batch job" and it has a few special behaviours:
+
+1. when you use `job_key` in `replace` or `preserve_run_at` mode, when a job is
+   replaced/updated, instead of overwriting the payload, the existing an new
+   payloads will be merged into a larger array (this only occurs when the
+   existing and new payloads are both arrays, otherwise the payload is simply
+   replaced).
+2. when a task executes a batch job, it may return a list of promises that is
+   the same length as the payload array. If any of these promises reject, then
+   the job is said to have "partial success," the result of which is it being
+   sent back to the queue for a retry, but with the successful objects removed
+   from the payload so only the failed objects will be retried.
+
+Batch jobs can be useful where you need to aggregate multiple tasks together
+over time for efficiency; for example if you have a notification system you
+might schedule a notification to be sent to a user in 2 minutes time that they
+received a DM. Over the next 2 minutes if any other DMs are received, these can
+be appended to the job payload such that when the job executes it can inform the
+user of all of these DMs, not just the latest one.
+
 ## Logger
 
 We use [`@graphile/logger`](https://github.com/graphile/logger) as a log
@@ -808,9 +833,9 @@ for more information.
 
 A task executor is a simple async JS function which receives as input the job
 payload and a collection of helpers. It does the work and then returns. If it
-returns then the job is deemed a success and is deleted from the queue. If it
-throws an error then the job is deemed a failure and the task is rescheduled
-using an exponential-backoff algorithm.
+returns then the job is deemed a success and is deleted from the queue (unless
+this is a "batch job"). If it throws an error then the job is deemed a failure
+and the task is rescheduled using an exponential-backoff algorithm.
 
 **IMPORTANT**: your jobs should wait for all asynchronous work to be completed
 before returning, otherwise we might mistakenly think they were successful.
@@ -863,6 +888,14 @@ Each task function is passed two arguments:
     `withPgClient(pgClient => pgClient.query(sql, values))`
   - `addJob` - a helper to schedule a job
 
+### Handling batch jobs
+
+If the payload is an array, then _optionally_ your task may choose to return an
+array of the same length, the entries in which are promises. Should any of these
+promises reject, then the job will be re-enqueued, but the payload will be
+overwritten to only contain the entries associated with the rejected promises -
+i.e. the successful entries will be removed.
+
 ### helpers
 
 #### `helpers.logger`
@@ -914,7 +947,8 @@ NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
 - `identifier` - the only **required** field, indicates the name of the task
   executor to run (omit the `.js` suffix!)
 - `payload` - a JSON object with information to tell the task executor what to
-  do (defaults to an empty object)
+  do, or an array of one or more of these objects for "batch jobs" (defaults to
+  an empty object)
 - `queue_name` - if you want certain tasks to run one at a time, add them to the
   same named queue (defaults to `null`)
 - `run_at` - a timestamp after which to run the job; defaults to now.
