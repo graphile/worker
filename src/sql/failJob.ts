@@ -7,6 +7,7 @@ export async function failJob(
   workerId: string,
   job: DbJob,
   message: string,
+  replacementPayload: undefined | any[],
 ): Promise<void> {
   const {
     escapedWorkerSchema,
@@ -25,7 +26,8 @@ set
 last_error = $2,
 run_at = greatest(now(), run_at) + (exp(least(attempts, 10))::text || ' seconds')::interval,
 locked_by = null,
-locked_at = null
+locked_at = null,
+payload = coalesce($4::json, jobs.payload)
 where id = $1 and locked_by = $3
 returning *
 )
@@ -33,7 +35,14 @@ update ${escapedWorkerSchema}.job_queues
 set locked_by = null, locked_at = null
 from j
 where job_queues.id = j.job_queue_id and job_queues.locked_by = $3;`,
-        values: [job.id, message, workerId],
+        values: [
+          job.id,
+          message,
+          workerId,
+          replacementPayload != null
+            ? JSON.stringify(replacementPayload)
+            : null,
+        ],
         name: noPreparedStatements ? undefined : `fail_job_q/${workerSchema}`,
       }),
     );
@@ -46,9 +55,17 @@ set
 last_error = $2,
 run_at = greatest(now(), run_at) + (exp(least(attempts, 10))::text || ' seconds')::interval,
 locked_by = null,
-locked_at = null
+locked_at = null,
+payload = coalesce($4::json, jobs.payload)
 where id = $1 and locked_by = $3;`,
-        values: [job.id, message, workerId],
+        values: [
+          job.id,
+          message,
+          workerId,
+          replacementPayload != null
+            ? JSON.stringify(replacementPayload)
+            : null,
+        ],
         name: noPreparedStatements ? undefined : `fail_job/${workerSchema}`,
       }),
     );
