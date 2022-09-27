@@ -52,6 +52,7 @@ export function makeAddJob(
         ],
       );
       const job: Job = rows[0];
+      job.task_identifier = identifier;
       return job;
     });
   };

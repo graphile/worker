@@ -1,4 +1,4 @@
-import { Job, TaskSpec, WorkerUtils, WorkerUtilsOptions } from "./interfaces";
+import { DbJob, TaskSpec, WorkerUtils, WorkerUtilsOptions } from "./interfaces";
 import { getUtilsAndReleasersFromOptions } from "./lib";
 import { migrate } from "./migrate";
 
@@ -24,7 +24,7 @@ export async function makeWorkerUtils(
 
     async completeJobs(ids) {
       const { rows } = await withPgClient((client) =>
-        client.query<Job>(
+        client.query<DbJob>(
           `select * from ${escapedWorkerSchema}.complete_jobs($1)`,
           [ids],
         ),
@@ -34,7 +34,7 @@ export async function makeWorkerUtils(
 
     async permanentlyFailJobs(ids, reason) {
       const { rows } = await withPgClient((client) =>
-        client.query<Job>(
+        client.query<DbJob>(
           `select * from ${escapedWorkerSchema}.permanently_fail_jobs($1, $2)`,
           [ids, reason || null],
         ),
@@ -44,7 +44,7 @@ export async function makeWorkerUtils(
 
     async rescheduleJobs(ids, options) {
       const { rows } = await withPgClient((client) =>
-        client.query<Job>(
+        client.query<DbJob>(
           `select * from ${escapedWorkerSchema}.reschedule_jobs(
             $1,
             run_at := $2,

@@ -110,7 +110,7 @@ export interface WorkerUtils extends Helpers {
    * deleted jobs will be returned (note that this may be fewer jobs than you
    * requested).
    */
-  completeJobs: (ids: string[]) => Promise<Job[]>;
+  completeJobs: (ids: string[]) => Promise<DbJob[]>;
 
   /**
    * Marks the specified jobs (by their ids) as failed permanently, assuming
@@ -118,7 +118,7 @@ export interface WorkerUtils extends Helpers {
    * `max_attempts`. The updated jobs will be returned (note that this may be
    * fewer jobs than you requested).
    */
-  permanentlyFailJobs: (ids: string[], reason?: string) => Promise<Job[]>;
+  permanentlyFailJobs: (ids: string[], reason?: string) => Promise<DbJob[]>;
 
   /**
    * Updates the specified scheduling properties of the jobs (assuming they are
@@ -138,7 +138,7 @@ export interface WorkerUtils extends Helpers {
       attempts?: number;
       maxAttempts?: number;
     },
-  ) => Promise<Job[]>;
+  ) => Promise<DbJob[]>;
 }
 
 export type Task = (
@@ -287,23 +287,38 @@ export interface CronItem {
 }
 
 /** Represents records in the `jobs` table */
-export interface Job {
+export interface DbJob {
   id: string;
-  queue_name: string | null;
-  task_identifier: string;
+  /** FK to job_queues */
+  job_queue_id: number | null;
+  /** FK to tasks */
+  task_id: number;
+  /** The JSON payload of the job */
   payload: unknown;
+  /** Lower number means it should run sooner */
   priority: number;
+  /** When it was due to run */
   run_at: Date;
+  /** How many times it has been attempted */
   attempts: number;
+  /** The limit for the number of times it should be attempted */
   max_attempts: number;
+  /** If attempts > 0, why did it fail last? */
   last_error: string | null;
   created_at: Date;
   updated_at: Date;
+  /** "job_key" - unique identifier for easy update from user code */
   key: string | null;
+  /** A count of the revision numbers */
   revision: number;
   locked_at: Date | null;
   locked_by: string | null;
   flags: { [flag: string]: true } | null;
+}
+
+export interface Job extends DbJob {
+  /** Shortcut to tasks.identifier */
+  task_identifier: string;
 }
 
 /** Represents records in the `known_crontabs` table */
@@ -316,7 +331,7 @@ export interface KnownCrontab {
 export interface Worker {
   nudge: () => boolean;
   workerId: string;
-  release: () => void;
+  release: () => void | Promise<void>;
   promise: Promise<void>;
   getActiveJob: () => Job | null;
 }
@@ -443,6 +458,23 @@ export interface SharedOptions {
    * false.)
    */
   useNodeTime?: boolean;
+
+  /**
+   * **Experimental**
+   *
+   * How often should we scan for jobs that have been locked too long and
+   * release them? This is the minimum interval, we'll choose a time between
+   * this and `maxResetLockedInterval`.
+   */
+  minResetLockedInterval?: number;
+
+  /**
+   * **Experimental**
+   *
+   * The upper bound of how long we'll wait between scans for jobs that have
+   * been locked too long. See `minResetLockedInterval`.
+   */
+  maxResetLockedInterval?: number;
 }
 
 /**
@@ -727,6 +759,46 @@ export type WorkerEventMap = {
     cron: Cron;
     timestamp: number;
     jobsAndIdentifiers: JobAndCronIdentifier[];
+  };
+
+  /**
+   * **Experimental** When we trigger the 'resetLocked' cleanup process
+   * (currently every 8-10 minutes)
+   */
+  "resetLocked:started": {
+    /** @internal Not sure this'll stay on pool */
+    pool: WorkerPool;
+  };
+
+  /**
+   * **Experimental** When the `resetLocked` process has completed
+   * successfully.
+   */
+  "resetLocked:success": {
+    /**
+     * The number of milliseconds until resetLocked runs again (or null if we
+     * won't because the pool is exiting)
+     */
+    delay: number | null;
+
+    /** @internal Not sure this'll stay on pool */
+    pool: WorkerPool;
+  };
+
+  /**
+   * **Experimental** When the `resetLocked` process has failed.
+   */
+  "resetLocked:failure": {
+    error: Error;
+
+    /**
+     * The number of milliseconds until resetLocked runs again (or null if we
+     * won't because the pool is exiting)
+     */
+    delay: number | null;
+
+    /** @internal Not sure this'll stay on pool */
+    pool: WorkerPool;
   };
 
   /**

@@ -4,6 +4,7 @@ import { parse } from "pg-connection-string";
 
 import defer from "../src/deferred";
 import {
+  DbJob,
   Job,
   KnownCrontab,
   RunnerOptions,
@@ -132,11 +133,19 @@ export async function getJobs(
   } = {},
 ) {
   const { where, values } = extra;
-  const { rows } = await pgClient.query<Job & { payload: any }>(
+  const { rows } = await pgClient.query<
+    Job & { queue_name: string; payload: any }
+  >(
     `\
 select
-  jobs.*
+  jobs.*,
+  identifier as task_identifier,
+  job_queues.queue_name as queue_name
 from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs
+left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks
+on (tasks.id = jobs.task_id)
+left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues
+on (job_queues.id = jobs.job_queue_id)
 ${where ? `where ${where}\n` : ""}\
 order by jobs.id asc`,
     values,
@@ -152,7 +161,7 @@ export async function getJobQueues(pgClient: pg.Pool | pg.PoolClient) {
     locked_at: Date;
     locked_by: string;
   }>(
-    `select job_queues.* from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues order by job_queues.queue_name asc`,
+    `select job_queues.*, count(jobs.*)::int as job_count from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs on (jobs.job_queue_id = job_queues.id) group by job_queues.id order by job_queues.queue_name asc`,
   );
   return rows;
 }
@@ -161,7 +170,8 @@ export function makeMockJob(taskIdentifier: string): Job {
   const createdAt = new Date(Date.now() - 12345678);
   return {
     id: String(Math.floor(Math.random() * 4294967296)),
-    queue_name: null,
+    job_queue_id: null,
+    task_id: 123456789,
     task_identifier: taskIdentifier,
     payload: {},
     priority: 0,
@@ -184,20 +194,20 @@ export async function makeSelectionOfJobs(
   pgClient: pg.PoolClient,
 ) {
   const future = new Date(Date.now() + 60 * 60 * 1000);
-  let failedJob = await utils.addJob("job1", { a: 1, runAt: future });
+  let failedJob: DbJob = await utils.addJob("job1", { a: 1, runAt: future });
   const regularJob1 = await utils.addJob("job1", { a: 2, runAt: future });
-  let lockedJob = await utils.addJob("job1", { a: 3, runAt: future });
+  let lockedJob: DbJob = await utils.addJob("job1", { a: 3, runAt: future });
   const regularJob2 = await utils.addJob("job1", { a: 4, runAt: future });
   const untouchedJob = await utils.addJob("job1", { a: 5, runAt: future });
   ({
     rows: [lockedJob],
-  } = await pgClient.query<Job>(
+  } = await pgClient.query<DbJob>(
     `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
     [lockedJob.id],
   ));
   ({
     rows: [failedJob],
-  } = await pgClient.query<Job>(
+  } = await pgClient.query<DbJob>(
     `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
     [failedJob.id],
   ));

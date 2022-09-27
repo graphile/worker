@@ -20,6 +20,7 @@ import {
 import { processSharedOptions } from "./lib";
 import { Logger } from "./logger";
 import SIGNALS from "./signals";
+import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
 
 // Wait at most 60 seconds between connection attempts for LISTEN.
@@ -133,17 +134,85 @@ export function runTaskList(
   let active = true;
   let reconnectTimeout: NodeJS.Timer | null = null;
 
+  const compiledSharedOptions = processSharedOptions(options);
+  const { minResetLockedInterval, maxResetLockedInterval } =
+    compiledSharedOptions;
+
+  const resetLockedDelay = () =>
+    Math.ceil(
+      minResetLockedInterval +
+        Math.random() * (maxResetLockedInterval - minResetLockedInterval),
+    );
+
+  let resetLockedAtPromise: Promise<void> | undefined;
+
+  const resetLocked = () => {
+    resetLockedAtPromise = resetLockedAt(
+      compiledSharedOptions,
+      withPgClient,
+    ).then(
+      () => {
+        resetLockedAtPromise = undefined;
+        if (active) {
+          const delay = resetLockedDelay();
+          events.emit("resetLocked:success", { pool: this, delay });
+          resetLockedTimeout = setTimeout(resetLocked, delay);
+        } else {
+          events.emit("resetLocked:success", { pool: this, delay: null });
+        }
+      },
+      (e) => {
+        resetLockedAtPromise = undefined;
+        // TODO: push this error out via an event.
+        if (active) {
+          const delay = resetLockedDelay();
+          events.emit("resetLocked:failure", { pool: this, error: e, delay });
+          resetLockedTimeout = setTimeout(resetLocked, delay);
+          logger.error(
+            `Failed to reset locked; we'll try again in ${delay}ms`,
+            {
+              error: e,
+            },
+          );
+        } else {
+          events.emit("resetLocked:failure", {
+            pool: this,
+            error: e,
+            delay: null,
+          });
+          logger.error(
+            `Failed to reset locked, but we're shutting down so won't try again`,
+            {
+              error: e,
+            },
+          );
+        }
+      },
+    );
+    events.emit("resetLocked:started", { pool: this });
+  };
+
+  // Reset locked in the first 60 seconds, not immediately because we don't
+  // want to cause a thundering herd.
+  let resetLockedTimeout: NodeJS.Timeout | null = setTimeout(
+    resetLocked,
+    Math.random() * Math.min(60000, maxResetLockedInterval),
+  );
+
   // This is a representation of us that can be interacted with externally
   const workerPool: WorkerPool = {
     release: async () => {
+      // IMPORTANT: if we assert that `active === true` here, we must ensure this is handled in `gracefulShutdown`
       active = false;
+      clearTimeout(resetLockedTimeout!);
+      resetLockedTimeout = null;
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
         reconnectTimeout = null;
       }
       events.emit("pool:release", { pool: this });
       unlistenForChanges();
-      promise.resolve();
+      promise.resolve(resetLockedAtPromise);
       await Promise.all(workers.map((worker) => worker.release()));
       const idx = allWorkerPools.indexOf(workerPool);
       allWorkerPools.splice(idx, 1);
@@ -154,6 +223,9 @@ export function runTaskList(
       events.emit("pool:gracefulShutdown", { pool: this, message });
       try {
         logger.debug(`Attempting graceful shutdown`);
+        // Stop new jobs being added
+        active = false;
+
         // Release all our workers' jobs
         const workerIds = workers.map((worker) => worker.workerId);
         const jobsInProgress: Array<Job> = workers
@@ -182,8 +254,9 @@ export function runTaskList(
           error: e,
         });
       }
+
       // Remove ourself from the list of worker pools
-      this.release();
+      await this.release();
     },
 
     promise,
@@ -318,6 +391,19 @@ export const runTaskListOnce = (
   options: WorkerOptions,
   tasks: TaskList,
   client: PoolClient,
-) =>
-  makeNewWorker(options, tasks, makeWithPgClientFromClient(client), false)
-    .promise;
+) => {
+  const withPgClient = makeWithPgClientFromClient(client);
+  const compiledSharedOptions = processSharedOptions(options);
+  const resetPromise = resetLockedAt(compiledSharedOptions, withPgClient);
+  const finalPromise = resetPromise.then(() => {
+    const worker = makeNewWorker(
+      options,
+      tasks,
+      makeWithPgClientFromClient(client),
+      false,
+    );
+    finalPromise["worker"] = worker;
+    return worker.promise;
+  });
+  return finalPromise;
+};

@@ -223,7 +223,7 @@ http://discord.gg/graphile
 
 ## Requirements
 
-PostgreSQL 10+\* and Node 10+\*.
+PostgreSQL 12+ and Node 14+\*.
 
 _Note: `graphile-worker` versions before 0.13.0 installed the `pgcrypto`
 extension into the public schema of your database (if it wasn't already
@@ -232,6 +232,10 @@ want to uninstall it - see the [release notes](RELEASE_NOTES.md#v0130) for
 instructions._
 
 \* Might work with older versions, but has not been tested.
+
+Note: Postgres 12 is required for the `generated always as (expression)`
+feature; if you need to use earlier versions of Postgres or Node, please use
+version 0.13.x or earlier.
 
 ## Installation
 
@@ -899,7 +903,8 @@ See [`addJob`](#addjob)
 
 You can schedule jobs directly in the database, e.g. from a trigger or function,
 or by calling SQL from your application code. You do this using the
-`graphile_worker.add_job` function.
+`graphile_worker.add_job` function (or the experimental
+`graphile_worker.add_jobs` function for bulk inserts, see below).
 
 NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
 `add_job` SQL function.
@@ -977,6 +982,35 @@ execute. To allow lower-privileged users to call it, wrap it inside a PostgreSQL
 function marked as `SECURITY DEFINER` so that it will run with the same
 privileges as the more powerful user that defined it. (Be sure that this
 function performs any access checks that are necessary.)
+
+### `add_jobs`
+
+**Experimental**: this API may change in a semver minor release.
+
+For bulk insertion of jobs, we've introduced the `graphile_worker.add_jobs`
+function. It accepts the following options:
+
+- `specs` - an array of `graphile_worker.job_spec` objects
+- `job_key_preserve_run_at` - an optional boolean detailing if the `run_at`
+  should be preserved when the same `job_key` is seen again
+
+The `job_spec` object has the following properties, all of which correspond with
+the `add_job` option of the same name above.
+
+- `identifier`
+- `payload`
+- `queue_name`
+- `run_at`
+- `max_attempts`
+- `job_key`
+- `priority`
+- `flags`
+
+Note: `job_key_mode='unsafe_dedupe'` is not supported in `add_jobs` - you must
+add jobs one at a time using `add_job` to use that. The equivalent of
+`job_key_mode='replace'` is enabled by default, to change this to the same
+behavior as `job_key_mode='preserve_run_at'` you should set
+`job_key_preserve_run_at` to `true`.
 
 ### Example: scheduling job from trigger
 
@@ -1465,7 +1499,8 @@ dedicated job queues, it's intended to be a very easy way to get a reasonably
 performant job queue up and running with Node.js and PostgreSQL. But this
 doesn't mean it's a slouch by any means - it achieves an average latency from
 triggering a job in one process to executing it in another of under 3ms, and a
-12-core database server can process around 10,000 jobs per second.
+12-core database server can queue around 99,600 jobs per second and can process
+around 11,800 jobs per second.
 
 `graphile-worker` is horizontally scalable. Each instance has a customisable
 worker pool, this pool defaults to size 1 (only one job at a time on this
@@ -1474,7 +1509,9 @@ compute-heavy) you will likely want to set this higher to benefit from Node.js'
 concurrency. If your tasks are compute heavy you may still wish to set it higher
 and then using Node's `child_process` (or Node v11's `worker_threads`) to share
 the compute load over multiple cores without significantly impacting the main
-worker's runloop.
+worker's runloop. Note, however, that Graphile Worker is limited by the
+performance of the underlying Postgres database, and when you hit this limit
+performance will start to go down (rather than up) as you add more workers.
 
 To test performance, you can run `yarn perfTest`. This runs three tests:
 
@@ -1485,7 +1522,8 @@ To test performance, you can run `yarn perfTest`. This runs three tests:
    [trivial](perfTest/tasks/log_if_999.js) jobs with a parallelism of 4 (i.e. 4
    node processes) and a concurrency of 10 (i.e. 10 concurrent jobs running on
    each node process), but you can configure this in `perfTest/run.js`. (These
-   settings were optimised for a 12-core hyperthreading machine.)
+   settings were optimised for a 12-core hyperthreading machine running both the
+   tests and the database locally.)
 3. a latency test - determining how long between issuing an `add_job` command
    and the task itself being executed.
 
@@ -1497,28 +1535,30 @@ not). Jobs=20000, parallelism=4, concurrency=10.
 
 Conclusion:
 
-- Startup/shutdown: 66ms
-- Jobs per second: 10,299
-- Average latency: 2.62ms (min: 2.43ms, max: 11.90ms)
+- Startup/shutdown: 110ms
+- Jobs per second: 11,851
+- Average latency: 2.66ms (min: 2.39ms, max: 12.09ms)
 
 ```
 Timing startup/shutdown time...
-... it took 66ms
+... it took 110ms
 
 Scheduling 20000 jobs
+Adding jobs: 200.84ms
+... it took 287ms
 
 
 Timing 20000 job execution...
 Found 999!
 
-... it took 2008ms
-Jobs per second: 10298.81
+... it took 1797ms
+Jobs per second: 11851.90
 
 
 Testing latency...
 [core] INFO: Worker connected and looking for jobs... (task names: 'latency')
 Beginning latency test
-Latencies - min: 2.43ms, max: 11.90ms, avg: 2.62ms
+Latencies - min: 2.39ms, max: 12.09ms, avg: 2.66ms
 ```
 
 TODO: post perfTest results in a more reasonable configuration, e.g. using an
@@ -1581,9 +1621,13 @@ then exits. If you need to restart your worker, you should do so using this
 graceful process.
 
 If the worker completely dies unexpectedly (e.g. `process.exit()`, segfault,
-`SIGKILL`) then those jobs remain locked for 4 hours, after which point they're
-available to be processed again automatically. You can free them up earlier than
-this by clearing the `locked_at` and `locked_by` columns on the relevant tables.
+`SIGKILL`) then the jobs that that worker was executing remain locked for at
+least 4 hours. Every 8-10 minutes a worker will sweep for jobs that have been
+locked for more than 4 hours and will make them available to be processed again
+automatically. If you run many workers, each worker will do this, so it's likely
+that jobs will be released closer to the 4 hour mark. You can unlock jobs
+earlier than this by clearing the `locked_at` and `locked_by` columns on the
+relevant tables.
 
 If the worker schema has not yet been installed into your database, the
 following error may appear in your PostgreSQL server logs. This is completely
@@ -1597,12 +1641,8 @@ STATEMENT: select id from "graphile_worker".migrations order by id desc limit 1;
 
 ### Error codes
 
-- `GWBID` - Task identifier is too long (max length: 128).
-- `GWBQN` - Job queue name is too long (max length: 128).
-- `GWBJK` - Job key is too long (max length: 512).
-- `GWBMA` - Job maximum attempts must be at least 1.
-- `GWBKM` - Invalid job_key_mode value, expected 'replace', 'preserve_run_at' or
-  'unsafe_dedupe'.
+- `GWBKM` - Invalid `job_key_mode` value, expected `'replace'`,
+  `'preserve_run_at'` or `'unsafe_dedupe'`.
 
 ## Development
 
@@ -1683,11 +1723,11 @@ docker-compose logs -f app
 ### Database migrations
 
 New database migrations must be accompanied by an updated db dump. This can be
-generated using the command `yarn db:dump`, and requires a running postgres 11
+generated using the command `yarn db:dump`, and requires a running postgres 12
 server. Using docker:
 
 ```
-docker run -e POSTGRES_HOST_AUTH_METHOD=trust -d -p 5432:5432 postgres:11
+docker run -e POSTGRES_HOST_AUTH_METHOD=trust -d -p 5432:5432 postgres:12
 ```
 
 then run

@@ -92,7 +92,7 @@ async function forEmptyQueue(pgPool) {
     const {
       rows: [row],
     } = await pgPool.query(
-      `select count(*) from graphile_worker.jobs where task_identifier = 'latency'`,
+      `select count(*) from graphile_worker.jobs where task_id = (select id from graphile_worker.tasks where identifier = 'latency')`,
     );
     remaining = (row && row.count) || 0;
     sleep(2000);

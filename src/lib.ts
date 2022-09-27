@@ -3,6 +3,7 @@ import { EventEmitter } from "events";
 import { Client, Pool, PoolClient } from "pg";
 
 import { defaults } from "./config";
+import { MINUTE } from "./cronConstants";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
 import {
   AddJobFunction,
@@ -14,13 +15,16 @@ import {
 import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
 
-interface CompiledSharedOptions {
+export interface CompiledSharedOptions {
   events: WorkerEvents;
   logger: Logger;
   workerSchema: string;
   escapedWorkerSchema: string;
   maxContiguousErrors: number;
   useNodeTime: boolean;
+  minResetLockedInterval: number;
+  maxResetLockedInterval: number;
+  options: SharedOptions;
 }
 
 interface ProcessSharedOptionsSettings {
@@ -39,8 +43,20 @@ export function processSharedOptions(
       schema: workerSchema = defaults.schema,
       events = new EventEmitter(),
       useNodeTime = false,
+      minResetLockedInterval = 8 * MINUTE,
+      maxResetLockedInterval = 10 * MINUTE,
     } = options;
     const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
+    if (
+      !Number.isFinite(minResetLockedInterval) ||
+      !Number.isFinite(maxResetLockedInterval) ||
+      minResetLockedInterval < 1 ||
+      maxResetLockedInterval < minResetLockedInterval
+    ) {
+      throw new Error(
+        `Invalid values for minResetLockedInterval (${minResetLockedInterval})/maxResetLockedInterval (${maxResetLockedInterval})`,
+      );
+    }
     compiled = {
       events,
       logger,
@@ -48,6 +64,9 @@ export function processSharedOptions(
       escapedWorkerSchema,
       maxContiguousErrors: defaults.maxContiguousErrors,
       useNodeTime,
+      minResetLockedInterval,
+      maxResetLockedInterval,
+      options,
     };
     _sharedOptionsCache.set(options, compiled);
   }

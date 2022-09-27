@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         node-version: [14.x, 16.x, 18.x]
-        postgres-version: [9.6, 10, 11, 12]
+        postgres-version: [12, 13, 14]
 
     services:
       postgres:
@@ -60,7 +60,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:11
+        image: postgres:12
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -87,7 +87,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:11
+        image: postgres:12
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
