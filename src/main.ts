@@ -23,6 +23,9 @@ import SIGNALS from "./signals";
 import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
 
+const ENABLE_DANGEROUS_LOGS =
+  process.env.GRAPHILE_ENABLE_DANGEROUS_LOGS === "1";
+
 // Wait at most 60 seconds between connection attempts for LISTEN.
 const MAX_DELAY = 60 * 1000;
 
@@ -105,7 +108,9 @@ export function runTaskList(
   pgPool: Pool,
 ): WorkerPool {
   const { logger, escapedWorkerSchema, events } = processSharedOptions(options);
-  logger.debug(`Worker pool options are ${inspect(options)}`, { options });
+  if (ENABLE_DANGEROUS_LOGS) {
+    logger.debug(`Worker pool options are ${inspect(options)}`, { options });
+  }
   const { concurrency = defaults.concurrentJobs, noHandleSignals } = options;
 
   if (!noHandleSignals) {
