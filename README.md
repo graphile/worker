@@ -1499,8 +1499,8 @@ dedicated job queues, it's intended to be a very easy way to get a reasonably
 performant job queue up and running with Node.js and PostgreSQL. But this
 doesn't mean it's a slouch by any means - it achieves an average latency from
 triggering a job in one process to executing it in another of under 3ms, and a
-12-core database server can queue around 80,000 jobs per second and can process
-around 11,800 jobs per second.
+12-core database server can queue around 99,600 jobs per second and can process
+around 11,600 jobs per second.
 
 `graphile-worker` is horizontally scalable. Each instance has a customisable
 worker pool, this pool defaults to size 1 (only one job at a time on this
@@ -1535,29 +1535,30 @@ not). Jobs=20000, parallelism=4, concurrency=10.
 
 Conclusion:
 
-- Startup/shutdown: 101ms
-- Jobs per second: 11,806
-- Average latency: 2.66ms (min: 2.37ms, max: 13.56ms)
+- Startup/shutdown: 111ms
+- Jobs per second: 11,636
+- Average latency: 2.63ms (min: 2.32ms, max: 12.16ms)
 
 ```
 Timing startup/shutdown time...
-... it took 101ms
+... it took 111ms
 
 Scheduling 20000 jobs
-... it took 255ms
+Adding jobs: 200.728ms
+... it took 286ms
 
 
 Timing 20000 job execution...
 Found 999!
 
-... it took 1795ms
-Jobs per second: 11806.33
+... it took 1830ms
+Jobs per second: 11635.89
 
 
 Testing latency...
 [core] INFO: Worker connected and looking for jobs... (task names: 'latency')
 Beginning latency test
-Latencies - min: 2.37ms, max: 13.56ms, avg: 2.66ms
+Latencies - min: 2.32ms, max: 12.16ms, avg: 2.63ms
 ```
 
 TODO: post perfTest results in a more reasonable configuration, e.g. using an
