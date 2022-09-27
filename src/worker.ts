@@ -218,31 +218,32 @@ export function makeNewWorker(
       const durationRaw = process.hrtime(startTimestamp);
       const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
 
-      const batchJobFailedPayloads = [];
-      const batchJobErrors = [];
+      // `batchJobFailedPayloads` and `batchJobErrors` should always have the same length
+      const batchJobFailedPayloads: any[] = [];
+      const batchJobErrors: any[] = [];
 
-      if (!err) {
-        if (Array.isArray(job.payload) && Array.isArray(result)) {
-          if (job.payload.length !== result.length) {
-            console.warn(
-              `Task '${job.task_identifier}' has invalid return value - should return an array with the same length as the incoming payload to indicate success or otherwise. We're going to treat this as full success, but this is a bug in your code.`,
-            );
-          }
+      if (!err && Array.isArray(job.payload) && Array.isArray(result)) {
+        // "Batch job" handling of the result list
 
-          const results = await Promise.allSettled(result);
-          for (let i = 0; i < job.payload.length; i++) {
-            const entryResult = results[i];
-            if (entryResult.status === "rejected") {
-              const entry = job.payload[i];
-              batchJobFailedPayloads.push(entry);
-              batchJobErrors.push(entryResult.reason);
-            } else {
-              // success!
-            }
+        if (job.payload.length !== result.length) {
+          console.warn(
+            `Task '${job.task_identifier}' has invalid return value - should return an array with the same length as the incoming payload to indicate success or otherwise. We're going to treat this as full success, but this is a bug in your code.`,
+          );
+        }
+
+        const results = await Promise.allSettled(result);
+        for (let i = 0; i < job.payload.length; i++) {
+          const entryResult = results[i];
+          if (entryResult.status === "rejected") {
+            batchJobFailedPayloads.push(job.payload[i]);
+            batchJobErrors.push(entryResult.reason);
+          } else {
+            // success!
           }
         }
 
-        if (batchJobFailedPayloads.length > 0) {
+        if (batchJobErrors.length > 0) {
+          // Create a "partial" error for the batch
           err = new Error(
             `Batch failures:\n${batchJobErrors
               .map((e) => e.message ?? String(e))
@@ -306,6 +307,7 @@ export function makeNewWorker(
           workerId,
           job,
           message,
+          // "Batch jobs": copy through only the unsuccessful parts of the payload
           batchJobFailedPayloads.length > 0
             ? batchJobFailedPayloads
             : undefined,
