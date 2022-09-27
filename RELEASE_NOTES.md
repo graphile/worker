@@ -38,6 +38,7 @@ earlier workers against this releases database schema or Bad Things will happen.
 
 #### Features
 
+- New "batch jobs" feature for merging payloads with a `job_key` (see README)
 - Significantly improved 'large jobs table' performance (e.g. when a large queue
   is locked, or there's a lot of jobs queued for task identifiers your worker
   instance doesn't support, or a lot of failed jobs). Around 20x improvement in
