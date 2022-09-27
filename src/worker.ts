@@ -223,32 +223,31 @@ export function makeNewWorker(
       const batchJobErrors: any[] = [];
 
       if (!err && Array.isArray(job.payload) && Array.isArray(result)) {
-        // "Batch job" handling of the result list
-
         if (job.payload.length !== result.length) {
           console.warn(
-            `Task '${job.task_identifier}' has invalid return value - should return an array with the same length as the incoming payload to indicate success or otherwise. We're going to treat this as full success, but this is a bug in your code.`,
+            `Task '${job.task_identifier}' has invalid return value - should return either nothing or an array with the same length as the incoming payload to indicate success or otherwise for each entry. We're going to treat this as full success, but this is a bug in your code.`,
           );
-        }
-
-        const results = await Promise.allSettled(result);
-        for (let i = 0; i < job.payload.length; i++) {
-          const entryResult = results[i];
-          if (entryResult.status === "rejected") {
-            batchJobFailedPayloads.push(job.payload[i]);
-            batchJobErrors.push(entryResult.reason);
-          } else {
-            // success!
+        } else {
+          // "Batch job" handling of the result list
+          const results = await Promise.allSettled(result);
+          for (let i = 0; i < job.payload.length; i++) {
+            const entryResult = results[i];
+            if (entryResult.status === "rejected") {
+              batchJobFailedPayloads.push(job.payload[i]);
+              batchJobErrors.push(entryResult.reason);
+            } else {
+              // success!
+            }
           }
-        }
 
-        if (batchJobErrors.length > 0) {
-          // Create a "partial" error for the batch
-          err = new Error(
-            `Batch failures:\n${batchJobErrors
-              .map((e) => e.message ?? String(e))
-              .join("\n")}`,
-          );
+          if (batchJobErrors.length > 0) {
+            // Create a "partial" error for the batch
+            err = new Error(
+              `Batch failures:\n${batchJobErrors
+                .map((e) => e.message ?? String(e))
+                .join("\n")}`,
+            );
+          }
         }
       }
 
