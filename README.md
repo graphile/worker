@@ -903,7 +903,8 @@ See [`addJob`](#addjob)
 
 You can schedule jobs directly in the database, e.g. from a trigger or function,
 or by calling SQL from your application code. You do this using the
-`graphile_worker.add_job` function.
+`graphile_worker.add_job` function (or the experimental
+`graphile_worker.add_jobs` function for bulk inserts, see below).
 
 NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
 `add_job` SQL function.
@@ -981,6 +982,35 @@ execute. To allow lower-privileged users to call it, wrap it inside a PostgreSQL
 function marked as `SECURITY DEFINER` so that it will run with the same
 privileges as the more powerful user that defined it. (Be sure that this
 function performs any access checks that are necessary.)
+
+### `add_jobs`
+
+**Experimental**: this API may change in a semver minor release.
+
+For bulk insertion of jobs, we've introduced the `graphile_worker.add_jobs`
+function. It accepts the following options:
+
+- `specs` - an array of `graphile_worker.job_spec` objects
+- `job_key_preserve_run_at` - an optional boolean detailing if the `run_at`
+  should be preserved when the same `job_key` is seen again
+
+The `job_spec` object has the following properties, all of which correspond with
+the `add_job` option of the same name above.
+
+- `identifier`
+- `payload`
+- `queue_name`
+- `run_at`
+- `max_attempts`
+- `job_key`
+- `priority`
+- `flags`
+
+Note: `job_key_mode='unsafe_dedupe'` is not supported in `add_jobs` - you must
+add jobs one at a time using `add_job` to use that. The equivalent of
+`job_key_mode='replace'` is enabled by default, to change this to the same
+behavior as `job_key_mode='preserve_run_at'` you should set
+`job_key_preserve_run_at` to `true`.
 
 ### Example: scheduling job from trigger
 
