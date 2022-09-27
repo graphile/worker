@@ -172,7 +172,13 @@ begin
   on conflict (key) do update set
     job_queue_id = excluded.job_queue_id,
     task_id = excluded.task_id,
-    payload = excluded.payload,
+    payload =
+      case
+      when json_typeof(jobs.payload) = 'array' and json_typeof(excluded.payload) = 'array' then
+        (jobs.payload::jsonb || excluded.payload::jsonb)::json
+      else
+        excluded.payload
+      end,
     max_attempts = excluded.max_attempts,
     run_at = (case
       when job_key_preserve_run_at is true and jobs.attempts = 0 then jobs.run_at
