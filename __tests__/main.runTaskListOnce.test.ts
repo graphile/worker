@@ -624,14 +624,15 @@ test("runs jobs asynchronously", () =>
         job1,
       };
       const runPromise = runTaskListOnce(options, tasks, pgClient);
-      const worker: Worker = runPromise["worker"];
-      expect(worker).toBeTruthy();
       let executed = false;
       runPromise.then(() => {
         executed = true;
       });
 
       await sleepUntil(() => !!jobPromise);
+
+      const worker: Worker = runPromise["worker"];
+      expect(worker).toBeTruthy();
 
       // Job should have been called once only
       expect(jobPromise).toBeTruthy();
