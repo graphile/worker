@@ -20,6 +20,7 @@ import {
 import { processSharedOptions } from "./lib";
 import { Logger } from "./logger";
 import SIGNALS from "./signals";
+import { failJobs } from "./sql/failJob";
 import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
 
@@ -107,7 +108,7 @@ export function runTaskList(
   tasks: TaskList,
   pgPool: Pool,
 ): WorkerPool {
-  const { logger, escapedWorkerSchema, events } = processSharedOptions(options);
+  const { logger, events } = processSharedOptions(options);
   if (ENABLE_DANGEROUS_LOGS) {
     logger.debug(`Worker pool options are ${inspect(options)}`, { options });
   }
@@ -241,13 +242,12 @@ export function runTaskList(
         logger.debug(`Releasing the jobs '${workerIds.join(", ")}'`, {
           workerIds,
         });
-        const { rows: cancelledJobs } = await pgPool.query(
-          `
-          SELECT ${escapedWorkerSchema}.fail_job(jobs.locked_by, jobs.id, $2)
-          FROM ${escapedWorkerSchema}.jobs
-          WHERE jobs.locked_by = ANY($1::text[]) AND jobs.id = ANY($3::int[]);
-        `,
-          [workerIds, message, jobsInProgress.map((job) => job.id)],
+        const cancelledJobs = await failJobs(
+          compiledSharedOptions,
+          withPgClient,
+          workerIds,
+          jobsInProgress,
+          message,
         );
         logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
           cancelledJobs,
