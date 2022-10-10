@@ -31,7 +31,17 @@ CREATE TABLE graphile_worker.jobs (
     CONSTRAINT jobs_key_check CHECK (((length(key) > 0) AND (length(key) <= 512))),
     CONSTRAINT jobs_max_attempts_check CHECK ((max_attempts >= 1))
 );
-CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts smallint DEFAULT NULL::smallint, job_key text DEFAULT NULL::text, priority smallint DEFAULT NULL::smallint, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text) RETURNS graphile_worker.jobs
+CREATE FUNCTION graphile_worker.add_job(
+  identifier text,
+  payload json DEFAULT NULL::json,
+  queue_name text DEFAULT NULL::text,
+  run_at timestamp with time zone DEFAULT NULL::timestamp with time zone,
+  max_attempts smallint DEFAULT NULL::smallint,
+  job_key text DEFAULT NULL::text,
+  priority smallint DEFAULT NULL::smallint,
+  flags text[] DEFAULT NULL::text[],
+  job_key_mode text DEFAULT 'replace'::text
+) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
 declare

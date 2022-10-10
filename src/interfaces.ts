@@ -184,6 +184,16 @@ export interface CronItemOptions {
 
   /** Optionally set the job priority */
   priority?: number;
+
+  /** Optionally prevent duplicate copies of this job from running */
+  jobKey?: string;
+
+  /**
+   * Modifies the behavior of `jobKey`; when 'replace' all attributes will be
+   * updated, when 'preserve_run_at' all attributes except 'run_at' will be
+   * updated. (Default: 'replace')
+   */
+  jobKeyMode?: "replace" | "preserve_run_at";
 }
 
 /**
@@ -557,6 +567,8 @@ export interface CronJob {
   };
   queueName?: string;
   runAt: string;
+  jobKey?: string;
+  jobKeyMode: CronItemOptions["jobKeyMode"];
   maxAttempts?: number;
   priority?: number;
 }

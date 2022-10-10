@@ -39,6 +39,10 @@ export const CRONTAB_OPTIONS_BACKFILL = /^((?:[0-9]+[smhdw])+)$/;
 export const CRONTAB_OPTIONS_MAX = /^([0-9]+)$/;
 /** Matches the queue=name option, capturing the queue name */
 export const CRONTAB_OPTIONS_QUEUE = /^([-a-zA-Z0-9_:]+)$/;
+/** Matches the jobKey=foo option, capturing the unique identifier for the job */
+export const CRONTAB_OPTIONS_JOB_KEY = /^(.*)$/;
+/** Matches the jobKeyMode=replace option, defining the replacement strategy this job */
+export const CRONTAB_OPTIONS_JOB_KEY_MODE = /^(replace|preserve_run_at)$/;
 /** Matches the priority=n option, capturing the priority value */
 export const CRONTAB_OPTIONS_PRIORITY = /^(-?[0-9]+)$/;
 

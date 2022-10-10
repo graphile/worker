@@ -54,7 +54,10 @@ test("parses crontab file correctly", () => {
   expect(parsedCronMatch0.dates).toEqual(ALL_DATES);
   expect(parsedCronMatch0.months).toEqual(ALL_MONTHS);
   expect(parsedCronMatch0.dows).toEqual(ALL_DOWS);
-  expect(parsed[0].options).toEqual({ backfillPeriod: 0 });
+  expect(parsed[0].options).toEqual({
+    backfillPeriod: 0,
+    jobKeyMode: "replace",
+  });
   expect(parsed[0].payload).toEqual(null);
 
   expect(parsed[1].task).toEqual("every_day_at_4_am");
@@ -66,7 +69,10 @@ test("parses crontab file correctly", () => {
   expect(parsedCronMatch1.dates).toEqual(ALL_DATES);
   expect(parsedCronMatch1.months).toEqual(ALL_MONTHS);
   expect(parsedCronMatch1.dows).toEqual(ALL_DOWS);
-  expect(parsed[1].options).toEqual({ backfillPeriod: 0 });
+  expect(parsed[1].options).toEqual({
+    backfillPeriod: 0,
+    jobKeyMode: "replace",
+  });
   expect(parsed[1].payload).toEqual(null);
 
   expect(parsed[2].task).toEqual("every_sunday_at_4_am");
@@ -78,7 +84,10 @@ test("parses crontab file correctly", () => {
   expect(parsedCronMatch2.dates).toEqual(ALL_DATES);
   expect(parsedCronMatch2.months).toEqual(ALL_MONTHS);
   expect(parsedCronMatch2.dows).toEqual([0]);
-  expect(parsed[2].options).toEqual({ backfillPeriod: 0 });
+  expect(parsed[2].options).toEqual({
+    backfillPeriod: 0,
+    jobKeyMode: "replace",
+  });
   expect(parsed[2].payload).toEqual(null);
 
   expect(parsed[3].task).toEqual("every_sunday_at_4_am");
@@ -90,7 +99,10 @@ test("parses crontab file correctly", () => {
   expect(parsedCronMatch3.dates).toEqual(ALL_DATES);
   expect(parsedCronMatch3.months).toEqual(ALL_MONTHS);
   expect(parsedCronMatch3.dows).toEqual([0]);
-  expect(parsed[3].options).toEqual({ backfillPeriod: 0 });
+  expect(parsed[3].options).toEqual({
+    backfillPeriod: 0,
+    jobKeyMode: "replace",
+  });
   expect(parsed[3].payload).toEqual(null);
 
   expect(parsed[4].task).toEqual("every_tuesday_at_4_am");
@@ -102,7 +114,10 @@ test("parses crontab file correctly", () => {
   expect(parsedCronMatch4.dates).toEqual(ALL_DATES);
   expect(parsedCronMatch4.months).toEqual(ALL_MONTHS);
   expect(parsedCronMatch4.dows).toEqual([2]);
-  expect(parsed[4].options).toEqual({ backfillPeriod: 0 });
+  expect(parsed[4].options).toEqual({
+    backfillPeriod: 0,
+    jobKeyMode: "replace",
+  });
   expect(parsed[4].payload).toEqual({ isTuesday: true });
 
   // */10,7,56-59 1 1 1 1 one ?id=stuff&fill=4w3d2h1m&max=3&queue=my_queue&priority=3 {myExtraPayload:{stuff:"here with # hash char"}}
@@ -120,6 +135,7 @@ test("parses crontab file correctly", () => {
   expect(parsed[5].options).toEqual({
     backfillPeriod: 4 * WEEK + 3 * DAY + 2 * HOUR + 1 * MINUTE,
     maxAttempts: 3,
+    jobKeyMode: "replace",
     priority: 3,
     queueName: "my_queue",
   } as CronItemOptions);
@@ -136,7 +152,10 @@ test("parses crontab file correctly", () => {
   expect(parsedCronMatch6.dates).toEqual(ALL_DATES);
   expect(parsedCronMatch6.months).toEqual(ALL_MONTHS);
   expect(parsedCronMatch6.dows).toEqual(ALL_DOWS);
-  expect(parsed[6].options).toEqual({ backfillPeriod: 0 });
+  expect(parsed[6].options).toEqual({
+    backfillPeriod: 0,
+    jobKeyMode: "replace",
+  });
   expect(parsed[6].payload).toEqual(null);
 
   expect(parsed).toMatchSnapshot();
@@ -189,7 +208,7 @@ describe("gives error on syntax error", () => {
 * * * * * invalid_options ?unknown=3
 `),
     ).toThrowErrorMatchingInlineSnapshot(
-      `"Options on line 1 of crontab contains unsupported key 'unknown'; supported keys are: 'id', 'fill', 'max', 'queue', 'priority'."`,
+      `"Options on line 1 of crontab contains unsupported key 'unknown'; supported keys are: 'id', 'fill', 'max', 'queue', 'jobKey', 'jobKeyMode', 'priority'."`,
     );
   });
 

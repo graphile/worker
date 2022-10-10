@@ -92,6 +92,8 @@ function makeJobForItem(
     queueName: item.options.queueName,
     runAt: ts,
     maxAttempts: item.options.maxAttempts,
+    jobKey: item.options.jobKey,
+    jobKeyMode: item.options.jobKeyMode,
     priority: item.options.priority,
   };
 }
@@ -121,7 +123,9 @@ async function scheduleCronJobs(
           ((json->'job')->>'queueName')::text as queue_name,
           ((json->'job')->>'runAt')::timestamptz as run_at,
           ((json->'job')->>'maxAttempts')::smallint as max_attempts,
-          ((json->'job')->>'priority')::smallint as priority
+          ((json->'job')->>'priority')::smallint as priority,
+          ((json->'job')->>'jobKey')::text as job_key,
+          ((json->'job')->>'jobKeyMode')::text as job_key_mode
         from json_array_elements($1::json) with ordinality AS entries (json, index)
       ),
       locks as (
@@ -143,8 +147,10 @@ async function scheduleCronJobs(
           specs.queue_name,
           coalesce(specs.run_at, $3::timestamptz, now()),
           specs.max_attempts,
-          null, -- job key
-          specs.priority
+          specs.job_key,
+          specs.priority,
+          null,
+          specs.job_key_mode
         )
       from specs
       inner join locks on (locks.identifier = specs.identifier)

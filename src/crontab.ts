@@ -6,6 +6,8 @@ import {
   CRONTAB_LINE_PARTS,
   CRONTAB_OPTIONS_BACKFILL,
   CRONTAB_OPTIONS_ID,
+  CRONTAB_OPTIONS_JOB_KEY,
+  CRONTAB_OPTIONS_JOB_KEY_MODE,
   CRONTAB_OPTIONS_MAX,
   CRONTAB_OPTIONS_PRIORITY,
   CRONTAB_OPTIONS_QUEUE,
@@ -62,6 +64,8 @@ const parseCrontabOptions = (
   let maxAttempts: number | undefined = undefined;
   let identifier: string | undefined = undefined;
   let queueName: string | undefined = undefined;
+  let jobKey: string | undefined = undefined;
+  let jobKeyMode: CronItemOptions["jobKeyMode"] = "replace";
   let priority: number | undefined = undefined;
 
   type MatcherTuple = [RegExp, (matches: RegExpExecArray) => void];
@@ -89,6 +93,18 @@ const parseCrontabOptions = (
       CRONTAB_OPTIONS_QUEUE,
       (matches) => {
         queueName = matches[1];
+      },
+    ],
+    jobKey: [
+      CRONTAB_OPTIONS_JOB_KEY,
+      (matches) => {
+        jobKey = matches[1];
+      },
+    ],
+    jobKeyMode: [
+      CRONTAB_OPTIONS_JOB_KEY_MODE,
+      (matches) => {
+        jobKeyMode = matches[1] as CronItemOptions["jobKeyMode"];
       },
     ],
     priority: [
@@ -136,7 +152,14 @@ const parseCrontabOptions = (
   }
 
   return {
-    options: { backfillPeriod, maxAttempts, queueName, priority },
+    options: {
+      backfillPeriod,
+      maxAttempts,
+      queueName,
+      priority,
+      jobKey,
+      jobKeyMode,
+    },
     identifier,
   };
 };
