@@ -5,9 +5,9 @@ CREATE TYPE graphile_worker.job_spec AS (
 	payload json,
 	queue_name text,
 	run_at timestamp with time zone,
-	max_attempts integer,
+	max_attempts smallint,
 	job_key text,
-	priority integer,
+	priority smallint,
 	flags text[]
 );
 CREATE TABLE graphile_worker.jobs (
@@ -31,7 +31,7 @@ CREATE TABLE graphile_worker.jobs (
     CONSTRAINT jobs_key_check CHECK (((length(key) > 0) AND (length(key) <= 512))),
     CONSTRAINT jobs_max_attempts_check CHECK ((max_attempts >= 1))
 );
-CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text) RETURNS graphile_worker.jobs
+CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts smallint DEFAULT NULL::smallint, job_key text DEFAULT NULL::text, priority smallint DEFAULT NULL::smallint, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
 declare
@@ -280,7 +280,7 @@ begin
   return v_job;
 end;
 $$;
-CREATE FUNCTION graphile_worker.reschedule_jobs(job_ids bigint[], run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, priority integer DEFAULT NULL::integer, attempts integer DEFAULT NULL::integer, max_attempts integer DEFAULT NULL::integer) RETURNS SETOF graphile_worker.jobs
+CREATE FUNCTION graphile_worker.reschedule_jobs(job_ids bigint[], run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, priority smallint DEFAULT NULL::smallint, attempts smallint DEFAULT NULL::smallint, max_attempts smallint DEFAULT NULL::smallint) RETURNS SETOF graphile_worker.jobs
     LANGUAGE sql
     AS $$
   update "graphile_worker".jobs
