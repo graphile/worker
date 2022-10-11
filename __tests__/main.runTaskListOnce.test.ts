@@ -452,7 +452,7 @@ select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job(
   '{"a": 1}',
   queue_name := 'queue1',
   run_at := '${runAt.toISOString()}',
-  max_attempts := 10,
+  max_attempts := 10::smallint,
   job_key := 'abc'
 ) jobs`,
     );
@@ -512,7 +512,7 @@ select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job(
         '{"a": 2}',
         queue_name := 'queue2',
         run_at := '${runAt2.toISOString()}',
-        max_attempts := 100,
+        max_attempts := 100::smallint,
         job_key := 'abc'
       )`,
     );

@@ -24,7 +24,7 @@ with j as (
 update ${escapedWorkerSchema}.jobs
 set
 last_error = $2,
-run_at = greatest(now(), run_at) + (exp(least(attempts, 10))::text || ' seconds')::interval,
+run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
 locked_by = null,
 locked_at = null,
 payload = coalesce($4::json, jobs.payload)
@@ -53,7 +53,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $3;`,
 update ${escapedWorkerSchema}.jobs
 set
 last_error = $2,
-run_at = greatest(now(), run_at) + (exp(least(attempts, 10))::text || ' seconds')::interval,
+run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
 locked_by = null,
 locked_at = null,
 payload = coalesce($4::json, jobs.payload)
@@ -92,7 +92,7 @@ with j as (
 update ${escapedWorkerSchema}.jobs
 set
 last_error = $2,
-run_at = greatest(now(), run_at) + (exp(least(attempts, 10))::text || ' seconds')::interval,
+run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
 locked_by = null,
 locked_at = null
 where id = any($1::int[]) and locked_by = any($3::text[])

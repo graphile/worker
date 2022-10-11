@@ -136,8 +136,12 @@ function buildRunner(input: {
       /* void */
     },
     (e) => {
-      console.error(`Stopping worker due to an error: ${e}`);
-      stop();
+      if (running) {
+        console.error(`Stopping worker due to an error: ${e}`);
+        stop();
+      } else {
+        console.error(`Error occurred, but worker is already stopping: ${e}`);
+      }
       return Promise.reject(e);
     },
   );
