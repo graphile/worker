@@ -8,10 +8,10 @@ towards the 1.0 release. Please read these notes carefully.
 **IMPORTANT**: this release is incompatible with previous releases - do not run
 earlier workers against this releases database schema or Bad Things will happen.
 
-**IMPORTANT**: migration `000011` in this release cannot run if there are any
-locked jobs - it will throw a "division by zero" error in this case. Please
-ensure all existing workers are shut down and any locked jobs released before
-upgrading to this version.
+**IMPORTANT**: the initial migration, `000011`, in this release cannot run if
+there are any locked jobs - it will throw a "division by zero" error in this
+case. Please ensure all existing workers are shut down and any locked jobs
+released before upgrading to this version.
 
 **IMPORTANT**: migration `000011` renames the old jobs table, creates a new jobs
 table with a slightly different format, copies the jobs across, and then deletes
