@@ -1,6 +1,6 @@
 # Release notes
 
-### Pending
+### v0.14.0
 
 **THIS RELEASE INTRODUCES SIGNIFICANT CHANGES**, in preparation for moving
 towards the 1.0 release. Please read these notes carefully.
