@@ -5,21 +5,24 @@
 **THIS RELEASE INTRODUCES SIGNIFICANT CHANGES**, in preparation for moving
 towards the 1.0 release. Please read these notes carefully.
 
-**IMPORTANT**: the migration for this release cannot run if there are any locked
-jobs - it will throw a "division by zero" error in this case. Please ensure all
-existing workers are shut down and any locked jobs released before upgrading to
-this version.
-
 **IMPORTANT**: this release is incompatible with previous releases - do not run
 earlier workers against this releases database schema or Bad Things will happen.
+
+**IMPORTANT**: migration `000011` in this release cannot run if there are any
+locked jobs - it will throw a "division by zero" error in this case. Please
+ensure all existing workers are shut down and any locked jobs released before
+upgrading to this version.
+
+**IMPORTANT**: migration `000011` renames the old jobs table, creates a new jobs
+table with a slightly different format, copies the jobs across, and then deletes
+the old jobs table. The jobs table itself is not a public interface - you should
+use the documented SQL functions and TypeScript APIs only - but if you are
+referencing the jobs table in a database function you may have a bad time.
 
 #### Breaking changes
 
 - BREAKING: Bump minimum Node version to 14 since 12.x is now end-of-life
 - BREAKING: Bump minimum PG version to 12 for `generated always as (expression)`
-- BREAKING: the 'jobs' table no longer has `queue_name` and `task_identifier`
-  columns; these have been replaced with `job_queue_id` and `task_id` which are
-  both `int`s
 - BREAKING: `jobs.priority`, `attempts` and `max_attempts` are now `int2` rather
   than `int4` (please ensure your `priority` values fit in `int2` -
   `-32768 <= priority <= +32767`)
@@ -29,6 +32,9 @@ earlier workers against this releases database schema or Bad Things will happen.
 
 #### Changes to internals
 
+- WARNING: the 'jobs' table no longer has `queue_name` and `task_identifier`
+  columns; these have been replaced with `job_queue_id` and `task_id` which are
+  both `int`s
 - WARNING: many of the "internal" SQL functions (`get_job`, `fail_job`,
   `complete_job`) have been moved to JS to allow for dynamic SQL generation for
   improved performance/flexibility
