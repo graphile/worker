@@ -139,3 +139,43 @@ test("clock skew doesn't prevent task from being scheduled at the right time", (
     await setTime(REFERENCE_TIMESTAMP + 4 * HOUR + 1 * SECOND); // 4:00:01am
     expect(cronScheduleCalls.count).toEqual(1);
   }));
+
+test("does not schedule duplicate jobs when a job key is supplied", () =>
+  withOptions(async (options) => {
+    await setTime(REFERENCE_TIMESTAMP + HOUR); // 1am
+    const { pgPool } = options;
+    await reset(pgPool, options);
+    const eventMonitor = new EventMonitor();
+    const cronFinishedBackfilling = eventMonitor.awaitNext("cron:started");
+    const poolReady = eventMonitor.awaitNext("pool:listen:success");
+    runner = await run({
+      ...options,
+      crontab: `0 */4 * * * my_task ?jobKey=foo`,
+      events: eventMonitor.events,
+    });
+    await cronFinishedBackfilling;
+    await poolReady;
+
+    const cronScheduleComplete = eventMonitor.awaitNext("cron:scheduled");
+
+    const cronScheduleCalls = eventMonitor.count("cron:schedule");
+    // Allow the first copy of the job to get scheduled
+    await setTime(REFERENCE_TIMESTAMP + 4 * HOUR + 1 * SECOND); // 4:00:01am
+    expect(cronScheduleCalls.count).toEqual(1);
+    let jobs = await getJobs(pgPool);
+    expect(jobs).toEqual([
+      expect.objectContaining({ task_identifier: "my_task", key: "foo" }),
+    ]);
+
+    // Allow the system to reschedule the job after seeing it wasn't picked up
+    await setTime(REFERENCE_TIMESTAMP + 8 * HOUR + 1 * SECOND); // 8:00:01am
+    expect(cronScheduleCalls.count).toEqual(2);
+    jobs = await getJobs(pgPool);
+    expect(jobs).toEqual([
+      expect.objectContaining({ task_identifier: "my_task", key: "foo" }),
+    ]);
+
+    // After this, the jobs should exist in the DB
+    await cronScheduleComplete;
+    await sleep(50);
+  }));
