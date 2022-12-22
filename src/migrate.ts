@@ -5,11 +5,11 @@ import { WorkerSharedOptions } from "./interfaces";
 import { processSharedOptions } from "./lib";
 
 function checkPostgresVersion(versionString: string) {
-  const version = parseFloat(versionString);
+  const version = parseInt(versionString, 10);
 
-  if (version < 12.0) {
+  if (version < 120000) {
     throw new Error(
-      `Postgres version ${versionString} detected, 12.0 or greater required!`,
+      `This version of Graphile Worker requires PostgreSQL v12.0 or greater (detected \`server_version_num\` = ${versionString})`,
     );
   }
 }
@@ -18,9 +18,9 @@ async function fetchAndCheckPostgresVersion(client: PoolClient) {
   const {
     rows: [row],
   } = await client.query(
-    "select current_setting('server_version') as server_version",
+    "select current_setting('server_version_num') as server_version_num",
   );
-  checkPostgresVersion(row.server_version);
+  checkPostgresVersion(row.server_version_num);
 }
 
 async function installSchema(options: WorkerSharedOptions, client: PoolClient) {
@@ -78,12 +78,12 @@ export async function migrate(
     const {
       rows: [row],
     } = await client.query(
-      `select current_setting('server_version') as server_version,
+      `select current_setting('server_version_num') as server_version_num,
       (select id from ${escapedWorkerSchema}.migrations order by id desc limit 1);`,
     );
 
     latestMigration = row.id;
-    checkPostgresVersion(row.server_version);
+    checkPostgresVersion(row.server_version_num);
   } catch (e) {
     if (e.code === "42P01") {
       await installSchema(options, client);
