@@ -79,7 +79,7 @@ export async function migrate(
       rows: [row],
     } = await client.query(
       `select current_setting('server_version_num') as server_version_num,
-      (select id from ${escapedWorkerSchema}.migrations order by id desc limit 1);`,
+      (select id from ${escapedWorkerSchema}.migrations order by id desc limit 1) as id;`,
     );
 
     latestMigration = row.id;
