@@ -10,7 +10,6 @@ import {
 } from "./lib";
 import { runTaskList, runTaskListOnce } from "./main";
 import { migrate } from "./migrate";
-import { doPostgresVersionCheck } from "./postgresVersionCheck";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
   const { withPgClient, release } = await getUtilsAndReleasersFromOptions(
@@ -18,17 +17,6 @@ export const runMigrations = async (options: RunnerOptions): Promise<void> => {
   );
   try {
     await withPgClient((client) => migrate(options, client));
-  } finally {
-    await release();
-  }
-};
-
-export const checkVersion = async (options: RunnerOptions): Promise<void> => {
-  const { withPgClient, release } = await getUtilsAndReleasersFromOptions(
-    options,
-  );
-  try {
-    await withPgClient((client) => doPostgresVersionCheck(client));
   } finally {
     await release();
   }

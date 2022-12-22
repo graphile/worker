@@ -4,8 +4,30 @@ import { readdir, readFile } from "./fs";
 import { WorkerSharedOptions } from "./interfaces";
 import { processSharedOptions } from "./lib";
 
+function checkPostgresVersion(versionString: string) {
+  const version = parseFloat(versionString);
+
+  if (version < 12.0) {
+    throw new Error(
+      `Postgres version ${versionString} detected, 12.0 or greater required!`,
+    );
+  }
+}
+
+async function fetchAndCheckPostgresVersion(client: PoolClient) {
+  const {
+    rows: [row],
+  } = await client.query(
+    "select current_setting('server_version') as server_version",
+  );
+  checkPostgresVersion(row.server_version);
+}
+
 async function installSchema(options: WorkerSharedOptions, client: PoolClient) {
   const { escapedWorkerSchema } = processSharedOptions(options);
+
+  await fetchAndCheckPostgresVersion(client);
+
   await client.query(`
     create schema ${escapedWorkerSchema};
     create table ${escapedWorkerSchema}.migrations(
@@ -56,10 +78,13 @@ export async function migrate(
     const {
       rows: [row],
     } = await client.query(
-      `select id from ${escapedWorkerSchema}.migrations order by id desc limit 1;`,
+      `select id, current_setting('server_version') as server_version from ${escapedWorkerSchema}.migrations order by id desc limit 1;`,
     );
     if (row) {
       latestMigration = row.id;
+      checkPostgresVersion(row.server_version);
+    } else {
+      await fetchAndCheckPostgresVersion(client);
     }
   } catch (e) {
     if (e.code === "42P01") {
@@ -68,6 +93,7 @@ export async function migrate(
       throw e;
     }
   }
+
   const migrationFiles = (await readdir(`${__dirname}/../sql`))
     .filter((f) => f.match(/^[0-9]{6}\.sql$/))
     .sort();

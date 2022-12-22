@@ -14,7 +14,6 @@ import {
 } from "./interfaces";
 import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
-import { doPostgresVersionCheck } from "./postgresVersionCheck";
 
 export interface CompiledSharedOptions {
   events: WorkerEvents;
@@ -219,8 +218,6 @@ export const getUtilsAndReleasersFromOptions = async (
     }
 
     const withPgClient = makeWithPgClientFromPool(pgPool);
-
-    await withPgClient((client) => doPostgresVersionCheck(client));
 
     // Migrate
     await withPgClient((client) => migrate(options, client));
