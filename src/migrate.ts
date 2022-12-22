@@ -78,14 +78,12 @@ export async function migrate(
     const {
       rows: [row],
     } = await client.query(
-      `select id, current_setting('server_version') as server_version from ${escapedWorkerSchema}.migrations order by id desc limit 1;`,
+      `select current_setting('server_version') as server_version,
+      (select id from ${escapedWorkerSchema}.migrations order by id desc limit 1);`,
     );
-    if (row) {
-      latestMigration = row.id;
-      checkPostgresVersion(row.server_version);
-    } else {
-      await fetchAndCheckPostgresVersion(client);
-    }
+
+    latestMigration = row.id;
+    checkPostgresVersion(row.server_version);
   } catch (e) {
     if (e.code === "42P01") {
       await installSchema(options, client);
