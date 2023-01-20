@@ -28,7 +28,7 @@ where locked_at < ${now} - interval '4 hours'`,
       values: useNodeTime ? [new Date().toISOString()] : [],
       name: noPreparedStatements
         ? undefined
-        : `clear_stale_locks/${workerSchema}`,
+        : `clear_stale_locks${useNodeTime ? "N" : ""}/${workerSchema}`,
     }),
   );
 }
