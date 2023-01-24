@@ -52,6 +52,10 @@ referencing the jobs table in a database function you may have a bad time.
 - Added new (experimental) much faster `add_jobs` batch API.
 - Fix error handling of cron issues in 'run' method.
 - CronItem.match can now accept either a pattern string or a matcher function
+- Jobs that were locked more than 4 hours will be reattempted as before, however
+  they are slightly de-prioritised by virtue of having their `run_at` updated,
+  giving interrim jobs a chance to be executed (and lessening the impact of
+  queue stalling through hanging tasks).
 
 ### v0.13.0
 
