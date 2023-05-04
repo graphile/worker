@@ -48,9 +48,9 @@ export async function makeWorkerUtils(
           `select * from ${escapedWorkerSchema}.reschedule_jobs(
             $1::bigint[],
             run_at := $2::timestamptz,
-            priority := $3::smallint,
-            attempts := $4::smallint,
-            max_attempts := $5::smallint
+            priority := $3::int,
+            attempts := $4::int,
+            max_attempts := $5::int
           )`,
           [
             ids,

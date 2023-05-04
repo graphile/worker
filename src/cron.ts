@@ -108,6 +108,8 @@ async function scheduleCronJobs(
   ts: string,
   useNodeTime: boolean,
 ) {
+  // TODO: refactor this to use `add_jobs`
+
   // Note that `identifier` is guaranteed to be unique for every record
   // in `specs`.
   await pgPool.query(
@@ -120,8 +122,8 @@ async function scheduleCronJobs(
           ((json->'job')->'payload')::json as payload,
           ((json->'job')->>'queueName')::text as queue_name,
           ((json->'job')->>'runAt')::timestamptz as run_at,
-          ((json->'job')->>'maxAttempts')::smallint as max_attempts,
-          ((json->'job')->>'priority')::smallint as priority
+          ((json->'job')->>'maxAttempts')::int as max_attempts,
+          ((json->'job')->>'priority')::int as priority
         from json_array_elements($1::json) with ordinality AS entries (json, index)
       ),
       locks as (
