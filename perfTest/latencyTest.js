@@ -6,7 +6,7 @@ const { default: deferred } = require("../dist/deferred");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const options = {
-  concurrecy: 1,
+  concurrency: 1,
 };
 
 async function main() {
