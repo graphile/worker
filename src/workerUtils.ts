@@ -46,11 +46,11 @@ export async function makeWorkerUtils(
       const { rows } = await withPgClient((client) =>
         client.query<DbJob>(
           `select * from ${escapedWorkerSchema}.reschedule_jobs(
-            $1,
-            run_at := $2,
-            priority := $3,
-            attempts := $4,
-            max_attempts := $5
+            $1::bigint[],
+            run_at := $2::timestamptz,
+            priority := $3::smallint,
+            attempts := $4::smallint,
+            max_attempts := $5::smallint
           )`,
           [
             ids,
