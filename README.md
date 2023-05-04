@@ -958,15 +958,14 @@ NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
   same named queue (defaults to `null`)
 - `run_at` - a timestamp after which to run the job; defaults to now.
 - `max_attempts` - if this task fails, how many times should we retry it?
-  Default: `25::smallint`. You must cast the value you specify as `::smallint`.
+  Default: `25`. Must be castable to `smallint`.
 - `job_key` - unique identifier for the job, used to replace, update or remove
   it later if needed (see
   [Replacing, updating and removing jobs](#replacing-updating-and-removing-jobs));
   can also be used for de-duplication
 - `priority` - an integer representing the jobs priority. Jobs are executed in
   numerically ascending order of priority (jobs with a numerically smaller
-  priority are run first). Default: `0::smallint`. You must cast the value you
-  specify as `::smallint`.
+  priority are run first). Default: `0`. Must be castable to `smallint`.
 - `flags` - an optional text array (`text[]`) representing a flags to attach to
   the job. Can be used alongside the `forbiddenFlags` option in library mode to
   implement complex rate limiting or other behaviors which requiring skipping
@@ -1012,7 +1011,7 @@ SELECT graphile_worker.add_job(
   $1,
   payload := $2,
   queue_name := $3,
-  max_attempts := $4::smallint,
+  max_attempts := $4,
   run_at := NOW() + ($5 * INTERVAL '1 second')
 );
 ```
@@ -1041,9 +1040,9 @@ the `add_job` option of the same name above.
 - `payload`
 - `queue_name`
 - `run_at`
-- `max_attempts` (don't forget to cast to `::smallint`)
+- `max_attempts`
 - `job_key`
-- `priority` (don't forget to cast to `::smallint`)
+- `priority`
 - `flags`
 
 Note: `job_key_mode='unsafe_dedupe'` is not supported in `add_jobs` - you must
@@ -1241,9 +1240,9 @@ SQL:
 SELECT * FROM graphile_worker.reschedule_jobs(
   ARRAY[7, 99, 38674, ...],
   run_at := NOW() + interval '5 minutes',
-  priority := 5::smallint,
-  attempts := 5::smallint,
-  max_attempts := 25::smallint
+  priority := 5,
+  attempts := 5,
+  max_attempts := 25
 );
 ```
 

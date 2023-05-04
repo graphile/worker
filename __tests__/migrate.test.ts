@@ -34,7 +34,7 @@ test("migration installs schema; second migration does no harm", async () => {
     const { rows: migrationRows } = await pgClient.query(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations`,
     );
-    expect(migrationRows).toHaveLength(13);
+    expect(migrationRows).toHaveLength(14);
     const migration = migrationRows[0];
     expect(migration.id).toEqual(1);
 
