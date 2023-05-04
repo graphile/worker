@@ -19,12 +19,17 @@ the old jobs table. The jobs table itself is not a public interface - you should
 use the documented SQL functions and TypeScript APIs only - but if you are
 referencing the jobs table in a database function you may have a bad time.
 
+**IMPORTANT**: `priority`, `attempts` and `max_attempts` are all now `smallint`,
+so please make sure that your values fit into these ranges before starting the
+migration process. (Really these values should never be larger than about `100`
+or smaller than about `-100` anyway.)
+
 #### Breaking changes
 
 - BREAKING: Bump minimum Node version to 14 since 12.x is now end-of-life
 - BREAKING: Bump minimum PG version to 12 for `generated always as (expression)`
 - BREAKING: `jobs.priority`, `attempts` and `max_attempts` are now `int2` rather
-  than `int4` (please ensure your `priority` values fit in `int2` -
+  than `int4` (please ensure your values fit in `int2` -
   `-32768 <= priority <= +32767`)
 - BREAKING: CronItem.pattern has been renamed to CronItem.match
 - BREAKING: database error codes have been removed because we've moved to

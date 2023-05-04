@@ -108,6 +108,8 @@ async function scheduleCronJobs(
   ts: string,
   useNodeTime: boolean,
 ) {
+  // TODO: refactor this to use `add_jobs`
+
   // Note that `identifier` is guaranteed to be unique for every record
   // in `specs`.
   await pgPool.query(
@@ -120,16 +122,16 @@ async function scheduleCronJobs(
           ((json->'job')->'payload')::json as payload,
           ((json->'job')->>'queueName')::text as queue_name,
           ((json->'job')->>'runAt')::timestamptz as run_at,
-          ((json->'job')->>'maxAttempts')::smallint as max_attempts,
-          ((json->'job')->>'priority')::smallint as priority
+          ((json->'job')->>'maxAttempts')::int as max_attempts,
+          ((json->'job')->>'priority')::int as priority
         from json_array_elements($1::json) with ordinality AS entries (json, index)
       ),
       locks as (
         insert into ${escapedWorkerSchema}.known_crontabs (identifier, known_since, last_execution)
         select
           specs.identifier,
-          $2 as known_since,
-          $2 as last_execution
+          $2::timestamptz as known_since,
+          $2::timestamptz as last_execution
         from specs
         on conflict (identifier)
         do update set last_execution = excluded.last_execution
@@ -182,7 +184,7 @@ async function registerAndBackfillItems(
     await pgPool.query(
       `
       INSERT INTO ${escapedWorkerSchema}.known_crontabs (identifier, known_since)
-      SELECT identifier, $2
+      SELECT identifier, $2::timestamptz
       FROM unnest($1::text[]) AS unnest (identifier)
       ON CONFLICT DO NOTHING
       `,

@@ -25,9 +25,9 @@ export function makeAddJob(
           payload => $2::json,
           queue_name => $3::text,
           run_at => $4::timestamptz,
-          max_attempts => $5::smallint,
+          max_attempts => $5::int,
           job_key => $6::text,
-          priority => $7::smallint,
+          priority => $7::int,
           flags => $8::text[],
           job_key_mode => $9::text
         );

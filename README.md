@@ -958,14 +958,14 @@ NOTE: the [`addJob`](#addjob) JavaScript method simply defers to this underlying
   same named queue (defaults to `null`)
 - `run_at` - a timestamp after which to run the job; defaults to now.
 - `max_attempts` - if this task fails, how many times should we retry it?
-  Default: 25.
+  Default: `25`. Must be castable to `smallint`.
 - `job_key` - unique identifier for the job, used to replace, update or remove
   it later if needed (see
   [Replacing, updating and removing jobs](#replacing-updating-and-removing-jobs));
   can also be used for de-duplication
 - `priority` - an integer representing the jobs priority. Jobs are executed in
   numerically ascending order of priority (jobs with a numerically smaller
-  priority are run first).
+  priority are run first). Default: `0`. Must be castable to `smallint`.
 - `flags` - an optional text array (`text[]`) representing a flags to attach to
   the job. Can be used alongside the `forbiddenFlags` option in library mode to
   implement complex rate limiting or other behaviors which requiring skipping
