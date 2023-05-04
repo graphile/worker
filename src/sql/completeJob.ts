@@ -20,13 +20,13 @@ export async function completeJob(
         text: `\
 with j as (
 delete from ${escapedWorkerSchema}.jobs
-where id = $1
+where id = $1::bigint
 returning *
 )
 update ${escapedWorkerSchema}.job_queues
 set locked_by = null, locked_at = null
 from j
-where job_queues.id = j.job_queue_id and job_queues.locked_by = $2;`,
+where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
         values: [job.id, workerId],
         name: noPreparedStatements
           ? undefined
@@ -38,7 +38,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $2;`,
       client.query({
         text: `\
 delete from ${escapedWorkerSchema}.jobs
-where id = $1`,
+where id = $1::bigint`,
         values: [job.id],
         name: noPreparedStatements ? undefined : `complete_job/${workerSchema}`,
       }),

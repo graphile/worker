@@ -128,8 +128,8 @@ async function scheduleCronJobs(
         insert into ${escapedWorkerSchema}.known_crontabs (identifier, known_since, last_execution)
         select
           specs.identifier,
-          $2 as known_since,
-          $2 as last_execution
+          $2::timestamptz as known_since,
+          $2::timestamptz as last_execution
         from specs
         on conflict (identifier)
         do update set last_execution = excluded.last_execution
@@ -182,7 +182,7 @@ async function registerAndBackfillItems(
     await pgPool.query(
       `
       INSERT INTO ${escapedWorkerSchema}.known_crontabs (identifier, known_since)
-      SELECT identifier, $2
+      SELECT identifier, $2::timestamptz
       FROM unnest($1::text[]) AS unnest (identifier)
       ON CONFLICT DO NOTHING
       `,

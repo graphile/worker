@@ -25,7 +25,7 @@ export async function makeWorkerUtils(
     async completeJobs(ids) {
       const { rows } = await withPgClient((client) =>
         client.query<DbJob>(
-          `select * from ${escapedWorkerSchema}.complete_jobs($1)`,
+          `select * from ${escapedWorkerSchema}.complete_jobs($1::bigint[])`,
           [ids],
         ),
       );
@@ -35,7 +35,7 @@ export async function makeWorkerUtils(
     async permanentlyFailJobs(ids, reason) {
       const { rows } = await withPgClient((client) =>
         client.query<DbJob>(
-          `select * from ${escapedWorkerSchema}.permanently_fail_jobs($1, $2)`,
+          `select * from ${escapedWorkerSchema}.permanently_fail_jobs($1::bigint[], $2::text)`,
           [ids, reason || null],
         ),
       );
