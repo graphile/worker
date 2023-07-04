@@ -244,7 +244,7 @@ yarn add graphile-worker
 ## Running
 
 `graphile-worker` manages its own database schema (`graphile_worker`). Just
-point graphile-worker at your database and we handle our own migratiDons:
+point graphile-worker at your database and we handle our own migrations:
 
 ```
 npx graphile-worker -c "postgres:///my_db"
