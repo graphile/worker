@@ -254,6 +254,11 @@ npx graphile-worker -c "postgres:///my_db"
 (`npx` looks for the `graphile-worker` binary locally; it's often better to use
 the `"scripts"` entry in `package.json` instead.)
 
+Note: Graphile Worker expects the Postgres role used at runtime to be the same
+as the role used while running the migrations. If you need to run your
+migrations as a different role, one solution is to explicitly change the owner
+of the `graphile_worker.*` tables to be the same role as is used at runtime.
+
 The following CLI options are available:
 
 ```
