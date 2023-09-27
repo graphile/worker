@@ -1,7 +1,7 @@
 const path = require("path");
 const fs = require("fs");
 
-const sqlDir = path.join(process.cwd(), "./sql");
+const sqlDir = path.join(__dirname, "../sql");
 const sqlFiles = fs
   .readdirSync(sqlDir)
   .filter((file) => /^[0-9]{6}\.sql$/.test(file))
