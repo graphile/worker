@@ -2,7 +2,7 @@ import { PoolClient } from "pg";
 
 import { WorkerSharedOptions } from "./interfaces";
 import { processSharedOptions } from "./lib";
-import * as sql from "./sql";
+import { migrations } from "./generated/sql";
 
 function checkPostgresVersion(versionString: string) {
   const version = parseInt(versionString, 10);
@@ -44,9 +44,7 @@ async function runMigration(
   migrationNumber: number,
 ) {
   const { escapedWorkerSchema } = processSharedOptions(options);
-  const rawText =
-    // eslint-disable-next-line import/namespace
-    sql["sql_" + migrationFile.replace(".sql", "").replace(/-/g, "_")];
+  const rawText = migrations[migrationFile];
   const text = rawText.replace(
     /:GRAPHILE_WORKER_SCHEMA\b/g,
     escapedWorkerSchema,
@@ -91,10 +89,7 @@ export async function migrate(
     }
   }
 
-  const migrationFiles = Object.keys(sql)
-    .map((key) => key.replace("sql_", "").replace(/_/g, "-") + ".sql")
-    .filter((f) => f.match(/^[0-9]{6}\.sql$/))
-    .sort();
+  const migrationFiles = Object.keys(sql);
   for (const migrationFile of migrationFiles) {
     const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
     if (latestMigration == null || migrationNumber > latestMigration) {
