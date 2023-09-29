@@ -1,8 +1,8 @@
 import { PoolClient } from "pg";
 
+import { migrations } from "./generated/sql";
 import { WorkerSharedOptions } from "./interfaces";
 import { processSharedOptions } from "./lib";
-import { migrations } from "./generated/sql";
 
 function checkPostgresVersion(versionString: string) {
   const version = parseInt(versionString, 10);
@@ -89,7 +89,7 @@ export async function migrate(
     }
   }
 
-  const migrationFiles = Object.keys(sql);
+  const migrationFiles = Object.keys(migrations);
   for (const migrationFile of migrationFiles) {
     const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
     if (latestMigration == null || migrationNumber > latestMigration) {
