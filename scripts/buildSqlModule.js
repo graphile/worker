@@ -13,7 +13,7 @@ const sqlFiles = fs
  */
 function escape(str) {
   return (
-    "String.raw`" +
+    "String.raw`\\\n" +
     str
       .replace(/`/g, '` + "`" + String.raw`')
       .replace(/\$\{/g, "$$` + String.raw`{") +
