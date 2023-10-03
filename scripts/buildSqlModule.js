@@ -13,7 +13,7 @@ const sqlFiles = fs
  */
 function escape(str) {
   return (
-    "String.raw`\\\n" +
+    "String.raw`" +
     str
       .replace(/`/g, '` + "`" + String.raw`')
       .replace(/\$\{/g, "$$` + String.raw`{") +
@@ -30,6 +30,7 @@ const sqlModule =
       const sql = fs.readFileSync(path.join(sqlDir, file), "utf8");
       return `  ${JSON.stringify(file)}: ${escape(sql)},`;
     })
-    .join("\n") + "\n};\n";
+    .join("\n") +
+  "\n};\n";
 
 fs.writeFileSync(path.join(__dirname, "../src/generated/sql.ts"), sqlModule);
