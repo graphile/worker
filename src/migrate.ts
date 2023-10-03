@@ -1,6 +1,6 @@
 import { PoolClient } from "pg";
 
-import { readdir, readFile } from "./fs";
+import { migrations } from "./generated/sql";
 import { WorkerSharedOptions } from "./interfaces";
 import { processSharedOptions } from "./lib";
 
@@ -44,10 +44,7 @@ async function runMigration(
   migrationNumber: number,
 ) {
   const { escapedWorkerSchema } = processSharedOptions(options);
-  const rawText = await readFile(
-    `${__dirname}/../sql/${migrationFile}`,
-    "utf8",
-  );
+  const rawText = migrations[migrationFile];
   const text = rawText.replace(
     /:GRAPHILE_WORKER_SCHEMA\b/g,
     escapedWorkerSchema,
@@ -92,9 +89,7 @@ export async function migrate(
     }
   }
 
-  const migrationFiles = (await readdir(`${__dirname}/../sql`))
-    .filter((f) => f.match(/^[0-9]{6}\.sql$/))
-    .sort();
+  const migrationFiles = Object.keys(migrations);
   for (const migrationFile of migrationFiles) {
     const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
     if (latestMigration == null || migrationNumber > latestMigration) {

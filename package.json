@@ -4,8 +4,9 @@
   "description": "Job queue for PostgreSQL",
   "main": "dist/index.js",
   "scripts": {
-    "prepack": "rm -Rf dist && tsc && chmod +x dist/cli.js",
-    "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && tsc --watch",
+    "build:sql": "node scripts/buildSqlModule.js",
+    "prepack": "rm -Rf dist && npm run build:sql && tsc && chmod +x dist/cli.js",
+    "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && npm run build:sql && tsc --watch",
     "lint": "yarn prettier:check && eslint --ext .js,.jsx,.ts,.tsx,.graphql .",
     "lint:fix": "eslint --ext .js,.jsx,.ts,.tsx,.graphql . --fix; prettier --ignore-path .eslintignore --write '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
     "prettier:check": "prettier --ignore-path .eslintignore --check '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
