@@ -1,5 +1,12 @@
 # Release notes
 
+### v0.15.0
+
+Migration files are no longer read from filesystem (via `fs` module); instead
+they are stored as strings in JS to enable Graphile Worker to be bundled. The
+files still exist and will continue to be distributed, so this should not be a
+breaking change. Thanks to @timelf123 for this feature!
+
 ### v0.14.0
 
 **THIS RELEASE INTRODUCES SIGNIFICANT CHANGES**, in preparation for moving
