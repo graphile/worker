@@ -192,18 +192,18 @@ export function runTaskList(
   const workers: Array<Worker> = [];
 
   let listenForChangesClient: PoolClient | null = null;
+  let listenForChangesClientRelease: (() => void) | null = null;
 
   const unlistenForChanges = async () => {
-    if (listenForChangesClient) {
-      const client = listenForChangesClient;
-      listenForChangesClient = null;
-      // Unsubscribe from jobs:insert topic
+    if (listenForChangesClientRelease) {
       try {
-        await client.query('UNLISTEN "jobs:insert"');
+        listenForChangesClientRelease();
       } catch (e) {
-        // Ignore
+        logger.error(
+          `Error occurred whilst releasing listening client: ${e.message}`,
+          { error: e },
+        );
       }
-      await client.release();
     }
   };
   let active = true;
@@ -497,7 +497,6 @@ export function runTaskList(
         return;
       }
       errorHandled = true;
-      listenForChangesClient = null;
       try {
         release();
       } catch (e) {
@@ -517,6 +516,7 @@ export function runTaskList(
     }
 
     function release() {
+      listenForChangesClient = null;
       client.removeListener("error", onErrorReleaseClientAndTryAgain);
       client.removeListener("notification", handleNotification);
       client.query('UNLISTEN "jobs:insert"').catch(() => {
@@ -532,6 +532,7 @@ export function runTaskList(
 
     events.emit("pool:listen:success", { workerPool, client });
     listenForChangesClient = client;
+    listenForChangesClientRelease = release;
     client.on("notification", handleNotification);
 
     // Subscribe to jobs:insert message
