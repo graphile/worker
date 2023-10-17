@@ -292,10 +292,18 @@ export function runTaskList(
     }
   }
 
+  let terminated = false;
   function terminate() {
-    const idx = allWorkerPools.indexOf(workerPool);
-    allWorkerPools.splice(idx, 1);
-    promise.resolve(resetLockedAtPromise);
+    if (!terminated) {
+      terminated = true;
+      const idx = allWorkerPools.indexOf(workerPool);
+      allWorkerPools.splice(idx, 1);
+      promise.resolve(resetLockedAtPromise);
+    } else {
+      logger.error(
+        `Graphile Worker internal error: terminate() was called twice for worker pool. Ignoring second call; but this indicates a bug - please file an issue.`,
+      );
+    }
   }
 
   // This is a representation of us that can be interacted with externally
