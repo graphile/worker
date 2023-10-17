@@ -87,7 +87,7 @@ export async function assertPool(
   releasers: Releasers,
 ): Promise<Pool> {
   const { logger } = processSharedOptions(options);
-  assert(
+  assert.ok(
     !options.pgPool || !options.connectionString,
     "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
   );

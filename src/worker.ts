@@ -75,7 +75,7 @@ export function makeNewWorker(
   };
 
   const nudge = () => {
-    assert(active, "nudge called after worker terminated");
+    assert.ok(active, "nudge called after worker terminated");
     if (doNextTimer) {
       // Must be idle; call early
       doNext();
@@ -105,8 +105,8 @@ export function makeNewWorker(
   const doNext = async (): Promise<void> => {
     again = false;
     cancelDoNext();
-    assert(active, "doNext called when active was false");
-    assert(!activeJob, "There should be no active job");
+    assert.ok(active, "doNext called when active was false");
+    assert.ok(!activeJob, "There should be no active job");
 
     // Find us a job
     try {
@@ -212,7 +212,7 @@ export function makeNewWorker(
       try {
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
-        assert(task, `Unsupported task '${job.task_identifier}'`);
+        assert.ok(task, `Unsupported task '${job.task_identifier}'`);
         const helpers = makeJobHelpers(options, job, { withPgClient, logger });
         result = await task(job.payload, helpers);
       } catch (error) {

@@ -1,6 +1,7 @@
 {
   "name": "graphile-worker",
   "version": "0.15.1",
+  "type": "commonjs",
   "description": "Job queue for PostgreSQL",
   "main": "dist/index.js",
   "scripts": {
