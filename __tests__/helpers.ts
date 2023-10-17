@@ -32,7 +32,7 @@ jest.setTimeout(15000);
 // process.env.GRAPHILE_LOGGER_DEBUG = "1";
 
 export const TEST_CONNECTION_STRING =
-  process.env.TEST_CONNECTION_STRING || "graphile_worker_test";
+  process.env.TEST_CONNECTION_STRING || "postgres:///graphile_worker_test";
 
 const parsed = parse(TEST_CONNECTION_STRING);
 
@@ -85,7 +85,7 @@ export async function withTransaction<T>(
 }
 
 function isPoolClient(o: pg.Pool | pg.PoolClient): o is pg.PoolClient {
-  return typeof o["release"] === "function";
+  return "release" in o && typeof o.release === "function";
 }
 
 export async function reset(

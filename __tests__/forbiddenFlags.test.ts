@@ -58,7 +58,7 @@ test.each([
     const shouldSkip = jest.fn();
 
     const job: Task = async (_payload, helpers) => {
-      const flags = helpers.job.flags || [];
+      const flags = helpers.job.flags || {};
 
       if (flags[badFlag]) {
         shouldSkip();
@@ -120,7 +120,7 @@ test.each([
     const ranWithDFlag = jest.fn();
 
     const job: Task = async (_payload, helpers) => {
-      const flags = helpers.job.flags || [];
+      const flags = helpers.job.flags || {};
 
       if (flags[badFlag]) {
         ranWithDFlag();
