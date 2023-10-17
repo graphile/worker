@@ -157,7 +157,7 @@ function registerSignalHandlers(logger: Logger, events: WorkerEvents) {
         removeForcefulHandler();
         clearTimeout(removeTimeout);
         logger.error(
-          `Global forceful shutdown attempted; killing self via ${signal}`,
+          `Global forceful shutdown completed; killing self via ${signal}`,
         );
         process.kill(process.pid, signal);
       });
@@ -347,8 +347,6 @@ export function runTaskList(
             cancelledJobs,
           });
           logger.debug("Jobs released");
-        } else {
-          logger.debug("No active jobs to release");
         }
         events.emit("pool:gracefulShutdown:complete", { pool: this });
         logger.debug("Graceful shutdown complete");
@@ -400,6 +398,8 @@ export function runTaskList(
         } else {
           logger.debug("No active jobs to release");
         }
+        events.emit("pool:forcefulShutdown:complete", { pool: this });
+        logger.debug("Forceful shutdown complete");
       } catch (e) {
         events.emit("pool:forcefulShutdown:error", { pool: this, error: e });
         logger.error(`Error occurred during forceful shutdown: ${e.message}`, {
