@@ -118,7 +118,7 @@ function buildRunner(input: {
   releasers.push(() => cron.release());
 
   const workerPool = runTaskList(options, taskList, pgPool);
-  releasers.push(() => workerPool.release());
+  releasers.push(() => workerPool.gracefulShutdown("Runner is shutting down"));
 
   let running = true;
   const stop = async () => {

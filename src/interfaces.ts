@@ -339,8 +339,10 @@ export interface Worker {
 }
 
 export interface WorkerPool {
+  /** @deprecated Use gracefulShutdown instead */
   release: () => Promise<void>;
-  gracefulShutdown: (message: string) => Promise<void>;
+  gracefulShutdown: (message?: string) => Promise<void>;
+  forcefulShutdown: (message: string) => Promise<void>;
   promise: Promise<void>;
 }
 
@@ -647,6 +649,36 @@ export type WorkerEventMap = {
   "pool:gracefulShutdown:error": { pool: WorkerPool; error: any };
 
   /**
+   * When a worker pool graceful shutdown is successful, but one of the workers
+   * throws an error from release()
+   */
+  "pool:gracefulShutdown:workerError": {
+    pool: WorkerPool;
+    error: any;
+    job: Job | null;
+  };
+
+  /**
+   * When a worker pool graceful shutdown throws an error
+   */
+  "pool:gracefulShutdown:complete": { pool: WorkerPool };
+
+  /**
+   * When a worker pool starts a forceful shutdown
+   */
+  "pool:forcefulShutdown": { pool: WorkerPool; message: string };
+
+  /**
+   * When a worker pool forceful shutdown throws an error
+   */
+  "pool:forcefulShutdown:error": { pool: WorkerPool; error: any };
+
+  /**
+   * When a worker pool forceful shutdown throws an error
+   */
+  "pool:forcefulShutdown:complete": { pool: WorkerPool };
+
+  /**
    * When a worker is created
    */
   "worker:create": { worker: Worker; tasks: TaskList };
@@ -812,6 +844,11 @@ export type WorkerEventMap = {
    * When the runner is terminated by a signal
    */
   gracefulShutdown: { signal: Signal };
+
+  /**
+   * When the runner is terminated by a signal _again_ after 5 seconds
+   */
+  forcefulShutdown: { signal: Signal };
 
   /**
    * When the runner is stopped

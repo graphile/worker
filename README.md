@@ -1657,11 +1657,14 @@ If a job throws an error, the job is failed and scheduled for retries with
 exponential back-off. We use async/await so assuming you write your task code
 well all errors should be cascaded down automatically.
 
-If the worker is terminated (`SIGTERM`, `SIGINT`, etc), it
-[triggers a graceful shutdown](https://github.com/graphile/worker/blob/3540df5ab4eb73f846d54959fdfad07897b616f0/src/main.ts#L39-L66) -
-i.e. it stops accepting new jobs, waits for the existing jobs to complete, and
-then exits. If you need to restart your worker, you should do so using this
-graceful process.
+If the worker is sent a termination signal (`SIGTERM`, `SIGINT`, etc), it
+triggers a graceful shutdown - i.e. it stops accepting new jobs, waits for the
+existing jobs to complete, and then exits. If you need to restart your worker,
+you should do so using this graceful process. After 5 seconds (during which
+duplicate signals are ignored), if this same signal is sent again it will
+trigger a forceful shutdown: all running jobs will be "failed" (i.e. will retry
+on another worker after their exponential back-off) and then the worker will
+exit.
 
 If the worker completely dies unexpectedly (e.g. `process.exit()`, segfault,
 `SIGKILL`) then the jobs that that worker was executing remain locked for at
