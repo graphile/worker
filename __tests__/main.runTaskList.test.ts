@@ -63,7 +63,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
 
       await sleep(1);
       expect(finished).toBeFalsy();
-      await workerPool.release();
+      await workerPool.gracefulShutdown();
       expect(job1).toHaveBeenCalledTimes(5);
       await sleep(1);
       expect(finished).toBeTruthy();
@@ -90,7 +90,7 @@ test("doesn't bail on deprecated `debug` function", () =>
       await addJob(pgPool);
       await sleepUntil(() => !!jobPromise);
       jobPromise!.resolve();
-      await workerPool.release();
+      await workerPool.gracefulShutdown();
     } finally {
       if (jobPromise) {
         (jobPromise as Deferred).resolve();

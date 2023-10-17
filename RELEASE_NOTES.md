@@ -1,5 +1,23 @@
 # Release notes
 
+### v0.15.1
+
+Fixes issues with graceful worker shutdowns:
+
+- Deprecates `workerPool.release()` in favour of (equivalent)
+  `workerPool.gracefulShutdown()`
+- Fixes `workerPool.gracefulShutdown()` to shut down gracefully (waiting for
+  jobs to complete)
+- Adds `workerPool.forcefulShutdown()` to "fail" the running jobs (so they'll be
+  re-attempted elsewhere) and force-release the pool
+- Fixes handling of signals:
+  - First termination signal triggers graceful shutdown
+  - Signal over next 5 seconds are ignored
+  - Second termination signal triggers forceful shutdown
+  - Signal over next 5 seconds are ignored
+  - Further termination signals are handled by Node (i.e. will likely instantly
+    exit the process)
+
 ### v0.15.0
 
 Migration files are no longer read from filesystem (via `fs` module); instead

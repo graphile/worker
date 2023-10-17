@@ -76,7 +76,7 @@ async function main() {
     )}ms, avg: ${average.toFixed(2)}ms`,
   );
 
-  await workerPool.release();
+  await workerPool.gracefulShutdown();
   await pgPool.end();
   console.log("Done");
 }
