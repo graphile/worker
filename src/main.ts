@@ -191,13 +191,15 @@ export function runTaskList(
   const promise = deferred();
   const workers: Array<Worker> = [];
 
-  let listenForChangesClient: PoolClient | null = null;
-  let listenForChangesClientRelease: (() => void) | null = null;
+  let changeListener: {
+    client: PoolClient;
+    release: () => void;
+  } | null = null;
 
   const unlistenForChanges = async () => {
-    if (listenForChangesClientRelease) {
+    if (changeListener) {
       try {
-        listenForChangesClientRelease();
+        changeListener.release();
       } catch (e) {
         logger.error(
           `Error occurred whilst releasing listening client: ${e.message}`,
@@ -509,14 +511,14 @@ export function runTaskList(
     }
 
     function handleNotification() {
-      if (listenForChangesClient === client) {
+      if (changeListener?.client === client) {
         // Find a worker that's available
         workers.some((worker) => worker.nudge());
       }
     }
 
     function release() {
-      listenForChangesClient = null;
+      changeListener = null;
       client.removeListener("error", onErrorReleaseClientAndTryAgain);
       client.removeListener("notification", handleNotification);
       client.query('UNLISTEN "jobs:insert"').catch(() => {
@@ -531,8 +533,7 @@ export function runTaskList(
     //----------------------------------------
 
     events.emit("pool:listen:success", { workerPool, client });
-    listenForChangesClient = client;
-    listenForChangesClientRelease = release;
+    changeListener = { client, release };
     client.on("notification", handleNotification);
 
     // Subscribe to jobs:insert message
