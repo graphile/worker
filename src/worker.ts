@@ -2,7 +2,7 @@ import * as assert from "assert";
 import { randomBytes } from "crypto";
 
 import { defaults } from "./config";
-import deferred from "./deferred";
+import deferred, { Deferred } from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
   Job,
@@ -36,7 +36,10 @@ export function makeNewWorker(
   });
   const { logger, maxContiguousErrors, events, useNodeTime } =
     compiledSharedOptions;
-  const promise = deferred();
+  const promise = deferred() as Deferred<void> & {
+    /** @internal */
+    worker?: Worker;
+  };
   promise.then(
     () => {
       events.emit("worker:stop", { worker });
@@ -47,7 +50,7 @@ export function makeNewWorker(
   );
   let activeJob: Job | null = null;
 
-  let doNextTimer: NodeJS.Timer | null = null;
+  let doNextTimer: NodeJS.Timeout | null = null;
   const cancelDoNext = () => {
     if (doNextTimer !== null) {
       clearTimeout(doNextTimer);
@@ -205,7 +208,7 @@ export function makeNewWorker(
        * **MUST** release the job once we've attempted it (success or error).
        */
       const startTimestamp = process.hrtime();
-      let result: void | PromiseOrDirect<unknown>[];
+      let result: void | PromiseOrDirect<unknown>[] = undefined;
       try {
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
@@ -368,7 +371,7 @@ export function makeNewWorker(
   doNext();
 
   // For tests
-  promise["worker"] = worker;
+  promise.worker = worker;
 
   return worker;
 }

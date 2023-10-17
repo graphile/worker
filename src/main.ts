@@ -209,7 +209,7 @@ export function runTaskList(
     }
   };
   let active = true;
-  let reconnectTimeout: NodeJS.Timer | null = null;
+  let reconnectTimeout: NodeJS.Timeout | null = null;
 
   const compiledSharedOptions = processSharedOptions(options);
   const { minResetLockedInterval, maxResetLockedInterval } =
@@ -589,8 +589,8 @@ export const runTaskListOnce = (
       makeWithPgClientFromClient(client),
       false,
     );
-    finalPromise["worker"] = worker;
+    finalPromise.worker = worker;
     return worker.promise;
-  });
+  }) as Promise<void> & { worker: Worker };
   return finalPromise;
 };
