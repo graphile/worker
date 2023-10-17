@@ -19,7 +19,7 @@ import {
 } from "./interfaces";
 import { processSharedOptions } from "./lib";
 import { Logger } from "./logger";
-import SIGNALS from "./signals";
+import SIGNALS, { Signal } from "./signals";
 import { failJobs } from "./sql/failJob";
 import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
@@ -78,92 +78,98 @@ function registerSignalHandlers(logger: Logger, events: WorkerEvents) {
   } else {
     _registeredSignalHandlers = true;
   }
-
-  SIGNALS.forEach((signal) => {
-    logger.debug(`Registering signal handler for ${signal}`, {
-      registeringSignalHandler: signal,
-    });
-    const switchToForcefulHandler = () => {
-      logger.debug(
-        `Switching to forceful handler for ${signal}; another ${signal} signal will force a fast (unsafe) shutdown`,
-        {
-          switchToForcefulHandler: signal,
-        },
-      );
+  const switchToForcefulHandler = () => {
+    logger.debug(
+      `Switching to forceful handler for termination signals (${SIGNALS.join(
+        ", ",
+      )}); another termination signal will force a fast (unsafe) shutdown`,
+      { switchToForcefulHandlers: true },
+    );
+    for (const signal of SIGNALS) {
       process.on(signal, forcefulHandler);
       process.removeListener(signal, gracefulHandler);
-    };
-    const removeForcefulHandler = () => {
-      logger.debug(
-        `Removed forceful handler for ${signal}; another ${signal} will likely kill the process (unless you've registered other handlers)`,
-        {
-          unregisteringSignalHandler: signal,
-        },
-      );
+    }
+  };
+  const removeForcefulHandler = () => {
+    logger.debug(
+      `Removed forceful handler for termination signals (${SIGNALS.join(
+        ", ",
+      )}); another termination signals will likely kill the process (unless you've registered other handlers)`,
+      { unregisteringSignalHandlers: true },
+    );
+    for (const signal of SIGNALS) {
       process.removeListener(signal, forcefulHandler);
-    };
-    const gracefulHandler = function () {
-      if (_shuttingDownGracefully || _shuttingDownForcefully) {
-        logger.error(
-          `Ignoring '${signal}' (graceful shutdown already in progress)`,
-        );
-        return;
-      } else {
-        _shuttingDownGracefully = true;
-      }
+    }
+  };
 
+  const gracefulHandler = function (signal: Signal) {
+    if (_shuttingDownGracefully) {
       logger.error(
-        `Received '${signal}'; attempting global graceful shutdown... (all ${signal} signals will be ignored for the next 5 seconds)`,
+        `Ignoring '${signal}' (graceful shutdown already in progress)`,
       );
-      const switchTimeout = setTimeout(switchToForcefulHandler, 5000);
-      _signalHandlersEventEmitter.emit("gracefulShutdown", { signal });
+      return;
+    } else {
+      _shuttingDownGracefully = true;
+    }
 
-      Promise.allSettled(
-        allWorkerPools.map((pool) =>
-          pool.gracefulShutdown(`Graceful worker shutdown due to ${signal}`),
-        ),
-      ).finally(() => {
-        clearTimeout(switchTimeout);
-        process.removeListener(signal, gracefulHandler);
-        if (!_shuttingDownForcefully) {
-          logger.error(
-            `Global graceful shutdown complete; killing self via ${signal}`,
-          );
-          process.kill(process.pid, signal);
-        }
-      });
-    };
-    const forcefulHandler = function () {
-      if (_shuttingDownForcefully) {
+    logger.error(
+      `Received '${signal}'; attempting global graceful shutdown... (all termination signals will be ignored for the next 5 seconds)`,
+    );
+    const switchTimeout = setTimeout(switchToForcefulHandler, 5000);
+    _signalHandlersEventEmitter.emit("gracefulShutdown", { signal });
+
+    Promise.allSettled(
+      allWorkerPools.map((pool) =>
+        pool.gracefulShutdown(`Graceful worker shutdown due to ${signal}`),
+      ),
+    ).finally(() => {
+      clearTimeout(switchTimeout);
+      process.removeListener(signal, gracefulHandler);
+      if (!_shuttingDownForcefully) {
         logger.error(
-          `Ignoring '${signal}' (forceful shutdown already in progress)`,
-        );
-        return;
-      } else {
-        _shuttingDownForcefully = true;
-      }
-
-      logger.error(
-        `Received '${signal}'; attempting global forceful shutdown... (all ${signal} signals will be ignored for the next 5 seconds)`,
-      );
-      const removeTimeout = setTimeout(removeForcefulHandler, 5000);
-      _signalHandlersEventEmitter.emit("forcefulShutdown", { signal });
-
-      Promise.allSettled(
-        allWorkerPools.map((pool) =>
-          pool.forcefulShutdown(`Forced worker shutdown due to ${signal}`),
-        ),
-      ).finally(() => {
-        removeForcefulHandler();
-        clearTimeout(removeTimeout);
-        logger.error(
-          `Global forceful shutdown completed; killing self via ${signal}`,
+          `Global graceful shutdown complete; killing self via ${signal}`,
         );
         process.kill(process.pid, signal);
-      });
-    };
+      }
+    });
+  };
+  const forcefulHandler = function (signal: Signal) {
+    if (_shuttingDownForcefully) {
+      logger.error(
+        `Ignoring '${signal}' (forceful shutdown already in progress)`,
+      );
+      return;
+    } else {
+      _shuttingDownForcefully = true;
+    }
+
+    logger.error(
+      `Received '${signal}'; attempting global forceful shutdown... (all termination signals will be ignored for the next 5 seconds)`,
+    );
+    const removeTimeout = setTimeout(removeForcefulHandler, 5000);
+    _signalHandlersEventEmitter.emit("forcefulShutdown", { signal });
+
+    Promise.allSettled(
+      allWorkerPools.map((pool) =>
+        pool.forcefulShutdown(`Forced worker shutdown due to ${signal}`),
+      ),
+    ).finally(() => {
+      removeForcefulHandler();
+      clearTimeout(removeTimeout);
+      logger.error(
+        `Global forceful shutdown completed; killing self via ${signal}`,
+      );
+      process.kill(process.pid, signal);
+    });
+  };
+
+  logger.debug(
+    `Registering termination signal handlers (${SIGNALS.join(", ")})`,
+    { registeringSignalHandlers: SIGNALS },
+  );
+  for (const signal of SIGNALS) {
     process.on(signal, gracefulHandler);
-  });
+  }
 }
 
 export function runTaskList(
@@ -269,17 +275,22 @@ export function runTaskList(
   );
 
   function deactivate() {
-    active = false;
-    if (resetLockedTimeout) {
-      clearTimeout(resetLockedTimeout);
-      resetLockedTimeout = null;
+    if (active) {
+      active = false;
+      if (resetLockedTimeout) {
+        clearTimeout(resetLockedTimeout);
+        resetLockedTimeout = null;
+      }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
+      events.emit("pool:release", { pool: this });
+      unlistenForChanges();
     }
-    if (reconnectTimeout) {
-      clearTimeout(reconnectTimeout);
-      reconnectTimeout = null;
-    }
-    events.emit("pool:release", { pool: this });
-    unlistenForChanges();
+  }
+
+  function terminate() {
     const idx = allWorkerPools.indexOf(workerPool);
     allWorkerPools.splice(idx, 1);
     promise.resolve(resetLockedAtPromise);
@@ -338,6 +349,15 @@ export function runTaskList(
         }
         if (jobsToRelease.length > 0) {
           const workerIds = workers.map((worker) => worker.workerId);
+          logger.debug(
+            `Releasing the jobs ${jobsToRelease
+              .map((j) => j.id)
+              .join()} (workers: ${workerIds.join(", ")})`,
+            {
+              jobs: jobsToRelease,
+              workerIds,
+            },
+          );
           const cancelledJobs = await failJobs(
             compiledSharedOptions,
             withPgClient,
@@ -348,7 +368,6 @@ export function runTaskList(
           logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
             cancelledJobs,
           });
-          logger.debug("Jobs released");
         }
         events.emit("pool:gracefulShutdown:complete", { pool: this });
         logger.debug("Graceful shutdown complete");
@@ -359,6 +378,7 @@ export function runTaskList(
         });
         return this.forcefulShutdown(e.message);
       }
+      terminate();
     },
 
     /**
@@ -383,9 +403,15 @@ export function runTaskList(
 
         if (jobsInProgress.length > 0) {
           const workerIds = workers.map((worker) => worker.workerId);
-          logger.debug(`Releasing the jobs '${workerIds.join(", ")}'`, {
-            workerIds,
-          });
+          logger.debug(
+            `Releasing the jobs ${jobsInProgress
+              .map((j) => j.id)
+              .join()} (workers: ${workerIds.join(", ")})`,
+            {
+              jobs: jobsInProgress,
+              workerIds,
+            },
+          );
           const cancelledJobs = await failJobs(
             compiledSharedOptions,
             withPgClient,
@@ -396,7 +422,6 @@ export function runTaskList(
           logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
             cancelledJobs,
           });
-          logger.debug("Jobs released");
         } else {
           logger.debug("No active jobs to release");
         }
@@ -408,6 +433,7 @@ export function runTaskList(
           error: e,
         });
       }
+      terminate();
     },
 
     promise,

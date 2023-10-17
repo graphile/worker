@@ -1660,8 +1660,8 @@ well all errors should be cascaded down automatically.
 If the worker is sent a termination signal (`SIGTERM`, `SIGINT`, etc), it
 triggers a graceful shutdown - i.e. it stops accepting new jobs, waits for the
 existing jobs to complete, and then exits. If you need to restart your worker,
-you should do so using this graceful process. After 5 seconds (during which
-duplicate signals are ignored), if this same signal is sent again it will
+you should do so using this graceful process. After 5 seconds (during which more
+terminal signals are ignored), if another terminal signal is sent it will
 trigger a forceful shutdown: all running jobs will be "failed" (i.e. will retry
 on another worker after their exponential back-off) and then the worker will
 exit.
