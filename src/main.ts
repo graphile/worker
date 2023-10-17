@@ -331,7 +331,9 @@ export function runTaskList(
                 reason: workerReleaseResult.reason,
               },
             );
-            if (job) jobsToRelease.push(job);
+            if (job) {
+              jobsToRelease.push(job);
+            }
           }
         }
         if (jobsToRelease.length > 0) {
