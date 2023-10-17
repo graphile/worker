@@ -113,7 +113,7 @@ function registerSignalHandlers(logger: Logger, events: WorkerEvents) {
       }
 
       logger.error(
-        `Received '${signal}'; attempting graceful shutdown... (all ${signal} signals will be ignored for the next 5 seconds)`,
+        `Received '${signal}'; attempting global graceful shutdown... (all ${signal} signals will be ignored for the next 5 seconds)`,
       );
       const switchTimeout = setTimeout(switchToForcefulHandler, 5000);
       _signalHandlersEventEmitter.emit("gracefulShutdown", { signal });
@@ -127,7 +127,7 @@ function registerSignalHandlers(logger: Logger, events: WorkerEvents) {
         process.removeListener(signal, gracefulHandler);
         if (!_shuttingDownForcefully) {
           logger.error(
-            `Graceful shutdown attempted; killing self via ${signal}`,
+            `Global graceful shutdown complete; killing self via ${signal}`,
           );
           process.kill(process.pid, signal);
         }
@@ -144,7 +144,7 @@ function registerSignalHandlers(logger: Logger, events: WorkerEvents) {
       }
 
       logger.error(
-        `Received '${signal}'; attempting forceful shutdown... (all ${signal} signals will be ignored for the next 5 seconds)`,
+        `Received '${signal}'; attempting global forceful shutdown... (all ${signal} signals will be ignored for the next 5 seconds)`,
       );
       const removeTimeout = setTimeout(removeForcefulHandler, 5000);
       _signalHandlersEventEmitter.emit("forcefulShutdown", { signal });
@@ -156,7 +156,9 @@ function registerSignalHandlers(logger: Logger, events: WorkerEvents) {
       ).finally(() => {
         removeForcefulHandler();
         clearTimeout(removeTimeout);
-        logger.error(`Graceful shutdown attempted; killing self via ${signal}`);
+        logger.error(
+          `Global forceful shutdown attempted; killing self via ${signal}`,
+        );
         process.kill(process.pid, signal);
       });
     };
