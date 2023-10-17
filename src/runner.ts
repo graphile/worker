@@ -12,9 +12,8 @@ import { runTaskList, runTaskListOnce } from "./main";
 import { migrate } from "./migrate";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
-  const { withPgClient, release } = await getUtilsAndReleasersFromOptions(
-    options,
-  );
+  const { withPgClient, release } =
+    await getUtilsAndReleasersFromOptions(options);
   try {
     await withPgClient((client) => migrate(options, client));
   } finally {
