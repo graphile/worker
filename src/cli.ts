@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { resolvePresets } from "graphile-config";
+import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
 import { defaults } from "./config";
@@ -8,7 +10,7 @@ import { run, runOnce } from "./index";
 import { RunnerOptions } from "./interfaces";
 import { runMigrations } from "./runner";
 
-const argv_ = yargs
+const argv = yargs
   .parserConfiguration({
     "boolean-negation": false,
   })
@@ -70,28 +72,54 @@ const argv_ = yargs
     default: false,
   })
   .boolean("no-prepared-statements")
+  .option("config", {
+    alias: "C",
+    description: "The path to the config file",
+    normalize: true,
+  })
+  .string("config")
   .strict(true).argv;
 
-function isPromise(val: any): val is Promise<any> {
-  return typeof val === "object" && val && typeof val.then === "function";
-}
-
-// Hack TypeScript to stop whinging about argv potentially being a promise
-if (isPromise(argv_)) {
-  throw new Error("yargs returned a promise");
-}
-const argv = argv_ as Awaited<typeof argv_>;
-
-const isInteger = (n: number): boolean => {
-  return isFinite(n) && Math.round(n) === n;
+const isInteger = (n: number | undefined): boolean => {
+  return typeof n === "number" && isFinite(n) && Math.round(n) === n;
 };
 
+function stripUndefined<T extends object>(
+  t: T,
+): { [Key in keyof T as T[Key] extends undefined ? never : Key]: T[Key] } {
+  return Object.fromEntries(
+    Object.entries(t).filter(([_, value]) => value !== undefined),
+  ) as T;
+}
+
+function argvToPreset(inArgv: Awaited<typeof argv>): GraphileConfig.Preset {
+  return {
+    worker: stripUndefined({
+      connectionString: inArgv["connection"],
+      maxPoolSize: isInteger(inArgv["max-pool-size"])
+        ? inArgv["max-pool-size"]
+        : undefined,
+      pollInterval: isInteger(inArgv["poll-interval"])
+        ? inArgv["poll-interval"]
+        : undefined,
+      preparedStatements: !inArgv["no-prepared-statements"],
+      schema: inArgv.schema,
+      watch: inArgv.watch,
+      crontabFile: inArgv["crontab"],
+      concurrentJobs: isInteger(inArgv.jobs) ? inArgv.jobs : undefined,
+    }),
+  };
+}
+
 async function main() {
-  const DATABASE_URL = argv.connection || process.env.DATABASE_URL || undefined;
-  const SCHEMA = argv.schema || undefined;
+  const userPreset = await loadConfig(argv.config);
+  const preset = resolvePresets([
+    ...(userPreset ? [userPreset] : []),
+    argvToPreset(argv),
+  ]);
   const ONCE = argv.once;
   const SCHEMA_ONLY = argv["schema-only"];
-  const WATCH = argv.watch;
+  const WATCH = argv.watch || (!SCHEMA_ONLY && preset.worker?.watch) || false;
 
   if (SCHEMA_ONLY && WATCH) {
     throw new Error("Cannot specify both --watch and --schema-only");
@@ -103,23 +131,30 @@ async function main() {
     throw new Error("Cannot specify both --watch and --once");
   }
 
-  if (!DATABASE_URL && !process.env.PGDATABASE) {
+  const {
+    connectionString = defaults.connectionString,
+    schema = defaults.schema,
+    preparedStatements = defaults.preparedStatements,
+    crontabFile = defaults.crontabFile,
+    tasksFolder = defaults.tasksFolder,
+    concurrentJobs = defaults.concurrentJobs,
+    maxPoolSize = defaults.maxPoolSize,
+    pollInterval = defaults.pollInterval,
+  } = preset.worker ?? {};
+
+  if (!connectionString && !process.env.PGDATABASE) {
     throw new Error(
       "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
     );
   }
 
   const options: RunnerOptions = {
-    schema: SCHEMA || defaults.schema,
-    concurrency: isInteger(argv.jobs) ? argv.jobs : defaults.concurrentJobs,
-    maxPoolSize: isInteger(argv["max-pool-size"])
-      ? argv["max-pool-size"]
-      : defaults.maxPoolSize,
-    pollInterval: isInteger(argv["poll-interval"])
-      ? argv["poll-interval"]
-      : defaults.pollInterval,
-    connectionString: DATABASE_URL,
-    noPreparedStatements: !!argv["no-prepared-statements"],
+    schema,
+    concurrency: concurrentJobs,
+    maxPoolSize,
+    pollInterval,
+    connectionString,
+    noPreparedStatements: !preparedStatements,
   };
 
   if (SCHEMA_ONLY) {
@@ -128,12 +163,8 @@ async function main() {
     return;
   }
 
-  const watchedTasks = await getTasks(options, `${process.cwd()}/tasks`, WATCH);
-  const watchedCronItems = await getCronItems(
-    options,
-    argv.crontab || `${process.cwd()}/crontab`,
-    WATCH,
-  );
+  const watchedTasks = await getTasks(options, tasksFolder, WATCH);
+  const watchedCronItems = await getCronItems(options, crontabFile, WATCH);
 
   if (ONCE) {
     await runOnce(options, watchedTasks.tasks);
