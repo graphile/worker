@@ -222,8 +222,8 @@ export function makeNewWorker(
       const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
 
       // `batchJobFailedPayloads` and `batchJobErrors` should always have the same length
-      const batchJobFailedPayloads: any[] = [];
-      const batchJobErrors: any[] = [];
+      const batchJobFailedPayloads: unknown[] = [];
+      const batchJobErrors: unknown[] = [];
 
       if (!err && Array.isArray(job.payload) && Array.isArray(result)) {
         if (job.payload.length !== result.length) {
@@ -247,7 +247,7 @@ export function makeNewWorker(
             // Create a "partial" error for the batch
             err = new Error(
               `Batch failures:\n${batchJobErrors
-                .map((e) => e.message ?? String(e))
+                .map((e) => (e as Error).message ?? String(e))
                 .join("\n")}`,
             );
           }

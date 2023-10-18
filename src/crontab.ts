@@ -145,7 +145,7 @@ const parseCrontabOptions = (
 const parseCrontabPayload = (
   lineNumber: number,
   payloadString: string | undefined,
-): any => {
+): Record<string, unknown> | null => {
   if (!payloadString) {
     return null;
   }

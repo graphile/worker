@@ -78,7 +78,7 @@ export interface JobHelpers extends Helpers {
    */
   query<R extends QueryResultRow>(
     queryText: string,
-    values?: any[],
+    values?: unknown[],
   ): Promise<QueryResult<R>>;
 }
 
@@ -255,7 +255,7 @@ export interface ParsedCronItem {
   options: CronItemOptions;
 
   /** A payload object to merge into the default cron payload object for the scheduled job */
-  payload: { [key: string]: any };
+  payload: { [key: string]: unknown } | null;
 
   /** An identifier so that we can prevent double-scheduling of a task and determine whether or not to backfill. */
   identifier: string;
@@ -282,7 +282,7 @@ export interface CronItem {
   options?: CronItemOptions;
 
   /** A payload object to merge into the default cron payload object for the scheduled job */
-  payload?: { [key: string]: any };
+  payload?: { [key: string]: unknown };
 
   /** An identifier so that we can prevent double-scheduling of a task and determine whether or not to backfill. */
   identifier?: string;
@@ -570,6 +570,7 @@ export interface JobAndCronIdentifier {
 
 export interface WorkerUtilsOptions extends SharedOptions {}
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type BaseEventMap = Record<string, any>;
 type EventMapKey<TEventMap extends BaseEventMap> = string & keyof TEventMap;
 type EventCallback<TPayload> = (params: TPayload) => void;
@@ -629,7 +630,7 @@ export type WorkerEventMap = {
    */
   "pool:listen:error": {
     workerPool: WorkerPool;
-    error: any;
+    error: unknown;
     client: PoolClient;
   };
 
@@ -646,7 +647,7 @@ export type WorkerEventMap = {
   /**
    * When a worker pool graceful shutdown throws an error
    */
-  "pool:gracefulShutdown:error": { pool: WorkerPool; error: any };
+  "pool:gracefulShutdown:error": { pool: WorkerPool; error: unknown };
 
   /**
    * When a worker pool graceful shutdown is successful, but one of the workers
@@ -654,7 +655,7 @@ export type WorkerEventMap = {
    */
   "pool:gracefulShutdown:workerError": {
     pool: WorkerPool;
-    error: any;
+    error: unknown;
     job: Job | null;
   };
 
@@ -671,7 +672,7 @@ export type WorkerEventMap = {
   /**
    * When a worker pool forceful shutdown throws an error
    */
-  "pool:forcefulShutdown:error": { pool: WorkerPool; error: any };
+  "pool:forcefulShutdown:error": { pool: WorkerPool; error: unknown };
 
   /**
    * When a worker pool forceful shutdown throws an error
@@ -691,7 +692,7 @@ export type WorkerEventMap = {
   /**
    * When a worker stops (normally after a release)
    */
-  "worker:stop": { worker: Worker; error?: any };
+  "worker:stop": { worker: Worker; error?: unknown };
 
   /**
    * When a worker is about to ask the database for a job to execute
@@ -701,7 +702,7 @@ export type WorkerEventMap = {
   /**
    * When a worker calls get_job but there are no available jobs
    */
-  "worker:getJob:error": { worker: Worker; error: any };
+  "worker:getJob:error": { worker: Worker; error: unknown };
 
   /**
    * When a worker calls get_job but there are no available jobs
@@ -711,7 +712,11 @@ export type WorkerEventMap = {
   /**
    * When a worker is created
    */
-  "worker:fatalError": { worker: Worker; error: any; jobError: any | null };
+  "worker:fatalError": {
+    worker: Worker;
+    error: unknown;
+    jobError: unknown | null;
+  };
 
   /**
    * When a job is retrieved by get_job
@@ -726,7 +731,12 @@ export type WorkerEventMap = {
   /**
    * When a job throws an error
    */
-  "job:error": { worker: Worker; job: Job; error: any; batchJobErrors?: any[] };
+  "job:error": {
+    worker: Worker;
+    job: Job;
+    error: unknown;
+    batchJobErrors?: unknown[];
+  };
 
   /**
    * When a job fails permanently (emitted after job:error when appropriate)
@@ -734,15 +744,15 @@ export type WorkerEventMap = {
   "job:failed": {
     worker: Worker;
     job: Job;
-    error: any;
-    batchJobErrors?: any[];
+    error: unknown;
+    batchJobErrors?: unknown[];
   };
 
   /**
    * When a job has finished executing and the result (success or failure) has
    * been written back to the database
    */
-  "job:complete": { worker: Worker; job: Job; error: any };
+  "job:complete": { worker: Worker; job: Job; error: unknown };
 
   /** **Experimental** When the cron starts working (before backfilling) */
   "cron:starting": { cron: Cron; start: Date };
@@ -853,7 +863,7 @@ export type WorkerEventMap = {
   /**
    * When the runner is stopped
    */
-  stop: {};
+  stop: Record<string, never>;
 };
 
 export type WorkerEvents = TypedEventEmitter<WorkerEventMap>;

@@ -85,13 +85,13 @@ export function makeJobHelpers(
 
   // DEPRECATED METHODS
   Object.assign(helpers, {
-    debug(format: string, ...parameters: any[]): void {
+    debug(format: string, ...parameters: unknown[]): void {
       logger.error(
         "REMOVED: `helpers.debug` has been replaced with `helpers.logger.debug`; please do not use `helpers.debug`",
       );
       logger.debug(format, { parameters });
     },
-  } as any);
+  } as unknown);
 
   return helpers;
 }
