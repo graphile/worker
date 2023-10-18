@@ -17,7 +17,9 @@ our commercial support options.
 `graphile-worker` versions before 0.13.0 installed the `pgcrypto` extension into
 the public schema of your database (if it wasn't already installed). As of
 version 0.13.0 we no longer use `pgcrypto`. Existing users may want to uninstall
-it - see the [release notes](RELEASE_NOTES.md#v0130) for instructions.
+it - see the
+[release notes](https://github.com/graphile/worker/blob/main/RELEASE_NOTES.md#v0130)
+for instructions.
 
 :::
 

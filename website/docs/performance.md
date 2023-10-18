@@ -28,11 +28,11 @@ To test performance, you can run `yarn perfTest`. This runs three tests:
    there's no jobs queued (this includes connecting to the database and ensuring
    the migrations are up to date)
 2. a load test - by default this will run 20,000
-   [trivial](perfTest/tasks/log_if_999.js) jobs with a parallelism of 4 (i.e. 4
-   node processes) and a concurrency of 10 (i.e. 10 concurrent jobs running on
-   each node process), but you can configure this in `perfTest/run.js`. (These
-   settings were optimised for a 12-core hyperthreading machine running both the
-   tests and the database locally.)
+   [trivial](https://github.com/graphile/worker/blob/main/perfTest/tasks/log_if_999.js)
+   jobs with a parallelism of 4 (i.e. 4 node processes) and a concurrency of 10
+   (i.e. 10 concurrent jobs running on each node process), but you can configure
+   this in `perfTest/run.js`. (These settings were optimised for a 12-core
+   hyperthreading machine running both the tests and the database locally.)
 3. a latency test - determining how long between issuing an `add_job` command
    and the task itself being executed.
 
