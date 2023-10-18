@@ -1,5 +1,13 @@
 # Release notes
 
+### v0.16.0
+
+**DROPS SUPPORT FOR NODE <18**. As of 24th October 2023, Node 20 is the active
+LTS and Node 18 is maintainence LTS; previous versions are no longer supported.
+
+Adds support for `graphile-config` - configuration can now be read from a
+`graphile.config.ts` (or `.js`, `.cjs`, etc) file.
+
 ### v0.15.1
 
 Fixes issues with graceful worker shutdowns:
