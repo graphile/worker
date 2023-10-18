@@ -40,7 +40,7 @@ export { allWorkerPools as _allWorkerPools };
  * gracefulShutdown to all the pools' events; we use this event emitter to
  * aggregate these requests.
  */
-let _signalHandlersEventEmitter: WorkerEvents = new EventEmitter();
+const _signalHandlersEventEmitter: WorkerEvents = new EventEmitter();
 
 /**
  * Only register the signal handlers once _globally_.

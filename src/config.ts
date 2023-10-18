@@ -32,7 +32,7 @@ export const defaults = {
 } satisfies Exclude<GraphileConfig.Preset["worker"], undefined>;
 
 function enforceStringOrUndefined(
-  keyName: String,
+  keyName: string,
   str: unknown,
 ): string | undefined {
   if (typeof str === "string") {
@@ -47,7 +47,7 @@ function enforceStringOrUndefined(
 }
 
 function enforceNumberOrUndefined(
-  keyName: String,
+  keyName: string,
   nr: unknown,
 ): number | undefined {
   if (typeof nr === "number") {

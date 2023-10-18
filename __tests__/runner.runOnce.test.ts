@@ -23,13 +23,10 @@ async function withEnv<T>(
   envOverrides: { [key: string]: string | undefined },
   callback: () => Promise<T>,
 ): Promise<T> {
-  const old = Object.keys(envOverrides).reduce(
-    (memo, key) => {
-      memo[key] = process.env[key];
-      return memo;
-    },
-    {} as { [key: string]: string | undefined },
-  );
+  const old = Object.keys(envOverrides).reduce((memo, key) => {
+    memo[key] = process.env[key];
+    return memo;
+  }, {} as { [key: string]: string | undefined });
   setEnvvars(envOverrides);
   try {
     return await callback();
