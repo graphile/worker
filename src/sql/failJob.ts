@@ -7,7 +7,7 @@ export async function failJob(
   workerId: string,
   job: DbJob,
   message: string,
-  replacementPayload: undefined | any[],
+  replacementPayload: undefined | unknown[],
 ): Promise<void> {
   const {
     escapedWorkerSchema,

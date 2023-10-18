@@ -40,7 +40,7 @@ async function installSchema(options: WorkerSharedOptions, client: PoolClient) {
 async function runMigration(
   options: WorkerSharedOptions,
   client: PoolClient,
-  migrationFile: string,
+  migrationFile: keyof typeof migrations,
   migrationNumber: number,
 ) {
   const { escapedWorkerSchema } = processSharedOptions(options);
@@ -89,7 +89,7 @@ export async function migrate(
     }
   }
 
-  const migrationFiles = Object.keys(migrations);
+  const migrationFiles = Object.keys(migrations) as (keyof typeof migrations)[];
   for (const migrationFile of migrationFiles) {
     const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
     if (latestMigration == null || migrationNumber > latestMigration) {

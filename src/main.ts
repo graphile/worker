@@ -40,7 +40,7 @@ export { allWorkerPools as _allWorkerPools };
  * gracefulShutdown to all the pools' events; we use this event emitter to
  * aggregate these requests.
  */
-let _signalHandlersEventEmitter: WorkerEvents = new EventEmitter();
+const _signalHandlersEventEmitter: WorkerEvents = new EventEmitter();
 
 /**
  * Only register the signal handlers once _globally_.
@@ -209,7 +209,7 @@ export function runTaskList(
     }
   };
   let active = true;
-  let reconnectTimeout: NodeJS.Timer | null = null;
+  let reconnectTimeout: NodeJS.Timeout | null = null;
 
   const compiledSharedOptions = processSharedOptions(options);
   const { minResetLockedInterval, maxResetLockedInterval } =
@@ -589,8 +589,8 @@ export const runTaskListOnce = (
       makeWithPgClientFromClient(client),
       false,
     );
-    finalPromise["worker"] = worker;
+    finalPromise.worker = worker;
     return worker.promise;
-  });
+  }) as Promise<void> & { worker: Worker };
   return finalPromise;
 };
