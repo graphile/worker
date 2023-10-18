@@ -29,7 +29,7 @@ export const defaults = {
   preparedStatements: true,
   crontabFile: `${process.cwd()}/crontab`,
   tasksFolder: `${process.cwd()}/tasks`,
-} satisfies Exclude<GraphileConfig.Preset["worker"], undefined>;
+} satisfies GraphileConfig.WorkerOptions;
 
 function enforceStringOrUndefined(
   keyName: string,

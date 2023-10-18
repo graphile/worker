@@ -338,6 +338,7 @@ export const runCron = (
     // The backfill may have taken a moment, we should continue from where the
     // worker started and catch up as quickly as we can. This does **NOT**
     // count as a backfill.
+    /** This timestamp will be mutated! */
     const nextTimestamp = unsafeRoundToMinute(new Date(+start), true);
 
     const scheduleNextLoop = () => {
