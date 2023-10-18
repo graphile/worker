@@ -44,12 +44,16 @@ jobs:
   lint:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        node-version: [18.x]
+
     steps:
-      - uses: actions/checkout@v1
-      - name: Use Node.js 14.x
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
         with:
-          node-version: 14.x
+          node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
       - run: yarn lint
 
@@ -58,9 +62,14 @@ jobs:
     env:
       GRAPHILE_WORKER_SCHEMA: custom_schema
 
+    strategy:
+      matrix:
+        node-version: [18.x]
+        postgres-version: [12]
+
     services:
       postgres:
-        image: postgres:12
+        image: postgres:${{ matrix.postgres-version }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -73,11 +82,11 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: 16.x
+          node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
       # - run: yarn lint # No need to lint altschema
       - run: yarn jest -i --ci
@@ -85,9 +94,14 @@ jobs:
   database_updated:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        node-version: [18.x]
+        postgres-version: [12]
+
     services:
       postgres:
-        image: postgres:12
+        image: postgres:${{ matrix.postgres-version }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -100,11 +114,11 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: 16.x
+          node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
       - name: Install pg_dump
         run: |
