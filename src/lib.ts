@@ -248,12 +248,6 @@ export function digestPreset(preset: GraphileConfig.Preset) {
     pollInterval = defaults.pollInterval,
   } = resolvedPreset.worker ?? {};
 
-  if (!connectionString && !process.env.PGDATABASE) {
-    throw new Error(
-      "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
-    );
-  }
-
   const runnerOptions: RunnerOptions = {
     schema,
     concurrency: concurrentJobs,

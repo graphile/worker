@@ -136,6 +136,12 @@ async function main() {
     throw new Error("Cannot specify both --watch and --once");
   }
 
+  if (!options.connectionString) {
+    throw new Error(
+      "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
+    );
+  }
+
   if (SCHEMA_ONLY) {
     await runMigrations(options);
     console.log("Schema updated");
