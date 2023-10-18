@@ -570,8 +570,7 @@ export interface JobAndCronIdentifier {
 
 export interface WorkerUtilsOptions extends SharedOptions {}
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type BaseEventMap = Record<string, any>;
+type BaseEventMap = Record<string, unknown>;
 type EventMapKey<TEventMap extends BaseEventMap> = string & keyof TEventMap;
 type EventCallback<TPayload> = (params: TPayload) => void;
 
