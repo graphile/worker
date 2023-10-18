@@ -58,6 +58,7 @@
     "@docusaurus/core": "2.4.3",
     "@docusaurus/module-type-aliases": "2.4.3",
     "@docusaurus/preset-classic": "2.4.3",
+    "@docusaurus/remark-plugin-npm2yarn": "^2.4.3",
     "@mdx-js/react": "^1.6.22",
     "@types/jest": "^26.0.0",
     "@types/json5": "^2.2.0",

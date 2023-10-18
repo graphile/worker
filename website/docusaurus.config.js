@@ -42,6 +42,14 @@ const config = {
         docs: {
           sidebarPath: require.resolve("./sidebars.js"),
           editUrl: "https://github.com/graphile/worker/tree/main/website/",
+          remarkPlugins: [
+            [require("@docusaurus/remark-plugin-npm2yarn"), { sync: true }],
+          ],
+        },
+        pages: {
+          remarkPlugins: [
+            [require("@docusaurus/remark-plugin-npm2yarn"), { sync: true }],
+          ],
         },
         blog: false /*{
           showReadingTime: true,
