@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { EventEmitter } from "events";
+import { resolvePresets } from "graphile-config";
 import { Client, Pool, PoolClient } from "pg";
 
 import { defaults } from "./config";
@@ -14,7 +15,6 @@ import {
 } from "./interfaces";
 import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
-import { resolvePresets } from "graphile-config";
 
 export interface CompiledSharedOptions {
   events: WorkerEvents;

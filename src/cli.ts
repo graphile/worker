@@ -6,8 +6,8 @@ import { defaults } from "./config";
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
 import { run, runOnce } from "./index";
-import { runMigrations } from "./runner";
 import { digestPreset } from "./lib";
+import { runMigrations } from "./runner";
 
 const argv = yargs
   .parserConfiguration({
