@@ -25,6 +25,8 @@ const config = {
 
   organizationName: "graphile",
   projectName: "worker",
+  deploymentBranch: "gh-pages",
+  trailingSlash: false,
 
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
