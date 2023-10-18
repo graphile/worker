@@ -14,6 +14,7 @@ import {
 } from "./interfaces";
 import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
+import { resolvePresets } from "graphile-config";
 
 export interface CompiledSharedOptions {
   events: WorkerEvents;
@@ -233,3 +234,39 @@ export const getUtilsAndReleasersFromOptions = async (
     };
   });
 };
+
+export function digestPreset(preset: GraphileConfig.Preset) {
+  const resolvedPreset = resolvePresets([preset]);
+  const {
+    connectionString = defaults.connectionString,
+    schema = defaults.schema,
+    preparedStatements = defaults.preparedStatements,
+    crontabFile = defaults.crontabFile,
+    tasksFolder = defaults.tasksFolder,
+    concurrentJobs = defaults.concurrentJobs,
+    maxPoolSize = defaults.maxPoolSize,
+    pollInterval = defaults.pollInterval,
+  } = resolvedPreset.worker ?? {};
+
+  if (!connectionString && !process.env.PGDATABASE) {
+    throw new Error(
+      "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
+    );
+  }
+
+  const runnerOptions: RunnerOptions = {
+    schema,
+    concurrency: concurrentJobs,
+    maxPoolSize,
+    pollInterval,
+    connectionString,
+    noPreparedStatements: !preparedStatements,
+  };
+
+  return {
+    resolvedPreset,
+    runnerOptions,
+    crontabFile,
+    tasksFolder,
+  };
+}

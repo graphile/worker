@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { resolvePresets } from "graphile-config";
 import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
@@ -7,8 +6,8 @@ import { defaults } from "./config";
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
 import { run, runOnce } from "./index";
-import { RunnerOptions } from "./interfaces";
 import { runMigrations } from "./runner";
+import { digestPreset } from "./lib";
 
 const argv = yargs
   .parserConfiguration({
@@ -113,13 +112,19 @@ function argvToPreset(inArgv: Awaited<typeof argv>): GraphileConfig.Preset {
 
 async function main() {
   const userPreset = await loadConfig(argv.config);
-  const preset = resolvePresets([
-    ...(userPreset ? [userPreset] : []),
-    argvToPreset(argv),
-  ]);
   const ONCE = argv.once;
   const SCHEMA_ONLY = argv["schema-only"];
-  const WATCH = argv.watch || (!SCHEMA_ONLY && preset.worker?.watch) || false;
+  const {
+    runnerOptions: options,
+    resolvedPreset,
+    tasksFolder,
+    crontabFile,
+  } = digestPreset({
+    extends: [...(userPreset ? [userPreset] : []), argvToPreset(argv)],
+  });
+
+  const WATCH =
+    argv.watch || (!SCHEMA_ONLY && resolvedPreset.worker?.watch) || false;
 
   if (SCHEMA_ONLY && WATCH) {
     throw new Error("Cannot specify both --watch and --schema-only");
@@ -130,32 +135,6 @@ async function main() {
   if (WATCH && ONCE) {
     throw new Error("Cannot specify both --watch and --once");
   }
-
-  const {
-    connectionString = defaults.connectionString,
-    schema = defaults.schema,
-    preparedStatements = defaults.preparedStatements,
-    crontabFile = defaults.crontabFile,
-    tasksFolder = defaults.tasksFolder,
-    concurrentJobs = defaults.concurrentJobs,
-    maxPoolSize = defaults.maxPoolSize,
-    pollInterval = defaults.pollInterval,
-  } = preset.worker ?? {};
-
-  if (!connectionString && !process.env.PGDATABASE) {
-    throw new Error(
-      "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
-    );
-  }
-
-  const options: RunnerOptions = {
-    schema,
-    concurrency: concurrentJobs,
-    maxPoolSize,
-    pollInterval,
-    connectionString,
-    noPreparedStatements: !preparedStatements,
-  };
 
   if (SCHEMA_ONLY) {
     await runMigrations(options);
