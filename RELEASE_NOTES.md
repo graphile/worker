@@ -11,6 +11,8 @@ emitter payloads are now `unknown` rather than `any`, so you might need to cast.
 Adds support for `graphile-config` - configuration can now be read from a
 `graphile.config.ts` (or `.js`, `.cjs`, etc) file.
 
+Crontab: now supports `jobKey` and `jobKeyMode` opts (thanks @spiffytech!)
+
 ### v0.15.1
 
 Fixes issues with graceful worker shutdowns:
