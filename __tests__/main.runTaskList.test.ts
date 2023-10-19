@@ -43,7 +43,9 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
       };
 
       // Run the worker
+      expect(process.listeners("SIGTERM")).toHaveLength(0);
       const workerPool = runTaskList({ concurrency: 3 }, tasks, pgPool);
+      expect(process.listeners("SIGTERM")).toHaveLength(1);
       let finished = false;
       workerPool.promise.then(() => {
         finished = true;
@@ -69,6 +71,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
       expect(finished).toBeTruthy();
       await workerPool.promise;
       expect(await jobCount(pgPool)).toEqual(0);
+      expect(process.listeners("SIGTERM")).toHaveLength(0);
     } finally {
       Object.values(jobPromises).forEach((p) => p?.resolve());
     }
