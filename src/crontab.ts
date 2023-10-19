@@ -66,7 +66,7 @@ const parseCrontabOptions = (
   let identifier: string | undefined = undefined;
   let queueName: string | undefined = undefined;
   let jobKey: string | undefined = undefined;
-  let jobKeyMode: CronItemOptions["jobKeyMode"] = "replace";
+  let jobKeyMode: CronItemOptions["jobKeyMode"] = undefined;
   let priority: number | undefined = undefined;
 
   type MatcherTuple = [RegExp, (matches: RegExpExecArray) => void];
@@ -150,6 +150,9 @@ const parseCrontabOptions = (
 
   if (!backfillPeriod) {
     backfillPeriod = 0;
+  }
+  if (!jobKeyMode && jobKey) {
+    jobKeyMode = "replace";
   }
 
   return {
