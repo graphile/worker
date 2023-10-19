@@ -8,7 +8,8 @@ RUN yarn install --frozen-lockfile --production=false --no-progress
 
 COPY tsconfig.json .eslintrc.js .eslintignore .prettierrc.js ./
 COPY ./sql ./sql
-COPY ./src ./src 
+COPY ./src ./src
+COPY ./scripts ./scripts
 
 RUN yarn run prepack
 
