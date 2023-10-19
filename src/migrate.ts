@@ -93,7 +93,9 @@ export async function migrate(
   let highestMigration = 0;
   for (const migrationFile of migrationFiles) {
     const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
-    if (migrationNumber > highestMigration) highestMigration = migrationNumber;
+    if (migrationNumber > highestMigration) {
+      highestMigration = migrationNumber;
+    }
     if (latestMigration == null || migrationNumber > latestMigration) {
       await runMigration(options, client, migrationFile, migrationNumber);
     }
