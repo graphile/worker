@@ -26,7 +26,7 @@ async function assertTaskList(
   options: RunnerOptions,
   releasers: Releasers,
 ): Promise<TaskList> {
-  assert(
+  assert.ok(
     !options.taskDirectory || !options.taskList,
     "Exactly one of either `taskDirectory` or `taskList` should be set",
   );
@@ -118,7 +118,7 @@ function buildRunner(input: {
   releasers.push(() => cron.release());
 
   const workerPool = runTaskList(options, taskList, pgPool);
-  releasers.push(() => workerPool.release());
+  releasers.push(() => workerPool.gracefulShutdown("Runner is shutting down"));
 
   let running = true;
   const stop = async () => {

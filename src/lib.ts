@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import { EventEmitter } from "events";
+import { resolvePresets } from "graphile-config";
 import { Client, Pool, PoolClient } from "pg";
 
 import { defaults } from "./config";
@@ -87,7 +88,7 @@ export async function assertPool(
   releasers: Releasers,
 ): Promise<Pool> {
   const { logger } = processSharedOptions(options);
-  assert(
+  assert.ok(
     !options.pgPool || !options.connectionString,
     "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
   );
@@ -233,3 +234,33 @@ export const getUtilsAndReleasersFromOptions = async (
     };
   });
 };
+
+export function digestPreset(preset: GraphileConfig.Preset) {
+  const resolvedPreset = resolvePresets([preset]);
+  const {
+    connectionString = defaults.connectionString,
+    schema = defaults.schema,
+    preparedStatements = defaults.preparedStatements,
+    crontabFile = defaults.crontabFile,
+    tasksFolder = defaults.tasksFolder,
+    concurrentJobs = defaults.concurrentJobs,
+    maxPoolSize = defaults.maxPoolSize,
+    pollInterval = defaults.pollInterval,
+  } = resolvedPreset.worker ?? {};
+
+  const runnerOptions: RunnerOptions = {
+    schema,
+    concurrency: concurrentJobs,
+    maxPoolSize,
+    pollInterval,
+    connectionString,
+    noPreparedStatements: !preparedStatements,
+  };
+
+  return {
+    resolvedPreset,
+    runnerOptions,
+    crontabFile,
+    tasksFolder,
+  };
+}

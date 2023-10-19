@@ -31,17 +31,7 @@ CREATE TABLE graphile_worker.jobs (
     CONSTRAINT jobs_key_check CHECK (((length(key) > 0) AND (length(key) <= 512))),
     CONSTRAINT jobs_max_attempts_check CHECK ((max_attempts >= 1))
 );
-CREATE FUNCTION graphile_worker.add_job(
-  identifier text,
-  payload json DEFAULT NULL::json,
-  queue_name text DEFAULT NULL::text,
-  run_at timestamp with time zone DEFAULT NULL::timestamp with time zone,
-  max_attempts smallint DEFAULT NULL::smallint,
-  job_key text DEFAULT NULL::text,
-  priority smallint DEFAULT NULL::smallint,
-  flags text[] DEFAULT NULL::text[],
-  job_key_mode text DEFAULT 'replace'::text
-) RETURNS graphile_worker.jobs
+CREATE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
 declare
@@ -55,9 +45,9 @@ begin
         payload,
         queue_name,
         run_at,
-        max_attempts,
+        max_attempts::smallint,
         job_key,
-        priority,
+        priority::smallint,
         flags
       )::"graphile_worker".job_spec],
       (job_key_mode = 'preserve_run_at')
@@ -97,9 +87,9 @@ begin
         tasks.id,
         coalesce(add_job.payload, '{}'::json),
         coalesce(add_job.run_at, now()),
-        coalesce(add_job.max_attempts, 25),
+        coalesce(add_job.max_attempts::smallint, 25::smallint),
         add_job.job_key,
-        coalesce(add_job.priority, 0),
+        coalesce(add_job.priority::smallint, 0::smallint),
         (
           select jsonb_object_agg(flag, true)
           from unnest(add_job.flags) as item(flag)
@@ -290,15 +280,15 @@ begin
   return v_job;
 end;
 $$;
-CREATE FUNCTION graphile_worker.reschedule_jobs(job_ids bigint[], run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, priority smallint DEFAULT NULL::smallint, attempts smallint DEFAULT NULL::smallint, max_attempts smallint DEFAULT NULL::smallint) RETURNS SETOF graphile_worker.jobs
+CREATE FUNCTION graphile_worker.reschedule_jobs(job_ids bigint[], run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, priority integer DEFAULT NULL::integer, attempts integer DEFAULT NULL::integer, max_attempts integer DEFAULT NULL::integer) RETURNS SETOF graphile_worker.jobs
     LANGUAGE sql
     AS $$
   update "graphile_worker".jobs
     set
       run_at = coalesce(reschedule_jobs.run_at, jobs.run_at),
-      priority = coalesce(reschedule_jobs.priority, jobs.priority),
-      attempts = coalesce(reschedule_jobs.attempts, jobs.attempts),
-      max_attempts = coalesce(reschedule_jobs.max_attempts, jobs.max_attempts),
+      priority = coalesce(reschedule_jobs.priority::smallint, jobs.priority),
+      attempts = coalesce(reschedule_jobs.attempts::smallint, jobs.attempts),
+      max_attempts = coalesce(reschedule_jobs.max_attempts::smallint, jobs.max_attempts),
       updated_at = now()
     where id = any(job_ids)
     and (

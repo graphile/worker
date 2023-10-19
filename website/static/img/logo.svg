@@ -1,0 +1,70 @@
+<svg width="1200" height="1200" version="1.1" viewBox="0 -0 1200 1200" xmlns="http://www.w3.org/2000/svg">
+<!--
+
+This file is Copyright Â© 2023 Benjie Gillam. All rights reserved.
+
+-->
+<style type="text/css">
+polygon {
+  stroke-width: 0;
+  shape-rendering: geometricPrecision;
+}
+.seg0 {
+  fill: #cd4948;
+  stroke: #cd4948;
+}
+.seg1 {
+  fill: #fd504e;
+  stroke: #fd504e;
+}
+.seg2 {
+  fill: #c0201c;
+  stroke: #c0201c;
+}
+.seg3 {
+  fill: #7e120e;
+  stroke: #7e120e;
+}
+.seg4 {
+  fill: #610f0d;
+  stroke: #610f0d;
+}
+
+.spanner {
+  fill: #ccc;
+  stroke: #555;
+  stroke-width: 8;
+  stroke-linejoin: round;
+}
+
+</style>
+
+  <desc>Worker Ant</desc>
+
+
+
+
+  <g class="base">
+    <polygon points="100,615 25,360 260,25 715,615" class="seg2"></polygon>
+    <polygon points="25,360 260,25 600,130 715,615" class="seg1"></polygon>
+    <polygon points="260,25 600,130 940,25 715,615" class="seg2"></polygon>
+    <polygon points="600,130 940,25 1175,360 715,615" class="seg1"></polygon>
+    <polygon points="940,25 1175,360 1100,615 715,615" class="seg2"></polygon>
+    <polygon points="1175,360 1100,615 600,1055 715,615" class="seg3"></polygon>
+    <polygon points="1100,615 600,1055 100,615 715,615" class="seg4"></polygon>
+    <polygon points="600,1055 100,615 25,360 715,615" class="seg3"></polygon>
+    <polygon points="100,615 25,360 715,615" class="seg2"></polygon>
+    
+  </g>
+
+
+  <g class="spanner">
+
+    <!-- polygon points="200,0 400,0 550,150 550,350 1200,1000 1200,1100 1100,1200 1000,1200 350,550 150,550 0,400 0,200 200,400 350,350 400,200" class="tusk left-tusk" -->
+    <polygon points="250,50 450,50 600,200 600,400 1050,850 1050,950 950,1050 850,1050 400,600 200,600 50,450 50,250 250,450 400,400 450,250" class="spanner"></polygon>
+
+
+
+  </g>
+
+</svg>

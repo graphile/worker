@@ -1,11 +1,33 @@
 import { PoolClient } from "pg";
 
-import { readdir, readFile } from "./fs";
+import { migrations } from "./generated/sql";
 import { WorkerSharedOptions } from "./interfaces";
 import { processSharedOptions } from "./lib";
 
+function checkPostgresVersion(versionString: string) {
+  const version = parseInt(versionString, 10);
+
+  if (version < 120000) {
+    throw new Error(
+      `This version of Graphile Worker requires PostgreSQL v12.0 or greater (detected \`server_version_num\` = ${versionString})`,
+    );
+  }
+}
+
+async function fetchAndCheckPostgresVersion(client: PoolClient) {
+  const {
+    rows: [row],
+  } = await client.query(
+    "select current_setting('server_version_num') as server_version_num",
+  );
+  checkPostgresVersion(row.server_version_num);
+}
+
 async function installSchema(options: WorkerSharedOptions, client: PoolClient) {
   const { escapedWorkerSchema } = processSharedOptions(options);
+
+  await fetchAndCheckPostgresVersion(client);
+
   await client.query(`
     create schema ${escapedWorkerSchema};
     create table ${escapedWorkerSchema}.migrations(
@@ -18,14 +40,11 @@ async function installSchema(options: WorkerSharedOptions, client: PoolClient) {
 async function runMigration(
   options: WorkerSharedOptions,
   client: PoolClient,
-  migrationFile: string,
+  migrationFile: keyof typeof migrations,
   migrationNumber: number,
 ) {
   const { escapedWorkerSchema } = processSharedOptions(options);
-  const rawText = await readFile(
-    `${__dirname}/../sql/${migrationFile}`,
-    "utf8",
-  );
+  const rawText = migrations[migrationFile];
   const text = rawText.replace(
     /:GRAPHILE_WORKER_SCHEMA\b/g,
     escapedWorkerSchema,
@@ -56,11 +75,12 @@ export async function migrate(
     const {
       rows: [row],
     } = await client.query(
-      `select id from ${escapedWorkerSchema}.migrations order by id desc limit 1;`,
+      `select current_setting('server_version_num') as server_version_num,
+      (select id from ${escapedWorkerSchema}.migrations order by id desc limit 1) as id;`,
     );
-    if (row) {
-      latestMigration = row.id;
-    }
+
+    latestMigration = row.id;
+    checkPostgresVersion(row.server_version_num);
   } catch (e) {
     if (e.code === "42P01") {
       await installSchema(options, client);
@@ -68,9 +88,8 @@ export async function migrate(
       throw e;
     }
   }
-  const migrationFiles = (await readdir(`${__dirname}/../sql`))
-    .filter((f) => f.match(/^[0-9]{6}\.sql$/))
-    .sort();
+
+  const migrationFiles = Object.keys(migrations) as (keyof typeof migrations)[];
   for (const migrationFile of migrationFiles) {
     const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
     if (latestMigration == null || migrationNumber > latestMigration) {

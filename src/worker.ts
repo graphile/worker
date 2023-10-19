@@ -2,7 +2,7 @@ import * as assert from "assert";
 import { randomBytes } from "crypto";
 
 import { defaults } from "./config";
-import deferred from "./deferred";
+import deferred, { Deferred } from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
   Job,
@@ -36,7 +36,10 @@ export function makeNewWorker(
   });
   const { logger, maxContiguousErrors, events, useNodeTime } =
     compiledSharedOptions;
-  const promise = deferred();
+  const promise = deferred() as Deferred<void> & {
+    /** @internal */
+    worker?: Worker;
+  };
   promise.then(
     () => {
       events.emit("worker:stop", { worker });
@@ -47,7 +50,7 @@ export function makeNewWorker(
   );
   let activeJob: Job | null = null;
 
-  let doNextTimer: NodeJS.Timer | null = null;
+  let doNextTimer: NodeJS.Timeout | null = null;
   const cancelDoNext = () => {
     if (doNextTimer !== null) {
       clearTimeout(doNextTimer);
@@ -72,7 +75,7 @@ export function makeNewWorker(
   };
 
   const nudge = () => {
-    assert(active, "nudge called after worker terminated");
+    assert.ok(active, "nudge called after worker terminated");
     if (doNextTimer) {
       // Must be idle; call early
       doNext();
@@ -102,8 +105,8 @@ export function makeNewWorker(
   const doNext = async (): Promise<void> => {
     again = false;
     cancelDoNext();
-    assert(active, "doNext called when active was false");
-    assert(!activeJob, "There should be no active job");
+    assert.ok(active, "doNext called when active was false");
+    assert.ok(!activeJob, "There should be no active job");
 
     // Find us a job
     try {
@@ -205,11 +208,11 @@ export function makeNewWorker(
        * **MUST** release the job once we've attempted it (success or error).
        */
       const startTimestamp = process.hrtime();
-      let result: void | PromiseOrDirect<unknown>[];
+      let result: void | PromiseOrDirect<unknown>[] = undefined;
       try {
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
-        assert(task, `Unsupported task '${job.task_identifier}'`);
+        assert.ok(task, `Unsupported task '${job.task_identifier}'`);
         const helpers = makeJobHelpers(options, job, { withPgClient, logger });
         result = await task(job.payload, helpers);
       } catch (error) {
@@ -219,8 +222,8 @@ export function makeNewWorker(
       const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
 
       // `batchJobFailedPayloads` and `batchJobErrors` should always have the same length
-      const batchJobFailedPayloads: any[] = [];
-      const batchJobErrors: any[] = [];
+      const batchJobFailedPayloads: unknown[] = [];
+      const batchJobErrors: unknown[] = [];
 
       if (!err && Array.isArray(job.payload) && Array.isArray(result)) {
         if (job.payload.length !== result.length) {
@@ -244,7 +247,7 @@ export function makeNewWorker(
             // Create a "partial" error for the batch
             err = new Error(
               `Batch failures:\n${batchJobErrors
-                .map((e) => e.message ?? String(e))
+                .map((e) => (e as Error).message ?? String(e))
                 .join("\n")}`,
             );
           }
@@ -368,7 +371,7 @@ export function makeNewWorker(
   doNext();
 
   // For tests
-  promise["worker"] = worker;
+  promise.worker = worker;
 
   return worker;
 }

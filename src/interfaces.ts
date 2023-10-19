@@ -78,7 +78,7 @@ export interface JobHelpers extends Helpers {
    */
   query<R extends QueryResultRow>(
     queryText: string,
-    values?: any[],
+    values?: unknown[],
   ): Promise<QueryResult<R>>;
 }
 
@@ -265,7 +265,7 @@ export interface ParsedCronItem {
   options: CronItemOptions;
 
   /** A payload object to merge into the default cron payload object for the scheduled job */
-  payload: { [key: string]: any };
+  payload: { [key: string]: unknown } | null;
 
   /** An identifier so that we can prevent double-scheduling of a task and determine whether or not to backfill. */
   identifier: string;
@@ -292,7 +292,7 @@ export interface CronItem {
   options?: CronItemOptions;
 
   /** A payload object to merge into the default cron payload object for the scheduled job */
-  payload?: { [key: string]: any };
+  payload?: { [key: string]: unknown };
 
   /** An identifier so that we can prevent double-scheduling of a task and determine whether or not to backfill. */
   identifier?: string;
@@ -349,8 +349,10 @@ export interface Worker {
 }
 
 export interface WorkerPool {
+  /** @deprecated Use gracefulShutdown instead */
   release: () => Promise<void>;
-  gracefulShutdown: (message: string) => Promise<void>;
+  gracefulShutdown: (message?: string) => Promise<void>;
+  forcefulShutdown: (message: string) => Promise<void>;
   promise: Promise<void>;
 }
 
@@ -580,7 +582,7 @@ export interface JobAndCronIdentifier {
 
 export interface WorkerUtilsOptions extends SharedOptions {}
 
-type BaseEventMap = Record<string, any>;
+type BaseEventMap = Record<string, unknown>;
 type EventMapKey<TEventMap extends BaseEventMap> = string & keyof TEventMap;
 type EventCallback<TPayload> = (params: TPayload) => void;
 
@@ -639,7 +641,7 @@ export type WorkerEventMap = {
    */
   "pool:listen:error": {
     workerPool: WorkerPool;
-    error: any;
+    error: unknown;
     client: PoolClient;
   };
 
@@ -656,7 +658,37 @@ export type WorkerEventMap = {
   /**
    * When a worker pool graceful shutdown throws an error
    */
-  "pool:gracefulShutdown:error": { pool: WorkerPool; error: any };
+  "pool:gracefulShutdown:error": { pool: WorkerPool; error: unknown };
+
+  /**
+   * When a worker pool graceful shutdown is successful, but one of the workers
+   * throws an error from release()
+   */
+  "pool:gracefulShutdown:workerError": {
+    pool: WorkerPool;
+    error: unknown;
+    job: Job | null;
+  };
+
+  /**
+   * When a worker pool graceful shutdown throws an error
+   */
+  "pool:gracefulShutdown:complete": { pool: WorkerPool };
+
+  /**
+   * When a worker pool starts a forceful shutdown
+   */
+  "pool:forcefulShutdown": { pool: WorkerPool; message: string };
+
+  /**
+   * When a worker pool forceful shutdown throws an error
+   */
+  "pool:forcefulShutdown:error": { pool: WorkerPool; error: unknown };
+
+  /**
+   * When a worker pool forceful shutdown throws an error
+   */
+  "pool:forcefulShutdown:complete": { pool: WorkerPool };
 
   /**
    * When a worker is created
@@ -671,7 +703,7 @@ export type WorkerEventMap = {
   /**
    * When a worker stops (normally after a release)
    */
-  "worker:stop": { worker: Worker; error?: any };
+  "worker:stop": { worker: Worker; error?: unknown };
 
   /**
    * When a worker is about to ask the database for a job to execute
@@ -681,7 +713,7 @@ export type WorkerEventMap = {
   /**
    * When a worker calls get_job but there are no available jobs
    */
-  "worker:getJob:error": { worker: Worker; error: any };
+  "worker:getJob:error": { worker: Worker; error: unknown };
 
   /**
    * When a worker calls get_job but there are no available jobs
@@ -691,7 +723,11 @@ export type WorkerEventMap = {
   /**
    * When a worker is created
    */
-  "worker:fatalError": { worker: Worker; error: any; jobError: any | null };
+  "worker:fatalError": {
+    worker: Worker;
+    error: unknown;
+    jobError: unknown | null;
+  };
 
   /**
    * When a job is retrieved by get_job
@@ -706,7 +742,12 @@ export type WorkerEventMap = {
   /**
    * When a job throws an error
    */
-  "job:error": { worker: Worker; job: Job; error: any; batchJobErrors?: any[] };
+  "job:error": {
+    worker: Worker;
+    job: Job;
+    error: unknown;
+    batchJobErrors?: unknown[];
+  };
 
   /**
    * When a job fails permanently (emitted after job:error when appropriate)
@@ -714,15 +755,15 @@ export type WorkerEventMap = {
   "job:failed": {
     worker: Worker;
     job: Job;
-    error: any;
-    batchJobErrors?: any[];
+    error: unknown;
+    batchJobErrors?: unknown[];
   };
 
   /**
    * When a job has finished executing and the result (success or failure) has
    * been written back to the database
    */
-  "job:complete": { worker: Worker; job: Job; error: any };
+  "job:complete": { worker: Worker; job: Job; error: unknown };
 
   /** **Experimental** When the cron starts working (before backfilling) */
   "cron:starting": { cron: Cron; start: Date };
@@ -826,9 +867,14 @@ export type WorkerEventMap = {
   gracefulShutdown: { signal: Signal };
 
   /**
+   * When the runner is terminated by a signal _again_ after 5 seconds
+   */
+  forcefulShutdown: { signal: Signal };
+
+  /**
    * When the runner is stopped
    */
-  stop: {};
+  stop: Record<string, never>;
 };
 
 export type WorkerEvents = TypedEventEmitter<WorkerEventMap>;

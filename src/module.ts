@@ -3,6 +3,13 @@ import { dirname } from "path";
 import _module = require("module");
 const { Module, builtinModules } = _module;
 
+declare global {
+  // eslint-disable-next-line no-var
+  var graphileWorker_fauxRequire: typeof fauxRequire;
+  // eslint-disable-next-line no-var
+  var graphileWorker_fauxRequireCache: Record<string, _module> | null;
+}
+
 function stripBOM(str: string) {
   if (str.charCodeAt(0) === 0xfeff) {
     return str.slice(1);
@@ -15,7 +22,7 @@ function stripBOM(str: string) {
  * multiple times without worrying about having to clear out the cache (useful
  * for watch mode).
  */
-export function fauxRequire(spec: string, cache = {}) {
+export function fauxRequire(spec: string, cache: Record<string, _module> = {}) {
   if (builtinModules.includes(spec)) {
     // Don't try and faux require builtin modules
     return require(spec);
@@ -73,15 +80,15 @@ ${code};
 
   // Since the code is evaluated synchronously, we set this immediately before
   // compiling and clear after.
-  global["graphileWorker_fauxRequireCache"] = cache;
+  global.graphileWorker_fauxRequireCache = cache;
   cache[filename] = replacementModule;
   // @ts-ignore
   replacementModule._compile(codeWithWrapper, filename);
-  global["graphileWorker_fauxRequireCache"] = null;
+  global.graphileWorker_fauxRequireCache = null;
 
   replacementModule.loaded = true;
 
   return replacementModule.exports;
 }
 
-global["graphileWorker_fauxRequire"] = fauxRequire;
+global.graphileWorker_fauxRequire = fauxRequire;

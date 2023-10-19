@@ -7,7 +7,7 @@ export async function failJob(
   workerId: string,
   job: DbJob,
   message: string,
-  replacementPayload: undefined | any[],
+  replacementPayload: undefined | unknown[],
 ): Promise<void> {
   const {
     escapedWorkerSchema,
@@ -23,18 +23,18 @@ export async function failJob(
 with j as (
 update ${escapedWorkerSchema}.jobs
 set
-last_error = $2,
+last_error = $2::text,
 run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
 locked_by = null,
 locked_at = null,
 payload = coalesce($4::json, jobs.payload)
-where id = $1 and locked_by = $3
+where id = $1::bigint and locked_by = $3::text
 returning *
 )
 update ${escapedWorkerSchema}.job_queues
 set locked_by = null, locked_at = null
 from j
-where job_queues.id = j.job_queue_id and job_queues.locked_by = $3;`,
+where job_queues.id = j.job_queue_id and job_queues.locked_by = $3::text;`,
         values: [
           job.id,
           message,
@@ -52,12 +52,12 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $3;`,
         text: `\
 update ${escapedWorkerSchema}.jobs
 set
-last_error = $2,
+last_error = $2::text,
 run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
 locked_by = null,
 locked_at = null,
 payload = coalesce($4::json, jobs.payload)
-where id = $1 and locked_by = $3;`,
+where id = $1::bigint and locked_by = $3::text;`,
         values: [
           job.id,
           message,
@@ -91,7 +91,7 @@ export async function failJobs(
 with j as (
 update ${escapedWorkerSchema}.jobs
 set
-last_error = $2,
+last_error = $2::text,
 run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
 locked_by = null,
 locked_at = null

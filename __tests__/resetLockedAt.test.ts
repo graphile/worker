@@ -65,7 +65,7 @@ where task_id = (select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks where id
     const states: string[] = [];
     events.on("resetLocked:started", () => {
       states.push("started");
-      workerPool.release();
+      workerPool.gracefulShutdown();
     });
     events.on("resetLocked:success", () => {
       states.push("success");

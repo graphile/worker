@@ -1,5 +1,41 @@
 # Release notes
 
+### v0.16.0
+
+**DROPS SUPPORT FOR NODE <18**. As of 24th October 2023, Node 20 is the active
+LTS and Node 18 is maintainence LTS; previous versions are no longer supported.
+
+**LOTS OF `any` CHANGED TO `unknown`**. In particular, errors in the event
+emitter payloads are now `unknown` rather than `any`, so you might need to cast.
+
+Adds support for `graphile-config` - configuration can now be read from a
+`graphile.config.ts` (or `.js`, `.cjs`, etc) file.
+
+### v0.15.1
+
+Fixes issues with graceful worker shutdowns:
+
+- Deprecates `workerPool.release()` in favour of (equivalent)
+  `workerPool.gracefulShutdown()`
+- Fixes `workerPool.gracefulShutdown()` to shut down gracefully (waiting for
+  jobs to complete)
+- Adds `workerPool.forcefulShutdown()` to "fail" the running jobs (so they'll be
+  re-attempted elsewhere) and force-release the pool
+- Fixes handling of signals:
+  - First termination signal triggers graceful shutdown
+  - Signal over next 5 seconds are ignored
+  - Second termination signal triggers forceful shutdown
+  - Signal over next 5 seconds are ignored
+  - Further termination signals are handled by Node (i.e. will likely instantly
+    exit the process)
+
+### v0.15.0
+
+Migration files are no longer read from filesystem (via `fs` module); instead
+they are stored as strings in JS to enable Graphile Worker to be bundled. The
+files still exist and will continue to be distributed, so this should not be a
+breaking change. Thanks to @timelf123 for this feature!
+
 ### v0.14.0
 
 **THIS RELEASE INTRODUCES SIGNIFICANT CHANGES**, in preparation for moving
@@ -19,12 +55,17 @@ the old jobs table. The jobs table itself is not a public interface - you should
 use the documented SQL functions and TypeScript APIs only - but if you are
 referencing the jobs table in a database function you may have a bad time.
 
+**IMPORTANT**: `priority`, `attempts` and `max_attempts` are all now `smallint`,
+so please make sure that your values fit into these ranges before starting the
+migration process. (Really these values should never be larger than about `100`
+or smaller than about `-100` anyway.)
+
 #### Breaking changes
 
 - BREAKING: Bump minimum Node version to 14 since 12.x is now end-of-life
 - BREAKING: Bump minimum PG version to 12 for `generated always as (expression)`
 - BREAKING: `jobs.priority`, `attempts` and `max_attempts` are now `int2` rather
-  than `int4` (please ensure your `priority` values fit in `int2` -
+  than `int4` (please ensure your values fit in `int2` -
   `-32768 <= priority <= +32767`)
 - BREAKING: CronItem.pattern has been renamed to CronItem.match
 - BREAKING: database error codes have been removed because we've moved to
@@ -52,6 +93,10 @@ referencing the jobs table in a database function you may have a bad time.
 - Added new (experimental) much faster `add_jobs` batch API.
 - Fix error handling of cron issues in 'run' method.
 - CronItem.match can now accept either a pattern string or a matcher function
+- Jobs that were locked more than 4 hours will be reattempted as before, however
+  they are slightly de-prioritised by virtue of having their `run_at` updated,
+  giving interim jobs a chance to be executed (and lessening the impact of queue
+  stalling through hanging tasks).
 
 ### v0.13.0
 
