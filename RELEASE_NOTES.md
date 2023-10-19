@@ -16,6 +16,8 @@ Adds support for `graphile-config` - configuration can now be read from a
 
 Crontab: now supports `jobKey` and `jobKeyMode` opts (thanks @spiffytech!)
 
+Signals: now releases signal handlers when shut down via the API.
+
 ### v0.15.1
 
 Fixes issues with graceful worker shutdowns:
