@@ -1,4 +1,4 @@
-FROM node:14-alpine as builder
+FROM node:18-alpine as builder
 
 WORKDIR /worker/
 
@@ -12,7 +12,7 @@ COPY ./src ./src
 
 RUN yarn run prepack
 
-FROM node:14-alpine as clean
+FROM node:18-alpine as clean
 
 COPY package.json yarn.lock /worker/
 
@@ -20,7 +20,7 @@ COPY *.md /worker/
 COPY --from=builder /worker/dist/ /worker/dist/
 COPY --from=builder /worker/sql/ /worker/sql/
 
-FROM node:14-alpine
+FROM node:18-alpine
 LABEL description="High performance Node.js/PostgreSQL job queue "
 
 WORKDIR /worker/
