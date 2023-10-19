@@ -3,3 +3,5 @@
 /src/generated
 /rewired
 /website/build
+/website/.docusaurus
+/_LOCAL

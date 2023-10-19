@@ -167,7 +167,9 @@ test("does not schedule duplicate jobs when a job key is supplied", () =>
     let jobs!: Awaited<ReturnType<typeof getJobs>>;
     for (let i = 0; i < 10; i++) {
       jobs = await getJobs(pgPool);
-      if (jobs.length > 0) break;
+      if (jobs.length > 0) {
+        break;
+      }
       await sleep(100);
     }
 
@@ -183,7 +185,9 @@ test("does not schedule duplicate jobs when a job key is supplied", () =>
     let jobs2!: Awaited<ReturnType<typeof getJobs>>;
     for (let i = 0; i < 10; i++) {
       jobs2 = await getJobs(pgPool);
-      if (jobs2[0].payload._cron.ts !== "2021-01-01T04:00:00.000Z") break;
+      if (jobs2[0].payload._cron.ts !== "2021-01-01T04:00:00.000Z") {
+        break;
+      }
       await sleep(100);
     }
 
