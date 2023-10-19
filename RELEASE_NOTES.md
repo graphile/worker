@@ -5,6 +5,9 @@
 **DROPS SUPPORT FOR NODE <18**. As of 24th October 2023, Node 20 is the active
 LTS and Node 18 is maintainence LTS; previous versions are no longer supported.
 
+**REMOVES `maxContiguousErrors`**. See #307; it wasn't fit for purpose, so best
+to remove it for now.
+
 **LOTS OF `any` CHANGED TO `unknown`**. In particular, errors in the event
 emitter payloads are now `unknown` rather than `any`, so you might need to cast.
 

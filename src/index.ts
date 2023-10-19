@@ -63,11 +63,6 @@ declare global {
        * @defaultValue `1`
        */
       concurrentJobs?: number;
-      /**
-       * How many errors in a row can we get fetching a job before we raise a higher
-       * exception?
-       */
-      maxContiguousErrors?: number;
     }
     interface Preset {
       worker?: WorkerOptions;

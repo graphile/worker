@@ -14,11 +14,6 @@ export const defaults = {
     process.env.GRAPHILE_WORKER_SCHEMA ||
     enforceStringOrUndefined("schema", cosmiconfig?.schema) ||
     "graphile_worker",
-  maxContiguousErrors:
-    enforceNumberOrUndefined(
-      "maxContiguousErrors",
-      cosmiconfig?.maxContiguousErrors,
-    ) || 10,
   pollInterval:
     enforceNumberOrUndefined("pollInterval", cosmiconfig?.pollInterval) || 2000,
   concurrentJobs:

@@ -34,8 +34,7 @@ export function makeNewWorker(
       workerId,
     },
   });
-  const { logger, maxContiguousErrors, events, useNodeTime } =
-    compiledSharedOptions;
+  const { logger, events, useNodeTime } = compiledSharedOptions;
   const promise = deferred() as Deferred<void> & {
     /** @internal */
     worker?: Worker;
@@ -148,25 +147,15 @@ export function makeNewWorker(
       if (continuous) {
         contiguousErrors++;
         logger.debug(
-          `Failed to acquire job: ${err.message} (${contiguousErrors}/${maxContiguousErrors})`,
+          `Failed to acquire job: ${err.message} (${contiguousErrors} contiguous fails)`,
         );
-        if (contiguousErrors >= maxContiguousErrors) {
-          promise.reject(
-            new Error(
-              `Failed ${contiguousErrors} times in a row to acquire job; latest error: ${err.message}`,
-            ),
-          );
-          release();
-          return;
+        if (active) {
+          // Error occurred fetching a job; try again...
+          doNextTimer = setTimeout(() => doNext(), pollInterval);
         } else {
-          if (active) {
-            // Error occurred fetching a job; try again...
-            doNextTimer = setTimeout(() => doNext(), pollInterval);
-          } else {
-            promise.reject(err);
-          }
-          return;
+          promise.reject(err);
         }
+        return;
       } else {
         promise.reject(err);
         release();

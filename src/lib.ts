@@ -21,7 +21,6 @@ export interface CompiledSharedOptions {
   logger: Logger;
   workerSchema: string;
   escapedWorkerSchema: string;
-  maxContiguousErrors: number;
   useNodeTime: boolean;
   minResetLockedInterval: number;
   maxResetLockedInterval: number;
@@ -63,7 +62,6 @@ export function processSharedOptions(
       logger,
       workerSchema,
       escapedWorkerSchema,
-      maxContiguousErrors: defaults.maxContiguousErrors,
       useNodeTime,
       minResetLockedInterval,
       maxResetLockedInterval,
