@@ -151,7 +151,7 @@ async function scheduleCronJobs(
           specs.max_attempts,
           specs.job_key,
           specs.priority,
-          null,
+          null, -- flags
           specs.job_key_mode
         )
       from specs
