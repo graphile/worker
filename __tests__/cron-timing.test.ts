@@ -162,9 +162,15 @@ test("does not schedule duplicate jobs when a job key is supplied", () =>
     // Allow the first copy of the job to get scheduled
     await setTime(REFERENCE_TIMESTAMP + 4 * HOUR + 1 * SECOND); // 4:00:01am
     expect(cronScheduleCalls.count).toEqual(1);
+
     // Makes the test more reliable, due to separate connections to Postgres being slightly out of sync
-    await sleep(150);
-    const jobs = await getJobs(pgPool);
+    let jobs!: Awaited<ReturnType<typeof getJobs>>;
+    for (let i = 0; i < 10; i++) {
+      jobs = await getJobs(pgPool);
+      if (jobs.length > 0) break;
+      await sleep(100);
+    }
+
     expect(jobs).toEqual([
       expect.objectContaining({ task_identifier: "my_task", key: "foo" }),
     ]);
@@ -172,9 +178,15 @@ test("does not schedule duplicate jobs when a job key is supplied", () =>
     // Allow the system to reschedule the job after seeing it wasn't picked up
     await setTime(REFERENCE_TIMESTAMP + 8 * HOUR + 1 * SECOND); // 8:00:01am
     expect(cronScheduleCalls.count).toEqual(2);
+
     // Makes the test more reliable, due to separate connections to Postgres being slightly out of sync
-    await sleep(150);
-    const jobs2 = await getJobs(pgPool);
+    let jobs2!: Awaited<ReturnType<typeof getJobs>>;
+    for (let i = 0; i < 10; i++) {
+      jobs2 = await getJobs(pgPool);
+      if (jobs2[0].payload._cron.ts !== "2021-01-01T04:00:00.000Z") break;
+      await sleep(100);
+    }
+
     expect(jobs2).toEqual([
       expect.objectContaining({
         task_identifier: "my_task",
