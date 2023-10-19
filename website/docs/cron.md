@@ -90,6 +90,10 @@ Currently we support the following `opts`:
   the job.
 - `queue=name` where `name` is an alphanumeric queue name - add the job to a
   named queue so it executes serially.
+- `jobKey=key` where `key` is any valid job key - replace/update the existing
+  job with this key, if present
+- `jobKeyMode=replace|preserve_run_at` - if `jobKey` is specified, affects what
+  it does
 - `priority=n` where `n` is a relatively small integer - override the priority
   of the job.
 
