@@ -162,7 +162,7 @@ test("does not schedule duplicate jobs when a job key is supplied", () =>
     // Allow the first copy of the job to get scheduled
     await setTime(REFERENCE_TIMESTAMP + 4 * HOUR + 1 * SECOND); // 4:00:01am
     expect(cronScheduleCalls.count).toEqual(1);
-    let jobs = await getJobs(pgPool);
+    const jobs = await getJobs(pgPool);
     expect(jobs).toEqual([
       expect.objectContaining({ task_identifier: "my_task", key: "foo" }),
     ]);
@@ -170,9 +170,13 @@ test("does not schedule duplicate jobs when a job key is supplied", () =>
     // Allow the system to reschedule the job after seeing it wasn't picked up
     await setTime(REFERENCE_TIMESTAMP + 8 * HOUR + 1 * SECOND); // 8:00:01am
     expect(cronScheduleCalls.count).toEqual(2);
-    jobs = await getJobs(pgPool);
-    expect(jobs).toEqual([
-      expect.objectContaining({ task_identifier: "my_task", key: "foo" }),
+    const jobs2 = await getJobs(pgPool);
+    expect(jobs2).toEqual([
+      expect.objectContaining({
+        task_identifier: "my_task",
+        key: "foo",
+        id: jobs[0].id,
+      }),
     ]);
 
     // After this, the jobs should exist in the DB
