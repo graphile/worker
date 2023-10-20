@@ -9,6 +9,7 @@ import {
   Cron,
   CronJob,
   JobAndCronIdentifier,
+  JobAndCronIdentifierWithDetails,
   KnownCrontab,
   ParsedCronItem,
   RunnerOptions,
@@ -39,6 +40,7 @@ function getBackfillAndUnknownItems(
   const backfillItemsAndDates: Array<{
     item: ParsedCronItem;
     notBefore: Date;
+    itemDetails: KnownCrontab;
   }> = [];
   const unknownIdentifiers: string[] = [];
   for (const item of parsedCronItems) {
@@ -51,6 +53,7 @@ function getBackfillAndUnknownItems(
       backfillItemsAndDates.push({
         item,
         notBefore,
+        itemDetails: known,
       });
     } else {
       unknownIdentifiers.push(item.identifier);
@@ -228,10 +231,10 @@ async function registerAndBackfillItems(
 
       // The identifiers in this array are guaranteed to be unique, since cron
       // items are guaranteed to have unique identifiers.
-      const itemsToBackfill: Array<JobAndCronIdentifier> = [];
+      const itemsToBackfill: Array<JobAndCronIdentifierWithDetails> = [];
 
       // See if anything needs backfilling for this timestamp
-      for (const { item, notBefore } of backfillItemsAndDates) {
+      for (const { item, notBefore, itemDetails } of backfillItemsAndDates) {
         if (
           item.options.backfillPeriod >= timeAgo &&
           unsafeTs >= notBefore &&
@@ -240,6 +243,8 @@ async function registerAndBackfillItems(
           itemsToBackfill.push({
             identifier: item.identifier,
             job: makeJobForItem(item, ts, true),
+            known_since: itemDetails.known_since,
+            last_execution: itemDetails.last_execution,
           });
         }
       }
