@@ -46,6 +46,12 @@ ERROR: relation "graphile_worker.migrations" does not exist at character 16
 STATEMENT: select id from "graphile_worker".migrations order by id desc limit 1;
 ```
 
+## Database migration
+
+If a new version of Graphile Worker is ran against the database, and this
+version includes new migrations, then a NOTIFY event will be issued. Graphile
+Worker 0.16+ will LISTEN for this event, and will shut down if it is received.
+
 ## Error codes
 
 - `GWBKM` - Invalid `job_key_mode` value, expected `'replace'`,
