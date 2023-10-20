@@ -24,6 +24,8 @@ current worker. (This won't be useful until future schema changes.)
 Schema: trigger a graceful shutdown if a new Graphile Worker process migrates
 the database schema.
 
+Events: add more detail to `cron:backfill` event.
+
 ### v0.15.1
 
 Fixes issues with graceful worker shutdowns:

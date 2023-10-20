@@ -579,6 +579,10 @@ export interface JobAndCronIdentifier {
   job: CronJob;
   identifier: string;
 }
+export interface JobAndCronIdentifierWithDetails extends JobAndCronIdentifier {
+  known_since: Date;
+  last_execution: Date | null;
+}
 
 export interface WorkerUtilsOptions extends SharedOptions {}
 
@@ -774,7 +778,7 @@ export type WorkerEventMap = {
   /** **Experimental** When a number of jobs need backfilling for a particular timestamp. */
   "cron:backfill": {
     cron: Cron;
-    itemsToBackfill: JobAndCronIdentifier[];
+    itemsToBackfill: JobAndCronIdentifierWithDetails[];
     timestamp: string;
   };
 
