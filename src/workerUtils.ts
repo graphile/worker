@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import { DbJob, TaskSpec, WorkerUtils, WorkerUtilsOptions } from "./interfaces";
 import { getUtilsAndReleasersFromOptions } from "./lib";
 import { migrate } from "./migrate";

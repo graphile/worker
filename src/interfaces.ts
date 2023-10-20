@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import { EventEmitter } from "events";
 import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 
@@ -179,6 +180,7 @@ export type TaskList = {
     | (string & {})]?: Key extends keyof GraphileWorker.Tasks
     ? Task<Key>
     : // The `any` here is required otherwise declaring something as a `TaskList` can cause issues.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       Task<any>;
 };
 
