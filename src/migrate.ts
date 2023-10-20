@@ -60,7 +60,7 @@ async function runMigration(
     });
     await client.query("select pg_notify($1, $2)", [
       "jobs:migrate",
-      { migrationNumber },
+      JSON.stringify({ migrationNumber }),
     ]);
     await client.query("commit");
   } catch (e) {
