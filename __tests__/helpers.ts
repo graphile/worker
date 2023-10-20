@@ -194,11 +194,11 @@ export async function makeSelectionOfJobs(
   pgClient: pg.PoolClient,
 ) {
   const future = new Date(Date.now() + 60 * 60 * 1000);
-  let failedJob: DbJob = await utils.addJob("job1", { a: 1, runAt: future });
-  const regularJob1 = await utils.addJob("job1", { a: 2, runAt: future });
-  let lockedJob: DbJob = await utils.addJob("job1", { a: 3, runAt: future });
-  const regularJob2 = await utils.addJob("job1", { a: 4, runAt: future });
-  const untouchedJob = await utils.addJob("job1", { a: 5, runAt: future });
+  let failedJob: DbJob = await utils.addJob("job3", { a: 1, runAt: future });
+  const regularJob1 = await utils.addJob("job3", { a: 2, runAt: future });
+  let lockedJob: DbJob = await utils.addJob("job3", { a: 3, runAt: future });
+  const regularJob2 = await utils.addJob("job3", { a: 4, runAt: future });
+  const untouchedJob = await utils.addJob("job3", { a: 5, runAt: future });
   ({
     rows: [lockedJob],
   } = await pgClient.query<DbJob>(

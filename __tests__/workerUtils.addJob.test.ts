@@ -27,7 +27,7 @@ test("runs a job added through the worker utils", () =>
     const utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
-    await utils.addJob("job1", { a: 1 });
+    await utils.addJob("job3", { a: 1 });
     await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
@@ -47,10 +47,10 @@ test("supports the jobKey API", () =>
     const utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
-    await utils.addJob("job1", { a: 1 }, { jobKey: "UNIQUE" });
-    await utils.addJob("job1", { a: 2 }, { jobKey: "UNIQUE" });
-    await utils.addJob("job1", { a: 3 }, { jobKey: "UNIQUE" });
-    await utils.addJob("job1", { a: 4 }, { jobKey: "UNIQUE" });
+    await utils.addJob("job3", { a: 1 }, { jobKey: "UNIQUE" });
+    await utils.addJob("job3", { a: 2 }, { jobKey: "UNIQUE" });
+    await utils.addJob("job3", { a: 3 }, { jobKey: "UNIQUE" });
+    await utils.addJob("job3", { a: 4 }, { jobKey: "UNIQUE" });
     await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
@@ -80,7 +80,7 @@ test("supports the jobKey API with jobKeyMode", () =>
 
     // Job first added in replace mode:
     job = await utils.addJob(
-      "job1",
+      "job3",
       { a: 1 },
       { jobKey: "UNIQUE", runAt: runAt1, jobKeyMode: "replace" },
     );
@@ -90,7 +90,7 @@ test("supports the jobKey API with jobKeyMode", () =>
 
     // Now updated, but preserve run_at
     job = await utils.addJob(
-      "job1",
+      "job3",
       { a: 2 },
       { jobKey: "UNIQUE", runAt: runAt2, jobKeyMode: "preserve_run_at" },
     );
@@ -100,7 +100,7 @@ test("supports the jobKey API with jobKeyMode", () =>
 
     // unsafe_dedupe should take no action other than to bump the revision number
     job = await utils.addJob(
-      "job1",
+      "job3",
       { a: 3 },
       { jobKey: "UNIQUE", runAt: runAt3, jobKeyMode: "unsafe_dedupe" },
     );
@@ -110,7 +110,7 @@ test("supports the jobKey API with jobKeyMode", () =>
 
     // Replace the job one final time
     job = await utils.addJob(
-      "job1",
+      "job3",
       { a: 4 },
       { jobKey: "UNIQUE", runAt: runAt4, jobKeyMode: "replace" },
     );
@@ -137,7 +137,7 @@ test("runs a job added through the addJob shortcut function", () =>
     await reset(pgClient, options);
 
     // Schedule a job
-    await quickAddJob({ connectionString: TEST_CONNECTION_STRING }, "job1", {
+    await quickAddJob({ connectionString: TEST_CONNECTION_STRING }, "job3", {
       a: 1,
     });
 
@@ -162,7 +162,7 @@ test("adding job respects useNodeTime", () =>
     });
     const timeOfAddJob = REFERENCE_TIMESTAMP + 1 * HOUR;
     await setTime(timeOfAddJob);
-    await utils.addJob("job1", { a: 1 });
+    await utils.addJob("job3", { a: 1 });
     await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
