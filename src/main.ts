@@ -573,6 +573,7 @@ export function runTaskList(
             console.warn(
               `Graphile Worker detected migration to database schema revision '${payload?.migrationNumber}'; it would be unsafe to continue, so shutting down...`,
             );
+            process.exitCode = 54;
             workerPool.gracefulShutdown();
             break;
           }

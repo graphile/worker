@@ -93,7 +93,14 @@ export const run = async (
       parsedCronItems,
     });
   } catch (e) {
-    await release();
+    try {
+      await release();
+    } catch (e2) {
+      console.error(
+        `Error occurred whilst attempting to release options after error occurred`,
+        e2,
+      );
+    }
     throw e;
   }
 };
@@ -125,20 +132,38 @@ function buildRunner(input: {
     if (running) {
       running = false;
       events.emit("stop", {});
-      await release();
+      try {
+        await release();
+      } catch (e) {
+        console.error(
+          `Error occurred whilst attempting to release runner options`,
+          e,
+        );
+      }
     } else {
       throw new Error("Runner is already stopped");
     }
   };
 
+  workerPool.promise.finally(() => {
+    if (running) {
+      stop();
+    }
+  });
+  cron.promise.finally(() => {
+    if (running) {
+      stop();
+    }
+  });
+
   const promise = Promise.all([cron.promise, workerPool.promise]).then(
     () => {
-      /* void */
+      /* noop */
     },
-    (e) => {
+    async (e) => {
       if (running) {
         console.error(`Stopping worker due to an error: ${e}`);
-        stop();
+        await stop();
       } else {
         console.error(`Error occurred, but worker is already stopping: ${e}`);
       }
