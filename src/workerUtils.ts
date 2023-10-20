@@ -77,14 +77,14 @@ export async function quickAddJob<
 >(
   options: WorkerUtilsOptions,
   identifier: TIdentifier,
-  payload?: TIdentifier extends keyof GraphileWorker.Tasks
+  payload: TIdentifier extends keyof GraphileWorker.Tasks
     ? GraphileWorker.Tasks[TIdentifier]
     : unknown,
   spec: TaskSpec = {},
 ) {
   const utils = await makeWorkerUtils(options);
   try {
-    return await utils.addJob(identifier, payload, spec);
+    return await utils.addJob<TIdentifier>(identifier, payload, spec);
   } finally {
     await utils.release();
   }

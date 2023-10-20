@@ -8,8 +8,12 @@ LTS and Node 18 is maintainence LTS; previous versions are no longer supported.
 **REMOVES `maxContiguousErrors`**. See #307; it wasn't fit for purpose, so best
 to remove it for now.
 
-**LOTS OF `any` CHANGED TO `unknown`**. In particular, errors in the event
-emitter payloads are now `unknown` rather than `any`, so you might need to cast.
+**TYPESCRIPT**: lots of `any` changed to `unknown`. In particular, errors in the
+event emitter payloads are now `unknown` rather than `any`, so you might need to
+cast.
+
+**TYPESCRIPT**: payload is now marked as required in `addJob` (just set to `{}`
+if your task doesn't need a payload).
 
 Adds the ability to type task payloads and `addJob()` calls (**please** read the
 caveats in the documentation before doing so).

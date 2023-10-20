@@ -47,7 +47,7 @@ export type AddJobFunction = <
   /**
    * The payload (typically a JSON object) that will be passed to the task executor.
    */
-  payload?: TIdentifier extends keyof GraphileWorker.Tasks
+  payload: TIdentifier extends keyof GraphileWorker.Tasks
     ? GraphileWorker.Tasks[TIdentifier]
     : unknown,
 
