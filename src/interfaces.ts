@@ -5,6 +5,14 @@ import { Release } from "./lib";
 import { Logger } from "./logger";
 import { Signal } from "./signals";
 
+declare global {
+  namespace GraphileWorker {
+    interface Tasks {
+      /* extend this through declaration merging */
+    }
+  }
+}
+
 /*
  * Terminology:
  *
@@ -27,16 +35,20 @@ export type WithPgClient = <T = void>(
  * The `addJob` interface is implemented in many places in the library, all
  * conforming to this.
  */
-export type AddJobFunction = (
+export type AddJobFunction = <
+  TIdentifier extends keyof GraphileWorker.Tasks | (string & {}) = string,
+>(
   /**
    * The name of the task that will be executed for this job.
    */
-  identifier: string,
+  identifier: TIdentifier,
 
   /**
    * The payload (typically a JSON object) that will be passed to the task executor.
    */
-  payload?: unknown,
+  payload?: TIdentifier extends keyof GraphileWorker.Tasks
+    ? GraphileWorker.Tasks[TIdentifier]
+    : unknown,
 
   /**
    * Additional details about how the job should be handled.
@@ -143,21 +155,32 @@ export interface WorkerUtils extends Helpers {
 
 export type PromiseOrDirect<T> = Promise<T> | T;
 
-export type Task = (
-  payload: unknown,
+export type Task<
+  TName extends keyof GraphileWorker.Tasks | (string & {}) = string & {},
+> = (
+  payload: TName extends keyof GraphileWorker.Tasks
+    ? GraphileWorker.Tasks[TName]
+    : unknown,
   helpers: JobHelpers,
 ) => PromiseOrDirect<void | PromiseOrDirect<unknown>[]>;
 
-export function isValidTask(fn: unknown): fn is Task {
+export function isValidTask<T extends string = keyof GraphileWorker.Tasks>(
+  fn: unknown,
+): fn is Task<T> {
   if (typeof fn === "function") {
     return true;
   }
   return false;
 }
 
-export interface TaskList {
-  [name: string]: Task;
-}
+export type TaskList = {
+  [Key in
+    | keyof GraphileWorker.Tasks
+    | (string & {})]?: Key extends keyof GraphileWorker.Tasks
+    ? Task<Key>
+    : // The `any` here is required otherwise declaring something as a `TaskList` can cause issues.
+      Task<any>;
+};
 
 export interface WatchedTaskList {
   tasks: TaskList;

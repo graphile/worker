@@ -11,6 +11,9 @@ to remove it for now.
 **LOTS OF `any` CHANGED TO `unknown`**. In particular, errors in the event
 emitter payloads are now `unknown` rather than `any`, so you might need to cast.
 
+Adds the ability to type task payloads and `addJob()` calls (**please** read the
+caveats in the documentation before doing so).
+
 Adds support for `graphile-config` - configuration can now be read from a
 `graphile.config.ts` (or `.js`, `.cjs`, etc) file.
 
