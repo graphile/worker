@@ -162,6 +162,15 @@ async function main() {
     // Continue forever(ish)
     await promise;
   }
+  watchedTasks.release();
+  watchedCronItems.release();
+  const timer = setTimeout(() => {
+    console.error(
+      `Worker failed to exit naturally after 10 seconds; terminating manually. This may indicate a bug in Graphile Worker.`,
+    );
+    process.exit(1);
+  }, 10000);
+  timer.unref();
 }
 
 main().catch((e) => {

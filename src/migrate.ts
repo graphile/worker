@@ -58,6 +58,10 @@ async function runMigration(
       text: `insert into ${escapedWorkerSchema}.migrations (id) values ($1)`,
       values: [migrationNumber],
     });
+    await client.query("select pg_notify($1, $2)", [
+      "jobs:migrate",
+      JSON.stringify({ migrationNumber }),
+    ]);
     await client.query("commit");
   } catch (e) {
     await client.query("rollback");

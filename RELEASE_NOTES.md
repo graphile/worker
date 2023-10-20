@@ -21,6 +21,9 @@ Signals: now releases signal handlers when shut down via the API.
 Schema: checks that current schema in database isn't more up to date than the
 current worker. (This won't be useful until future schema changes.)
 
+Schema: trigger a graceful shutdown if a new Graphile Worker process migrates
+the database schema.
+
 ### v0.15.1
 
 Fixes issues with graceful worker shutdowns:
