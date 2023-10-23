@@ -14,6 +14,15 @@ import {
 } from "../src/interfaces";
 import { migrate } from "../src/migrate";
 
+declare global {
+  namespace GraphileWorker {
+    interface Tasks {
+      job1: { id: string };
+      job2: { id: string };
+    }
+  }
+}
+
 export {
   DAY,
   HOUR,

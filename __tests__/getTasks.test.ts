@@ -21,11 +21,11 @@ Array [
     const helpers = makeJobHelpers(options, makeMockJob("would you like"), {
       withPgClient: makeWithPgClientFromClient(client),
     });
-    expect(await tasks.wouldyoulike(helpers.job.payload, helpers)).toEqual(
+    expect(await tasks.wouldyoulike!(helpers.job.payload, helpers)).toEqual(
       "some sausages",
     );
     expect(
-      await tasks.wouldyoulike_default(helpers.job.payload, helpers),
+      await tasks.wouldyoulike_default!(helpers.job.payload, helpers),
     ).toEqual("some more sausages");
     await release();
   }));
@@ -47,8 +47,8 @@ Array [
     const helpers = makeJobHelpers(options, makeMockJob("task1"), {
       withPgClient: makeWithPgClientFromClient(client),
     });
-    expect(await tasks.task1(helpers.job.payload, helpers)).toEqual("hi");
-    expect(await tasks.task2(helpers.job.payload, helpers)).toEqual("hello");
+    expect(await tasks.task1!(helpers.job.payload, helpers)).toEqual("hi");
+    expect(await tasks.task2!(helpers.job.payload, helpers)).toEqual("hello");
 
     await release();
   }));
@@ -70,10 +70,10 @@ Array [
     const helpers = makeJobHelpers(options, makeMockJob("t1"), {
       withPgClient: makeWithPgClientFromClient(client),
     });
-    expect(await tasks.t1(helpers.job.payload, helpers)).toEqual(
+    expect(await tasks.t1!(helpers.job.payload, helpers)).toEqual(
       "come with me",
     );
-    expect(await tasks.t2(helpers.job.payload, helpers)).toEqual(
+    expect(await tasks.t2!(helpers.job.payload, helpers)).toEqual(
       "if you want to live",
     );
 
