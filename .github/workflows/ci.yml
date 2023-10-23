@@ -39,14 +39,14 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
-      - run: yarn jest -i --ci
+      - run: yarn node --experimental-vm-modules node_modules/.bin/jest -i --ci
 
   lint:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [20.x]
 
     steps:
       - uses: actions/checkout@v3
@@ -64,7 +64,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [20.x]
         postgres-version: [12]
 
     services:
@@ -89,14 +89,14 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
       # - run: yarn lint # No need to lint altschema
-      - run: yarn jest -i --ci
+      - run: yarn node --experimental-vm-modules node_modules/.bin/jest -i --ci
 
   database_updated:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [20.x]
         postgres-version: [12]
 
     services:
