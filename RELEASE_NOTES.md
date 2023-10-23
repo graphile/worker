@@ -8,6 +8,12 @@ LTS and Node 18 is maintainence LTS; previous versions are no longer supported.
 **REMOVES `maxContiguousErrors`**. See #307; it wasn't fit for purpose, so best
 to remove it for now.
 
+**REMOVES `--watch`** and watch mode in general. Now signal handling is improved
+(see below) and with people wanting to use ESM to define modules, it's finally
+time to remove the experimental watch mode. Use `node --watch` or `nodemon` or
+similar instead. Note: `crontab` file is also not watched, so be sure to watch
+that too!
+
 **TYPESCRIPT**: lots of `any` changed to `unknown`. In particular, errors in the
 event emitter payloads are now `unknown` rather than `any`, so you might need to
 cast.

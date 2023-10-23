@@ -39,13 +39,6 @@ declare global {
        */
       schema?: string;
       /**
-       * [EXPERIMENTAL] Watch task files for changes, automatically reloading
-       * the task code without restarting worker.
-       *
-       * @defaultValue `false`
-       */
-      watch?: boolean;
-      /**
        * Override path to find tasks
        *
        * @defaultValue `process.cwd() + "/tasks"`
