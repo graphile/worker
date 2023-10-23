@@ -46,7 +46,6 @@
     "@graphile/logger": "^0.2.0",
     "@types/debug": "^4.1.10",
     "@types/pg": "^8.10.5",
-    "chokidar": "^3.4.0",
     "cosmiconfig": "^8.3.6",
     "graphile-config": "^0.0.1-beta.3",
     "json5": "^2.2.3",

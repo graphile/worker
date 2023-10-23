@@ -521,7 +521,7 @@ export async function getParsedCronItemsFromOptions(
       "`crontabFile` and `parsedCronItems` must not be set at the same time.",
     );
 
-    const watchedCronItems = await getCronItems(options, crontabFile, false);
+    const watchedCronItems = await getCronItems(options, crontabFile);
     releasers.push(() => watchedCronItems.release());
     return watchedCronItems.items;
   } else {

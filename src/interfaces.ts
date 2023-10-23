@@ -557,7 +557,7 @@ export interface WorkerPoolOptions extends WorkerSharedOptions {
  */
 export interface RunnerOptions extends WorkerPoolOptions {
   /**
-   * Task names and handler, e.g. from `getTasks` (use this if you need watch mode)
+   * Task names and handler, e.g. from `getTasks`
    */
   taskList?: TaskList;
 

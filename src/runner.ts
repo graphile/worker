@@ -33,7 +33,7 @@ async function assertTaskList(
   if (options.taskList) {
     return options.taskList;
   } else if (options.taskDirectory) {
-    const watchedTasks = await getTasks(options, options.taskDirectory, false);
+    const watchedTasks = await getTasks(options, options.taskDirectory);
     releasers.push(() => watchedTasks.release());
     return watchedTasks.tasks;
   } else {
