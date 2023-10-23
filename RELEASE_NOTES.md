@@ -39,6 +39,9 @@ the database schema.
 
 Events: add more detail to `cron:backfill` event.
 
+Tasks: now use `await import(...)` rather than `require(...)`, so ESM can be
+imported.
+
 ### v0.15.1
 
 Fixes issues with graceful worker shutdowns:

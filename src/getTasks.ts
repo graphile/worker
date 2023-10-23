@@ -39,8 +39,7 @@ async function loadFileIntoTasks(
   filename: string,
   name: string | null = null,
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const replacementModule = require(filename);
+  const replacementModule = await import(filename);
 
   if (!replacementModule) {
     throw new Error(`Module '${filename}' doesn't have an export`);
