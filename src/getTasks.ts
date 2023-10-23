@@ -39,6 +39,7 @@ async function loadFileIntoTasks(
   filename: string,
   name: string | null = null,
 ) {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const replacementModule = require(filename);
 
   if (!replacementModule) {
