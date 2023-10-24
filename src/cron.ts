@@ -1,14 +1,15 @@
 import * as assert from "assert";
 import { Pool } from "pg";
 
-import { cronItemMatches } from "./cronMatcher";
 import { parseCrontab } from "./crontab";
 import defer from "./deferred";
 import getCronItems from "./getCronItems";
 import {
+  $$isParsed,
   Cron,
   CronJob,
   JobAndCronIdentifier,
+  JobAndCronIdentifierWithDetails,
   KnownCrontab,
   ParsedCronItem,
   RunnerOptions,
@@ -39,6 +40,7 @@ function getBackfillAndUnknownItems(
   const backfillItemsAndDates: Array<{
     item: ParsedCronItem;
     notBefore: Date;
+    itemDetails: KnownCrontab;
   }> = [];
   const unknownIdentifiers: string[] = [];
   for (const item of parsedCronItems) {
@@ -51,6 +53,7 @@ function getBackfillAndUnknownItems(
       backfillItemsAndDates.push({
         item,
         notBefore,
+        itemDetails: known,
       });
     } else {
       unknownIdentifiers.push(item.identifier);
@@ -92,6 +95,8 @@ function makeJobForItem(
     queueName: item.options.queueName,
     runAt: ts,
     maxAttempts: item.options.maxAttempts,
+    jobKey: item.options.jobKey,
+    jobKeyMode: item.options.jobKeyMode,
     priority: item.options.priority,
   };
 }
@@ -108,6 +113,8 @@ async function scheduleCronJobs(
   ts: string,
   useNodeTime: boolean,
 ) {
+  // TODO: refactor this to use `add_jobs`
+
   // Note that `identifier` is guaranteed to be unique for every record
   // in `specs`.
   await pgPool.query(
@@ -120,16 +127,18 @@ async function scheduleCronJobs(
           ((json->'job')->'payload')::json as payload,
           ((json->'job')->>'queueName')::text as queue_name,
           ((json->'job')->>'runAt')::timestamptz as run_at,
-          ((json->'job')->>'maxAttempts')::int as max_attempts,
-          ((json->'job')->>'priority')::int as priority
+          ((json->'job')->>'maxAttempts')::smallint as max_attempts,
+          ((json->'job')->>'priority')::smallint as priority,
+          ((json->'job')->>'jobKey')::text as job_key,
+          ((json->'job')->>'jobKeyMode')::text as job_key_mode
         from json_array_elements($1::json) with ordinality AS entries (json, index)
       ),
       locks as (
         insert into ${escapedWorkerSchema}.known_crontabs (identifier, known_since, last_execution)
         select
           specs.identifier,
-          $2 as known_since,
-          $2 as last_execution
+          $2::timestamptz as known_since,
+          $2::timestamptz as last_execution
         from specs
         on conflict (identifier)
         do update set last_execution = excluded.last_execution
@@ -143,8 +152,10 @@ async function scheduleCronJobs(
           specs.queue_name,
           coalesce(specs.run_at, $3::timestamptz, now()),
           specs.max_attempts,
-          null, -- job key
-          specs.priority
+          specs.job_key,
+          specs.priority,
+          null, -- flags
+          specs.job_key_mode
         )
       from specs
       inner join locks on (locks.identifier = specs.identifier)
@@ -174,17 +185,15 @@ async function registerAndBackfillItems(
     `SELECT * FROM ${escapedWorkerSchema}.known_crontabs`,
   );
 
-  const {
-    backfillItemsAndDates,
-    unknownIdentifiers,
-  } = getBackfillAndUnknownItems(parsedCronItems, rows);
+  const { backfillItemsAndDates, unknownIdentifiers } =
+    getBackfillAndUnknownItems(parsedCronItems, rows);
 
   if (unknownIdentifiers.length) {
     // They're known now.
     await pgPool.query(
       `
       INSERT INTO ${escapedWorkerSchema}.known_crontabs (identifier, known_since)
-      SELECT identifier, $2
+      SELECT identifier, $2::timestamptz
       FROM unnest($1::text[]) AS unnest (identifier)
       ON CONFLICT DO NOTHING
       `,
@@ -222,18 +231,20 @@ async function registerAndBackfillItems(
 
       // The identifiers in this array are guaranteed to be unique, since cron
       // items are guaranteed to have unique identifiers.
-      const itemsToBackfill: Array<JobAndCronIdentifier> = [];
+      const itemsToBackfill: Array<JobAndCronIdentifierWithDetails> = [];
 
       // See if anything needs backfilling for this timestamp
-      for (const { item, notBefore } of backfillItemsAndDates) {
+      for (const { item, notBefore, itemDetails } of backfillItemsAndDates) {
         if (
           item.options.backfillPeriod >= timeAgo &&
           unsafeTs >= notBefore &&
-          cronItemMatches(item, digest)
+          item.match(digest)
         ) {
           itemsToBackfill.push({
             identifier: item.identifier,
             job: makeJobForItem(item, ts, true),
+            known_since: itemDetails.known_since,
+            last_execution: itemDetails.last_execution,
           });
         }
       }
@@ -284,16 +295,12 @@ export const runCron = (
   requirements: CronRequirements,
 ): Cron => {
   const { pgPool } = requirements;
-  const {
-    logger,
-    escapedWorkerSchema,
-    events,
-    useNodeTime,
-  } = processSharedOptions(options);
+  const { logger, escapedWorkerSchema, events, useNodeTime } =
+    processSharedOptions(options);
 
   const promise = defer();
   let released = false;
-  let timeout: NodeJS.Timer | null = null;
+  let timeout: NodeJS.Timeout | null = null;
 
   let stopCalled = false;
   function stop(e?: Error) {
@@ -342,7 +349,8 @@ export const runCron = (
     // The backfill may have taken a moment, we should continue from where the
     // worker started and catch up as quickly as we can. This does **NOT**
     // count as a backfill.
-    let nextTimestamp = unsafeRoundToMinute(new Date(+start), true);
+    /** This timestamp will be mutated! */
+    const nextTimestamp = unsafeRoundToMinute(new Date(+start), true);
 
     const scheduleNextLoop = () => {
       if (released) {
@@ -420,7 +428,7 @@ export const runCron = (
 
         // Gather the relevant jobs
         for (const item of parsedCronItems) {
-          if (cronItemMatches(item, digest)) {
+          if (item.match(digest)) {
             jobsAndIdentifiers.push({
               identifier: item.identifier,
               job: makeJobForItem(item, ts),
@@ -497,46 +505,40 @@ export async function getParsedCronItemsFromOptions(
   }
 
   if (crontab) {
-    assert(
+    assert.ok(
       !crontabFile,
       "`crontab` and `crontabFile` must not be set at the same time.",
     );
-    assert(
+    assert.ok(
       !parsedCronItems,
       "`crontab` and `parsedCronItems` must not be set at the same time.",
     );
 
     return parseCrontab(crontab);
   } else if (crontabFile) {
-    assert(
+    assert.ok(
       !parsedCronItems,
       "`crontabFile` and `parsedCronItems` must not be set at the same time.",
     );
 
-    const watchedCronItems = await getCronItems(options, crontabFile, false);
+    const watchedCronItems = await getCronItems(options, crontabFile);
     releasers.push(() => watchedCronItems.release());
     return watchedCronItems.items;
   } else {
-    assert(parsedCronItems != null, "Expected `parsedCronItems` to be set.");
+    assert.ok(parsedCronItems != null, "Expected `parsedCronItems` to be set.");
     // Basic check to ensure that users remembered to call
     // `parseCronItems`/`parseCrontab`; not intended to be a full check, just a
     // quick one to catch the obvious errors. Keep in mind that
     // `parsedCronItems` is mutable so it may be changed later to contain more
     // entries; we can't keep performing these checks everywhere for
     // performance reasons.
-    assert(
+    assert.ok(
       Array.isArray(parsedCronItems),
       "Expected `parsedCronItems` to be an array; you must use a helper e.g. `parseCrontab()` or `parseCronItems()` to produce this value.",
     );
     const firstItem = parsedCronItems[0];
     if (firstItem) {
-      if (
-        !Array.isArray(firstItem.minutes) ||
-        !Array.isArray(firstItem.hours) ||
-        !Array.isArray(firstItem.dates) ||
-        !Array.isArray(firstItem.months) ||
-        !Array.isArray(firstItem.dows)
-      ) {
+      if (!firstItem[$$isParsed]) {
         throw new Error(
           "Invalid `parsedCronItems`; you must use a helper e.g. `parseCrontab()` or `parseCronItems()` to produce this value.",
         );

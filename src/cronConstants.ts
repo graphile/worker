@@ -11,9 +11,11 @@ export const WEEK = 7 * DAY;
 
 // A (non-comment, non-empty) line in the crontab file
 /** Separates crontab line into the minute, hour, day of month, month, day of week and command parts. */
-export const CRONTAB_LINE_PARTS = /^([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+(.*)$/;
+export const CRONTAB_LINE_PARTS =
+  /^([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+(.*)$/;
 /** Just the time expression from CRONTAB_LINE_PARTS */
-export const CRONTAB_TIME_PARTS = /^([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)$/;
+export const CRONTAB_TIME_PARTS =
+  /^([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)\s+([0-9*/,-]+)$/;
 
 // Crontab ranges from the minute, hour, day of month, month and day of week parts of the crontab line
 /** Matches an explicit numeric value */
@@ -25,7 +27,8 @@ export const CRONTAB_WILDCARD = /^\*(?:\/([0-9]+))?$/;
 
 // The command from the crontab line
 /** Splits the command from the crontab line into the task, options and payload. */
-export const CRONTAB_COMMAND = /^([_a-zA-Z][_a-zA-Z0-9:_-]*)(?:\s+\?([^\s]+))?(?:\s+(\{.*\}))?$/;
+export const CRONTAB_COMMAND =
+  /^([_a-zA-Z][_a-zA-Z0-9:_-]*)(?:\s+\?([^\s]+))?(?:\s+(\{.*\}))?$/;
 
 // Crontab command options
 /** Matches the id=UID option, capturing the unique identifier */
@@ -36,6 +39,10 @@ export const CRONTAB_OPTIONS_BACKFILL = /^((?:[0-9]+[smhdw])+)$/;
 export const CRONTAB_OPTIONS_MAX = /^([0-9]+)$/;
 /** Matches the queue=name option, capturing the queue name */
 export const CRONTAB_OPTIONS_QUEUE = /^([-a-zA-Z0-9_:]+)$/;
+/** Matches the jobKey=foo option, capturing the unique identifier for the job */
+export const CRONTAB_OPTIONS_JOB_KEY = /^(.*)$/;
+/** Matches the jobKeyMode=replace option, defining the replacement strategy this job */
+export const CRONTAB_OPTIONS_JOB_KEY_MODE = /^(replace|preserve_run_at)$/;
 /** Matches the priority=n option, capturing the priority value */
 export const CRONTAB_OPTIONS_PRIORITY = /^(-?[0-9]+)$/;
 

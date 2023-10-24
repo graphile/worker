@@ -35,7 +35,7 @@ begin
       values(
         identifier,
         payload,
-        coalesce(queue_name, public.gen_random_uuid()::text),
+        queue_name,
         run_at,
         max_attempts,
         job_key
@@ -55,7 +55,7 @@ begin
       where jobs.locked_at is null
       returning *
       into v_job;
-    
+
     -- If upsert succeeded (insert or update), return early
     if not (v_job is null) then
       return v_job;
@@ -76,7 +76,7 @@ begin
     values(
       identifier,
       payload,
-      coalesce(queue_name, public.gen_random_uuid()::text),
+      queue_name,
       run_at,
       max_attempts,
       job_key

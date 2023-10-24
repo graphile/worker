@@ -1,8 +1,10 @@
 import * as assert from "assert";
 import { EventEmitter } from "events";
+import { resolvePresets } from "graphile-config";
 import { Client, Pool, PoolClient } from "pg";
 
 import { defaults } from "./config";
+import { MINUTE } from "./cronConstants";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
 import {
   AddJobFunction,
@@ -14,13 +16,15 @@ import {
 import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
 
-interface CompiledSharedOptions {
+export interface CompiledSharedOptions {
   events: WorkerEvents;
   logger: Logger;
   workerSchema: string;
   escapedWorkerSchema: string;
-  maxContiguousErrors: number;
   useNodeTime: boolean;
+  minResetLockedInterval: number;
+  maxResetLockedInterval: number;
+  options: SharedOptions;
 }
 
 interface ProcessSharedOptionsSettings {
@@ -39,15 +43,29 @@ export function processSharedOptions(
       schema: workerSchema = defaults.schema,
       events = new EventEmitter(),
       useNodeTime = false,
+      minResetLockedInterval = 8 * MINUTE,
+      maxResetLockedInterval = 10 * MINUTE,
     } = options;
     const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
+    if (
+      !Number.isFinite(minResetLockedInterval) ||
+      !Number.isFinite(maxResetLockedInterval) ||
+      minResetLockedInterval < 1 ||
+      maxResetLockedInterval < minResetLockedInterval
+    ) {
+      throw new Error(
+        `Invalid values for minResetLockedInterval (${minResetLockedInterval})/maxResetLockedInterval (${maxResetLockedInterval})`,
+      );
+    }
     compiled = {
       events,
       logger,
       workerSchema,
       escapedWorkerSchema,
-      maxContiguousErrors: defaults.maxContiguousErrors,
       useNodeTime,
+      minResetLockedInterval,
+      maxResetLockedInterval,
+      options,
     };
     _sharedOptionsCache.set(options, compiled);
   }
@@ -68,7 +86,7 @@ export async function assertPool(
   releasers: Releasers,
 ): Promise<Pool> {
   const { logger } = processSharedOptions(options);
-  assert(
+  assert.ok(
     !options.pgPool || !options.connectionString,
     "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
   );
@@ -188,31 +206,59 @@ export const getUtilsAndReleasersFromOptions = async (
 ): Promise<CompiledOptions> => {
   const shared = processSharedOptions(options, settings);
   const { concurrency = defaults.concurrentJobs } = options;
-  return withReleasers(
-    async (releasers, release): Promise<CompiledOptions> => {
-      const pgPool: Pool = await assertPool(options, releasers);
-      // @ts-ignore
-      const max = pgPool?.options?.max || 10;
-      if (max < concurrency) {
-        console.warn(
-          `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`,
-        );
-      }
+  return withReleasers(async (releasers, release): Promise<CompiledOptions> => {
+    const pgPool: Pool = await assertPool(options, releasers);
+    // @ts-ignore
+    const max = pgPool?.options?.max || 10;
+    if (max < concurrency) {
+      console.warn(
+        `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`,
+      );
+    }
 
-      const withPgClient = makeWithPgClientFromPool(pgPool);
+    const withPgClient = makeWithPgClientFromPool(pgPool);
 
-      // Migrate
-      await withPgClient((client) => migrate(options, client));
-      const addJob = makeAddJob(options, withPgClient);
+    // Migrate
+    await withPgClient((client) => migrate(options, client));
+    const addJob = makeAddJob(options, withPgClient);
 
-      return {
-        ...shared,
-        pgPool,
-        withPgClient,
-        addJob,
-        release,
-        releasers,
-      };
-    },
-  );
+    return {
+      ...shared,
+      pgPool,
+      withPgClient,
+      addJob,
+      release,
+      releasers,
+    };
+  });
 };
+
+export function digestPreset(preset: GraphileConfig.Preset) {
+  const resolvedPreset = resolvePresets([preset]);
+  const {
+    connectionString = defaults.connectionString,
+    schema = defaults.schema,
+    preparedStatements = defaults.preparedStatements,
+    crontabFile = defaults.crontabFile,
+    tasksFolder = defaults.tasksFolder,
+    concurrentJobs = defaults.concurrentJobs,
+    maxPoolSize = defaults.maxPoolSize,
+    pollInterval = defaults.pollInterval,
+  } = resolvedPreset.worker ?? {};
+
+  const runnerOptions: RunnerOptions = {
+    schema,
+    concurrency: concurrentJobs,
+    maxPoolSize,
+    pollInterval,
+    connectionString,
+    noPreparedStatements: !preparedStatements,
+  };
+
+  return {
+    resolvedPreset,
+    runnerOptions,
+    crontabFile,
+    tasksFolder,
+  };
+}

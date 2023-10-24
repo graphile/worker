@@ -6,15 +6,21 @@ import {
   CRONTAB_LINE_PARTS,
   CRONTAB_OPTIONS_BACKFILL,
   CRONTAB_OPTIONS_ID,
+  CRONTAB_OPTIONS_JOB_KEY,
+  CRONTAB_OPTIONS_JOB_KEY_MODE,
   CRONTAB_OPTIONS_MAX,
   CRONTAB_OPTIONS_PRIORITY,
   CRONTAB_OPTIONS_QUEUE,
-  CRONTAB_TIME_PARTS,
   PERIOD_DURATIONS,
   TIMEPHRASE_PART,
 } from "./cronConstants";
-import { parseCrontabRanges } from "./cronMatcher";
-import { CronItem, CronItemOptions, ParsedCronItem } from "./interfaces";
+import { createCronMatcher, createCronMatcherFromRanges } from "./cronMatcher";
+import {
+  $$isParsed,
+  CronItem,
+  CronItemOptions,
+  ParsedCronItem,
+} from "./interfaces";
 
 /**
  * Returns a period of time in milliseconds representing the time phrase given.
@@ -42,9 +48,10 @@ const parseTimePhrase = (timePhrase: string): number => {
       );
     }
     const [wholeMatch, quantity, period] = matches;
-    const periodDuration = PERIOD_DURATIONS[period] || 0;
+    const periodDuration =
+      PERIOD_DURATIONS[period as keyof typeof PERIOD_DURATIONS] || 0;
     milliseconds += parseInt(quantity, 10) * periodDuration;
-    remaining = remaining.substr(wholeMatch.length);
+    remaining = remaining.slice(wholeMatch.length);
   }
   return milliseconds;
 };
@@ -58,6 +65,8 @@ const parseCrontabOptions = (
   let maxAttempts: number | undefined = undefined;
   let identifier: string | undefined = undefined;
   let queueName: string | undefined = undefined;
+  let jobKey: string | undefined = undefined;
+  let jobKeyMode: CronItemOptions["jobKeyMode"] = undefined;
   let priority: number | undefined = undefined;
 
   type MatcherTuple = [RegExp, (matches: RegExpExecArray) => void];
@@ -85,6 +94,18 @@ const parseCrontabOptions = (
       CRONTAB_OPTIONS_QUEUE,
       (matches) => {
         queueName = matches[1];
+      },
+    ],
+    jobKey: [
+      CRONTAB_OPTIONS_JOB_KEY,
+      (matches) => {
+        jobKey = matches[1];
+      },
+    ],
+    jobKeyMode: [
+      CRONTAB_OPTIONS_JOB_KEY_MODE,
+      (matches) => {
+        jobKeyMode = matches[1] as CronItemOptions["jobKeyMode"];
       },
     ],
     priority: [
@@ -130,9 +151,19 @@ const parseCrontabOptions = (
   if (!backfillPeriod) {
     backfillPeriod = 0;
   }
+  if (!jobKeyMode && jobKey) {
+    jobKeyMode = "replace";
+  }
 
   return {
-    options: { backfillPeriod, maxAttempts, queueName, priority },
+    options: {
+      backfillPeriod,
+      maxAttempts,
+      queueName,
+      priority,
+      jobKey,
+      jobKeyMode,
+    },
     identifier,
   };
 };
@@ -140,7 +171,7 @@ const parseCrontabOptions = (
 const parseCrontabPayload = (
   lineNumber: number,
   payloadString: string | undefined,
-): any => {
+): Record<string, unknown> | null => {
   if (!payloadString) {
     return null;
   }
@@ -185,7 +216,7 @@ export const parseCrontabLine = (
       `Could not process line '${lineNumber}' of crontab: '${crontabLine}'`,
     );
   }
-  const { minutes, hours, dates, months, dows } = parseCrontabRanges(
+  const match = createCronMatcherFromRanges(
     matches,
     `line ${lineNumber} of crontab`,
   );
@@ -195,11 +226,8 @@ export const parseCrontabLine = (
   );
 
   return {
-    minutes,
-    hours,
-    dates,
-    months,
-    dows,
+    [$$isParsed]: true,
+    match,
     task,
     options,
     payload,
@@ -259,32 +287,30 @@ export const parseCronItems = (items: CronItem[]): ParsedCronItem[] => {
 export const parseCronItem = (
   cronItem: CronItem,
   source: string = "parseCronItem call",
-) => {
+): ParsedCronItem => {
   const {
-    pattern,
+    match: rawMatch,
     task,
     options = {} as CronItemOptions,
     payload = {},
     identifier = task,
   } = cronItem;
-  const matches = CRONTAB_TIME_PARTS.exec(pattern);
-  if (!matches) {
-    throw new Error(`Invalid cron pattern '${pattern}' in ${source}`);
+  if (cronItem.pattern) {
+    throw new Error("Please rename the 'pattern' property to 'match'");
   }
-  const { minutes, hours, dates, months, dows } = parseCrontabRanges(
-    matches,
-    source,
-  );
-  const item: ParsedCronItem = {
-    minutes,
-    hours,
-    dates,
-    months,
-    dows,
+  const match =
+    typeof rawMatch === "string"
+      ? createCronMatcher(rawMatch, source)
+      : rawMatch;
+  if (typeof match !== "function") {
+    throw new Error("Invalid 'match' configuration");
+  }
+  return {
+    [$$isParsed]: true,
+    match,
     task,
     options,
     payload,
     identifier,
   };
-  return item;
 };

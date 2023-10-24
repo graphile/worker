@@ -6,7 +6,7 @@ const { default: deferred } = require("../dist/deferred");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const options = {
-  concurrecy: 1,
+  concurrency: 1,
 };
 
 async function main() {
@@ -76,7 +76,7 @@ async function main() {
     )}ms, avg: ${average.toFixed(2)}ms`,
   );
 
-  await workerPool.release();
+  await workerPool.gracefulShutdown();
   await pgPool.end();
   console.log("Done");
 }
@@ -92,7 +92,7 @@ async function forEmptyQueue(pgPool) {
     const {
       rows: [row],
     } = await pgPool.query(
-      `select count(*) from graphile_worker.jobs where task_identifier = 'latency'`,
+      `select count(*) from graphile_worker.jobs where task_id = (select id from graphile_worker.tasks where identifier = 'latency')`,
     );
     remaining = (row && row.count) || 0;
     sleep(2000);

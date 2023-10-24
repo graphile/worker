@@ -1,10 +1,10 @@
 import { Pool, PoolClient } from "pg";
 
 import {
+  AddJobFunction,
   Job,
   JobHelpers,
   SharedOptions,
-  TaskSpec,
   WithPgClient,
   WorkerSharedOptions,
 } from "./interfaces";
@@ -14,9 +14,9 @@ import { Logger } from "./logger";
 export function makeAddJob(
   options: WorkerSharedOptions,
   withPgClient: WithPgClient,
-) {
+): AddJobFunction {
   const { escapedWorkerSchema, useNodeTime } = processSharedOptions(options);
-  return (identifier: string, payload: unknown = {}, spec: TaskSpec = {}) => {
+  return (identifier, payload, spec = {}) => {
     return withPgClient(async (pgClient) => {
       const { rows } = await pgClient.query(
         `
@@ -34,7 +34,7 @@ export function makeAddJob(
         `,
         [
           identifier,
-          JSON.stringify(payload),
+          JSON.stringify(payload ?? {}),
           spec.queueName || null,
           // If there's an explicit run at, use that. Otherwise, if we've been
           // told to use Node time, use the current timestamp. Otherwise we'll
@@ -52,6 +52,7 @@ export function makeAddJob(
         ],
       );
       const job: Job = rows[0];
+      job.task_identifier = identifier;
       return job;
     });
   };
@@ -84,13 +85,13 @@ export function makeJobHelpers(
 
   // DEPRECATED METHODS
   Object.assign(helpers, {
-    debug(format: string, ...parameters: any[]): void {
+    debug(format: string, ...parameters: unknown[]): void {
       logger.error(
         "REMOVED: `helpers.debug` has been replaced with `helpers.logger.debug`; please do not use `helpers.debug`",
       );
       logger.debug(format, { parameters });
     },
-  } as any);
+  } as unknown);
 
   return helpers;
 }

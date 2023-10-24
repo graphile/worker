@@ -1,16 +1,19 @@
 import {
   CRONTAB_NUMBER,
   CRONTAB_RANGE,
+  CRONTAB_TIME_PARTS,
   CRONTAB_WILDCARD,
 } from "./cronConstants";
-import { ParsedCronItem, TimestampDigest } from "./interfaces";
+import { CronMatcher, ParsedCronMatch, TimestampDigest } from "./interfaces";
 
 /**
  * Returns true if the cronItem should fire for the given timestamp digest,
  * false otherwise.
+ *
+ * @internal
  */
-export function cronItemMatches(
-  cronItem: ParsedCronItem,
+function cronItemMatches(
+  cronItem: ParsedCronMatch,
   digest: TimestampDigest,
 ): boolean {
   const { min, hour, date, month, dow } = digest;
@@ -136,7 +139,16 @@ const parseCrontabRange = (
   return uniqueNumbers;
 };
 
-export function parseCrontabRanges(matches: string[], source: string) {
+/**
+ * Processes a list of matches from the CRONTAB_LINE_PARTS or
+ * CRONTAB_TIME_PARTS regexps and returns the parsed matches.
+ *
+ * @internal
+ */
+function parseCrontabRanges(
+  matches: string[],
+  source: string,
+): ParsedCronMatch {
   const minutes = parseCrontabRange(
     `minutes range in ${source}`,
     matches[1],
@@ -170,3 +182,47 @@ export function parseCrontabRanges(matches: string[], source: string) {
   );
   return { minutes, hours, dates, months, dows };
 }
+
+export const parseCronRangeString = (
+  pattern: string,
+  source: string,
+): ParsedCronMatch => {
+  const matches = CRONTAB_TIME_PARTS.exec(pattern);
+  if (!matches) {
+    throw new Error(`Invalid cron pattern '${pattern}' in ${source}`);
+  }
+  return parseCrontabRanges(matches, source);
+};
+
+/**
+ * Takes a list of matches from the CRONTAB_LINE_PARTS or CRONTAB_TIME_PARTS
+ * regexps a CronMatcher function.
+ *
+ * @internal
+ */
+export const createCronMatcherFromRanges = (
+  matches: string[],
+  source: string,
+): CronMatcher => {
+  const parsedCronMatch = parseCrontabRanges(matches, source);
+  const matcher = (digest: TimestampDigest) =>
+    cronItemMatches(parsedCronMatch, digest);
+  Object.assign(matcher, { parsedCronMatch });
+
+  return matcher;
+};
+
+/**
+ * Creates a CronMatcher function from the given cron pattern.
+ */
+export const createCronMatcher = (
+  pattern: string,
+  source: string,
+): CronMatcher => {
+  const matches = CRONTAB_TIME_PARTS.exec(pattern);
+  if (!matches) {
+    throw new Error(`Invalid cron pattern '${pattern}' in ${source}`);
+  }
+
+  return createCronMatcherFromRanges(matches, source);
+};

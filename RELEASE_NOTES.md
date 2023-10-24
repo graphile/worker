@@ -1,5 +1,153 @@
 # Release notes
 
+### v0.16.0
+
+**DROPS SUPPORT FOR NODE <18**. As of 24th October 2023, Node 20 is the active
+LTS and Node 18 is maintainence LTS; previous versions are no longer supported.
+
+**REMOVES `maxContiguousErrors`**. See #307; it wasn't fit for purpose, so best
+to remove it for now.
+
+**REMOVES `--watch`** and watch mode in general. Now signal handling is improved
+(see below) and with people wanting to use ESM to define modules, it's finally
+time to remove the experimental watch mode. Use `node --watch` or `nodemon` or
+similar instead. Note: `crontab` file is also not watched, so be sure to watch
+that too!
+
+**TYPESCRIPT**: lots of `any` changed to `unknown`. In particular, errors in the
+event emitter payloads are now `unknown` rather than `any`, so you might need to
+cast.
+
+**TYPESCRIPT**: payload is now marked as required in `addJob` (just set to `{}`
+if your task doesn't need a payload).
+
+Adds the ability to type task payloads and `addJob()` calls (**please** read the
+caveats in the documentation before doing so).
+
+Adds support for `graphile-config` - configuration can now be read from a
+`graphile.config.ts` (or `.js`, `.cjs`, etc) file.
+
+Crontab: now supports `jobKey` and `jobKeyMode` opts (thanks @spiffytech!)
+
+Signals: now releases signal handlers when shut down via the API.
+
+Schema: checks that current schema in database isn't more up to date than the
+current worker. (This won't be useful until future schema changes.)
+
+Schema: trigger a graceful shutdown if a new Graphile Worker process migrates
+the database schema.
+
+Events: add more detail to `cron:backfill` event.
+
+Tasks: now use `await import(...)` rather than `require(...)`, so ESM can be
+imported.
+
+### v0.15.1
+
+Fixes issues with graceful worker shutdowns:
+
+- Deprecates `workerPool.release()` in favour of (equivalent)
+  `workerPool.gracefulShutdown()`
+- Fixes `workerPool.gracefulShutdown()` to shut down gracefully (waiting for
+  jobs to complete)
+- Adds `workerPool.forcefulShutdown()` to "fail" the running jobs (so they'll be
+  re-attempted elsewhere) and force-release the pool
+- Fixes handling of signals:
+  - First termination signal triggers graceful shutdown
+  - Signal over next 5 seconds are ignored
+  - Second termination signal triggers forceful shutdown
+  - Signal over next 5 seconds are ignored
+  - Further termination signals are handled by Node (i.e. will likely instantly
+    exit the process)
+
+### v0.15.0
+
+Migration files are no longer read from filesystem (via `fs` module); instead
+they are stored as strings in JS to enable Graphile Worker to be bundled. The
+files still exist and will continue to be distributed, so this should not be a
+breaking change. Thanks to @timelf123 for this feature!
+
+### v0.14.0
+
+**THIS RELEASE INTRODUCES SIGNIFICANT CHANGES**, in preparation for moving
+towards the 1.0 release. Please read these notes carefully.
+
+**IMPORTANT**: this release is incompatible with previous releases - do not run
+earlier workers against this releases database schema or Bad Things will happen.
+
+**IMPORTANT**: the initial migration, `000011`, in this release cannot run if
+there are any locked jobs - it will throw a "division by zero" error in this
+case. Please ensure all existing workers are shut down and any locked jobs
+released before upgrading to this version.
+
+**IMPORTANT**: migration `000011` renames the old jobs table, creates a new jobs
+table with a slightly different format, copies the jobs across, and then deletes
+the old jobs table. The jobs table itself is not a public interface - you should
+use the documented SQL functions and TypeScript APIs only - but if you are
+referencing the jobs table in a database function you may have a bad time.
+
+**IMPORTANT**: `priority`, `attempts` and `max_attempts` are all now `smallint`,
+so please make sure that your values fit into these ranges before starting the
+migration process. (Really these values should never be larger than about `100`
+or smaller than about `-100` anyway.)
+
+#### Breaking changes
+
+- BREAKING: Bump minimum Node version to 14 since 12.x is now end-of-life
+- BREAKING: Bump minimum PG version to 12 for `generated always as (expression)`
+- BREAKING: `jobs.priority`, `attempts` and `max_attempts` are now `int2` rather
+  than `int4` (please ensure your values fit in `int2` -
+  `-32768 <= priority <= +32767`)
+- BREAKING: CronItem.pattern has been renamed to CronItem.match
+- BREAKING: database error codes have been removed because we've moved to
+  `CHECK` constraints
+
+#### Changes to internals
+
+- WARNING: the 'jobs' table no longer has `queue_name` and `task_identifier`
+  columns; these have been replaced with `job_queue_id` and `task_id` which are
+  both `int`s
+- WARNING: many of the "internal" SQL functions (`get_job`, `fail_job`,
+  `complete_job`) have been moved to JS to allow for dynamic SQL generation for
+  improved performance/flexibility
+- WARNING: most of the triggers have been removed (for performance reasons), so
+  if you are inserting directly into the jobs table (don't do that, it's not a
+  supported interface!) make sure you update your code to be compatible
+
+#### Features
+
+- New "batch jobs" feature for merging payloads with a `job_key` (see README)
+- Significantly improved 'large jobs table' performance (e.g. when a large queue
+  is locked, or there's a lot of jobs queued for task identifiers your worker
+  instance doesn't support, or a lot of failed jobs). Around 20x improvement in
+  this 'worst case' performance for real user workloads.
+- Added new (experimental) much faster `add_jobs` batch API.
+- Fix error handling of cron issues in 'run' method.
+- CronItem.match can now accept either a pattern string or a matcher function
+- Jobs that were locked more than 4 hours will be reattempted as before, however
+  they are slightly de-prioritised by virtue of having their `run_at` updated,
+  giving interim jobs a chance to be executed (and lessening the impact of queue
+  stalling through hanging tasks).
+
+### v0.13.0
+
+- Remove dependency on `pgcrypto` database extension (thanks @noinkling)
+  - If you have a pre-existing installation and wish to uninstall `pgcrypto` you
+    will need to do so manually. This can be done by running
+    `DROP EXTENSION pgcrypto;` _after_ updating to the latest schema.
+- The `jobs.queue_name` column no longer has a default value (this is only
+  relevant to people inserting into the table directly, which is not
+  recommended - use the `add_job` helper)
+
+### v0.12.2
+
+- Fix issue when a connect error occurs whilst releasing worker (thanks
+  @countcain)
+
+### v0.12.1
+
+- Jobs with no queue are now released during graceful shutdown (thanks @olexiyb)
+
 ### v0.12.0
 
 - Run shutdown actions in reverse order (rather than parallel) - more stable

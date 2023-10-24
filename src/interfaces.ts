@@ -1,9 +1,18 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import { EventEmitter } from "events";
 import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 
 import { Release } from "./lib";
 import { Logger } from "./logger";
 import { Signal } from "./signals";
+
+declare global {
+  namespace GraphileWorker {
+    interface Tasks {
+      /* extend this through declaration merging */
+    }
+  }
+}
 
 /*
  * Terminology:
@@ -27,16 +36,20 @@ export type WithPgClient = <T = void>(
  * The `addJob` interface is implemented in many places in the library, all
  * conforming to this.
  */
-export type AddJobFunction = (
+export type AddJobFunction = <
+  TIdentifier extends keyof GraphileWorker.Tasks | (string & {}) = string,
+>(
   /**
    * The name of the task that will be executed for this job.
    */
-  identifier: string,
+  identifier: TIdentifier,
 
   /**
    * The payload (typically a JSON object) that will be passed to the task executor.
    */
-  payload?: unknown,
+  payload: TIdentifier extends keyof GraphileWorker.Tasks
+    ? GraphileWorker.Tasks[TIdentifier]
+    : unknown,
 
   /**
    * Additional details about how the job should be handled.
@@ -78,7 +91,7 @@ export interface JobHelpers extends Helpers {
    */
   query<R extends QueryResultRow>(
     queryText: string,
-    values?: any[],
+    values?: unknown[],
   ): Promise<QueryResult<R>>;
 }
 
@@ -110,7 +123,7 @@ export interface WorkerUtils extends Helpers {
    * deleted jobs will be returned (note that this may be fewer jobs than you
    * requested).
    */
-  completeJobs: (ids: string[]) => Promise<Job[]>;
+  completeJobs: (ids: string[]) => Promise<DbJob[]>;
 
   /**
    * Marks the specified jobs (by their ids) as failed permanently, assuming
@@ -118,7 +131,7 @@ export interface WorkerUtils extends Helpers {
    * `max_attempts`. The updated jobs will be returned (note that this may be
    * fewer jobs than you requested).
    */
-  permanentlyFailJobs: (ids: string[], reason?: string) => Promise<Job[]>;
+  permanentlyFailJobs: (ids: string[], reason?: string) => Promise<DbJob[]>;
 
   /**
    * Updates the specified scheduling properties of the jobs (assuming they are
@@ -138,24 +151,38 @@ export interface WorkerUtils extends Helpers {
       attempts?: number;
       maxAttempts?: number;
     },
-  ) => Promise<Job[]>;
+  ) => Promise<DbJob[]>;
 }
 
-export type Task = (
-  payload: unknown,
-  helpers: JobHelpers,
-) => void | Promise<void>;
+export type PromiseOrDirect<T> = Promise<T> | T;
 
-export function isValidTask(fn: unknown): fn is Task {
+export type Task<
+  TName extends keyof GraphileWorker.Tasks | (string & {}) = string & {},
+> = (
+  payload: TName extends keyof GraphileWorker.Tasks
+    ? GraphileWorker.Tasks[TName]
+    : unknown,
+  helpers: JobHelpers,
+) => PromiseOrDirect<void | PromiseOrDirect<unknown>[]>;
+
+export function isValidTask<T extends string = keyof GraphileWorker.Tasks>(
+  fn: unknown,
+): fn is Task<T> {
   if (typeof fn === "function") {
     return true;
   }
   return false;
 }
 
-export interface TaskList {
-  [name: string]: Task;
-}
+export type TaskList = {
+  [Key in
+    | keyof GraphileWorker.Tasks
+    | (string & {})]?: Key extends keyof GraphileWorker.Tasks
+    ? Task<Key>
+    : // The `any` here is required otherwise declaring something as a `TaskList` can cause issues.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Task<any>;
+};
 
 export interface WatchedTaskList {
   tasks: TaskList;
@@ -182,7 +209,61 @@ export interface CronItemOptions {
 
   /** Optionally set the job priority */
   priority?: number;
+
+  /** Optionally prevent duplicate copies of this job from running */
+  jobKey?: string;
+
+  /**
+   * Modifies the behavior of `jobKey`; when 'replace' all attributes will be
+   * updated, when 'preserve_run_at' all attributes except 'run_at' will be
+   * updated. (Default: 'replace')
+   */
+  jobKeyMode?: "replace" | "preserve_run_at";
 }
+
+/**
+ * Crontab ranges from the minute, hour, day of month, month and day of week
+ * parts of the crontab line
+ *
+ * @internal
+ *
+ * You should use this as an opaque type; you should **not** read values from
+ * inside it, and you should not construct it manually. The definition of this
+ * type may change dramatically between minor releases of Graphile Worker,
+ * these changes are not seen as breaking changes.
+ *
+ * **WARNING**: it is assumed that values of this type adhere to the constraints in
+ * the comments below (many of these cannot be asserted by TypeScript). If you
+ * construct this type manually and do not adhere to these constraints then you
+ * may get unexpected behaviours. Graphile Worker enforces these rules when
+ * constructing `ParsedCronMatch`s internally, you should use the Graphile
+ * Worker helpers to construct this type.
+ */
+export interface ParsedCronMatch {
+  /** Minutes (0-59) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  minutes: number[];
+  /** Hours (0-23) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  hours: number[];
+  /** Dates (1-31) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  dates: number[];
+  /** Months (1-12) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  months: number[];
+  /** Days of the week (0-6) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
+  dows: number[];
+}
+
+/**
+ * A function which determines if a particular item should be executed for a
+ * given TimestampDigest.
+ */
+export type CronMatcher = (digest: TimestampDigest) => boolean;
+
+/**
+ * Symbol to determine that the item was indeed fed through a parser function.
+ *
+ * @internal
+ */
+export const $$isParsed = Symbol("isParsed");
 
 /**
  * A recurring task schedule; this may represent a line in the `crontab` file,
@@ -194,27 +275,13 @@ export interface CronItemOptions {
  * `parseCronItems` instead. The definition of this type may change
  * dramatically between minor releases of Graphile Worker, these changes are
  * not seen as breaking changes.
- *
- * @internal
- *
- * **WARNING**: it is assumed that values of this type adhere to the constraints in
- * the comments below (many of these cannot be asserted by TypeScript). If you
- * construct this type manually and do not adhere to these constraints then you
- * may get unexpected behaviours. Graphile Worker enforces these rules when
- * constructing `ParsedCronItem`s internally, you should use the Graphile
- * Worker helpers to construct this type.
  */
 export interface ParsedCronItem {
-  /** Minutes (0-59) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  minutes: number[];
-  /** Hours (0-23) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  hours: number[];
-  /** Dates (1-31) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  dates: number[];
-  /** Months (1-12) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  months: number[];
-  /** Days of the week (0-6) on which to run the item; must contain unique numbers from the allowed range, ordered ascending. */
-  dows: number[];
+  /** @internal Used to guarantee that the item was parsed correctly */
+  [$$isParsed]: true;
+
+  /** Optimised function to determine if this item matches the given TimestampDigest */
+  match: CronMatcher;
 
   /** The identifier of the task to execute */
   task: string;
@@ -223,7 +290,7 @@ export interface ParsedCronItem {
   options: CronItemOptions;
 
   /** A payload object to merge into the default cron payload object for the scheduled job */
-  payload: { [key: string]: any };
+  payload: { [key: string]: unknown } | null;
 
   /** An identifier so that we can prevent double-scheduling of a task and determine whether or not to backfill. */
   identifier: string;
@@ -240,37 +307,55 @@ export interface CronItem {
   /** The identifier of the task to execute */
   task: string;
 
-  /** Cron pattern (e.g. `* * * * *`) to detail when the task should be executed */
-  pattern: string;
+  /** @deprecated Please rename this property to 'match' */
+  pattern?: never;
+
+  /** Cron pattern (e.g. `* * * * *`) or a function to detail when the task should be executed */
+  match: string | CronMatcher;
 
   /** Options influencing backfilling and properties of the scheduled job */
   options?: CronItemOptions;
 
   /** A payload object to merge into the default cron payload object for the scheduled job */
-  payload?: { [key: string]: any };
+  payload?: { [key: string]: unknown };
 
   /** An identifier so that we can prevent double-scheduling of a task and determine whether or not to backfill. */
   identifier?: string;
 }
 
 /** Represents records in the `jobs` table */
-export interface Job {
+export interface DbJob {
   id: string;
-  queue_name: string | null;
-  task_identifier: string;
+  /** FK to job_queues */
+  job_queue_id: number | null;
+  /** FK to tasks */
+  task_id: number;
+  /** The JSON payload of the job */
   payload: unknown;
+  /** Lower number means it should run sooner */
   priority: number;
+  /** When it was due to run */
   run_at: Date;
+  /** How many times it has been attempted */
   attempts: number;
+  /** The limit for the number of times it should be attempted */
   max_attempts: number;
+  /** If attempts > 0, why did it fail last? */
   last_error: string | null;
   created_at: Date;
   updated_at: Date;
+  /** "job_key" - unique identifier for easy update from user code */
   key: string | null;
+  /** A count of the revision numbers */
   revision: number;
   locked_at: Date | null;
   locked_by: string | null;
   flags: { [flag: string]: true } | null;
+}
+
+export interface Job extends DbJob {
+  /** Shortcut to tasks.identifier */
+  task_identifier: string;
 }
 
 /** Represents records in the `known_crontabs` table */
@@ -283,14 +368,16 @@ export interface KnownCrontab {
 export interface Worker {
   nudge: () => boolean;
   workerId: string;
-  release: () => void;
+  release: () => void | Promise<void>;
   promise: Promise<void>;
   getActiveJob: () => Job | null;
 }
 
 export interface WorkerPool {
+  /** @deprecated Use gracefulShutdown instead */
   release: () => Promise<void>;
-  gracefulShutdown: (message: string) => Promise<void>;
+  gracefulShutdown: (message?: string) => Promise<void>;
+  forcefulShutdown: (message: string) => Promise<void>;
   promise: Promise<void>;
 }
 
@@ -410,6 +497,23 @@ export interface SharedOptions {
    * false.)
    */
   useNodeTime?: boolean;
+
+  /**
+   * **Experimental**
+   *
+   * How often should we scan for jobs that have been locked too long and
+   * release them? This is the minimum interval, we'll choose a time between
+   * this and `maxResetLockedInterval`.
+   */
+  minResetLockedInterval?: number;
+
+  /**
+   * **Experimental**
+   *
+   * The upper bound of how long we'll wait between scans for jobs that have
+   * been locked too long. See `minResetLockedInterval`.
+   */
+  maxResetLockedInterval?: number;
 }
 
 /**
@@ -453,7 +557,7 @@ export interface WorkerPoolOptions extends WorkerSharedOptions {
  */
 export interface RunnerOptions extends WorkerPoolOptions {
   /**
-   * Task names and handler, e.g. from `getTasks` (use this if you need watch mode)
+   * Task names and handler, e.g. from `getTasks`
    */
   taskList?: TaskList;
 
@@ -490,6 +594,8 @@ export interface CronJob {
   };
   queueName?: string;
   runAt: string;
+  jobKey?: string;
+  jobKeyMode: CronItemOptions["jobKeyMode"];
   maxAttempts?: number;
   priority?: number;
 }
@@ -498,10 +604,14 @@ export interface JobAndCronIdentifier {
   job: CronJob;
   identifier: string;
 }
+export interface JobAndCronIdentifierWithDetails extends JobAndCronIdentifier {
+  known_since: Date;
+  last_execution: Date | null;
+}
 
 export interface WorkerUtilsOptions extends SharedOptions {}
 
-type BaseEventMap = Record<string, any>;
+type BaseEventMap = Record<string, unknown>;
 type EventMapKey<TEventMap extends BaseEventMap> = string & keyof TEventMap;
 type EventCallback<TPayload> = (params: TPayload) => void;
 
@@ -560,7 +670,7 @@ export type WorkerEventMap = {
    */
   "pool:listen:error": {
     workerPool: WorkerPool;
-    error: any;
+    error: unknown;
     client: PoolClient;
   };
 
@@ -577,7 +687,37 @@ export type WorkerEventMap = {
   /**
    * When a worker pool graceful shutdown throws an error
    */
-  "pool:gracefulShutdown:error": { pool: WorkerPool; error: any };
+  "pool:gracefulShutdown:error": { pool: WorkerPool; error: unknown };
+
+  /**
+   * When a worker pool graceful shutdown is successful, but one of the workers
+   * throws an error from release()
+   */
+  "pool:gracefulShutdown:workerError": {
+    pool: WorkerPool;
+    error: unknown;
+    job: Job | null;
+  };
+
+  /**
+   * When a worker pool graceful shutdown throws an error
+   */
+  "pool:gracefulShutdown:complete": { pool: WorkerPool };
+
+  /**
+   * When a worker pool starts a forceful shutdown
+   */
+  "pool:forcefulShutdown": { pool: WorkerPool; message: string };
+
+  /**
+   * When a worker pool forceful shutdown throws an error
+   */
+  "pool:forcefulShutdown:error": { pool: WorkerPool; error: unknown };
+
+  /**
+   * When a worker pool forceful shutdown throws an error
+   */
+  "pool:forcefulShutdown:complete": { pool: WorkerPool };
 
   /**
    * When a worker is created
@@ -592,7 +732,7 @@ export type WorkerEventMap = {
   /**
    * When a worker stops (normally after a release)
    */
-  "worker:stop": { worker: Worker; error?: any };
+  "worker:stop": { worker: Worker; error?: unknown };
 
   /**
    * When a worker is about to ask the database for a job to execute
@@ -602,7 +742,7 @@ export type WorkerEventMap = {
   /**
    * When a worker calls get_job but there are no available jobs
    */
-  "worker:getJob:error": { worker: Worker; error: any };
+  "worker:getJob:error": { worker: Worker; error: unknown };
 
   /**
    * When a worker calls get_job but there are no available jobs
@@ -612,7 +752,11 @@ export type WorkerEventMap = {
   /**
    * When a worker is created
    */
-  "worker:fatalError": { worker: Worker; error: any; jobError: any | null };
+  "worker:fatalError": {
+    worker: Worker;
+    error: unknown;
+    jobError: unknown | null;
+  };
 
   /**
    * When a job is retrieved by get_job
@@ -627,18 +771,28 @@ export type WorkerEventMap = {
   /**
    * When a job throws an error
    */
-  "job:error": { worker: Worker; job: Job; error: any };
+  "job:error": {
+    worker: Worker;
+    job: Job;
+    error: unknown;
+    batchJobErrors?: unknown[];
+  };
 
   /**
    * When a job fails permanently (emitted after job:error when appropriate)
    */
-  "job:failed": { worker: Worker; job: Job; error: any };
+  "job:failed": {
+    worker: Worker;
+    job: Job;
+    error: unknown;
+    batchJobErrors?: unknown[];
+  };
 
   /**
    * When a job has finished executing and the result (success or failure) has
    * been written back to the database
    */
-  "job:complete": { worker: Worker; job: Job; error: any };
+  "job:complete": { worker: Worker; job: Job; error: unknown };
 
   /** **Experimental** When the cron starts working (before backfilling) */
   "cron:starting": { cron: Cron; start: Date };
@@ -649,7 +803,7 @@ export type WorkerEventMap = {
   /** **Experimental** When a number of jobs need backfilling for a particular timestamp. */
   "cron:backfill": {
     cron: Cron;
-    itemsToBackfill: JobAndCronIdentifier[];
+    itemsToBackfill: JobAndCronIdentifierWithDetails[];
     timestamp: string;
   };
 
@@ -697,14 +851,59 @@ export type WorkerEventMap = {
   };
 
   /**
+   * **Experimental** When we trigger the 'resetLocked' cleanup process
+   * (currently every 8-10 minutes)
+   */
+  "resetLocked:started": {
+    /** @internal Not sure this'll stay on pool */
+    pool: WorkerPool;
+  };
+
+  /**
+   * **Experimental** When the `resetLocked` process has completed
+   * successfully.
+   */
+  "resetLocked:success": {
+    /**
+     * The number of milliseconds until resetLocked runs again (or null if we
+     * won't because the pool is exiting)
+     */
+    delay: number | null;
+
+    /** @internal Not sure this'll stay on pool */
+    pool: WorkerPool;
+  };
+
+  /**
+   * **Experimental** When the `resetLocked` process has failed.
+   */
+  "resetLocked:failure": {
+    error: Error;
+
+    /**
+     * The number of milliseconds until resetLocked runs again (or null if we
+     * won't because the pool is exiting)
+     */
+    delay: number | null;
+
+    /** @internal Not sure this'll stay on pool */
+    pool: WorkerPool;
+  };
+
+  /**
    * When the runner is terminated by a signal
    */
   gracefulShutdown: { signal: Signal };
 
   /**
+   * When the runner is terminated by a signal _again_ after 5 seconds
+   */
+  forcefulShutdown: { signal: Signal };
+
+  /**
    * When the runner is stopped
    */
-  stop: {};
+  stop: Record<string, never>;
 };
 
 export type WorkerEvents = TypedEventEmitter<WorkerEventMap>;

@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { Pool, PoolClient } from "pg";
+import { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
 import { defaults } from "./config";
@@ -12,6 +12,7 @@ import {
   Job,
   TaskList,
   Worker,
+  WorkerEventMap,
   WorkerEvents,
   WorkerOptions,
   WorkerPool,
@@ -19,8 +20,13 @@ import {
 } from "./interfaces";
 import { processSharedOptions } from "./lib";
 import { Logger } from "./logger";
-import SIGNALS from "./signals";
+import SIGNALS, { Signal } from "./signals";
+import { failJobs } from "./sql/failJob";
+import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
+
+const ENABLE_DANGEROUS_LOGS =
+  process.env.GRAPHILE_ENABLE_DANGEROUS_LOGS === "1";
 
 // Wait at most 60 seconds between connection attempts for LISTEN.
 const MAX_DELAY = 60 * 1000;
@@ -35,7 +41,7 @@ export { allWorkerPools as _allWorkerPools };
  * gracefulShutdown to all the pools' events; we use this event emitter to
  * aggregate these requests.
  */
-let _signalHandlersEventEmitter: WorkerEvents = new EventEmitter();
+const _signalHandlersEventEmitter: WorkerEvents = new EventEmitter();
 
 /**
  * Only register the signal handlers once _globally_.
@@ -45,7 +51,10 @@ let _registeredSignalHandlers = false;
 /**
  * Only trigger graceful shutdown once.
  */
-let _shuttingDown = false;
+let _shuttingDownGracefully = false;
+let _shuttingDownForcefully = false;
+
+let _registeredSignalHandlersCount = 0;
 
 /**
  * This will register the signal handlers to make sure the worker shuts down
@@ -53,49 +62,147 @@ let _shuttingDown = false;
  * you call it multiple times it will always use the first logger it is passed,
  * future calls will register the events but take no further actions.
  */
-function registerSignalHandlers(logger: Logger, events: WorkerEvents) {
-  if (_shuttingDown) {
+function registerSignalHandlers(
+  logger: Logger,
+  events: WorkerEvents,
+): () => void {
+  if (_shuttingDownGracefully || _shuttingDownForcefully) {
     throw new Error(
       "System has already gone into shutdown, should not be spawning new workers now!",
     );
   }
-  _signalHandlersEventEmitter.on("gracefulShutdown", (o) =>
-    events.emit("gracefulShutdown", o),
-  );
-  if (_registeredSignalHandlers) {
-    return;
+
+  const gscb = (o: WorkerEventMap["gracefulShutdown"]) =>
+    events.emit("gracefulShutdown", o);
+  const fscb = (o: WorkerEventMap["forcefulShutdown"]) =>
+    events.emit("forcefulShutdown", o);
+
+  if (!_registeredSignalHandlers) {
+    _reallyRegisterSignalHandlers(logger);
   }
-  _registeredSignalHandlers = true;
-  SIGNALS.forEach((signal) => {
-    logger.debug(`Registering signal handler for ${signal}`, {
-      registeringSignalHandler: signal,
-    });
-    const removeHandler = () => {
-      logger.debug(`Removing signal handler for ${signal}`, {
-        unregisteringSignalHandler: signal,
-      });
-      process.removeListener(signal, handler);
-    };
-    const handler = function () {
-      logger.error(`Received '${signal}'; attempting graceful shutdown...`);
-      setTimeout(removeHandler, 5000);
-      if (_shuttingDown) {
-        return;
-      }
-      _shuttingDown = true;
-      _signalHandlersEventEmitter.emit("gracefulShutdown", { signal });
-      Promise.all(
-        allWorkerPools.map((pool) =>
-          pool.gracefulShutdown(`Forced worker shutdown due to ${signal}`),
-        ),
-      ).finally(() => {
-        removeHandler();
-        logger.error(`Graceful shutdown attempted; killing self via ${signal}`);
+
+  _registeredSignalHandlersCount++;
+  _signalHandlersEventEmitter.on("gracefulShutdown", gscb);
+  _signalHandlersEventEmitter.on("forcefulShutdown", fscb);
+  return function release() {
+    _signalHandlersEventEmitter.off("gracefulShutdown", gscb);
+    _signalHandlersEventEmitter.off("forcefulShutdown", fscb);
+    _registeredSignalHandlersCount--;
+    if (_registeredSignalHandlersCount === 0) {
+      _releaseSignalHandlers();
+    }
+  };
+}
+
+let _releaseSignalHandlers = () => void 0;
+
+function _reallyRegisterSignalHandlers(logger: Logger) {
+  const switchToForcefulHandler = () => {
+    logger.debug(
+      `Switching to forceful handler for termination signals (${SIGNALS.join(
+        ", ",
+      )}); another termination signal will force a fast (unsafe) shutdown`,
+      { switchToForcefulHandlers: true },
+    );
+    for (const signal of SIGNALS) {
+      process.on(signal, forcefulHandler);
+      process.removeListener(signal, gracefulHandler);
+    }
+  };
+  const removeForcefulHandler = () => {
+    logger.debug(
+      `Removed forceful handler for termination signals (${SIGNALS.join(
+        ", ",
+      )}); another termination signals will likely kill the process (unless you've registered other handlers)`,
+      { unregisteringSignalHandlers: true },
+    );
+    for (const signal of SIGNALS) {
+      process.removeListener(signal, forcefulHandler);
+    }
+  };
+
+  const gracefulHandler = function (signal: Signal) {
+    if (_shuttingDownGracefully) {
+      logger.error(
+        `Ignoring '${signal}' (graceful shutdown already in progress)`,
+      );
+      return;
+    } else {
+      _shuttingDownGracefully = true;
+    }
+
+    logger.error(
+      `Received '${signal}'; attempting global graceful shutdown... (all termination signals will be ignored for the next 5 seconds)`,
+    );
+    const switchTimeout = setTimeout(switchToForcefulHandler, 5000);
+    _signalHandlersEventEmitter.emit("gracefulShutdown", { signal });
+
+    Promise.allSettled(
+      allWorkerPools.map((pool) =>
+        pool.gracefulShutdown(`Graceful worker shutdown due to ${signal}`),
+      ),
+    ).finally(() => {
+      clearTimeout(switchTimeout);
+      process.removeListener(signal, gracefulHandler);
+      if (!_shuttingDownForcefully) {
+        logger.error(
+          `Global graceful shutdown complete; killing self via ${signal}`,
+        );
         process.kill(process.pid, signal);
-      });
-    };
-    process.on(signal, handler);
-  });
+      }
+    });
+  };
+  const forcefulHandler = function (signal: Signal) {
+    if (_shuttingDownForcefully) {
+      logger.error(
+        `Ignoring '${signal}' (forceful shutdown already in progress)`,
+      );
+      return;
+    } else {
+      _shuttingDownForcefully = true;
+    }
+
+    logger.error(
+      `Received '${signal}'; attempting global forceful shutdown... (all termination signals will be ignored for the next 5 seconds)`,
+    );
+    const removeTimeout = setTimeout(removeForcefulHandler, 5000);
+    _signalHandlersEventEmitter.emit("forcefulShutdown", { signal });
+
+    Promise.allSettled(
+      allWorkerPools.map((pool) =>
+        pool.forcefulShutdown(`Forced worker shutdown due to ${signal}`),
+      ),
+    ).finally(() => {
+      removeForcefulHandler();
+      clearTimeout(removeTimeout);
+      logger.error(
+        `Global forceful shutdown completed; killing self via ${signal}`,
+      );
+      process.kill(process.pid, signal);
+    });
+  };
+
+  logger.debug(
+    `Registering termination signal handlers (${SIGNALS.join(", ")})`,
+    { registeringSignalHandlers: SIGNALS },
+  );
+
+  _registeredSignalHandlers = true;
+  for (const signal of SIGNALS) {
+    process.on(signal, gracefulHandler);
+  }
+  _releaseSignalHandlers = () => {
+    if (_shuttingDownGracefully || _shuttingDownForcefully) {
+      console.warn(`Not unregistering signal handlers as we're shutting down`);
+      return;
+    }
+
+    _releaseSignalHandlers = () => void 0;
+    for (const signal of SIGNALS) {
+      process.off(signal, gracefulHandler);
+    }
+    _registeredSignalHandlers = false;
+  };
 }
 
 export function runTaskList(
@@ -103,88 +210,277 @@ export function runTaskList(
   tasks: TaskList,
   pgPool: Pool,
 ): WorkerPool {
-  const { logger, escapedWorkerSchema, events } = processSharedOptions(options);
-  logger.debug(`Worker pool options are ${inspect(options)}`, { options });
+  const { logger, events } = processSharedOptions(options);
+  if (ENABLE_DANGEROUS_LOGS) {
+    logger.debug(`Worker pool options are ${inspect(options)}`, { options });
+  }
   const { concurrency = defaults.concurrentJobs, noHandleSignals } = options;
 
+  let unregisterSignalHandlers: (() => void) | undefined = undefined;
   if (!noHandleSignals) {
     // Clean up when certain signals occur
-    registerSignalHandlers(logger, events);
+    unregisterSignalHandlers = registerSignalHandlers(logger, events);
   }
 
   const promise = deferred();
   const workers: Array<Worker> = [];
 
-  let listenForChangesClient: PoolClient | null = null;
+  let changeListener: {
+    client: PoolClient;
+    release: () => void;
+  } | null = null;
 
   const unlistenForChanges = async () => {
-    if (listenForChangesClient) {
-      const client = listenForChangesClient;
-      listenForChangesClient = null;
-      // Unsubscribe from jobs:insert topic
+    if (changeListener) {
       try {
-        await client.query('UNLISTEN "jobs:insert"');
+        changeListener.release();
       } catch (e) {
-        // Ignore
+        logger.error(
+          `Error occurred whilst releasing listening client: ${e.message}`,
+          { error: e },
+        );
       }
-      await client.release();
     }
   };
   let active = true;
-  let reconnectTimeout: NodeJS.Timer | null = null;
+  let reconnectTimeout: NodeJS.Timeout | null = null;
 
-  // This is a representation of us that can be interacted with externally
-  const workerPool: WorkerPool = {
-    release: async () => {
+  const compiledSharedOptions = processSharedOptions(options);
+  const { minResetLockedInterval, maxResetLockedInterval } =
+    compiledSharedOptions;
+
+  const resetLockedDelay = () =>
+    Math.ceil(
+      minResetLockedInterval +
+        Math.random() * (maxResetLockedInterval - minResetLockedInterval),
+    );
+
+  let resetLockedAtPromise: Promise<void> | undefined;
+
+  const resetLocked = () => {
+    resetLockedAtPromise = resetLockedAt(
+      compiledSharedOptions,
+      withPgClient,
+    ).then(
+      () => {
+        resetLockedAtPromise = undefined;
+        if (active) {
+          const delay = resetLockedDelay();
+          events.emit("resetLocked:success", { pool: this, delay });
+          resetLockedTimeout = setTimeout(resetLocked, delay);
+        } else {
+          events.emit("resetLocked:success", { pool: this, delay: null });
+        }
+      },
+      (e) => {
+        resetLockedAtPromise = undefined;
+        // TODO: push this error out via an event.
+        if (active) {
+          const delay = resetLockedDelay();
+          events.emit("resetLocked:failure", { pool: this, error: e, delay });
+          resetLockedTimeout = setTimeout(resetLocked, delay);
+          logger.error(
+            `Failed to reset locked; we'll try again in ${delay}ms`,
+            {
+              error: e,
+            },
+          );
+        } else {
+          events.emit("resetLocked:failure", {
+            pool: this,
+            error: e,
+            delay: null,
+          });
+          logger.error(
+            `Failed to reset locked, but we're shutting down so won't try again`,
+            {
+              error: e,
+            },
+          );
+        }
+      },
+    );
+    events.emit("resetLocked:started", { pool: this });
+  };
+
+  // Reset locked in the first 60 seconds, not immediately because we don't
+  // want to cause a thundering herd.
+  let resetLockedTimeout: NodeJS.Timeout | null = setTimeout(
+    resetLocked,
+    Math.random() * Math.min(60000, maxResetLockedInterval),
+  );
+
+  function deactivate() {
+    if (active) {
       active = false;
+      if (resetLockedTimeout) {
+        clearTimeout(resetLockedTimeout);
+        resetLockedTimeout = null;
+      }
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
         reconnectTimeout = null;
       }
       events.emit("pool:release", { pool: this });
       unlistenForChanges();
-      promise.resolve();
-      await Promise.all(workers.map((worker) => worker.release()));
+    }
+  }
+
+  let terminated = false;
+  function terminate() {
+    if (!terminated) {
+      terminated = true;
       const idx = allWorkerPools.indexOf(workerPool);
       allWorkerPools.splice(idx, 1);
+      promise.resolve(resetLockedAtPromise);
+      if (unregisterSignalHandlers) {
+        unregisterSignalHandlers();
+      }
+    } else {
+      logger.error(
+        `Graphile Worker internal error: terminate() was called twice for worker pool. Ignoring second call; but this indicates a bug - please file an issue.`,
+      );
+    }
+  }
+
+  // This is a representation of us that can be interacted with externally
+  const workerPool: WorkerPool = {
+    release: async () => {
+      console.trace(
+        "DEPRECATED: You are calling `workerPool.release()`; please use `workerPool.gracefulShutdown()` instead.",
+      );
+      return this.gracefulShutdown();
     },
 
-    // Make sure we clean up after ourselves even if a signal is caught
-    async gracefulShutdown(message: string) {
+    /**
+     * Stop accepting jobs, and wait gracefully for the jobs that are in
+     * progress to complete.
+     */
+    async gracefulShutdown(
+      message = "Worker pool is shutting down gracefully",
+    ) {
       events.emit("pool:gracefulShutdown", { pool: this, message });
       try {
         logger.debug(`Attempting graceful shutdown`);
-        // Release all our workers' jobs
-        const workerIds = workers.map((worker) => worker.workerId);
-        const jobsInProgress: Array<Job> = workers
-          .map((worker) => worker.getActiveJob())
-          .filter((job): job is Job => !!job);
+        // Stop new jobs being added
+        deactivate();
+
         // Remove all the workers - we're shutting them down manually
-        workers.splice(0, workers.length).map((worker) => worker.release());
-        logger.debug(`Releasing the jobs '${workerIds.join(", ")}'`, {
-          workerIds,
-        });
-        const { rows: cancelledJobs } = await pgPool.query(
-          `
-          SELECT ${escapedWorkerSchema}.fail_job(job_queues.locked_by, jobs.id, $2)
-          FROM ${escapedWorkerSchema}.jobs
-          INNER JOIN ${escapedWorkerSchema}.job_queues ON (job_queues.queue_name = jobs.queue_name)
-          WHERE job_queues.locked_by = ANY($1::text[]) AND jobs.id = ANY($3::int[]);
-        `,
-          [workerIds, message, jobsInProgress.map((job) => job.id)],
-        );
-        logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
-          cancelledJobs,
-        });
-        logger.debug("Jobs released");
+        const workerPromises = workers.map((worker) => worker.release());
+        const workerReleaseResults = await Promise.allSettled(workerPromises);
+        const jobsToRelease: Job[] = [];
+        for (let i = 0; i < workerReleaseResults.length; i++) {
+          const workerReleaseResult = workerReleaseResults[i];
+          if (workerReleaseResult.status === "rejected") {
+            const worker = workers[i];
+            const job = worker.getActiveJob();
+            events.emit("pool:gracefulShutdown:workerError", {
+              pool: this,
+              error: workerReleaseResult.reason,
+              job,
+            });
+            logger.debug(
+              `Cancelling worker ${worker.workerId} (job: ${
+                job?.id ?? "none"
+              }) failed`,
+              {
+                worker,
+                job,
+                reason: workerReleaseResult.reason,
+              },
+            );
+            if (job) {
+              jobsToRelease.push(job);
+            }
+          }
+        }
+        if (jobsToRelease.length > 0) {
+          const workerIds = workers.map((worker) => worker.workerId);
+          logger.debug(
+            `Releasing the jobs ${jobsToRelease
+              .map((j) => j.id)
+              .join()} (workers: ${workerIds.join(", ")})`,
+            {
+              jobs: jobsToRelease,
+              workerIds,
+            },
+          );
+          const cancelledJobs = await failJobs(
+            compiledSharedOptions,
+            withPgClient,
+            workerIds,
+            jobsToRelease,
+            message,
+          );
+          logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
+            cancelledJobs,
+          });
+        }
+        events.emit("pool:gracefulShutdown:complete", { pool: this });
+        logger.debug("Graceful shutdown complete");
       } catch (e) {
         events.emit("pool:gracefulShutdown:error", { pool: this, error: e });
         logger.error(`Error occurred during graceful shutdown: ${e.message}`, {
           error: e,
         });
+        return this.forcefulShutdown(e.message);
       }
-      // Remove ourself from the list of worker pools
-      this.release();
+      terminate();
+    },
+
+    /**
+     * Stop accepting jobs and "fail" all currently running jobs.
+     */
+    async forcefulShutdown(message: string) {
+      events.emit("pool:forcefulShutdown", { pool: this, message });
+      try {
+        logger.debug(`Attempting forceful shutdown`);
+        // Stop new jobs being added
+        deactivate();
+
+        // Release all our workers' jobs
+        const jobsInProgress: Array<Job> = workers
+          .map((worker) => worker.getActiveJob())
+          .filter((job): job is Job => !!job);
+
+        // Remove all the workers - we're shutting them down manually
+        const workerPromises = workers.map((worker) => worker.release());
+        // Ignore the results, we're shutting down anyway
+        Promise.allSettled(workerPromises);
+
+        if (jobsInProgress.length > 0) {
+          const workerIds = workers.map((worker) => worker.workerId);
+          logger.debug(
+            `Releasing the jobs ${jobsInProgress
+              .map((j) => j.id)
+              .join()} (workers: ${workerIds.join(", ")})`,
+            {
+              jobs: jobsInProgress,
+              workerIds,
+            },
+          );
+          const cancelledJobs = await failJobs(
+            compiledSharedOptions,
+            withPgClient,
+            workerIds,
+            jobsInProgress,
+            message,
+          );
+          logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
+            cancelledJobs,
+          });
+        } else {
+          logger.debug("No active jobs to release");
+        }
+        events.emit("pool:forcefulShutdown:complete", { pool: this });
+        logger.debug("Forceful shutdown complete");
+      } catch (e) {
+        events.emit("pool:forcefulShutdown:error", { pool: this, error: e });
+        logger.error(`Error occurred during forceful shutdown: ${e.message}`, {
+          error: e,
+        });
+      }
+      terminate();
     },
 
     promise,
@@ -202,7 +498,7 @@ export function runTaskList(
   ) => {
     if (!active) {
       // We were released, release this new client and abort
-      releaseClient();
+      releaseClient?.();
       return;
     }
 
@@ -248,7 +544,6 @@ export function runTaskList(
         return;
       }
       errorHandled = true;
-      listenForChangesClient = null;
       try {
         release();
       } catch (e) {
@@ -260,14 +555,39 @@ export function runTaskList(
       reconnectWithExponentialBackoff(e);
     }
 
-    function handleNotification() {
-      if (listenForChangesClient === client) {
-        // Find a worker that's available
-        workers.some((worker) => worker.nudge());
+    function handleNotification(message: Notification) {
+      if (changeListener?.client === client) {
+        switch (message.channel) {
+          case "jobs:insert": {
+            // Find a worker that's available
+            workers.some((worker) => worker.nudge());
+            break;
+          }
+          case "jobs:migrate": {
+            let payload: null | { migrationNumber?: number } = null;
+            try {
+              payload = message.payload ? JSON.parse(message.payload) : null;
+            } catch (e) {
+              /* noop */
+            }
+            console.warn(
+              `Graphile Worker detected migration to database schema revision '${payload?.migrationNumber}'; it would be unsafe to continue, so shutting down...`,
+            );
+            process.exitCode = 54;
+            workerPool.gracefulShutdown();
+            break;
+          }
+          default: {
+            console.warn(
+              `Unhandled NOTIFY message on channel '${message.channel}'`,
+            );
+          }
+        }
       }
     }
 
     function release() {
+      changeListener = null;
       client.removeListener("error", onErrorReleaseClientAndTryAgain);
       client.removeListener("notification", handleNotification);
       client.query('UNLISTEN "jobs:insert"').catch(() => {
@@ -282,7 +602,7 @@ export function runTaskList(
     //----------------------------------------
 
     events.emit("pool:listen:success", { workerPool, client });
-    listenForChangesClient = client;
+    changeListener = { client, release };
     client.on("notification", handleNotification);
 
     // Subscribe to jobs:insert message
@@ -290,6 +610,9 @@ export function runTaskList(
       // Successful listen; reset attempts
       attempts = 0;
     }, onErrorReleaseClientAndTryAgain);
+    client
+      .query('LISTEN "jobs:migrate"')
+      .then(null, onErrorReleaseClientAndTryAgain);
 
     const supportedTaskNames = Object.keys(tasks);
 
@@ -319,6 +642,19 @@ export const runTaskListOnce = (
   options: WorkerOptions,
   tasks: TaskList,
   client: PoolClient,
-) =>
-  makeNewWorker(options, tasks, makeWithPgClientFromClient(client), false)
-    .promise;
+) => {
+  const withPgClient = makeWithPgClientFromClient(client);
+  const compiledSharedOptions = processSharedOptions(options);
+  const resetPromise = resetLockedAt(compiledSharedOptions, withPgClient);
+  const finalPromise = resetPromise.then(() => {
+    const worker = makeNewWorker(
+      options,
+      tasks,
+      makeWithPgClientFromClient(client),
+      false,
+    );
+    finalPromise.worker = worker;
+    return worker.promise;
+  }) as Promise<void> & { worker: Worker };
+  return finalPromise;
+};
