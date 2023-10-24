@@ -285,11 +285,11 @@ export function makeNewWorker(
           "Non error or error without message thrown.";
 
         logger.error(
-          `Failed task ${job.id} (${
-            job.task_identifier
-          }) with error ${message} (${duration.toFixed(2)}ms; attempt ${
-            job.attempts
-          } of ${job.max_attempts})${
+          `Failed task ${job.id} (${job.task_identifier}, ${duration.toFixed(
+            2,
+          )}ms, attempt ${job.attempts} of ${
+            job.max_attempts
+          }) with error '${message}'${
             stack ? `:\n  ${String(stack).replace(/\n/g, "\n  ").trim()}` : ""
           }`,
           { failure: true, job, error: err, duration },
