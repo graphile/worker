@@ -4,44 +4,47 @@ sidebar_position: 45
 toc_max_heading_level: 5
 ---
 
-A "job" is a description of a single "job to be done" stored into the database
-via the JS `addJob()` function or SQL `graphile_worker.add_job()` function.
+A &ldquo;job&rdquo; is a description of a single &ldquo;job to be done&rdquo;
+stored into the database via the JS `addJob()` function or SQL
+`graphile_worker.add_job()` function.
 
-A "task" is the type of work that a job may take, for example "send email",
-"convert image" or "process webhook". A "task identifier" is a unique name given
-to a task, for example `send_email` or `convert_image`. A "task executor" is the
-function to execute when a job with the associated task identifier is found.
+A &ldquo;task&rdquo; is the type of work that a job may take, for example
+&ldquo;send email&rdquo;, &ldquo;convert image&rdquo; or &ldquo;process
+webhook&rdquo;. A &ldquo;task identifier&rdquo; is a unique name given to a
+task, for example `send_email` or `convert_image`. A &ldquo;task executor&rdquo;
+is the function to execute when a job with the associated task identifier is
+found.
 
 ## Task executor function
 
 A task executor is a simple async JS function which: receives as input the job
 payload and a collection of helpers, does the work, and then returns. If the
 task executor returns successfully then the job is deemed a success and is
-deleted from the queue (unless this is a "batch job"). If it throws an error
-(or, equivalently, rejects the promise) then the job is deemed a failure and the
-task is rescheduled using an exponential-backoff algorithm.
+deleted from the queue (unless this is a &ldquo;batch job&rdquo;). If it throws
+an error (or, equivalently, rejects the promise) then the job is deemed a
+failure and the task is rescheduled using an exponential-backoff algorithm.
 
 Each task function is passed two arguments:
 
-- `payload` - the (JSON) payload you passed when calling
+- `payload` &mdash; the (JSON) payload you passed when calling
   `graphile_worker.add_job(...)` in the database, or `addJob(...)` via the JS
   API
-- `helpers` (see [`helpers`](#helpers) below) - an object containing:
-  - `logger` - a scoped [Logger](/docs/library/logger) instance, to aid
+- `helpers` (see [`helpers`](#helpers) below) &mdash; an object containing:
+  - `logger` &mdash; a scoped [Logger](/docs/library/logger) instance, to aid
     tracing/debugging
-  - `job` - the whole job (including `uuid`, `attempts`, etc) - you shouldn't
-    need this
-  - `withPgClient` - a helper to use to get a database client
-  - `query(sql, values)` - a convenience wrapper for
+  - `job` &mdash; the whole job (including `uuid`, `attempts`, etc) &mdash; you
+    shouldn't need this
+  - `withPgClient` &mdash; a helper to use to get a database client
+  - `query(sql, values)` &mdash; a convenience wrapper for
     `withPgClient(pgClient => pgClient.query(sql, values))`
-  - `addJob` - a helper to schedule a job
+  - `addJob` &mdash; a helper to schedule a job
 
 :::warning Important
 
 Your jobs must wait for all asynchronous work to be completed before returning,
 otherwise we might think they were successful prematurely. Every promise that a
 task executor triggers must be `await`-ed; task executors _should not_ create
-"untethered" promises.
+&ldquo;untethered&rdquo; promises.
 
 :::
 

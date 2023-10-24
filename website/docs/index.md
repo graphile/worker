@@ -14,7 +14,7 @@ The main reason behind Graphile Worker (and not a dedicated job queue) is to
 help you to keep your infrastructure simple; when you're working with a small
 number of engineers on a project, the more infrastructure you have, the more
 time you lose to maintenance of that infrastructure, so consolidating your
-infrastructure can make a lot of sense. Graphile Worker focusses on performance
+infrastructure can make a lot of sense. Graphile Worker focuses on performance
 to ensure that you can use it as a job queue until your engineering team has
 grown enough that you can afford the time to maintain a dedicated job queue.
 
@@ -58,10 +58,10 @@ you find the project useful and want to help it keep improving, please consider
 - Parallel by default
 - Adding jobs to same named queue runs them in series
 - Automatically re-attempts failed jobs with exponential back-off
-- Customisable retry count (default: 25 attempts over ~3 days)
+- Customizable retry count (default: 25 attempts over ~3 days)
 - Crontab-like scheduling feature for recurring tasks (with optional backfill)
 - Task de-duplication via unique `job_key`
-- Append data to already enqueued jobs with "batch jobs"
+- Append data to already enqueued jobs with &lsquo;batch jobs&rsquo;
 - Flexible runtime controls that can be used for complex rate limiting (e.g. via
   [graphile-worker-rate-limiter](https://github.com/politics-rewired/graphile-worker-rate-limiter))
 - Open source; liberal MIT license
