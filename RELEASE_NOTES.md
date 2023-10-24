@@ -42,6 +42,9 @@ Events: add more detail to `cron:backfill` event.
 Tasks: now use `await import(...)` rather than `require(...)`, so ESM can be
 imported.
 
+Logging: changed format of task completion/failure logs to include attempts/max
+attempts and to reduce duplicate parenthesis.
+
 ### v0.15.1
 
 Fixes issues with graceful worker shutdowns:
