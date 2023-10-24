@@ -7,8 +7,8 @@ The current version of Graphile Worker requires PostgreSQL 12+ and Node 18+[^1].
 
 Once a version of PostgreSQL or Node.js reaches end of life, we also no longer
 support it and may drop support in a minor update. Should you require support
-for an end-of-life version of one of these projects, please [get in touch about
-our commercial support options](https://graphile.org/support/).
+for an end-of-life version of one of these projects, please
+[get in touch about our commercial support options](https://graphile.org/support/).
 
 [^1]: Might work with older versions, but has not been tested.
 
