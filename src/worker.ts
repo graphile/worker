@@ -317,7 +317,11 @@ export function makeNewWorker(
           logger.info(
             `Completed task ${job.id} (${
               job.task_identifier
-            }) with success (${duration.toFixed(2)}ms)`,
+            }, ${duration.toFixed(2)}ms${
+              job.attempts > 1
+                ? `, attempt ${job.attempts} of ${job.max_attempts}`
+                : ""
+            }) with success`,
             { job, duration, success: true },
           );
         }
