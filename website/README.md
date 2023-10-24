@@ -5,20 +5,21 @@ static website generator.
 
 ### Installation
 
-Git clone the entire worker repo, not just this website directory.
+Git clone this repository.
 
-Run the yarn commands in the root folder, not `/website`.
+**IMPORTANT**: Run all commands in the **root folder** of the repository,
+**not** inside `/website`.
 
-To install:
+Install dependencies:
 
-```
-$ yarn
+```bash
+yarn
 ```
 
 ### Local Development
 
-```
-$ yarn website start
+```bash
+yarn website start
 ```
 
 This command starts a local development server and opens up a browser window.
@@ -26,9 +27,18 @@ Most changes are reflected live without having to restart the server.
 
 ### Build
 
-```
-$ yarn website build
+```bash
+yarn website build
 ```
 
 This command generates static content into the `build` directory and can be
 served using any static contents hosting service.
+
+### Deploy
+
+```bash
+yarn website deploy
+```
+
+Deploys the website to GitHub pages. Only committers can do this. At some point
+we'll automate it with GitHub actions.
