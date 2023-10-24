@@ -262,10 +262,11 @@ export function makeNewWorker(
         logger.error(
           `Failed task ${job.id} (${
             job.task_identifier
-          }) with error ${message} (${duration.toFixed(2)}ms)${
+          }) with error ${message} (${duration.toFixed(2)}ms; attempt ${
+            job.attempts
+          } of ${job.max_attempts})${
             stack ? `:\n  ${String(stack).replace(/\n/g, "\n  ").trim()}` : ""
-          }
-          attempt (${job.attempts} of ${job.max_attempts})`,
+          }`,
           { failure: true, job, error: err, duration },
         );
         // TODO: retry logic, in case of server connection interruption
