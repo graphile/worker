@@ -4,12 +4,12 @@ sidebar_position: 45
 toc_max_heading_level: 5
 ---
 
-A "job" is a description of a single "job to be done" stored into the database
+A &ldquo;job&rdquo; is a description of a single &ldquo;job to be done&rdquo; stored into the database
 via the JS `addJob()` function or SQL `graphile_worker.add_job()` function.
 
-A "task" is the type of work that a job may take, for example "send email",
-"convert image" or "process webhook". A "task identifier" is a unique name given
-to a task, for example `send_email` or `convert_image`. A "task executor" is the
+A &ldquo;task&rdquo; is the type of work that a job may take, for example &ldquo;send email&rdquo;,
+&ldquo;convert image&rdquo; or &ldquo;process webhook&rdquo;. A &ldquo;task identifier&rdquo; is a unique name given
+to a task, for example `send_email` or `convert_image`. A &ldquo;task executor&rdquo; is the
 function to execute when a job with the associated task identifier is found.
 
 ## Task executor function
