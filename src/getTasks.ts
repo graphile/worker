@@ -39,15 +39,16 @@ async function loadFileIntoTasks(
   filename: string,
   name: string | null = null,
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const replacementModule = require(filename);
-
-  if (!replacementModule) {
-    throw new Error(`Module '${filename}' doesn't have an export`);
-  }
+  const rawMod = await import(filename);
+  const mod =
+    Object.keys(rawMod).length === 1 &&
+    typeof rawMod.default === "object" &&
+    rawMod.default !== null
+      ? rawMod.default
+      : rawMod;
 
   if (name) {
-    const task = replacementModule.default || replacementModule;
+    const task = mod.default || mod;
     if (isValidTask(task)) {
       tasks[name] = task;
     } else {
@@ -61,13 +62,10 @@ async function loadFileIntoTasks(
     Object.keys(tasks).forEach((taskName) => {
       delete tasks[taskName];
     });
-    if (
-      !replacementModule.default ||
-      typeof replacementModule.default === "function"
-    ) {
-      Object.assign(tasks, validTasks(logger, replacementModule));
+    if (!mod.default || typeof mod.default === "function") {
+      Object.assign(tasks, validTasks(logger, mod));
     } else {
-      Object.assign(tasks, validTasks(logger, replacementModule.default));
+      Object.assign(tasks, validTasks(logger, mod.default));
     }
   }
 }
