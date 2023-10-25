@@ -6,12 +6,12 @@ sidebar_position: 63
 By default, Graphile Worker installs its tables and functions into a database
 schema (namespace) called `graphile_worker`, though this is configurable.
 
-## Public API is functions-only
+## Only use public APIs
 
-You should interact with Graphile Worker using the documented APIs (such as the
-[`graphile_worker.add_job()` function](/docs/sql-add-job) and the
-[administrative functions](/docs/admin-functions)). Database tables are not a
-public interface!
+You should interact with Graphile Worker using the APIs documented in this
+website (such as the [`graphile_worker.add_job()` function](/docs/sql-add-job)
+and the [administrative functions](/docs/admin-functions)). Database tables are
+not a public interface!
 
 :::warning
 

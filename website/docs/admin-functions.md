@@ -17,6 +17,15 @@ automatically ensure that the jobs are not locked before applying any changes.
 
 :::
 
+:::info
+
+These methods are not meant to be called on the currently running job from
+inside the job itself; they are administration functions intended to be called
+externally. Unless otherwise noted, these functions ignore locked jobs (which
+includes all currently running jobs).
+
+:::
+
 ## Complete jobs
 
 ```sql title="SQL API"
