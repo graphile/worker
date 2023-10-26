@@ -10,18 +10,19 @@ schema (namespace) called `graphile_worker`, though this is configurable.
 
 You should interact with Graphile Worker using the APIs documented in this
 website (such as the [`graphile_worker.add_job()` function](/docs/sql-add-job)
-and the [administrative functions](/docs/admin-functions)). Database tables are
-not a public interface!
+the [administrative functions](/docs/admin-functions), and
+[the `jobs` view](/docs/jobs-view)). Database tables are not a public interface!
 
 :::warning
 
-Do not use the various tables (`jobs`, `job_queues`, `known_crontabs`,
-`migrations`, `tasks`) directly. There are a few reasons for this:
+Do not use the various tables (`_private_jobs`, `_private_job_queues`,
+`_private_known_crontabs`, `_private_tasks`, `migrations`) directly. There are a
+few reasons for this:
 
 1. The various tables may change in a minor version, breaking your assumptions
-   (see, for example, the v0.13 ➡️ v0.14 big shift)
-2. Reading from the jobs table impacts performance of the queue &mdash;
-   especially when doing aggregates or similar
+   (see, for example, the v0.13 ➡️ v0.14 or v0.15 ➡️ v0.16 big shifts)
+2. Reading from the jobs table (or the jobs view) impacts performance of the
+   queue &mdash; especially when scanning over all records
 3. Reading from the jobs table inside a transaction prevents those jobs being
    worked on (they may be skipped over as if they don't exist) &mdash; this can
    lead to unexpected results, such as out-of-order execution.
@@ -30,21 +31,17 @@ Do not use the various tables (`jobs`, `job_queues`, `known_crontabs`,
 
 :::tip
 
-You may think reading from the `jobs` table in a read replica is safe &mdash;
-and certainly it shouldn't have the performance overhead of doing so on the
-primary &mdash; but do keep in mind that we may change the schema of the table
-in a minor update, so any code relying on the table structure can be brittle. If
-you really feel you need this, please file an issue and we can discuss if there
-might be a better way to solve the problem.
+It should be safe to read from [the `jobs` view](/docs/jobs-view) in a read
+replica, but be aware that certain data such as locking information may be out
+of date or incorrect therein.
 
 :::
 
 ## Tracking jobs
 
-Since you should not interact with the `jobs` table directly, should you need to
-track completed jobs or associate additional data with any jobs, we suggest that
-you create a "shadow" table in your own application's schema in which you can
-store additional details.
+Should you need to track completed jobs or associate additional data with any
+jobs, we suggest that you create a "shadow" table in your own application's
+schema in which you can store additional details.
 
 1. Create your own function to add jobs that delegates to
    `graphile_worker.add_job(...)` under the hood
