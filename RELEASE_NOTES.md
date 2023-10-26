@@ -5,6 +5,10 @@
 **DROPS SUPPORT FOR NODE <18**. As of 24th October 2023, Node 20 is the active
 LTS and Node 18 is maintainence LTS; previous versions are no longer supported.
 
+**RENAMES** all of the tables `*` to `_private_*` to make it clear that you
+should not rely on their schema being stable. We might change them in a patch
+release. This has always been the case, but the naming makes this clearer.
+
 **REMOVES `maxContiguousErrors`**. See #307; it wasn't fit for purpose, so best
 to remove it for now.
 
