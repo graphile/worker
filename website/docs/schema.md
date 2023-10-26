@@ -50,10 +50,12 @@ store additional details.
    `graphile_worker.add_job(...)` under the hood
 2. In your function, insert details of the job into your own "shadow" table
 3. If you want, add a reference from your "shadow" table to the
-   `graphile_worker.jobs` table but be sure to add `ON DELETE CASCADE` (to
-   delete the row) or `ON DELETE SET NULL` (to nullify the job id column). Note
-   that doing this has performance overhead for the queue, so you should be very
-   certain that you need it before doing it.
+   `graphile_worker._private_jobs` table but be sure to add `ON DELETE CASCADE`
+   (to delete the row) or `ON DELETE SET NULL` (to nullify the job id column).
+   Note that doing this has performance overhead for the queue, so you should be
+   very certain that you need it before doing it. Also this is a private table
+   so its schema is likely to change, but you're only referencing the primary
+   key here so it should be fine.
 4. Optionally, add the id of this "shadow" record into the job payload (before
    calling `graphile_worker.add_job(...)`); then you can update this "shadow"
    row from your task code. This is particularly useful to keep the end user

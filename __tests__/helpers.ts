@@ -122,14 +122,14 @@ export async function jobCount(
   const {
     rows: [row],
   } = await pgPoolOrClient.query(
-    `select count(*)::int from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
+    `select count(*)::int from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs`,
   );
   return row ? row.count || 0 : 0;
 }
 
 export async function getKnown(pgPool: pg.Pool) {
   const { rows } = await pgPool.query<KnownCrontab>(
-    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.known_crontabs`,
+    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_known_crontabs as known_crontabs`,
   );
   return rows;
 }
@@ -150,10 +150,10 @@ select
   jobs.*,
   identifier as task_identifier,
   job_queues.queue_name as queue_name
-from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs
-left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks
+from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs
+left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks as tasks
 on (tasks.id = jobs.task_id)
-left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues
+left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues as job_queues
 on (job_queues.id = jobs.job_queue_id)
 ${where ? `where ${where}\n` : ""}\
 order by jobs.id asc`,
@@ -170,7 +170,14 @@ export async function getJobQueues(pgClient: pg.Pool | pg.PoolClient) {
     locked_at: Date;
     locked_by: string;
   }>(
-    `select job_queues.*, count(jobs.*)::int as job_count from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs on (jobs.job_queue_id = job_queues.id) group by job_queues.id order by job_queues.queue_name asc`,
+    `\
+select job_queues.*, count(jobs.*)::int as job_count
+from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues as job_queues
+left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs on (
+  jobs.job_queue_id = job_queues.id
+)
+group by job_queues.id
+order by job_queues.queue_name asc`,
   );
   return rows;
 }
@@ -211,13 +218,13 @@ export async function makeSelectionOfJobs(
   ({
     rows: [lockedJob],
   } = await pgClient.query<DbJob>(
-    `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
+    `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
     [lockedJob.id],
   ));
   ({
     rows: [failedJob],
   } = await pgClient.query<DbJob>(
-    `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
+    `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
     [failedJob.id],
   ));
 

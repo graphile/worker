@@ -45,7 +45,7 @@ test("backfills if identifier already registered (5h)", () =>
     const expectedTime = now - (now % FOUR_HOURS);
     await pgPool.query(
       `
-        insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.known_crontabs (
+        insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_known_crontabs as known_crontabs (
           identifier,
           known_since,
           last_execution
@@ -99,7 +99,7 @@ test("backfills if identifier already registered (25h)", () =>
     const expectedTime = now - (now % FOUR_HOURS);
     await pgPool.query(
       `
-        insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.known_crontabs (
+        insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_known_crontabs as known_crontabs (
           identifier,
           known_since,
           last_execution

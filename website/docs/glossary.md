@@ -38,9 +38,8 @@ export const send_email: Task = async (payload, helpers) => {
 
 ## Job
 
-A record in the `graphile_worker.jobs` table which represents a single
-&ldquo;job to be done&rdquo;: which Task to execute and what parameters
-(Payload) to execute it with. Also stores additional details such as how many
+A single &ldquo;job to be done&rdquo;: which Task to execute and what parameters
+(Payload) to execute it with. Also contains additional details such as how many
 attempts it has had so far, what the max attempts are, when it will be attempted
 next, etc. Created via the [JS `addJob()`](/docs/library/add-job) or
 [SQL `graphile_worker.add_job()`](/docs/sql-add-job) function.

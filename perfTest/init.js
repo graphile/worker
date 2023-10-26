@@ -27,7 +27,7 @@ begin
     )
   );
 
-  update graphile_worker.job_queues
+  update graphile_worker._private_job_queues as job_queues
   set locked_at = now(), locked_by = 'fakelock'
   where queue_name like '${taskIdentifier}%';
 end;

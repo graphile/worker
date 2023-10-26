@@ -43,13 +43,20 @@ test("unlocks jobs for the given workers, leaves others unaffected", () =>
         { queueName: queueName ?? undefined },
       );
       await pgClient.query(
-        `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set locked_at = $1, locked_by = $2 where id = $3`,
+        `\
+update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs
+set locked_at = $1, locked_by = $2
+where id = $3`,
         [workerId ? date.toISOString() : null, workerId, job.id],
       );
       jobs.push(job);
     }
     await pgClient.query(
-      `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues set locked_at = jobs.locked_at, locked_by = jobs.locked_by from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs where jobs.job_queue_id = job_queues.id;`,
+      `\
+update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues as job_queues
+set locked_at = jobs.locked_at, locked_by = jobs.locked_by
+from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs
+where jobs.job_queue_id = job_queues.id;`,
     );
     await utils.forceUnlockWorkers([WORKER_ID_2, WORKER_ID_3]);
 
@@ -73,7 +80,7 @@ test("unlocks jobs for the given workers, leaves others unaffected", () =>
       }
     }
     const { rows: lockedQueues } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues where locked_at is not null`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues as job_queues where locked_at is not null`,
     );
 
     expect(lockedQueues).toEqual([

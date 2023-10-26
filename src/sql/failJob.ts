@@ -21,7 +21,7 @@ export async function failJob(
       client.query({
         text: `\
 with j as (
-update ${escapedWorkerSchema}.jobs
+update ${escapedWorkerSchema}._private_jobs as jobs
 set
 last_error = $2::text,
 run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
@@ -31,7 +31,7 @@ payload = coalesce($4::json, jobs.payload)
 where id = $1::bigint and locked_by = $3::text
 returning *
 )
-update ${escapedWorkerSchema}.job_queues
+update ${escapedWorkerSchema}._private_job_queues as job_queues
 set locked_by = null, locked_at = null
 from j
 where job_queues.id = j.job_queue_id and job_queues.locked_by = $3::text;`,
@@ -50,7 +50,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $3::text;`,
     await withPgClient((client) =>
       client.query({
         text: `\
-update ${escapedWorkerSchema}.jobs
+update ${escapedWorkerSchema}._private_jobs as jobs
 set
 last_error = $2::text,
 run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
@@ -89,7 +89,7 @@ export async function failJobs(
     client.query<DbJob>({
       text: `\
 with j as (
-update ${escapedWorkerSchema}.jobs
+update ${escapedWorkerSchema}._private_jobs as jobs
 set
 last_error = $2::text,
 run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
@@ -98,7 +98,7 @@ locked_at = null
 where id = any($1::int[]) and locked_by = any($3::text[])
 returning *
 ), queues as (
-update ${escapedWorkerSchema}.job_queues
+update ${escapedWorkerSchema}._private_job_queues as job_queues
 set locked_by = null, locked_at = null
 from j
 where job_queues.id = j.job_queue_id and job_queues.locked_by = any($3::text[])
