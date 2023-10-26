@@ -202,6 +202,7 @@ export function makeMockJob(taskIdentifier: string): Job {
     revision: 0,
     key: null,
     flags: null,
+    is_available: true,
   };
 }
 
@@ -210,23 +211,25 @@ export async function makeSelectionOfJobs(
   pgClient: pg.PoolClient,
 ) {
   const future = new Date(Date.now() + 60 * 60 * 1000);
-  let failedJob: DbJob = await utils.addJob("job3", { a: 1, runAt: future });
+  const failedJob: DbJob = await utils.addJob("job3", { a: 1, runAt: future });
   const regularJob1 = await utils.addJob("job3", { a: 2, runAt: future });
-  let lockedJob: DbJob = await utils.addJob("job3", { a: 3, runAt: future });
+  const lockedJob: DbJob = await utils.addJob("job3", { a: 3, runAt: future });
   const regularJob2 = await utils.addJob("job3", { a: 4, runAt: future });
   const untouchedJob = await utils.addJob("job3", { a: 5, runAt: future });
-  ({
-    rows: [lockedJob],
+  const {
+    rows: [lockedJobUpdate],
   } = await pgClient.query<DbJob>(
     `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
     [lockedJob.id],
-  ));
-  ({
-    rows: [failedJob],
+  );
+  Object.assign(lockedJob, lockedJobUpdate);
+  const {
+    rows: [failedJobUpdate],
   } = await pgClient.query<DbJob>(
     `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
     [failedJob.id],
-  ));
+  );
+  Object.assign(failedJob, failedJobUpdate);
 
   return {
     failedJob,
