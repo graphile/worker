@@ -19,11 +19,11 @@ export async function completeJob(
       client.query({
         text: `\
 with j as (
-delete from ${escapedWorkerSchema}.jobs
+delete from ${escapedWorkerSchema}._private_jobs as jobs
 where id = $1::bigint
 returning *
 )
-update ${escapedWorkerSchema}.job_queues
+update ${escapedWorkerSchema}._private_job_queues as job_queues
 set locked_by = null, locked_at = null
 from j
 where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
@@ -37,7 +37,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
     await withPgClient((client) =>
       client.query({
         text: `\
-delete from ${escapedWorkerSchema}.jobs
+delete from ${escapedWorkerSchema}._private_jobs as jobs
 where id = $1::bigint`,
         values: [job.id],
         name: noPreparedStatements ? undefined : `complete_job/${workerSchema}`,

@@ -134,7 +134,7 @@ async function scheduleCronJobs(
         from json_array_elements($1::json) with ordinality AS entries (json, index)
       ),
       locks as (
-        insert into ${escapedWorkerSchema}.known_crontabs (identifier, known_since, last_execution)
+        insert into ${escapedWorkerSchema}._private_known_crontabs as known_crontabs (identifier, known_since, last_execution)
         select
           specs.identifier,
           $2::timestamptz as known_since,
@@ -182,7 +182,7 @@ async function registerAndBackfillItems(
 ) {
   // First, scan the DB to get our starting point.
   const { rows } = await pgPool.query<KnownCrontab>(
-    `SELECT * FROM ${escapedWorkerSchema}.known_crontabs`,
+    `SELECT * FROM ${escapedWorkerSchema}._private_known_crontabs as known_crontabs`,
   );
 
   const { backfillItemsAndDates, unknownIdentifiers } =
@@ -192,7 +192,7 @@ async function registerAndBackfillItems(
     // They're known now.
     await pgPool.query(
       `
-      INSERT INTO ${escapedWorkerSchema}.known_crontabs (identifier, known_since)
+      INSERT INTO ${escapedWorkerSchema}._private_known_crontabs AS known_crontabs (identifier, known_since)
       SELECT identifier, $2::timestamptz
       FROM unnest($1::text[]) AS unnest (identifier)
       ON CONFLICT DO NOTHING

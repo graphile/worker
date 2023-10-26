@@ -153,7 +153,13 @@ test("retries job", () =>
 
     // Tell the job to be runnable
     await pgClient.query(
-      `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set run_at = now() where task_id = (select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks where identifier = 'job3')`,
+      `\
+update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs
+set run_at = now()
+where task_id = (
+  select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks as tasks
+  where identifier = 'job3'
+)`,
     );
 
     // Run the job
@@ -209,7 +215,13 @@ test("supports future-scheduled jobs", () =>
 
     // Tell the job to be runnable
     await pgClient.query(
-      `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set run_at = now() where task_id = (select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks where identifier = 'future')`,
+      `\
+update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs
+set run_at = now()
+where task_id = (
+  select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks as tasks
+  where identifier = 'future'
+)`,
     );
 
     // Run the job

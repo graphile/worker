@@ -20,15 +20,34 @@ table to scan over is an empty one!
 
 Graphile Worker automatically deletes jobs when they are complete to keep the
 jobs table small; however if a job perma-fails we leave it so that you can debug
-why it happened and handle the failure. **You should clear up perma-failed jobs
-periodically** - either figure out why they failed, fix your task executor, and
-then reduce the `attempts` number of the job so that it'll try again; or simply
-delete the jobs.
+why it happened and handle the failure.
+
+:::tip
+
+**Jobs should not perma-fail**. Your job execution code should have its own
+internal checks that recognize a repeated failure, and log it to the relevant
+place and _successfully_ exit from the task, such that Graphile Worker deletes
+the job. You should not store long term failures into the jobs table.
+
+:::
+
+**You should clear up perma-failed jobs periodically** - either figure out why
+they failed, fix your task executor, and then reduce the `attempts` number of
+the job so that it'll try again; or delete the jobs.
+
+:::warning
+
+A query like the following might be suitable for deleting the perma-failed jobs,
+but be aware that `_private_jobs` is a private table, so we may change its
+implementation even in a patch release. If you run code like the following, it
+should be ran by a human after inspecting the perma-failed jobs and figuring out
+_why_ they failed. The underlying cause should be rectified.
 
 ```sql
--- WARNING: untested!
-delete from graphile_worker.jobs where attempts = max_attempts and locked_at is null;
+delete from graphile_worker._private_jobs where attempts = max_attempts and locked_at is null;
 ```
+
+:::
 
 Jobs scheduled to run in the future can also keep the number of jobs in the jobs
 table higher, impacting peak performance. Be thoughtful about these tasks, and
