@@ -1,10 +1,10 @@
-import { Job, WorkerSharedOptions, makeWorkerUtils } from "../src";
+import { Job, makeWorkerUtils, WorkerSharedOptions } from "../src";
 import {
+  ESCAPED_GRAPHILE_WORKER_SCHEMA,
   makeSelectionOfJobs,
   reset,
-  withPgClient,
   TEST_CONNECTION_STRING,
-  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  withPgClient,
 } from "./helpers";
 
 const options: WorkerSharedOptions = {};
