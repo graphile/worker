@@ -34,7 +34,7 @@ test("migration installs schema; second migration does no harm", async () => {
     const { rows: migrationRows } = await pgClient.query(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations`,
     );
-    expect(migrationRows).toHaveLength(14);
+    expect(migrationRows).toHaveLength(15);
     const migration = migrationRows[0];
     expect(migration.id).toEqual(1);
 
@@ -89,7 +89,7 @@ test("aborts if database is more up to date than current worker", async () => {
     await expect(
       migrate(options, pgClient),
     ).rejects.toThrowErrorMatchingInlineSnapshot(
-      `"Database is using Graphile Worker schema revision 999999, but the currently running worker only supports up to revision 14. Please ensure all versions of Graphile Worker you're running are compatible."`,
+      `"Database is using Graphile Worker schema revision 999999, but the currently running worker only supports up to revision 15. Please ensure all versions of Graphile Worker you're running are compatible."`,
     );
   });
 });

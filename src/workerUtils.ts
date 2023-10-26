@@ -64,6 +64,15 @@ export async function makeWorkerUtils(
       );
       return rows;
     },
+
+    async forceUnlockWorkers(workerIds) {
+      await withPgClient((client) =>
+        client.query(
+          `select ${escapedWorkerSchema}.force_unlock_workers($1::text[]);`,
+          [workerIds],
+        ),
+      );
+    },
   };
 }
 
