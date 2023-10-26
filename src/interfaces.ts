@@ -152,6 +152,13 @@ export interface WorkerUtils extends Helpers {
       maxAttempts?: number;
     },
   ) => Promise<DbJob[]>;
+
+  /**
+   * Forcefully unlocks jobs for the given workers, leaving others unaffected.
+   * Only use this if the workers in question are no longer running (crashed,
+   * were terminated, are permanently unreachable, etc).
+   */
+  forceUnlockWorkers: (workerIds: string[]) => Promise<void>;
 }
 
 export type PromiseOrDirect<T> = Promise<T> | T;

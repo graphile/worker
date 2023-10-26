@@ -24,6 +24,9 @@ if your task doesn't need a payload).
 Adds the ability to type task payloads and `addJob()` calls (**please** read the
 caveats in the documentation before doing so).
 
+Adds the ability to unlock all jobs from a list of crashed/terminated worker
+IDs: `force_unlock_workers`.
+
 Adds support for `graphile-config` - configuration can now be read from a
 `graphile.config.ts` (or `.js`, `.cjs`, etc) file.
 

@@ -58,8 +58,6 @@ requested).
 
 ## Rescheduling jobs
 
-SQL:
-
 ```sql title="SQL API"
 SELECT * FROM graphile_worker.reschedule_jobs(
   ARRAY[7, 99, 38674, ...],
@@ -89,3 +87,39 @@ left unmodified.
 This method can be used to postpone or advance job execution, or to schedule a
 previously failed or permanently failed job for execution. The updated jobs will
 be returned (note that this may be fewer jobs than you requested).
+
+## Force unlock workers
+
+(Since v0.16)
+
+If a worker crashes or is otherwise terminated without unlocking its jobs, then
+those jobs will remain locked for 4 hours before they can be re-attempted. If
+you have a system in place that can determine this has happened (for example a
+heartbeat server, or the process that runs Graphile Worker notices that it has
+exited) then you can use the "force unlock workers" functionality to unlock all
+of the jobs from the given list of worker IDs.
+
+```sql title="SQL API"
+SELECT graphile_worker.force_unlock_workers(ARRAY[
+  'worker-0d069f0d6be41d1adb',
+  'worker-cd357d05e3382cd169'
+]);
+```
+
+```ts title="JS API"
+await workerUtils.forceUnlockWorkers([
+  "worker-0d069f0d6be41d1adb",
+  "worker-cd357d05e3382cd169",
+]);
+```
+
+:::warning
+
+The **only** legitimate reason to manually unlock a job is if the worker has
+crashed/died/exited/ceased to exist; in all other cases it's almost certainly
+the wrong thing to do. That is why this method relates to unlocking any jobs
+from the given list of crashed workers (rather than unlocking jobs directly via
+their IDs/keys). Do **NOT** pass any alive worker ids to this method or Bad
+Things may happen.
+
+:::

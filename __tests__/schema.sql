@@ -207,33 +207,15 @@ CREATE FUNCTION graphile_worker.complete_jobs(job_ids bigint[]) RETURNS SETOF gr
     )
     returning *;
 $$;
-CREATE FUNCTION graphile_worker.jobs__decrease_job_queue_count() RETURNS trigger
-    LANGUAGE plpgsql
+CREATE FUNCTION graphile_worker.force_unlock_workers(worker_ids text[]) RETURNS void
+    LANGUAGE sql
     AS $$
-declare
-  v_new_job_count int;
-begin
-  update "graphile_worker".job_queues
-    set job_count = job_queues.job_count - 1
-    where queue_name = old.queue_name
-    returning job_count into v_new_job_count;
-  if v_new_job_count <= 0 then
-    delete from "graphile_worker".job_queues where queue_name = old.queue_name and job_count <= 0;
-  end if;
-  return old;
-end;
-$$;
-CREATE FUNCTION graphile_worker.jobs__increase_job_queue_count() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-begin
-  insert into "graphile_worker".job_queues(queue_name, job_count)
-    values(new.queue_name, 1)
-    on conflict (queue_name)
-    do update
-    set job_count = job_queues.job_count + 1;
-  return new;
-end;
+update "graphile_worker".jobs
+set locked_at = null, locked_by = null
+where locked_by = any(worker_ids);
+update "graphile_worker".job_queues
+set locked_at = null, locked_by = null
+where locked_by = any(worker_ids);
 $$;
 CREATE FUNCTION graphile_worker.permanently_fail_jobs(job_ids bigint[], error_message text DEFAULT NULL::text) RETURNS SETOF graphile_worker.jobs
     LANGUAGE sql
@@ -297,14 +279,6 @@ CREATE FUNCTION graphile_worker.reschedule_jobs(job_ids bigint[], run_at timesta
       locked_at < NOW() - interval '4 hours'
     )
     returning *;
-$$;
-CREATE FUNCTION graphile_worker.tg__update_timestamp() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-begin
-  new.updated_at = greatest(now(), old.updated_at + interval '1 millisecond');
-  return new;
-end;
 $$;
 CREATE FUNCTION graphile_worker.tg_jobs__after_insert() RETURNS trigger
     LANGUAGE plpgsql
