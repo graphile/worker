@@ -9,6 +9,9 @@ LTS and Node 18 is maintainence LTS; previous versions are no longer supported.
 should not rely on their schema being stable. We might change them in a patch
 release. This has always been the case, but the naming makes this clearer.
 
+**ADDS** `graphile_worker.jobs` view as a public interface to view details of
+jobs. NOTE: this interface DELIBERATELY excludes the `payload` field.
+
 **REMOVES `maxContiguousErrors`**. See #307; it wasn't fit for purpose, so best
 to remove it for now.
 
