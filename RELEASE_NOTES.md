@@ -37,6 +37,13 @@ IDs: `force_unlock_workers`.
 Adds support for `graphile-config` - configuration can now be read from a
 `graphile.config.ts` (or `.js`, `.cjs`, etc) file.
 
+Adds support for loading tasks from nested folders
+(`tasks/users/email/verify.js` will identify task `users/email/verify`).
+
+Adds support for loading `.cjs` and `.mjs` files.
+
+Adds pluggable task loaders.
+
 Crontab: now supports `jobKey` and `jobKeyMode` opts (thanks @spiffytech!)
 
 Signals: now releases signal handlers when shut down via the API.
