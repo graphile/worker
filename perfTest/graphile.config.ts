@@ -1,4 +1,4 @@
-import { GraphileConfig } from "graphile-config";
+import "graphile-config";
 
 import type {} from "../src/index.js";
 
