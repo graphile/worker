@@ -66,8 +66,8 @@ main().catch((err) => {
 });
 ```
 
-We recommend building one instance of WorkerUtils and sharing it as a singleton
-throughout your code.
+We recommend building one instance of `WorkerUtils` and sharing it as a
+singleton throughout your code.
 
 ## `WorkerUtilsOptions`
 
@@ -83,14 +83,14 @@ throughout your code.
 
 A `WorkerUtils` instance has the following methods:
 
-- `addJob(name: string, payload: JSON, spec: TaskSpec)` - a method you can call
-  to enqueue a job, see [addJob](#addjob).
-- `migrate()` - a method you can call to update the graphile-worker database
-  schema; returns a promise.
-- `release()` - call this to release the `WorkerUtils` instance. It's typically
-  best to use `WorkerUtils` as a singleton, so you often won't need this, but
-  it's useful for tests or processes where you want Node to exit cleanly when
-  it's done.
+- `addJob(name: string, payload: JSON, spec: TaskSpec)` &mdash; a method you can
+  call to enqueue a job, see [addJob](./add-job.md).
+- `migrate()` &mdash; a method you can call to update the graphile-worker
+  database schema; returns a promise.
+- `release()` &mdash; call this to release the `WorkerUtils` instance. It&apos;s
+  typically best to use `WorkerUtils` as a singleton, so you often won&apos;t
+  need this, but it&apos;s useful for tests or processes where you want Node to
+  exit cleanly when it&apos;s done.
 
 ## `quickAddJob()`
 
@@ -98,11 +98,11 @@ A `WorkerUtils` instance has the following methods:
 function quickAddJob(options: WorkerUtilsOptions, ...addJobArgs): Promise<Job>;
 ```
 
-If you want to quickly add a job and you don't mind the cost of opening a DB
-connection pool and then cleaning it up right away _for every job added_,
-there's the `quickAddJob` convenience function. It takes the same options as
-`makeWorkerUtils` as the first argument; the remaining arguments are for
-[`addJob`](#addjob).
+If you want to quickly add a job and you don&apos;t mind the cost of opening a
+DB connection pool and then cleaning it up right away _for every job added_,
+there&apos;s the `quickAddJob` convenience function. It takes the same options
+as `makeWorkerUtils` as the first argument; the remaining arguments are for
+[`addJob`](./add-job.md).
 
 :::tip
 

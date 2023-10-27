@@ -89,7 +89,7 @@ quickAddJob(
 Though `quickAddJob` is a quick and easy way for you to add a one-off job, it is
 not the recommended to use it in your main application due to inefficiency. It's
 fine for one-off scripts like this, but in your main application you should use
-[WorkerUtils](/docs/library/queue#makeworkerutils)' `addJob` method..
+[WorkerUtils](/docs/library/queue#workerutils)&apos; `addJob` method..
 
 :::
 
