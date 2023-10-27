@@ -1,5 +1,5 @@
 import { Stats } from "node:fs";
-import { readdir, realpath, stat } from "node:fs/promises";
+import { lstat, readdir, realpath } from "node:fs/promises";
 import { join as pathJoin } from "node:path";
 
 import { tryStat } from "./fs";
@@ -159,7 +159,7 @@ async function getTasksFromDirectory(
   await Promise.all(
     entries.map(async (entry) => {
       const fullPath = pathJoin(taskPath, ...subpath, entry);
-      const stats = await stat(fullPath);
+      const stats = await lstat(fullPath);
       if (stats.isDirectory()) {
         if (DIRECTORY_REGEXP.test(entry)) {
           await getTasksFromDirectory(
@@ -176,7 +176,7 @@ async function getTasksFromDirectory(
       } else if (stats.isSymbolicLink()) {
         // Must be a symbolic link to a file, otherwise ignore
         const symlinkTarget = await realpath(fullPath);
-        const targetStats = await stat(symlinkTarget);
+        const targetStats = await lstat(symlinkTarget);
         if (targetStats.isFile() && !targetStats.isSymbolicLink()) {
           maybeAddFile(
             compiledSharedOptions,
