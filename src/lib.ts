@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import { EventEmitter } from "events";
-import { resolvePresets } from "graphile-config";
+import { AsyncHooks, applyHooks, resolvePresets } from "graphile-config";
 import { Client, Pool, PoolClient } from "pg";
 
 import { defaults } from "./config";
@@ -15,6 +15,7 @@ import {
 } from "./interfaces";
 import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
+import { defaultPlugins } from "./defaultPlugins";
 
 export interface CompiledSharedOptions {
   events: WorkerEvents;
@@ -25,6 +26,7 @@ export interface CompiledSharedOptions {
   minResetLockedInterval: number;
   maxResetLockedInterval: number;
   options: SharedOptions;
+  hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
 }
 
 interface ProcessSharedOptionsSettings {
@@ -45,6 +47,7 @@ export function processSharedOptions(
       useNodeTime = false,
       minResetLockedInterval = 8 * MINUTE,
       maxResetLockedInterval = 10 * MINUTE,
+      plugins = defaultPlugins,
     } = options;
     const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
     if (
@@ -57,6 +60,7 @@ export function processSharedOptions(
         `Invalid values for minResetLockedInterval (${minResetLockedInterval})/maxResetLockedInterval (${maxResetLockedInterval})`,
       );
     }
+    const hooks = new AsyncHooks<GraphileConfig.WorkerHooks>();
     compiled = {
       events,
       logger,
@@ -66,7 +70,23 @@ export function processSharedOptions(
       minResetLockedInterval,
       maxResetLockedInterval,
       options,
+      hooks,
     };
+    applyHooks(
+      // TODO: when `graphile-config` updates to allow readonly Plugin[], remove the cast
+      plugins as GraphileConfig.Plugin[],
+      (p) => p.worker?.hooks,
+      (name, fn, _plugin) => {
+        const context = {
+          compiledSharedOptions: compiled,
+        };
+
+        (hooks.hook as any)(
+          name as any,
+          ((...args: any[]) => (fn as any)(context, ...args)) as any,
+        );
+      },
+    );
     _sharedOptionsCache.set(options, compiled);
   }
   if (scope) {
@@ -253,6 +273,7 @@ export function digestPreset(preset: GraphileConfig.Preset) {
     pollInterval,
     connectionString,
     noPreparedStatements: !preparedStatements,
+    plugins: resolvedPreset.plugins,
   };
 
   return {

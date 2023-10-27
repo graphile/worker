@@ -75,28 +75,42 @@ module.exports = async (payload, helpers) => {
 
 ## The `tasks/` folder
 
-Out of the box, `graphile-worker` will automatically look for `.js` files inside
-the `tasks/` folder inside the working directory in which `graphile-worker` is
-executed, and will load them as tasks. The name of the file (less the `.js`
-suffix) is used as the &ldquo;task identifier&rdquo;, and the `module.exports`
-is used as the task executor function.
+When you run `graphile-worker`, it will look in the current directory for a
+folder called `tasks`, and it will recursively look for files suitable to run as
+tasks. File names excluding the extension and folder names must only use
+alphanumeric characters, underscores and dashes (`/^[A-Za-z0-9_-]+$/`) to be
+recognized. Graphile Worker will then attempt to load the file as a task
+executor; the task identifier for this will be all the folders and the file name
+(excluding the extension) joined with `/` characters; e.g.
+`tasks/send_notification.js` would get the identifier `send_notification` and
+`tasks/users/emails/verify.js` would get the identifier `users/emails/verify`.
+How the file is loaded as a task executor will depend on the file in question
+and the plugins you have loaded.
 
 ```
 current directory
 ├── package.json
 ├── node_modules
 └── tasks
-    ├── task_1.js
-    └── task_2.js
+    ├── send_notification.js
+    ├── generate_pdf.js
+    └── users
+        ├── congratulate.js
+        └── emails
+            ├── verify.js
+            └── send_otp.js
 ```
 
-:::note
+### Loading task files
 
-Currently only `.js` files that can be directly loaded by Node.js are supported;
-if you are using Babel, TypeScript or similar you will need to compile your
-tasks into the `tasks` folder.
+Out of the box, Graphile Worker will load `.js`, `.cjs` and `.mjs` files using
+the `import()` function. If the file is a CommonJS module then Worker will
+expect `module.exports` to be the task executor function; if the file is an
+ECMAScript module (ESM) then Worker will expect the default export to be the
+task executor function.
 
-:::
+Via plugins, support for other ways of loading task files can be added; look at
+the source code of `LoadTaskFromJsPlugin.ts` for inspiration.
 
 ## Handling batch jobs
 

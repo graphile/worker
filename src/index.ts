@@ -1,5 +1,8 @@
+import { PluginHook } from "graphile-config";
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
+import { FileDetails, Task } from "./interfaces";
+import { CompiledSharedOptions } from "./lib";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
 export * from "./interfaces";
 export { digestPreset } from "./lib";
@@ -16,7 +19,19 @@ export { makeWorkerUtils, quickAddJob } from "./workerUtils";
 export { getTasks };
 export { getCronItems };
 
+export interface WorkerPluginContext {
+  compiledSharedOptions: CompiledSharedOptions;
+}
+
+export type PromiseOrDirect<T> = T | Promise<T>;
+
 declare global {
+  namespace GraphileWorker {
+    interface Tasks {
+      /* extend this through declaration merging */
+    }
+  }
+
   namespace GraphileConfig {
     interface WorkerOptions {
       /**
@@ -64,6 +79,29 @@ declare global {
     }
     interface Preset {
       worker?: WorkerOptions;
+    }
+
+    interface Plugin {
+      worker?: {
+        hooks?: {
+          [key in keyof WorkerHooks]?: PluginHook<
+            WorkerHooks[key] extends (...args: infer UArgs) => infer UResult
+              ? (info: WorkerPluginContext, ...args: UArgs) => UResult
+              : never
+          >;
+        };
+      };
+    }
+    interface WorkerHooks {
+      loadTaskFromFiles(
+        mutableEvent: {
+          handler?: Task;
+        },
+        details: {
+          taskIdentifier: string;
+          fileDetailsList: readonly FileDetails[];
+        },
+      ): PromiseOrDirect<void>;
     }
   }
 }

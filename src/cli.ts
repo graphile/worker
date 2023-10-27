@@ -8,6 +8,7 @@ import getTasks from "./getTasks";
 import { run, runOnce } from "./index";
 import { digestPreset } from "./lib";
 import { runMigrations } from "./runner";
+import { defaultPlugins } from "./defaultPlugins";
 
 const argv = yargs
   .parserConfiguration({
@@ -106,17 +107,22 @@ async function main() {
   const userPreset = await loadConfig(argv.config);
   const ONCE = argv.once;
   const SCHEMA_ONLY = argv["schema-only"];
+
+  if (SCHEMA_ONLY && ONCE) {
+    throw new Error("Cannot specify both --once and --schema-only");
+  }
+
   const {
     runnerOptions: options,
     tasksFolder,
     crontabFile,
   } = digestPreset({
-    extends: [...(userPreset ? [userPreset] : []), argvToPreset(argv)],
+    extends: [
+      { plugins: defaultPlugins },
+      ...(userPreset ? [userPreset] : []),
+      argvToPreset(argv),
+    ],
   });
-
-  if (SCHEMA_ONLY && ONCE) {
-    throw new Error("Cannot specify both --once and --schema-only");
-  }
 
   if (!options.connectionString) {
     throw new Error(
