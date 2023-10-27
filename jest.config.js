@@ -5,5 +5,9 @@ module.exports = {
   },
   testRegex: "(/__tests__/.*\\.(test|spec))\\.[tj]sx?$",
   moduleFileExtensions: ["ts", "js", "json"],
+  extensionsToTreatAsEsm: [".ts"],
+  moduleNameMapper: {
+    "^(\\.{1,2}/.*)\\.js$": "$1",
+  },
   testEnvironment: "node",
 };
