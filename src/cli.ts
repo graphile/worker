@@ -3,12 +3,12 @@ import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
 import { defaults } from "./config";
+import { defaultPlugins } from "./defaultPlugins";
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
 import { run, runOnce } from "./index";
 import { digestPreset } from "./lib";
 import { runMigrations } from "./runner";
-import { defaultPlugins } from "./defaultPlugins";
 
 const argv = yargs
   .parserConfiguration({

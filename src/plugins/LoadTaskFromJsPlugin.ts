@@ -1,6 +1,7 @@
 import { GraphileConfig } from "graphile-config";
-import { version } from "../version.js";
+
 import { isValidTask } from "../index.js";
+import { version } from "../version.js";
 
 export const LoadTaskFromJsPlugin: GraphileConfig.Plugin = {
   name: "LoadTaskFromJsPlugin",

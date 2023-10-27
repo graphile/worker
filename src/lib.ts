@@ -1,10 +1,11 @@
 import * as assert from "assert";
 import { EventEmitter } from "events";
-import { AsyncHooks, applyHooks, resolvePresets } from "graphile-config";
+import { applyHooks, AsyncHooks, resolvePresets } from "graphile-config";
 import { Client, Pool, PoolClient } from "pg";
 
 import { defaults } from "./config";
 import { MINUTE } from "./cronConstants";
+import { defaultPlugins } from "./defaultPlugins";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
 import {
   AddJobFunction,
@@ -15,7 +16,6 @@ import {
 } from "./interfaces";
 import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
-import { defaultPlugins } from "./defaultPlugins";
 
 export interface CompiledSharedOptions {
   events: WorkerEvents;
@@ -81,10 +81,8 @@ export function processSharedOptions(
           compiledSharedOptions: compiled,
         };
 
-        (hooks.hook as any)(
-          name as any,
-          ((...args: any[]) => (fn as any)(context, ...args)) as any,
-        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        hooks.hook(name, ((...args: any[]) => fn(context, ...args)) as any);
       },
     );
     _sharedOptionsCache.set(options, compiled);
