@@ -1,7 +1,9 @@
 import { GraphileConfig } from "graphile-config";
 
-import { isValidTask } from "../index.js";
+import { FileDetails, isValidTask } from "../index.js";
 import { version } from "../version.js";
+
+const DEFAULT_EXTENSIONS = [".js", ".mjs", ".cjs"];
 
 export const LoadTaskFromJsPlugin: GraphileConfig.Plugin = {
   name: "LoadTaskFromJsPlugin",
@@ -9,7 +11,10 @@ export const LoadTaskFromJsPlugin: GraphileConfig.Plugin = {
 
   worker: {
     hooks: {
-      async loadTaskFromFiles(_info, mutableEvent, details) {
+      async loadTaskFromFiles(info, mutableEvent, details) {
+        const {
+          compiledSharedOptions: { resolvedPreset },
+        } = info;
         const { fileDetailsList } = details;
 
         if (mutableEvent.handler) {
@@ -17,10 +22,20 @@ export const LoadTaskFromJsPlugin: GraphileConfig.Plugin = {
           return;
         }
 
-        const jsFile =
-          fileDetailsList.find((d) => d.extension === ".js") ||
-          fileDetailsList.find((d) => d.extension === ".mjs") ||
-          fileDetailsList.find((d) => d.extension === ".cjs");
+        let jsFile: FileDetails | undefined = undefined;
+        const extensions =
+          resolvedPreset?.worker?.fileExtensions ?? DEFAULT_EXTENSIONS;
+
+        // Find a matching file in extension priority order
+        outerloop: for (const extension of extensions) {
+          for (const fileDetails of fileDetailsList) {
+            if (fileDetails.extension === extension) {
+              jsFile = fileDetails;
+              break outerloop;
+            }
+          }
+        }
+
         if (!jsFile) {
           // Don't know how to handle; skip
           return;

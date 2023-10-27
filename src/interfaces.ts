@@ -516,7 +516,7 @@ export interface SharedOptions {
    */
   maxResetLockedInterval?: number;
 
-  plugins?: readonly GraphileConfig.Plugin[];
+  preset?: GraphileConfig.Preset;
 }
 
 /**

@@ -77,6 +77,13 @@ declare global {
        * @defaultValue `1`
        */
       concurrentJobs?: number;
+
+      /**
+       * A list of file extensions (in priority order) that Graphile Worker
+       * should attempt to import directly when loading tasks. Defaults to
+       * `[".js", ".cjs", ".mjs"]`.
+       */
+      fileExtensions?: string[];
     }
     interface Preset {
       worker?: WorkerOptions;

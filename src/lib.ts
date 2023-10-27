@@ -27,6 +27,7 @@ export interface CompiledSharedOptions {
   maxResetLockedInterval: number;
   options: SharedOptions;
   hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
+  resolvedPreset?: GraphileConfig.ResolvedPreset;
 }
 
 interface ProcessSharedOptionsSettings {
@@ -47,8 +48,9 @@ export function processSharedOptions(
       useNodeTime = false,
       minResetLockedInterval = 8 * MINUTE,
       maxResetLockedInterval = 10 * MINUTE,
-      plugins = defaultPlugins,
+      preset,
     } = options;
+    const resolvedPreset = preset ? resolvePresets([preset]) : {};
     const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
     if (
       !Number.isFinite(minResetLockedInterval) ||
@@ -71,15 +73,13 @@ export function processSharedOptions(
       maxResetLockedInterval,
       options,
       hooks,
+      resolvedPreset,
     };
     applyHooks(
-      // TODO: when `graphile-config` updates to allow readonly Plugin[], remove the cast
-      plugins as GraphileConfig.Plugin[],
+      resolvedPreset.plugins ?? defaultPlugins,
       (p) => p.worker?.hooks,
       (name, fn, _plugin) => {
-        const context = {
-          compiledSharedOptions: compiled,
-        };
+        const context = { compiledSharedOptions: compiled };
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         hooks.hook(name, ((...args: any[]) => fn(context, ...args)) as any);
@@ -271,7 +271,7 @@ export function digestPreset(preset: GraphileConfig.Preset) {
     pollInterval,
     connectionString,
     noPreparedStatements: !preparedStatements,
-    plugins: resolvedPreset.plugins,
+    preset: resolvedPreset,
   };
 
   return {

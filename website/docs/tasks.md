@@ -112,6 +112,43 @@ task executor function.
 Via plugins, support for other ways of loading task files can be added; look at
 the source code of `LoadTaskFromJsPlugin.ts` for inspiration.
 
+### Loading TypeScript files
+
+:::tip
+
+For performance and memory usage reasons, we recommend that you compile
+TypeScript files to JS and then have Graphile Worker load the JS files.
+
+:::
+
+To load TypeScript files directly as tasks (without precompilation), one way is
+to:
+
+1. install `ts-node`,
+2. add `".ts"` to the `worker.fileExtensions` list in your `graphile.config.ts`,
+3. run Graphile Worker with the environmental variable
+   `NODE_OPTIONS="--loader ts-node/esm"` set.
+
+```ts title="Example graphile.config.ts"
+import type { GraphileConfig } from "graphile-config";
+import type {} from "graphile-worker";
+
+const preset: GraphileConfig.Preset = {
+  worker: {
+    connectionString: process.env.DATABASE_URL,
+    concurrentJobs: 5,
+    fileExtensions: [".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"],
+  },
+};
+
+export default preset;
+```
+
+```bash title="Running graphile-worker with '--loader ts-node/esm'"
+NODE_OPTIONS="--loader ts-node/esm" graphile-worker -c ...
+# OR: node --loader ts-node/esm node_modules/.bin/graphile-worker -c ...
+```
+
 ## Handling batch jobs
 
 If the payload is an array, then _optionally_ your task may choose to return an
