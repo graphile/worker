@@ -1,6 +1,6 @@
-import { Stats } from "node:fs";
-import { lstat, readdir, realpath } from "node:fs/promises";
-import { join as pathJoin } from "node:path";
+import { Stats } from "fs";
+import { lstat, readdir, realpath } from "fs/promises";
+import { join as pathJoin } from "path";
 
 import { tryStat } from "./fs";
 import {

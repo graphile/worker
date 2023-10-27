@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { stat } from "fs/promises";
 
 export async function tryStat(pathToStat: string) {
   try {
