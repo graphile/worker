@@ -153,4 +153,4 @@ increasing contention over the pool of database clients.
 await helpers.addJob(identifier, payload, options);
 ```
 
-See [`addJob`](/library/addjob.md)
+See [`addJob`](/library/add-job.md).
