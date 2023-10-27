@@ -15,6 +15,7 @@
     "db:dump": "./scripts/dump_db",
     "perfTest": "cd perfTest && node ./run.js",
     "preversion": "grep '^### Pending' RELEASE_NOTES.md && echo \"⚠️ Cannot publish with 'Pending' in RELEASE_NOTES ⚠️\" && exit 1 || true",
+    "postversion": "node scripts/postversion.mjs",
     "website": "cd website && yarn run"
   },
   "bin": {
