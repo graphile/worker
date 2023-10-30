@@ -345,6 +345,7 @@ export function runTaskList(
 
   // This is a representation of us that can be interacted with externally
   const workerPool: WorkerPool = {
+    _shuttingDown: false,
     release: async () => {
       console.trace(
         "DEPRECATED: You are calling `workerPool.release()`; please use `workerPool.gracefulShutdown()` instead.",
@@ -359,6 +360,14 @@ export function runTaskList(
     async gracefulShutdown(
       message = "Worker pool is shutting down gracefully",
     ) {
+      if (workerPool._shuttingDown) {
+        logger.error(
+          `gracefulShutdown called when gracefulShutdown is already in progress`,
+        );
+        return;
+      }
+      workerPool._shuttingDown = true;
+
       events.emit("pool:gracefulShutdown", { pool: this, message });
       try {
         logger.debug(`Attempting graceful shutdown`);

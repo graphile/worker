@@ -380,6 +380,8 @@ export interface WorkerPool {
   gracefulShutdown: (message?: string) => Promise<void>;
   forcefulShutdown: (message: string) => Promise<void>;
   promise: Promise<void>;
+  /** @internal */
+  readonly _shuttingDown: boolean;
 }
 
 export interface Runner {
