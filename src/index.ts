@@ -103,6 +103,11 @@ declare global {
     }
     interface WorkerHooks {
       /**
+       * Called when Graphile Worker starts up.
+       */
+      init(): PromiseOrDirect<void>;
+
+      /**
        * Used to build a given `taskIdentifier`'s handler given a list of files,
        * if possible.
        */

@@ -90,6 +90,7 @@ export function processSharedOptions(
       },
     );
     _sharedOptionsCache.set(options, compiled);
+    hooks.process("init");
   }
   if (scope) {
     return {
