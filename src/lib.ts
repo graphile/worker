@@ -16,6 +16,7 @@ import {
 } from "./interfaces";
 import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
+import { EMPTY_PRESET } from "./preset";
 
 export interface CompiledSharedOptions {
   events: WorkerEvents;
@@ -33,8 +34,6 @@ export interface CompiledSharedOptions {
 interface ProcessSharedOptionsSettings {
   scope?: LogScope;
 }
-
-export const EMPTY_PRESET: GraphileConfig.Preset = Object.freeze({});
 
 const _sharedOptionsCache = new WeakMap<SharedOptions, CompiledSharedOptions>();
 export function processSharedOptions(

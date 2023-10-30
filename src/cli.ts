@@ -6,8 +6,8 @@ import { defaults } from "./config";
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
 import { run, runOnce } from "./index";
-import { digestPreset, EMPTY_PRESET } from "./lib";
-import { WorkerPreset } from "./preset";
+import { digestPreset } from "./lib";
+import { EMPTY_PRESET, WorkerPreset } from "./preset";
 import { runMigrations } from "./runner";
 
 const argv = yargs

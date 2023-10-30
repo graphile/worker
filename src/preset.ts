@@ -15,3 +15,5 @@ export const WorkerPreset: GraphileConfig.Preset = {
     fileExtensions: [".js", ".cjs", ".mjs"],
   },
 };
+
+export const EMPTY_PRESET: GraphileConfig.Preset = Object.freeze({});
