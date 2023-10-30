@@ -16,8 +16,8 @@ npx graphile-worker -c "postgres:///my_db"
 
 :::tip
 
-`npx` looks for the `graphile-worker` binary locally; it's often better to use
-the `"scripts"` entry in `package.json` instead.
+`npx` looks for the `graphile-worker` binary locally; it&apos;s often better to
+use the `"scripts"` entry in `package.json` instead.
 
 :::
 
@@ -70,7 +70,7 @@ postgres://[user]:[pass]@[host]:[port]/[databaseName]?[parameter]=[value]
 
 Where each of the `[...]` placeholders are optional. Here are some examples:
 
-- `postgres:///my_db` - connect to database `my_db` on the default host
+- `postgres:///my_db` &mdash; connect to database `my_db` on the default host
   (localhost) and default port (5432)
 - `postgres://127.0.0.1/my_db`
 - `postgres://127.0.0.1:5432/my_db`

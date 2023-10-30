@@ -14,16 +14,16 @@ schedule. This is designed for recurring tasks such as sending a weekly email,
 running database maintenance tasks every day, performing data roll-ups hourly,
 downloading external data every 20 minutes, etc.
 
-Graphile Worker's crontab support:
+Graphile Worker&apos;s crontab support:
 
 - guarantees (thanks to ACID-compliant transactions) that no duplicate task
   schedules will occur
-- can backfill missed jobs if desired (e.g. if the Worker wasn't running when
-  the job was due to be scheduled)
-- schedules tasks using Graphile Worker's regular job queue, so you get all the
-  regular features such as exponential back-off on failure.
-- works reliably even if you're running multiple workers (see "Distributed
-  crontab" below)
+- can backfill missed jobs if desired (e.g. if the Worker wasn&apos;t running
+  when the job was due to be scheduled)
+- schedules tasks using Graphile Worker&apos;s regular job queue, so you get all
+  the regular features such as exponential back-off on failure.
+- works reliably even if you&apos;re running multiple workers (see
+  &ldquo;Distributed crontab&rdquo; below)
 
 :::note
 
@@ -36,8 +36,8 @@ multiple users) if necessary.
 
 Tasks are by default read from a `crontab` file next to the `tasks/` folder (but
 this is configurable in library mode). Please note that our syntax is not 100%
-compatible with cron's, and our task payload differs. We only handle timestamps
-in UTC.
+compatible with cron&apos;s, and our task payload differs. We only handle
+timestamps in UTC.
 
 ## `crontab` format
 
@@ -73,29 +73,29 @@ and hyphen). It should be the name of one of your Graphile Worker tasks.
 
 The `opts` must always be prefixed with a `?` if provided and details
 configuration for the task such as what should be done in the event that the
-previous event was not scheduled (e.g. because the Worker wasn't running).
+previous event was not scheduled (e.g. because the Worker wasn&apos;t running).
 Options are specified using HTTP query string syntax (with `&` separator).
 
 Currently we support the following `opts`:
 
 - `id=UID` where UID is a unique alphanumeric case-sensitive identifier starting
-  with a letter - specify an identifier for this crontab entry; by default this
-  will use the task identifier, but if you want more than one schedule for the
-  same task (e.g. with different payload, or different times) then you will need
-  to supply a unique identifier explicitly.
-- `fill=t` where `t` is a "time phrase" (see below) - backfill any entries from
-  the last time period `t`, for example if the worker was not running when they
-  were due to be executed (by default, no backfilling).
-- `max=n` where `n` is a small positive integer - override the `max_attempts` of
-  the job.
-- `queue=name` where `name` is an alphanumeric queue name - add the job to a
-  named queue so it executes serially.
-- `jobKey=key` where `key` is any valid job key - replace/update the existing
-  job with this key, if present
-- `jobKeyMode=replace|preserve_run_at` - if `jobKey` is specified, affects what
-  it does
-- `priority=n` where `n` is a relatively small integer - override the priority
-  of the job.
+  with a letter &mdash; specify an identifier for this crontab entry; by default
+  this will use the task identifier, but if you want more than one schedule for
+  the same task (e.g. with different payload, or different times) then you will
+  need to supply a unique identifier explicitly.
+- `fill=t` where `t` is a &ldquo;time phrase&rdquo; (see below) &mdash; backfill
+  any entries from the last time period `t`, for example if the worker was not
+  running when they were due to be executed (by default, no backfilling).
+- `max=n` where `n` is a small positive integer &mdash; override the
+  `max_attempts` of the job.
+- `queue=name` where `name` is an alphanumeric queue name &mdash; add the job to
+  a named queue so it executes serially.
+- `jobKey=key` where `key` is any valid job key &mdash; replace/update the
+  existing job with this key, if present.
+- `jobKeyMode=replace|preserve_run_at` &mdash; if `jobKey` is specified, affects
+  what it does.
+- `priority=n` where `n` is a relatively small integer &mdash; override the
+  priority of the job.
 
 :::warning
 
@@ -148,12 +148,12 @@ the value being an object with the following entries:
 ## Distributed crontab
 
 **TL;DR**: when running identical crontabs on multiple workers no special action
-is necessary - it Just Works :tm:
+is necessary &mdash; it Just Works :tm:
 
 When you run multiple workers with the same crontab files then the first worker
 that attempts to queue a particular cron job will succeed and the other workers
-will take no action - this is thanks to SQL ACID-compliant transactions and our
-`known_crontabs` lock table.
+will take no action &mdash; this is thanks to SQL ACID-compliant transactions
+and our `known_crontabs` lock table.
 
 If your workers have different crontabs then you must be careful to ensure that
 the cron items each have unique identifiers; the easiest way to do this is to
@@ -189,11 +189,12 @@ The following triggers the `rollup` task every 4 hours on the hour:
 When you ask Graphile Worker to backfill jobs, it will do so for all jobs
 matching that specification that should have been scheduled over the backfill
 period. Other than the period itself, you cannot place limits on the backfilling
-(for example, you cannot say "backfill at most one job" or "only backfill if the
-next job isn't due within the next 3 hours"); this is because we've determined
-that there's many situations (back-off, overloaded worker, serially executed
-jobs, etc.) in which the result of this behaviour might result in outcomes that
-the user did not expect.
+(for example, you cannot say &ldquo;backfill at most one job&rdquo; or
+&ldquo;only backfill if the next job isn&apos;t due within the next 3
+hours&rdquo;); this is because we&apos;ve determined that there&apos;s many
+situations (back-off, overloaded worker, serially executed jobs, etc.) in which
+the result of this behaviour might result in outcomes that the user did not
+expect.
 
 If you need these kinds of constraints on backfilled jobs, you should implement
 them _at runtime_ (rather than at scheduling time) in the task executor itself,
@@ -202,21 +203,22 @@ should continue or not.
 
 ## Specifying cron items in library mode
 
-You've three options for specifying cron tasks in library mode:
+You&apos;ve three options for specifying cron tasks in library mode:
 
 1. `crontab`: a crontab string (like the contents of a crontab file)
 2. `crontabFile`: the (string) path to a crontab file, from which to read the
    rules
 3. `parsedCronItems`: explicit parsed cron items (see below)
 
-### parsedCronItems
+### `parsedCronItems`
 
 The Graphile Worker internal format for cron items lists all the matching
 minutes/hours/etc uniquely and in numerically ascending order. It also has other
 requirements and is to be treated as an opaque type, so you must not construct
 this value manually.
 
-Instead, you may specify the parsedCronItems using one of the helper functions:
+Instead, you may specify the `parsedCronItems` using one of the helper
+functions:
 
 1. `parseCrontab`: pass a crontab string and it will be converted into a list of
    `ParsedCronItem`s

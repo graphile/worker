@@ -50,11 +50,11 @@ task executor triggers must be `await`-ed; task executors _should not_ create
 
 :::tip
 
-We automatically retry the job if it fails, so it's often sensible to split a
-large job into multiple smaller jobs, this also allows them to run in parallel
+We automatically retry the job if it fails, so it&apos;s often sensible to split
+a large job into multiple smaller jobs, this also allows them to run in parallel
 resulting in faster execution. This is particularly important for tasks that are
-not idempotent (i.e. running them a second time will have extra side effects) -
-for example sending emails.
+not idempotent (i.e. running them a second time will have extra side effects)
+&mdash; for example sending emails.
 
 :::
 
@@ -78,8 +78,8 @@ module.exports = async (payload, helpers) => {
 Out of the box, `graphile-worker` will automatically look for `.js` files inside
 the `tasks/` folder inside the working directory in which `graphile-worker` is
 executed, and will load them as tasks. The name of the file (less the `.js`
-suffix) is used as the "task identifier", and the `module.exports` is used as
-the task executor function.
+suffix) is used as the &ldquo;task identifier&rdquo;, and the `module.exports`
+is used as the task executor function.
 
 ```
 current directory
@@ -103,8 +103,8 @@ tasks into the `tasks` folder.
 If the payload is an array, then _optionally_ your task may choose to return an
 array of the same length, the entries in which are promises. Should any of these
 promises reject, then the job will be re-enqueued, but the payload will be
-overwritten to only contain the entries associated with the rejected promises -
-i.e. the successful entries will be removed.
+overwritten to only contain the entries associated with the rejected promises
+&mdash; i.e. the successful entries will be removed.
 
 ## `helpers`
 
@@ -112,9 +112,9 @@ i.e. the successful entries will be removed.
 
 So that you may redirect logs to your preferred logging provider, we have
 enabled you to supply your own logging provider. Overriding this is currently
-only available in library mode (see [Logger](#logger)). We then wrap this
-logging provider with a helper class to ease debugging; the helper class has the
-following methods:
+only available in library mode (see [Logger](/library/logger.md)). We then wrap
+this logging provider with a helper class to ease debugging; the helper class
+has the following methods:
 
 - `error(message, meta?)`: for logging errors, similar to `console.error`
 - `warn(message, meta?)`: for logging warnings, similar to `console.warn`
@@ -142,7 +142,7 @@ const {
 
 Neither `withPgClient` nor `query` methods create a database transaction. If you
 need a database transaction, you should do so yourself, but please note that
-keeping transactions open may decrease Graphile Worker's performance due to
+keeping transactions open may decrease Graphile Worker&apos;s performance due to
 increasing contention over the pool of database clients.
 
 :::
@@ -153,4 +153,4 @@ increasing contention over the pool of database clients.
 await helpers.addJob(identifier, payload, options);
 ```
 
-See [`addJob`](#addjob)
+See [`addJob`](/library/add-job.md).

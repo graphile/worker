@@ -32,7 +32,7 @@ module.exports = async (payload, helpers) => {
 
 ### Run the worker
 
-(Make sure you're in the folder that contains the `tasks/` folder.)
+(Make sure you&apos;re in the folder that contains the `tasks/` folder.)
 
 ```bash
 npx graphile-worker -c "postgres:///my_db"
@@ -44,7 +44,7 @@ npx graphile-worker -c "postgres:///my_db"
 
 :::note
 
-`npx` runs the local copy of an npm module if it is installed, when you're
+`npx` runs the local copy of an npm module if it is installed, when you&apos;re
 ready, switch to using the `package.json` `"scripts"` entry instead.
 
 :::
