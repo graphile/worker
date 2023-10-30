@@ -28,8 +28,8 @@ this underlying `add_job` SQL function.
   (defaults to `25`. Must be castable to `smallint`).
 - `job_key` &mdash; unique identifier for the job, used to replace, update or
   remove it later if needed (see
-  [Replacing and updating jobs](../job-key.md#replacingupdating-jobs) and
-  [removing jobs](../job-key.md#removing-jobs)); can also be used for
+  [Replacing and updating jobs](./job-key.md#replacingupdating-jobs) and
+  [removing jobs](./job-key.md#removing-jobs)); can also be used for
   de-duplication.
 - `priority` &mdash; an integer representing the jobs priority. Jobs are
   executed in numerically ascending order of priority (jobs with a numerically
