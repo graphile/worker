@@ -49,8 +49,6 @@ requested).
 
 ## Rescheduling jobs
 
-SQL:
-
 ```sql title="SQL API"
 SELECT * FROM graphile_worker.reschedule_jobs(
   ARRAY[7, 99, 38674, ...],
