@@ -2,7 +2,13 @@ import * as assert from "assert";
 
 import { getParsedCronItemsFromOptions, runCron } from "./cron";
 import getTasks from "./getTasks";
-import { ParsedCronItem, Runner, RunnerOptions, TaskList } from "./interfaces";
+import {
+  ParsedCronItem,
+  Runner,
+  RunnerOptions,
+  TaskList,
+  WorkerOptions,
+} from "./interfaces";
 import {
   CompiledOptions,
   getUtilsAndReleasersFromOptions,
@@ -55,9 +61,15 @@ export const runOnce = async (
       overrideTaskList || (await assertTaskList(options, releasers));
 
     const promises: Promise<void>[] = [];
+    const workerOptions: WorkerOptions = {
+      ...options,
+      abortSignal: undefined,
+    };
     for (let i = 0; i < concurrency; i++) {
       promises.push(
-        withPgClient((client) => runTaskListOnce(options, taskList, client)),
+        withPgClient((client) =>
+          runTaskListOnce(workerOptions, taskList, client),
+        ),
       );
     }
     await Promise.all(promises);
@@ -125,7 +137,11 @@ function buildRunner(input: {
   releasers.push(() => cron.release());
 
   const workerPool = runTaskList(options, taskList, pgPool);
-  releasers.push(() => workerPool.gracefulShutdown("Runner is shutting down"));
+  releasers.push(() => {
+    if (!workerPool._shuttingDown) {
+      workerPool.gracefulShutdown("Runner is shutting down");
+    }
+  });
 
   let running = true;
   const stop = async () => {

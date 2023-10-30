@@ -27,6 +27,7 @@ export function makeNewWorker(
     workerId = `worker-${randomBytes(9).toString("hex")}`,
     pollInterval = defaults.pollInterval,
     forbiddenFlags,
+    abortSignal,
   } = options;
   const compiledSharedOptions = processSharedOptions(options, {
     scope: {
@@ -202,7 +203,11 @@ export function makeNewWorker(
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
         assert.ok(task, `Unsupported task '${job.task_identifier}'`);
-        const helpers = makeJobHelpers(options, job, { withPgClient, logger });
+        const helpers = makeJobHelpers(options, job, {
+          withPgClient,
+          logger,
+          abortSignal,
+        });
         result = await task(job.payload, helpers);
       } catch (error) {
         err = error;

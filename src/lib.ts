@@ -1,8 +1,9 @@
 import * as assert from "assert";
 import { EventEmitter } from "events";
-import { resolvePresets } from "graphile-config";
+import { applyHooks, AsyncHooks, resolvePresets } from "graphile-config";
 import { Client, Pool, PoolClient } from "pg";
 
+import { WorkerPreset } from ".";
 import { defaults } from "./config";
 import { MINUTE } from "./cronConstants";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
@@ -15,6 +16,7 @@ import {
 } from "./interfaces";
 import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
+import { EMPTY_PRESET } from "./preset";
 
 export interface CompiledSharedOptions {
   events: WorkerEvents;
@@ -25,6 +27,9 @@ export interface CompiledSharedOptions {
   minResetLockedInterval: number;
   maxResetLockedInterval: number;
   options: SharedOptions;
+  hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
+  resolvedPreset?: GraphileConfig.ResolvedPreset;
+  gracefulShutdownAbortTimeout: number;
 }
 
 interface ProcessSharedOptionsSettings {
@@ -45,7 +50,13 @@ export function processSharedOptions(
       useNodeTime = false,
       minResetLockedInterval = 8 * MINUTE,
       maxResetLockedInterval = 10 * MINUTE,
+      preset,
+      gracefulShutdownAbortTimeout = 5000,
     } = options;
+    const resolvedPreset = resolvePresets([
+      WorkerPreset,
+      preset ?? EMPTY_PRESET,
+    ]);
     const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
     if (
       !Number.isFinite(minResetLockedInterval) ||
@@ -57,6 +68,7 @@ export function processSharedOptions(
         `Invalid values for minResetLockedInterval (${minResetLockedInterval})/maxResetLockedInterval (${maxResetLockedInterval})`,
       );
     }
+    const hooks = new AsyncHooks<GraphileConfig.WorkerHooks>();
     compiled = {
       events,
       logger,
@@ -66,8 +78,22 @@ export function processSharedOptions(
       minResetLockedInterval,
       maxResetLockedInterval,
       options,
+      hooks,
+      resolvedPreset,
+      gracefulShutdownAbortTimeout,
     };
+    applyHooks(
+      resolvedPreset.plugins,
+      (p) => p.worker?.hooks,
+      (name, fn, _plugin) => {
+        const context = { compiledSharedOptions: compiled };
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        hooks.hook(name, ((...args: any[]) => fn(context, ...args)) as any);
+      },
+    );
     _sharedOptionsCache.set(options, compiled);
+    hooks.process("init");
   }
   if (scope) {
     return {
@@ -244,6 +270,7 @@ export function digestPreset(preset: GraphileConfig.Preset) {
     concurrentJobs = defaults.concurrentJobs,
     maxPoolSize = defaults.maxPoolSize,
     pollInterval = defaults.pollInterval,
+    gracefulShutdownAbortTimeout = defaults.gracefulShutdownAbortTimeout,
   } = resolvedPreset.worker ?? {};
 
   const runnerOptions: RunnerOptions = {
@@ -253,6 +280,8 @@ export function digestPreset(preset: GraphileConfig.Preset) {
     pollInterval,
     connectionString,
     noPreparedStatements: !preparedStatements,
+    preset: resolvedPreset,
+    gracefulShutdownAbortTimeout,
   };
 
   return {

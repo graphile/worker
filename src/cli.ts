@@ -7,6 +7,7 @@ import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
 import { run, runOnce } from "./index";
 import { digestPreset } from "./lib";
+import { EMPTY_PRESET, WorkerPreset } from "./preset";
 import { runMigrations } from "./runner";
 
 const argv = yargs
@@ -106,17 +107,18 @@ async function main() {
   const userPreset = await loadConfig(argv.config);
   const ONCE = argv.once;
   const SCHEMA_ONLY = argv["schema-only"];
+
+  if (SCHEMA_ONLY && ONCE) {
+    throw new Error("Cannot specify both --once and --schema-only");
+  }
+
   const {
     runnerOptions: options,
     tasksFolder,
     crontabFile,
   } = digestPreset({
-    extends: [...(userPreset ? [userPreset] : []), argvToPreset(argv)],
+    extends: [WorkerPreset, userPreset ?? EMPTY_PRESET, argvToPreset(argv)],
   });
-
-  if (SCHEMA_ONLY && ONCE) {
-    throw new Error("Cannot specify both --once and --schema-only");
-  }
 
   if (!options.connectionString) {
     throw new Error(

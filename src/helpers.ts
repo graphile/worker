@@ -64,7 +64,12 @@ export function makeJobHelpers(
   {
     withPgClient,
     logger: overrideLogger,
-  }: { withPgClient: WithPgClient; logger?: Logger },
+    abortSignal,
+  }: {
+    withPgClient: WithPgClient;
+    logger?: Logger;
+    abortSignal: AbortSignal | undefined;
+  },
 ): JobHelpers {
   const baseLogger = overrideLogger || processSharedOptions(options).logger;
   const logger = baseLogger.scope({
@@ -73,6 +78,7 @@ export function makeJobHelpers(
     jobId: job.id,
   });
   const helpers: JobHelpers = {
+    abortSignal,
     job,
     logger,
     withPgClient,

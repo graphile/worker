@@ -24,6 +24,7 @@ export const defaults = {
   preparedStatements: true,
   crontabFile: `${process.cwd()}/crontab`,
   tasksFolder: `${process.cwd()}/tasks`,
+  gracefulShutdownAbortTimeout: 5000,
 } satisfies GraphileConfig.WorkerOptions;
 
 function enforceStringOrUndefined(

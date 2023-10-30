@@ -1,5 +1,9 @@
+import { PluginHook } from "graphile-config";
+
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
+import { FileDetails, Task } from "./interfaces";
+import { CompiledSharedOptions } from "./lib";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
 export * from "./interfaces";
 export { digestPreset } from "./lib";
@@ -10,13 +14,26 @@ export {
   LogLevel,
 } from "./logger";
 export { runTaskList, runTaskListOnce } from "./main";
+export { WorkerPreset } from "./preset";
 export { run, runMigrations, runOnce } from "./runner";
 export { makeWorkerUtils, quickAddJob } from "./workerUtils";
 
 export { getTasks };
 export { getCronItems };
 
+export interface WorkerPluginContext {
+  compiledSharedOptions: CompiledSharedOptions;
+}
+
+export type PromiseOrDirect<T> = T | Promise<T>;
+
 declare global {
+  namespace GraphileWorker {
+    interface Tasks {
+      /* extend this through declaration merging */
+    }
+  }
+
   namespace GraphileConfig {
     interface WorkerOptions {
       /**
@@ -61,9 +78,69 @@ declare global {
        * @defaultValue `1`
        */
       concurrentJobs?: number;
+
+      /**
+       * A list of file extensions (in priority order) that Graphile Worker
+       * should attempt to import directly when loading tasks. Defaults to
+       * `[".js", ".cjs", ".mjs"]`.
+       */
+      fileExtensions?: string[];
+
+      /**
+       * How long in milliseconds after a gracefulShutdown is triggered should
+       * we wait to trigger the AbortController, which should cancel supported
+       * asynchronous actions?
+       *
+       * @defaultValue `5000`
+       */
+      gracefulShutdownAbortTimeout?: number;
     }
     interface Preset {
       worker?: WorkerOptions;
+    }
+
+    interface Plugin {
+      worker?: {
+        hooks?: {
+          [key in keyof WorkerHooks]?: PluginHook<
+            WorkerHooks[key] extends (...args: infer UArgs) => infer UResult
+              ? (info: WorkerPluginContext, ...args: UArgs) => UResult
+              : never
+          >;
+        };
+      };
+    }
+    interface WorkerHooks {
+      /**
+       * Called when Graphile Worker starts up.
+       */
+      init(): PromiseOrDirect<void>;
+
+      /**
+       * Used to build a given `taskIdentifier`'s handler given a list of files,
+       * if possible.
+       */
+      loadTaskFromFiles(
+        mutableEvent: {
+          /**
+           * If set, you should not replace this. If unset and you can support
+           * this task identifier (see `details`), you should set it.
+           */
+          handler?: Task;
+        },
+        details: {
+          /**
+           * The string that will identify this task (inferred from the file
+           * path).
+           */
+          taskIdentifier: string;
+          /**
+           * A list of the files (and associated metadata) that match this task
+           * identifier.
+           */
+          fileDetailsList: readonly FileDetails[];
+        },
+      ): PromiseOrDirect<void>;
     }
   }
 }

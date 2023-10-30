@@ -1,18 +1,11 @@
 /* eslint-disable @typescript-eslint/ban-types */
-import { EventEmitter } from "events";
-import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
+import type { EventEmitter } from "events";
+import type { Stats } from "fs";
+import type { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 
-import { Release } from "./lib";
-import { Logger } from "./logger";
-import { Signal } from "./signals";
-
-declare global {
-  namespace GraphileWorker {
-    interface Tasks {
-      /* extend this through declaration merging */
-    }
-  }
-}
+import type { Release } from "./lib";
+import type { Logger } from "./logger";
+import type { Signal } from "./signals";
 
 /*
  * Terminology:
@@ -93,6 +86,13 @@ export interface JobHelpers extends Helpers {
     queryText: string,
     values?: unknown[],
   ): Promise<QueryResult<R>>;
+
+  /**
+   * An AbortSignal that will be triggered when the job should exit.
+   *
+   * @experimental
+   */
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -387,6 +387,10 @@ export interface WorkerPool {
   gracefulShutdown: (message?: string) => Promise<void>;
   forcefulShutdown: (message: string) => Promise<void>;
   promise: Promise<void>;
+  /** @experimental */
+  abortSignal: AbortSignal;
+  /** @internal */
+  _shuttingDown: boolean;
 }
 
 export interface Runner {
@@ -522,6 +526,17 @@ export interface SharedOptions {
    * been locked too long. See `minResetLockedInterval`.
    */
   maxResetLockedInterval?: number;
+
+  preset?: GraphileConfig.Preset;
+
+  /**
+   * How long in milliseconds after a gracefulShutdown is triggered should
+   * we wait to trigger the AbortController, which should cancel supported
+   * asynchronous actions?
+   *
+   * @defaultValue `5000`
+   */
+  gracefulShutdownAbortTimeout?: number;
 }
 
 /**
@@ -542,6 +557,8 @@ export interface WorkerOptions extends WorkerSharedOptions {
    * An identifier for this specific worker; if unset then a random ID will be assigned. Do not assign multiple workers the same worker ID!
    */
   workerId?: string;
+
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -925,4 +942,16 @@ export interface TimestampDigest {
   date: number;
   month: number;
   dow: number;
+}
+
+/** Details of a file (guaranteed not to be a directory, nor a symlink) */
+export interface FileDetails {
+  /** The full path to the file (possibly relative to the current working directory) */
+  fullPath: string;
+  /** The stats of the file */
+  stats: Stats;
+  /** The name of the file, excluding any extensions */
+  baseName: string;
+  /** The extensions of the file, e.g. `""` for no extensions, `".js"` or even `".test.js"`. */
+  extension: string;
 }
