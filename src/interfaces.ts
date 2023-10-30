@@ -92,7 +92,7 @@ export interface JobHelpers extends Helpers {
    *
    * @experimental
    */
-  abortSignal: AbortSignal | undefined;
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -558,7 +558,7 @@ export interface WorkerOptions extends WorkerSharedOptions {
    */
   workerId?: string;
 
-  abortSignal: AbortSignal | undefined;
+  abortSignal?: AbortSignal;
 }
 
 /**
