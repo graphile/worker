@@ -34,6 +34,9 @@ Each task function is passed two arguments:
     tracing/debugging
   - `job` &mdash; the whole job (including `uuid`, `attempts`, etc) &mdash; you
     shouldn't need this
+  - `abortSignal` &mdash; could be an `AbortSignal` or `undefined`; if set, use
+    this to abort your task early on graceful shutdown (can be passed to a
+    number of asynchronous Node.js methods)
   - `withPgClient` &mdash; a helper to use to get a database client
   - `query(sql, values)` &mdash; a convenience wrapper for
     `withPgClient(pgClient => pgClient.query(sql, values))`
@@ -101,7 +104,7 @@ current directory
             └── send_otp.js
 ```
 
-### Loading JavaScript files
+## Loading JavaScript files
 
 Out of the box, Graphile Worker will load `.js`, `.cjs` and `.mjs` files using
 the `import()` function. If the file is a CommonJS module then Worker will
@@ -112,7 +115,7 @@ task executor function.
 Via plugins, support for other ways of loading task files can be added; look at
 the source code of `LoadTaskFromJsPlugin.ts` for inspiration.
 
-#### Loading TypeScript files
+### Loading TypeScript files
 
 :::tip
 
@@ -149,7 +152,7 @@ NODE_OPTIONS="--loader ts-node/esm" graphile-worker -c ...
 # OR: node --loader ts-node/esm node_modules/.bin/graphile-worker -c ...
 ```
 
-### Loading executable files
+## Loading executable files
 
 :::warning Experimental
 
@@ -164,7 +167,7 @@ setting the relevant environmental variables and passing in the payload
 according to the encoding. If the executable exits with code `0` then Graphile
 Worker will see this as success, all other exit codes are seen as failure.
 
-#### Environmental variables
+### Environmental variables
 
 - `GRAPHILE_WORKER_PAYLOAD_FORMAT` &mdash; the encoding that Graphile Worker
   uses to pass the payload to the binary. Currently this will be the string
@@ -185,7 +188,7 @@ Worker will see this as success, all other exit codes are seen as failure.
 - `GRAPHILE_WORKER_JOB_RUN_AT` &mdash; when the job is scheduled to run (can be
   used to detect delayed jobs)
 
-#### Payload format: "json"
+### Payload format: "json"
 
 In the JSON payload format, your binary will be fed via stdin
 `JSON.stringify({payload})`; for example, if you did
