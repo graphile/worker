@@ -7,7 +7,7 @@ have exactly the same call signature. The API is used to add a job to the queue
 for immediate or delayed execution. With `jobKey` and `jobKeyMode` it can also
 be used to replace existing jobs.
 
-:::tip
+:::note
 
 `quickAddJob` is similar to `addJob`, but accepts an additional initial
 parameter describing how to connect to the database.

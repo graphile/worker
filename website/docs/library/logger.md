@@ -67,12 +67,18 @@ logger function.
 See the [`@graphile/logger`](https://github.com/graphile/logger) documentation
 for more information.
 
-**NOTE**: you do not need to (and should not) customize, inherit or extend the
-`Logger` class at all.
+:::note
 
-**NOTE**: some log messages are gated behind the
-`GRAPHILE_ENABLE_DANGEROUS_LOGS=1` environmental variable &mdash; to see them
-you will need to enable that envvar AND enable debug logging (e.g. with
-`GRAPHILE_LOGGER_DEBUG=1` as mentioned above) &mdash; do not do this in
-production as these logs may include incredibly sensitive details such as your
-full database connection string including password.
+you do not need to (and should not) customize, inherit or extend the `Logger`
+class at all. :::
+
+:::note
+
+some log messages are gated behind the `GRAPHILE_ENABLE_DANGEROUS_LOGS=1`
+environmental variable &mdash; to see them you will need to enable that envvar
+AND enable debug logging (e.g. with `GRAPHILE_LOGGER_DEBUG=1` as mentioned
+above) &mdash; do not do this in production as these logs may include incredibly
+sensitive details such as your full database connection string including
+password.
+
+:::
