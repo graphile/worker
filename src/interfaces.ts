@@ -86,6 +86,13 @@ export interface JobHelpers extends Helpers {
     queryText: string,
     values?: unknown[],
   ): Promise<QueryResult<R>>;
+
+  /**
+   * An AbortSignal that will be triggered when the job should exit.
+   *
+   * @experimental
+   */
+  abortSignal: AbortSignal | undefined;
 }
 
 /**
@@ -380,6 +387,8 @@ export interface WorkerPool {
   gracefulShutdown: (message?: string) => Promise<void>;
   forcefulShutdown: (message: string) => Promise<void>;
   promise: Promise<void>;
+  /** @experimental */
+  abortSignal: AbortSignal;
   /** @internal */
   readonly _shuttingDown: boolean;
 }
@@ -519,6 +528,15 @@ export interface SharedOptions {
   maxResetLockedInterval?: number;
 
   preset?: GraphileConfig.Preset;
+
+  /**
+   * How long in milliseconds after a gracefulShutdown is triggered should
+   * we wait to trigger the AbortController, which should cancel supported
+   * asynchronous actions?
+   *
+   * @defaultValue `5000`
+   */
+  gracefulShutdownAbortTimeout?: number;
 }
 
 /**
@@ -539,6 +557,8 @@ export interface WorkerOptions extends WorkerSharedOptions {
    * An identifier for this specific worker; if unset then a random ID will be assigned. Do not assign multiple workers the same worker ID!
    */
   workerId?: string;
+
+  abortSignal: AbortSignal | undefined;
 }
 
 /**

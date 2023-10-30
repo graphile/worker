@@ -343,9 +343,13 @@ export function runTaskList(
     }
   }
 
+  const abortController = new AbortController();
+  const abortSignal = abortController.signal;
+
   // This is a representation of us that can be interacted with externally
   const workerPool: WorkerPool = {
     _shuttingDown: false,
+    abortSignal,
     release: async () => {
       console.trace(
         "DEPRECATED: You are calling `workerPool.release()`; please use `workerPool.gracefulShutdown()` instead.",
@@ -367,6 +371,11 @@ export function runTaskList(
         return;
       }
       workerPool._shuttingDown = true;
+
+      const abortTimer = setTimeout(() => {
+        abortController.abort();
+      }, compiledSharedOptions.gracefulShutdownAbortTimeout);
+      abortTimer.unref();
 
       events.emit("pool:gracefulShutdown", { pool: this, message });
       try {
@@ -494,6 +503,12 @@ export function runTaskList(
 
     promise,
   };
+
+  abortSignal.addEventListener("abort", () => {
+    if (!workerPool._shuttingDown) {
+      workerPool.gracefulShutdown();
+    }
+  });
 
   // Ensure that during a forced shutdown we get cleaned up too
   allWorkerPools.push(workerPool);
@@ -638,8 +653,9 @@ export function runTaskList(
 
   // Spawn our workers; they can share clients from the pool.
   const withPgClient = makeWithPgClientFromPool(pgPool);
+  const workerOptions: WorkerOptions = { ...options, abortSignal };
   for (let i = 0; i < concurrency; i++) {
-    workers.push(makeNewWorker(options, tasks, withPgClient));
+    workers.push(makeNewWorker(workerOptions, tasks, withPgClient, true));
   }
 
   // TODO: handle when a worker shuts down (spawn a new one)

@@ -13,7 +13,9 @@ export const LoadTaskFromJsPlugin: GraphileConfig.Plugin = {
     hooks: {
       async loadTaskFromFiles(info, mutableEvent, details) {
         // Check it hasn't already been handled
-        if (mutableEvent.handler) return;
+        if (mutableEvent.handler) {
+          return;
+        }
 
         const {
           compiledSharedOptions: { resolvedPreset },

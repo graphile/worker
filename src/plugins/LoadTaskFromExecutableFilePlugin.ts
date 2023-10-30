@@ -1,9 +1,9 @@
+import { spawn } from "child_process";
 import { constants } from "fs";
 import { GraphileConfig } from "graphile-config";
 
 import { Task } from "../index.js";
 import { version } from "../version.js";
-import { spawn } from "child_process";
 
 const supportsExecutableBit = [
   "darwin",
@@ -28,10 +28,14 @@ export const LoadTaskFromExecutableFilePlugin: GraphileConfig.Plugin = {
       },
       async loadTaskFromFiles(info, mutableEvent, details) {
         // Check it hasn't already been handled
-        if (mutableEvent.handler) return;
+        if (mutableEvent.handler) {
+          return;
+        }
 
         // Return if OS is unsupported
-        if (!supportsExecutableBit) return;
+        if (!supportsExecutableBit) {
+          return;
+        }
 
         const { fileDetailsList, taskIdentifier } = details;
 
@@ -77,7 +81,7 @@ function makeTaskForExecutable(taskIdentifier: string, fullPath: string): Task {
         },
         stdio: "pipe",
         shell: false,
-        // signal: helpers.abortSignal,
+        signal: helpers.abortSignal,
         timeout: 4 * 60 * 60 * 1000, // 4 hours
       });
       child.once("error", (error) => {

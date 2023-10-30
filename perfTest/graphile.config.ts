@@ -8,6 +8,7 @@ const preset: GraphileConfig.Preset = {
     concurrentJobs: 3,
     fileExtensions: [".js", ".cjs", ".mjs"],
     // fileExtensions: [".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"],
+    gracefulShutdownAbortTimeout: 2500,
   },
 };
 export default preset;

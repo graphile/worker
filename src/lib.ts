@@ -29,6 +29,7 @@ export interface CompiledSharedOptions {
   options: SharedOptions;
   hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
   resolvedPreset?: GraphileConfig.ResolvedPreset;
+  gracefulShutdownAbortTimeout: number;
 }
 
 interface ProcessSharedOptionsSettings {
@@ -50,6 +51,7 @@ export function processSharedOptions(
       minResetLockedInterval = 8 * MINUTE,
       maxResetLockedInterval = 10 * MINUTE,
       preset,
+      gracefulShutdownAbortTimeout = 5000,
     } = options;
     const resolvedPreset = resolvePresets([
       WorkerPreset,
@@ -78,6 +80,7 @@ export function processSharedOptions(
       options,
       hooks,
       resolvedPreset,
+      gracefulShutdownAbortTimeout,
     };
     applyHooks(
       resolvedPreset.plugins,
@@ -267,6 +270,7 @@ export function digestPreset(preset: GraphileConfig.Preset) {
     concurrentJobs = defaults.concurrentJobs,
     maxPoolSize = defaults.maxPoolSize,
     pollInterval = defaults.pollInterval,
+    gracefulShutdownAbortTimeout = defaults.gracefulShutdownAbortTimeout,
   } = resolvedPreset.worker ?? {};
 
   const runnerOptions: RunnerOptions = {
@@ -277,6 +281,7 @@ export function digestPreset(preset: GraphileConfig.Preset) {
     connectionString,
     noPreparedStatements: !preparedStatements,
     preset: resolvedPreset,
+    gracefulShutdownAbortTimeout,
   };
 
   return {

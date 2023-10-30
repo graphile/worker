@@ -85,6 +85,15 @@ declare global {
        * `[".js", ".cjs", ".mjs"]`.
        */
       fileExtensions?: string[];
+
+      /**
+       * How long in milliseconds after a gracefulShutdown is triggered should
+       * we wait to trigger the AbortController, which should cancel supported
+       * asynchronous actions?
+       *
+       * @defaultValue `5000`
+       */
+      gracefulShutdownAbortTimeout?: number;
     }
     interface Preset {
       worker?: WorkerOptions;
