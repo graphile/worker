@@ -50,7 +50,7 @@ export type AddJobFunction = (
   /**
    * The payload (typically a JSON object) that will be passed to the task executor.
    */
-  payload?: any,
+  payload: any,
 
   /**
    * Additional details about how the job should be handled.

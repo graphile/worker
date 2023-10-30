@@ -54,7 +54,7 @@ test("emits the expected events", () =>
       [id: string]: Deferred | undefined;
     } = {};
     try {
-      const job1: Task = jest.fn(({ id }: { id: string }) => {
+      const job1: Task<"job1"> = jest.fn(({ id }) => {
         const jobPromise = deferred();
         if (jobPromises[id]) {
           throw new Error("Job with this id already registered");

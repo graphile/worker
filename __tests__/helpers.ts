@@ -14,6 +14,15 @@ import {
 } from "../src/interfaces";
 import { migrate } from "../src/migrate";
 
+declare global {
+  namespace GraphileWorker {
+    interface Tasks {
+      job1: { id: string };
+      job2: { id: string };
+    }
+  }
+}
+
 export {
   DAY,
   HOUR,
@@ -113,14 +122,14 @@ export async function jobCount(
   const {
     rows: [row],
   } = await pgPoolOrClient.query(
-    `select count(*)::int from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
+    `select count(*)::int from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs`,
   );
   return row ? row.count || 0 : 0;
 }
 
 export async function getKnown(pgPool: pg.Pool) {
   const { rows } = await pgPool.query<KnownCrontab>(
-    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.known_crontabs`,
+    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_known_crontabs as known_crontabs`,
   );
   return rows;
 }
@@ -141,10 +150,10 @@ select
   jobs.*,
   identifier as task_identifier,
   job_queues.queue_name as queue_name
-from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs
-left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks
+from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs
+left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks as tasks
 on (tasks.id = jobs.task_id)
-left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues
+left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues as job_queues
 on (job_queues.id = jobs.job_queue_id)
 ${where ? `where ${where}\n` : ""}\
 order by jobs.id asc`,
@@ -161,7 +170,14 @@ export async function getJobQueues(pgClient: pg.Pool | pg.PoolClient) {
     locked_at: Date;
     locked_by: string;
   }>(
-    `select job_queues.*, count(jobs.*)::int as job_count from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs on (jobs.job_queue_id = job_queues.id) group by job_queues.id order by job_queues.queue_name asc`,
+    `\
+select job_queues.*, count(jobs.*)::int as job_count
+from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues as job_queues
+left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs on (
+  jobs.job_queue_id = job_queues.id
+)
+group by job_queues.id
+order by job_queues.queue_name asc`,
   );
   return rows;
 }
@@ -186,6 +202,7 @@ export function makeMockJob(taskIdentifier: string): Job {
     revision: 0,
     key: null,
     flags: null,
+    is_available: true,
   };
 }
 
@@ -194,23 +211,25 @@ export async function makeSelectionOfJobs(
   pgClient: pg.PoolClient,
 ) {
   const future = new Date(Date.now() + 60 * 60 * 1000);
-  let failedJob: DbJob = await utils.addJob("job1", { a: 1, runAt: future });
-  const regularJob1 = await utils.addJob("job1", { a: 2, runAt: future });
-  let lockedJob: DbJob = await utils.addJob("job1", { a: 3, runAt: future });
-  const regularJob2 = await utils.addJob("job1", { a: 4, runAt: future });
-  const untouchedJob = await utils.addJob("job1", { a: 5, runAt: future });
-  ({
-    rows: [lockedJob],
+  const failedJob: DbJob = await utils.addJob("job3", { a: 1, runAt: future });
+  const regularJob1 = await utils.addJob("job3", { a: 2, runAt: future });
+  const lockedJob: DbJob = await utils.addJob("job3", { a: 3, runAt: future });
+  const regularJob2 = await utils.addJob("job3", { a: 4, runAt: future });
+  const untouchedJob = await utils.addJob("job3", { a: 5, runAt: future });
+  const {
+    rows: [lockedJobUpdate],
   } = await pgClient.query<DbJob>(
-    `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
+    `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
     [lockedJob.id],
-  ));
-  ({
-    rows: [failedJob],
+  );
+  Object.assign(lockedJob, lockedJobUpdate);
+  const {
+    rows: [failedJobUpdate],
   } = await pgClient.query<DbJob>(
-    `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
+    `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
     [failedJob.id],
-  ));
+  );
+  Object.assign(failedJob, failedJobUpdate);
 
   return {
     failedJob,

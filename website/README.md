@@ -25,6 +25,14 @@ yarn website start
 This command starts a local development server and opens up a browser window.
 Most changes are reflected live without having to restart the server.
 
+Before you submit a pull request, run:
+
+```bash
+yarn lint:fix
+```
+
+This will ensure all the files are formatted correctly.
+
 ### Build
 
 ```bash

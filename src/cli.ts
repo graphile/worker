@@ -36,13 +36,6 @@ const argv = yargs
     default: false,
   })
   .boolean("once")
-  .option("watch", {
-    description:
-      "[EXPERIMENTAL] Watch task files for changes, automatically reloading the task code without restarting worker",
-    alias: "w",
-    default: false,
-  })
-  .boolean("watch")
   .option("crontab", {
     description: "override path to crontab file",
   })
@@ -103,7 +96,6 @@ function argvToPreset(inArgv: Awaited<typeof argv>): GraphileConfig.Preset {
         : undefined,
       preparedStatements: !inArgv["no-prepared-statements"],
       schema: inArgv.schema,
-      watch: inArgv.watch,
       crontabFile: inArgv["crontab"],
       concurrentJobs: isInteger(inArgv.jobs) ? inArgv.jobs : undefined,
     }),
@@ -116,24 +108,14 @@ async function main() {
   const SCHEMA_ONLY = argv["schema-only"];
   const {
     runnerOptions: options,
-    resolvedPreset,
     tasksFolder,
     crontabFile,
   } = digestPreset({
     extends: [...(userPreset ? [userPreset] : []), argvToPreset(argv)],
   });
 
-  const WATCH =
-    argv.watch || (!SCHEMA_ONLY && resolvedPreset.worker?.watch) || false;
-
-  if (SCHEMA_ONLY && WATCH) {
-    throw new Error("Cannot specify both --watch and --schema-only");
-  }
   if (SCHEMA_ONLY && ONCE) {
     throw new Error("Cannot specify both --once and --schema-only");
-  }
-  if (WATCH && ONCE) {
-    throw new Error("Cannot specify both --watch and --once");
   }
 
   if (!options.connectionString) {
@@ -148,8 +130,8 @@ async function main() {
     return;
   }
 
-  const watchedTasks = await getTasks(options, tasksFolder, WATCH);
-  const watchedCronItems = await getCronItems(options, crontabFile, WATCH);
+  const watchedTasks = await getTasks(options, tasksFolder);
+  const watchedCronItems = await getCronItems(options, crontabFile);
 
   if (ONCE) {
     await runOnce(options, watchedTasks.tasks);
@@ -162,6 +144,15 @@ async function main() {
     // Continue forever(ish)
     await promise;
   }
+  watchedTasks.release();
+  watchedCronItems.release();
+  const timer = setTimeout(() => {
+    console.error(
+      `Worker failed to exit naturally after 10 seconds; terminating manually. This may indicate a bug in Graphile Worker.`,
+    );
+    process.exit(1);
+  }, 10000);
+  timer.unref();
 }
 
 main().catch((e) => {

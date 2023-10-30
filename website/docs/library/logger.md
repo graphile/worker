@@ -45,9 +45,8 @@ run({
 Your `logFactory` function will be passed a scope object which may contain the
 following keys (all optional):
 
-- `label` (string): a rough description of the type of action
-  (&lsquo;watch&rsquo;, &lsquo;worker&rsquo; and &lsquo;job&rsquo; are the
-  currently used values).
+- `label` (string): a rough description of the type of action (&lsquo;worker&rsquo; and
+  &lsquo;job&rsquo; are the currently used values).
 - `workerId` (string): the ID of the worker instance
 - `taskIdentifier` (string): the task name (identifier) of the running job
 - `jobId` (number): the id of the running job

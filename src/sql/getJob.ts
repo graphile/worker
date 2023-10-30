@@ -85,7 +85,7 @@ export async function getJob(
       jobs.job_queue_id is null
       or exists (
         select 1
-        from ${escapedWorkerSchema}.job_queues
+        from ${escapedWorkerSchema}._private_job_queues as job_queues
         where job_queues.id = jobs.job_queue_id
         and job_queues.is_available = true
         for update
@@ -98,7 +98,7 @@ export async function getJob(
       or
       jobs.job_queue_id in (
         select id
-        from ${escapedWorkerSchema}.job_queues
+        from ${escapedWorkerSchema}._private_job_queues as job_queues
         where job_queues.is_available = true
         for update
         skip locked
@@ -109,7 +109,7 @@ export async function getJob(
       or
       jobs.job_queue_id not in (
         select id
-        from ${escapedWorkerSchema}.job_queues
+        from ${escapedWorkerSchema}._private_job_queues as job_queues
         where job_queues.is_available = false
       )
     )`;
@@ -120,7 +120,7 @@ export async function getJob(
       or
       jobs.job_queue_id in (
         select id
-        from ${escapedWorkerSchema}.job_queues
+        from ${escapedWorkerSchema}._private_job_queues as job_queues
         where job_queues.is_available = true
       )
     )`
@@ -131,7 +131,7 @@ export async function getJob(
       ? ""
       : `,
 q as (
-  update ${escapedWorkerSchema}.job_queues
+  update ${escapedWorkerSchema}._private_job_queues as job_queues
     set
       locked_by = $1::text,
       locked_at = ${now}
@@ -142,7 +142,7 @@ q as (
   const text = `\
 with j as (
   select jobs.job_queue_id, jobs.priority, jobs.run_at, jobs.id
-    from ${escapedWorkerSchema}.jobs
+    from ${escapedWorkerSchema}._private_jobs as jobs
     where jobs.is_available = true
     and run_at <= ${now}
     and task_id = any($2::int[])
@@ -153,7 +153,7 @@ with j as (
     for update
     skip locked
 )${updateQueue}
-  update ${escapedWorkerSchema}.jobs
+  update ${escapedWorkerSchema}._private_jobs as jobs
     set
       attempts = jobs.attempts + 1,
       locked_by = $1::text,

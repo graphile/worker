@@ -69,7 +69,5 @@ you find the project useful and want to help it keep improving, please consider
   networked service)
 - Modern JS with 100% async/await API (no callbacks)
 - Written natively in TypeScript
-- Watch mode for development (experimental - iterate your jobs without
-  restarting worker)
 - If you're running really lean, you can run Graphile Worker in the same Node
   process as your server to keep costs and devops complexity down.

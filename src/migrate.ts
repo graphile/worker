@@ -58,6 +58,10 @@ async function runMigration(
       text: `insert into ${escapedWorkerSchema}.migrations (id) values ($1)`,
       values: [migrationNumber],
     });
+    await client.query("select pg_notify($1, $2)", [
+      "jobs:migrate",
+      JSON.stringify({ migrationNumber }),
+    ]);
     await client.query("commit");
   } catch (e) {
     await client.query("rollback");
@@ -90,10 +94,19 @@ export async function migrate(
   }
 
   const migrationFiles = Object.keys(migrations) as (keyof typeof migrations)[];
+  let highestMigration = 0;
   for (const migrationFile of migrationFiles) {
     const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
+    if (migrationNumber > highestMigration) {
+      highestMigration = migrationNumber;
+    }
     if (latestMigration == null || migrationNumber > latestMigration) {
       await runMigration(options, client, migrationFile, migrationNumber);
     }
+  }
+  if (latestMigration && highestMigration < latestMigration) {
+    throw new Error(
+      `Database is using Graphile Worker schema revision ${latestMigration}, but the currently running worker only supports up to revision ${highestMigration}. Please ensure all versions of Graphile Worker you're running are compatible.`,
+    );
   }
 }

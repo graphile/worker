@@ -9,6 +9,7 @@ import {
   Cron,
   CronJob,
   JobAndCronIdentifier,
+  JobAndCronIdentifierWithDetails,
   KnownCrontab,
   ParsedCronItem,
   RunnerOptions,
@@ -39,6 +40,7 @@ function getBackfillAndUnknownItems(
   const backfillItemsAndDates: Array<{
     item: ParsedCronItem;
     notBefore: Date;
+    itemDetails: KnownCrontab;
   }> = [];
   const unknownIdentifiers: string[] = [];
   for (const item of parsedCronItems) {
@@ -51,6 +53,7 @@ function getBackfillAndUnknownItems(
       backfillItemsAndDates.push({
         item,
         notBefore,
+        itemDetails: known,
       });
     } else {
       unknownIdentifiers.push(item.identifier);
@@ -131,7 +134,7 @@ async function scheduleCronJobs(
         from json_array_elements($1::json) with ordinality AS entries (json, index)
       ),
       locks as (
-        insert into ${escapedWorkerSchema}.known_crontabs (identifier, known_since, last_execution)
+        insert into ${escapedWorkerSchema}._private_known_crontabs as known_crontabs (identifier, known_since, last_execution)
         select
           specs.identifier,
           $2::timestamptz as known_since,
@@ -179,7 +182,7 @@ async function registerAndBackfillItems(
 ) {
   // First, scan the DB to get our starting point.
   const { rows } = await pgPool.query<KnownCrontab>(
-    `SELECT * FROM ${escapedWorkerSchema}.known_crontabs`,
+    `SELECT * FROM ${escapedWorkerSchema}._private_known_crontabs as known_crontabs`,
   );
 
   const { backfillItemsAndDates, unknownIdentifiers } =
@@ -189,7 +192,7 @@ async function registerAndBackfillItems(
     // They're known now.
     await pgPool.query(
       `
-      INSERT INTO ${escapedWorkerSchema}.known_crontabs (identifier, known_since)
+      INSERT INTO ${escapedWorkerSchema}._private_known_crontabs AS known_crontabs (identifier, known_since)
       SELECT identifier, $2::timestamptz
       FROM unnest($1::text[]) AS unnest (identifier)
       ON CONFLICT DO NOTHING
@@ -228,10 +231,10 @@ async function registerAndBackfillItems(
 
       // The identifiers in this array are guaranteed to be unique, since cron
       // items are guaranteed to have unique identifiers.
-      const itemsToBackfill: Array<JobAndCronIdentifier> = [];
+      const itemsToBackfill: Array<JobAndCronIdentifierWithDetails> = [];
 
       // See if anything needs backfilling for this timestamp
-      for (const { item, notBefore } of backfillItemsAndDates) {
+      for (const { item, notBefore, itemDetails } of backfillItemsAndDates) {
         if (
           item.options.backfillPeriod >= timeAgo &&
           unsafeTs >= notBefore &&
@@ -240,6 +243,8 @@ async function registerAndBackfillItems(
           itemsToBackfill.push({
             identifier: item.identifier,
             job: makeJobForItem(item, ts, true),
+            known_since: itemDetails.known_since,
+            last_execution: itemDetails.last_execution,
           });
         }
       }
@@ -516,7 +521,7 @@ export async function getParsedCronItemsFromOptions(
       "`crontabFile` and `parsedCronItems` must not be set at the same time.",
     );
 
-    const watchedCronItems = await getCronItems(options, crontabFile, false);
+    const watchedCronItems = await getCronItems(options, crontabFile);
     releasers.push(() => watchedCronItems.release());
     return watchedCronItems.items;
   } else {

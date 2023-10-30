@@ -5,11 +5,34 @@
 **DROPS SUPPORT FOR NODE <18**. As of 24th October 2023, Node 20 is the active
 LTS and Node 18 is maintainence LTS; previous versions are no longer supported.
 
+**RENAMES** all of the tables `*` to `_private_*` to make it clear that you
+should not rely on their schema being stable. We might change them in a patch
+release. This has always been the case, but the naming makes this clearer.
+
+**ADDS** `graphile_worker.jobs` view as a public interface to view details of
+jobs. NOTE: this interface DELIBERATELY excludes the `payload` field.
+
 **REMOVES `maxContiguousErrors`**. See #307; it wasn't fit for purpose, so best
 to remove it for now.
 
-**LOTS OF `any` CHANGED TO `unknown`**. In particular, errors in the event
-emitter payloads are now `unknown` rather than `any`, so you might need to cast.
+**REMOVES `--watch`** and watch mode in general. Now signal handling is improved
+(see below) and with people wanting to use ESM to define modules, it's finally
+time to remove the experimental watch mode. Use `node --watch` or `nodemon` or
+similar instead. Note: `crontab` file is also not watched, so be sure to watch
+that too!
+
+**TYPESCRIPT**: lots of `any` changed to `unknown`. In particular, errors in the
+event emitter payloads are now `unknown` rather than `any`, so you might need to
+cast.
+
+**TYPESCRIPT**: payload is now marked as required in `addJob` (just set to `{}`
+if your task doesn't need a payload).
+
+Adds the ability to type task payloads and `addJob()` calls (**please** read the
+caveats in the documentation before doing so).
+
+Adds the ability to unlock all jobs from a list of crashed/terminated worker
+IDs: `force_unlock_workers`.
 
 Adds support for `graphile-config` - configuration can now be read from a
 `graphile.config.ts` (or `.js`, `.cjs`, etc) file.
@@ -17,6 +40,20 @@ Adds support for `graphile-config` - configuration can now be read from a
 Crontab: now supports `jobKey` and `jobKeyMode` opts (thanks @spiffytech!)
 
 Signals: now releases signal handlers when shut down via the API.
+
+Schema: checks that current schema in database isn't more up to date than the
+current worker. (This won't be useful until future schema changes.)
+
+Schema: trigger a graceful shutdown if a new Graphile Worker process migrates
+the database schema.
+
+Events: add more detail to `cron:backfill` event.
+
+Tasks: now use `await import(...)` rather than `require(...)`, so ESM can be
+imported.
+
+Logging: changed format of task completion/failure logs to include attempts/max
+attempts and to reduce duplicate parenthesis.
 
 ### v0.15.1
 

@@ -1,9 +1,18 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import { EventEmitter } from "events";
 import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 
 import { Release } from "./lib";
 import { Logger } from "./logger";
 import { Signal } from "./signals";
+
+declare global {
+  namespace GraphileWorker {
+    interface Tasks {
+      /* extend this through declaration merging */
+    }
+  }
+}
 
 /*
  * Terminology:
@@ -27,16 +36,20 @@ export type WithPgClient = <T = void>(
  * The `addJob` interface is implemented in many places in the library, all
  * conforming to this.
  */
-export type AddJobFunction = (
+export type AddJobFunction = <
+  TIdentifier extends keyof GraphileWorker.Tasks | (string & {}) = string,
+>(
   /**
    * The name of the task that will be executed for this job.
    */
-  identifier: string,
+  identifier: TIdentifier,
 
   /**
    * The payload (typically a JSON object) that will be passed to the task executor.
    */
-  payload?: unknown,
+  payload: TIdentifier extends keyof GraphileWorker.Tasks
+    ? GraphileWorker.Tasks[TIdentifier]
+    : unknown,
 
   /**
    * Additional details about how the job should be handled.
@@ -139,25 +152,44 @@ export interface WorkerUtils extends Helpers {
       maxAttempts?: number;
     },
   ) => Promise<DbJob[]>;
+
+  /**
+   * Forcefully unlocks jobs for the given workers, leaving others unaffected.
+   * Only use this if the workers in question are no longer running (crashed,
+   * were terminated, are permanently unreachable, etc).
+   */
+  forceUnlockWorkers: (workerIds: string[]) => Promise<void>;
 }
 
 export type PromiseOrDirect<T> = Promise<T> | T;
 
-export type Task = (
-  payload: unknown,
+export type Task<
+  TName extends keyof GraphileWorker.Tasks | (string & {}) = string & {},
+> = (
+  payload: TName extends keyof GraphileWorker.Tasks
+    ? GraphileWorker.Tasks[TName]
+    : unknown,
   helpers: JobHelpers,
 ) => PromiseOrDirect<void | PromiseOrDirect<unknown>[]>;
 
-export function isValidTask(fn: unknown): fn is Task {
+export function isValidTask<T extends string = keyof GraphileWorker.Tasks>(
+  fn: unknown,
+): fn is Task<T> {
   if (typeof fn === "function") {
     return true;
   }
   return false;
 }
 
-export interface TaskList {
-  [name: string]: Task;
-}
+export type TaskList = {
+  [Key in
+    | keyof GraphileWorker.Tasks
+    | (string & {})]?: Key extends keyof GraphileWorker.Tasks
+    ? Task<Key>
+    : // The `any` here is required otherwise declaring something as a `TaskList` can cause issues.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Task<any>;
+};
 
 export interface WatchedTaskList {
   tasks: TaskList;
@@ -326,6 +358,7 @@ export interface DbJob {
   locked_at: Date | null;
   locked_by: string | null;
   flags: { [flag: string]: true } | null;
+  is_available: boolean;
 }
 
 export interface Job extends DbJob {
@@ -532,7 +565,7 @@ export interface WorkerPoolOptions extends WorkerSharedOptions {
  */
 export interface RunnerOptions extends WorkerPoolOptions {
   /**
-   * Task names and handler, e.g. from `getTasks` (use this if you need watch mode)
+   * Task names and handler, e.g. from `getTasks`
    */
   taskList?: TaskList;
 
@@ -578,6 +611,10 @@ export interface CronJob {
 export interface JobAndCronIdentifier {
   job: CronJob;
   identifier: string;
+}
+export interface JobAndCronIdentifierWithDetails extends JobAndCronIdentifier {
+  known_since: Date;
+  last_execution: Date | null;
 }
 
 export interface WorkerUtilsOptions extends SharedOptions {}
@@ -774,7 +811,7 @@ export type WorkerEventMap = {
   /** **Experimental** When a number of jobs need backfilling for a particular timestamp. */
   "cron:backfill": {
     cron: Cron;
-    itemsToBackfill: JobAndCronIdentifier[];
+    itemsToBackfill: JobAndCronIdentifierWithDetails[];
     timestamp: string;
   };
 

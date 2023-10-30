@@ -47,9 +47,6 @@ Options:
                                 then exit             [boolean] [default: false]
       --once                    Run until there are no runnable jobs left, then
                                 exit                  [boolean] [default: false]
-  -w, --watch                   [EXPERIMENTAL] Watch task files for changes,
-                                automatically reloading the task code without
-                                restarting worker     [boolean] [default: false]
       --crontab                 override path to crontab file           [string]
   -j, --jobs                    number of jobs to run concurrently
                                                            [number] [default: 1]

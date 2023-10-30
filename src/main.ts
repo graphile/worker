@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { Pool, PoolClient } from "pg";
+import { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
 import { defaults } from "./config";
@@ -555,10 +555,34 @@ export function runTaskList(
       reconnectWithExponentialBackoff(e);
     }
 
-    function handleNotification() {
+    function handleNotification(message: Notification) {
       if (changeListener?.client === client) {
-        // Find a worker that's available
-        workers.some((worker) => worker.nudge());
+        switch (message.channel) {
+          case "jobs:insert": {
+            // Find a worker that's available
+            workers.some((worker) => worker.nudge());
+            break;
+          }
+          case "jobs:migrate": {
+            let payload: null | { migrationNumber?: number } = null;
+            try {
+              payload = message.payload ? JSON.parse(message.payload) : null;
+            } catch (e) {
+              /* noop */
+            }
+            console.warn(
+              `Graphile Worker detected migration to database schema revision '${payload?.migrationNumber}'; it would be unsafe to continue, so shutting down...`,
+            );
+            process.exitCode = 54;
+            workerPool.gracefulShutdown();
+            break;
+          }
+          default: {
+            console.warn(
+              `Unhandled NOTIFY message on channel '${message.channel}'`,
+            );
+          }
+        }
       }
     }
 
@@ -586,6 +610,9 @@ export function runTaskList(
       // Successful listen; reset attempts
       attempts = 0;
     }, onErrorReleaseClientAndTryAgain);
+    client
+      .query('LISTEN "jobs:migrate"')
+      .then(null, onErrorReleaseClientAndTryAgain);
 
     const supportedTaskNames = Object.keys(tasks);
 

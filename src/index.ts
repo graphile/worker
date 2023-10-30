@@ -3,7 +3,12 @@ import getTasks from "./getTasks";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
 export * from "./interfaces";
 export { digestPreset } from "./lib";
-export { consoleLogFactory, LogFunctionFactory, Logger } from "./logger";
+export {
+  consoleLogFactory,
+  LogFunctionFactory,
+  Logger,
+  LogLevel,
+} from "./logger";
 export { runTaskList, runTaskListOnce } from "./main";
 export { run, runMigrations, runOnce } from "./runner";
 export { makeWorkerUtils, quickAddJob } from "./workerUtils";
@@ -38,13 +43,6 @@ declare global {
        * @defaultValue `graphile_worker`
        */
       schema?: string;
-      /**
-       * [EXPERIMENTAL] Watch task files for changes, automatically reloading
-       * the task code without restarting worker.
-       *
-       * @defaultValue `false`
-       */
-      watch?: boolean;
       /**
        * Override path to find tasks
        *

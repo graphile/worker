@@ -18,11 +18,11 @@ export async function resetLockedAt(
     client.query({
       text: `\
 with j as (
-update ${escapedWorkerSchema}.jobs
+update ${escapedWorkerSchema}._private_jobs as jobs
 set locked_at = null, locked_by = null, run_at = greatest(run_at, now())
 where locked_at < ${now} - interval '4 hours'
 )
-update ${escapedWorkerSchema}.job_queues
+update ${escapedWorkerSchema}._private_job_queues as job_queues
 set locked_at = null, locked_by = null
 where locked_at < ${now} - interval '4 hours'`,
       values: useNodeTime ? [new Date().toISOString()] : [],
