@@ -74,7 +74,7 @@ SELECT graphile_worker.add_job('reminder', run_at := NOW() + INTERVAL '2 days');
 
 :::tip
 
-if you want to run a job after a variable number of seconds according to the
+If you want to run a job after a variable number of seconds according to the
 database time (rather than the application time), you can use interval
 multiplication; see `run_at` in this example:
 
@@ -161,9 +161,9 @@ CREATE TRIGGER generate_pdf_update
 
 ## `graphile_worker.add_jobs()`
 
-:::caution
+:::caution Experimental
 
-**Experimental**: this API may change in a semver minor release.
+This API may change in a semver minor release.
 
 :::
 
