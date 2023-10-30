@@ -30,7 +30,7 @@ if your task doesn't need a payload).
 
 **RUN OTHER LANGUAGES**: tasks can now be defined in other languages, see
 [Loading executable files](https://worker.graphile.org/docs/tasks#loading-executable-files)
-in the documentation.
+in the documentation. (EXPERIMENTAL!)
 
 Adds the ability to type task payloads and `addJob()` calls (**please** read the
 caveats in the documentation before doing so).
@@ -46,7 +46,10 @@ Adds support for loading tasks from nested folders
 
 Adds support for loading `.cjs` and `.mjs` files.
 
-Adds pluggable task loaders.
+Adds pluggable task loaders. (EXPERIMENTAL!)
+
+Adds `abortSignal` to job helpers so that tasks my cancel their asynchronous
+work on `gracefulShutdown`. (EXPERIMENTAL!)
 
 Crontab: now supports `jobKey` and `jobKeyMode` opts (thanks @spiffytech!)
 
