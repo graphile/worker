@@ -1,8 +1,9 @@
 import { defaults } from "./config";
+import { LoadTaskFromExecutableFilePlugin } from "./plugins/LoadTaskFromExecutableFilePlugin";
 import { LoadTaskFromJsPlugin } from "./plugins/LoadTaskFromJsPlugin";
 
 export const WorkerPreset: GraphileConfig.Preset = {
-  plugins: [LoadTaskFromJsPlugin],
+  plugins: [LoadTaskFromJsPlugin, LoadTaskFromExecutableFilePlugin],
   worker: {
     connectionString: defaults.connectionString,
     schema: defaults.schema,
