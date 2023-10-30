@@ -14,6 +14,7 @@ export {
   LogLevel,
 } from "./logger";
 export { runTaskList, runTaskListOnce } from "./main";
+export { WorkerPreset } from "./preset";
 export { run, runMigrations, runOnce } from "./runner";
 export { makeWorkerUtils, quickAddJob } from "./workerUtils";
 
@@ -101,12 +102,28 @@ declare global {
       };
     }
     interface WorkerHooks {
+      /**
+       * Used to build a given `taskIdentifier`'s handler given a list of files,
+       * if possible.
+       */
       loadTaskFromFiles(
         mutableEvent: {
+          /**
+           * If set, you should not replace this. If unset and you can support
+           * this task identifier (see `details`), you should set it.
+           */
           handler?: Task;
         },
         details: {
+          /**
+           * The string that will identify this task (inferred from the file
+           * path).
+           */
           taskIdentifier: string;
+          /**
+           * A list of the files (and associated metadata) that match this task
+           * identifier.
+           */
           fileDetailsList: readonly FileDetails[];
         },
       ): PromiseOrDirect<void>;

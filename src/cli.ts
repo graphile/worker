@@ -3,11 +3,11 @@ import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
 import { defaults } from "./config";
-import { defaultPlugins } from "./defaultPlugins";
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
 import { run, runOnce } from "./index";
-import { digestPreset } from "./lib";
+import { digestPreset, EMPTY_PRESET } from "./lib";
+import { WorkerPreset } from "./preset";
 import { runMigrations } from "./runner";
 
 const argv = yargs
@@ -117,11 +117,7 @@ async function main() {
     tasksFolder,
     crontabFile,
   } = digestPreset({
-    extends: [
-      { plugins: defaultPlugins },
-      ...(userPreset ? [userPreset] : []),
-      argvToPreset(argv),
-    ],
+    extends: [WorkerPreset, userPreset ?? EMPTY_PRESET, argvToPreset(argv)],
   });
 
   if (!options.connectionString) {

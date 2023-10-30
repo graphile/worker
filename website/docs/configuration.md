@@ -12,7 +12,6 @@ file, e.g.:
 
 ```ts title="graphile.config.js"
 module.exports = {
-  plugins: [],
   worker: {
     connectionString: process.env.DATABASE_URL,
     maxPoolSize: 10,
@@ -33,7 +32,6 @@ import type {} from "graphile-config";
 import type {} from "graphile-worker";
 
 const preset: GraphileConfig.Preset = {
-  plugins: [],
   worker: {
     connectionString: process.env.DATABASE_URL,
     maxPoolSize: 10,

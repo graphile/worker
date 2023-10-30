@@ -3,9 +3,9 @@ import { EventEmitter } from "events";
 import { applyHooks, AsyncHooks, resolvePresets } from "graphile-config";
 import { Client, Pool, PoolClient } from "pg";
 
+import { WorkerPreset } from ".";
 import { defaults } from "./config";
 import { MINUTE } from "./cronConstants";
-import { defaultPlugins } from "./defaultPlugins";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
 import {
   AddJobFunction,
@@ -34,6 +34,8 @@ interface ProcessSharedOptionsSettings {
   scope?: LogScope;
 }
 
+export const EMPTY_PRESET: GraphileConfig.Preset = Object.freeze({});
+
 const _sharedOptionsCache = new WeakMap<SharedOptions, CompiledSharedOptions>();
 export function processSharedOptions(
   options: SharedOptions,
@@ -50,7 +52,10 @@ export function processSharedOptions(
       maxResetLockedInterval = 10 * MINUTE,
       preset,
     } = options;
-    const resolvedPreset = preset ? resolvePresets([preset]) : {};
+    const resolvedPreset = resolvePresets([
+      WorkerPreset,
+      preset ?? EMPTY_PRESET,
+    ]);
     const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
     if (
       !Number.isFinite(minResetLockedInterval) ||
@@ -76,7 +81,7 @@ export function processSharedOptions(
       resolvedPreset,
     };
     applyHooks(
-      resolvedPreset.plugins ?? defaultPlugins,
+      resolvedPreset.plugins,
       (p) => p.worker?.hooks,
       (name, fn, _plugin) => {
         const context = { compiledSharedOptions: compiled };
