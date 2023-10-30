@@ -28,6 +28,10 @@ cast.
 **TYPESCRIPT**: payload is now marked as required in `addJob` (just set to `{}`
 if your task doesn't need a payload).
 
+**RUN OTHER LANGUAGES**: tasks can now be defined in other languages, see
+[Loading executable files](https://worker.graphile.org/docs/tasks#loading-executable-files)
+in the documentation.
+
 Adds the ability to type task payloads and `addJob()` calls (**please** read the
 caveats in the documentation before doing so).
 

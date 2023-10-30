@@ -101,7 +101,7 @@ current directory
             └── send_otp.js
 ```
 
-### Loading task files
+### Loading JavaScript files
 
 Out of the box, Graphile Worker will load `.js`, `.cjs` and `.mjs` files using
 the `import()` function. If the file is a CommonJS module then Worker will
@@ -112,7 +112,7 @@ task executor function.
 Via plugins, support for other ways of loading task files can be added; look at
 the source code of `LoadTaskFromJsPlugin.ts` for inspiration.
 
-### Loading TypeScript files
+#### Loading TypeScript files
 
 :::tip
 
@@ -148,6 +148,49 @@ export default preset;
 NODE_OPTIONS="--loader ts-node/esm" graphile-worker -c ...
 # OR: node --loader ts-node/esm node_modules/.bin/graphile-worker -c ...
 ```
+
+### Loading executable files
+
+:::warning Experimental
+
+This feature is currently experimental.
+
+:::
+
+If you're running on Linux or Unix (including macOS) then if Graphile Worker
+finds an executable file inside of `tasks/` it will create a task executor for
+it. When a task of this kind is found, Graphile Worker will execute the file
+setting the relevant environmental variables and passing in the payload
+according to the encoding. If the executable exits with code `0` then Graphile
+Worker will see this as success, all other exit codes are seen as failure.
+
+#### Environmental variables
+
+- `GRAPHILE_WORKER_PAYLOAD_FORMAT` &mdash; the encoding that Graphile Worker
+  uses to pass the payload to the binary. Currently this will be the string
+  `json`, but you should check this before processing the payload in case the
+  format changes.
+- `GRAPHILE_WORKER_TASK_IDENTIFIER` &mdash; the identifier for the task this
+  file represents (useful if you want multiple task identifiers to be served by
+  the same binary file, e.g. via symlinks)
+- `GRAPHILE_WORKER_JOB_ID` &mdash; the ID of the job in the database
+- `GRAPHILE_WORKER_JOB_KEY` &mdash; the [Job Key](./job-key.md) the job was
+  created with, if any
+- `GRAPHILE_WORKER_JOB_ATTEMPTS` &mdash; the number of attempts that we've made
+  to execute this job; starts at 1
+- `GRAPHILE_WORKER_JOB_MAX_ATTEMPTS` &mdash; the maximum number of attempts
+  we'll try
+- `GRAPHILE_WORKER_JOB_PRIORITY` &mdash; the numeric priority the job was
+  created with
+- `GRAPHILE_WORKER_JOB_RUN_AT` &mdash; when the job is scheduled to run (can be
+  used to detect delayed jobs)
+
+#### Payload format: "json"
+
+In the JSON payload format, your binary will be fed via stdin
+`JSON.stringify({payload})`; for example, if you did
+`addJob('myScript', {mol: 42})` then your `myScript` task would be sent
+`{"payload":{"mol":42}}` via stdin.
 
 ## Handling batch jobs
 
