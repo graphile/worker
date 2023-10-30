@@ -390,7 +390,7 @@ export interface WorkerPool {
   /** @experimental */
   abortSignal: AbortSignal;
   /** @internal */
-  readonly _shuttingDown: boolean;
+  _shuttingDown: boolean;
 }
 
 export interface Runner {
