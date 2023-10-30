@@ -655,7 +655,7 @@ export function runTaskList(
   const withPgClient = makeWithPgClientFromPool(pgPool);
   const workerOptions: WorkerOptions = { ...options, abortSignal };
   for (let i = 0; i < concurrency; i++) {
-    workers.push(makeNewWorker(workerOptions, tasks, withPgClient, true));
+    workers.push(makeNewWorker(workerOptions, tasks, withPgClient));
   }
 
   // TODO: handle when a worker shuts down (spawn a new one)
