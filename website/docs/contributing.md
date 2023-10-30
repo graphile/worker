@@ -3,10 +3,11 @@ title: "Contributing"
 sidebar_position: 170
 ---
 
-We love contributions from the community; but please: if you're planning to do
-something big, talk to us first. Graphile Worker is quite opinionated and
-prioritises performance over many other things, so there's a risk that we may
-not want your feature in core, and we don't want you to waste your time!
+We love contributions from the community; but please: if you&apos;re planning to
+do something big, talk to us first. Graphile Worker is quite opinionated and
+prioritizes performance over many other things, so there&apos;s a risk that we
+may not want your feature in core, and we don&apos;t want you to waste your
+time!
 
 ## Development
 
