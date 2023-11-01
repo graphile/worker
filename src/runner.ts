@@ -15,17 +15,10 @@ import {
   Releasers,
 } from "./lib";
 import { runTaskList, runTaskListOnce } from "./main";
-import { migrate } from "./migrate";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
-  const { withPgClient, release } = await getUtilsAndReleasersFromOptions(
-    options,
-  );
-  try {
-    await withPgClient((client) => migrate(options, client));
-  } finally {
-    await release();
-  }
+  const { release } = await getUtilsAndReleasersFromOptions(options);
+  await release();
 };
 
 async function assertTaskList(
