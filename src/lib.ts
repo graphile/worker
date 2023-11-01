@@ -232,6 +232,7 @@ export const getUtilsAndReleasersFromOptions = async (
 ): Promise<CompiledOptions> => {
   const shared = processSharedOptions(options, settings);
   const { concurrency = defaults.concurrentJobs } = options;
+  const { hooks } = shared;
   return withReleasers(async (releasers, release): Promise<CompiledOptions> => {
     const pgPool: Pool = await assertPool(options, releasers);
     // @ts-ignore
@@ -245,7 +246,13 @@ export const getUtilsAndReleasersFromOptions = async (
     const withPgClient = makeWithPgClientFromPool(pgPool);
 
     // Migrate
-    await withPgClient((client) => migrate(options, client));
+    await withPgClient(async (client) => {
+      const event = { client };
+      await hooks.process("premigrate", event);
+      await migrate(options, event.client);
+      await hooks.process("postmigrate", event);
+    });
+
     const addJob = makeAddJob(options, withPgClient);
 
     return {

@@ -1,4 +1,5 @@
 import { PluginHook } from "graphile-config";
+import type { PoolClient } from "pg";
 
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
@@ -115,6 +116,16 @@ declare global {
        * Called when Graphile Worker starts up.
        */
       init(): PromiseOrDirect<void>;
+
+      /**
+       * Called before migrating the DB.
+       */
+      premigrate(mutableEvent: { client: PoolClient }): PromiseOrDirect<void>;
+
+      /**
+       * Called after migrating the DB.
+       */
+      postmigrate(mutableEvent: { client: PoolClient }): PromiseOrDirect<void>;
 
       /**
        * Used to build a given `taskIdentifier`'s handler given a list of files,

@@ -105,6 +105,7 @@ export async function migrate(
     }
   }
   if (latestMigration && highestMigration < latestMigration) {
+    process.exitCode = 18; // It's too late to run this; the DB has moved on.
     throw new Error(
       `Database is using Graphile Worker schema revision ${latestMigration}, but the currently running worker only supports up to revision ${highestMigration}. Please ensure all versions of Graphile Worker you're running are compatible.`,
     );
