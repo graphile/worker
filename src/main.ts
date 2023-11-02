@@ -211,11 +211,14 @@ export function runTaskList(
   tasks: TaskList,
   pgPool: Pool,
 ): WorkerPool {
-  const { logger, events } = processSharedOptions(options);
+  const { concurrency = defaults.concurrentJobs, noHandleSignals } = options;
+  const compiledSharedOptions = processSharedOptions(options);
+  const { logger, events, minResetLockedInterval, maxResetLockedInterval } =
+    compiledSharedOptions;
+
   if (ENABLE_DANGEROUS_LOGS) {
     logger.debug(`Worker pool options are ${inspect(options)}`, { options });
   }
-  const { concurrency = defaults.concurrentJobs, noHandleSignals } = options;
 
   let unregisterSignalHandlers: (() => void) | undefined = undefined;
   if (!noHandleSignals) {
@@ -245,10 +248,6 @@ export function runTaskList(
   };
   let active = true;
   let reconnectTimeout: NodeJS.Timeout | null = null;
-
-  const compiledSharedOptions = processSharedOptions(options);
-  const { minResetLockedInterval, maxResetLockedInterval } =
-    compiledSharedOptions;
 
   const resetLockedDelay = () =>
     Math.ceil(
