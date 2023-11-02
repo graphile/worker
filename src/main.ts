@@ -193,7 +193,7 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
   }
   _releaseSignalHandlers = () => {
     if (_shuttingDownGracefully || _shuttingDownForcefully) {
-      console.warn(`Not unregistering signal handlers as we're shutting down`);
+      logger.warn(`Not unregistering signal handlers as we're shutting down`);
       return;
     }
 
@@ -351,7 +351,7 @@ export function runTaskList(
     _shuttingDown: false,
     abortSignal,
     release: async () => {
-      console.trace(
+      logger.error(
         "DEPRECATED: You are calling `workerPool.release()`; please use `workerPool.gracefulShutdown()` instead.",
       );
       return this.gracefulShutdown();
@@ -599,7 +599,7 @@ export function runTaskList(
             } catch (e) {
               /* noop */
             }
-            console.warn(
+            logger.warn(
               `Graphile Worker detected migration to database schema revision '${payload?.migrationNumber}'; it would be unsafe to continue, so shutting down...`,
             );
             process.exitCode = 54;
@@ -607,7 +607,7 @@ export function runTaskList(
             break;
           }
           default: {
-            console.warn(
+            logger.debug(
               `Unhandled NOTIFY message on channel '${message.channel}'`,
             );
           }
