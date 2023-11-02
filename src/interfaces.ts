@@ -565,6 +565,8 @@ export interface WorkerOptions extends WorkerSharedOptions {
   workerId?: string;
 
   abortSignal?: AbortSignal;
+
+  workerPool: WorkerPool | null;
 }
 
 /**

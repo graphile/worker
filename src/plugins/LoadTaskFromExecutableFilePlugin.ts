@@ -26,9 +26,9 @@ export const LoadTaskFromExecutableFilePlugin: GraphileConfig.Plugin = {
           );
         }
       },
-      async loadTaskFromFiles(ctx, mutableEvent, details) {
+      async loadTaskFromFiles(ctx, details) {
         // Check it hasn't already been handled
-        if (mutableEvent.handler) {
+        if (details.handler) {
           return;
         }
 
@@ -53,7 +53,7 @@ export const LoadTaskFromExecutableFilePlugin: GraphileConfig.Plugin = {
           `Making executable file task '${taskIdentifier}' for '${executableFile.fullPath}'`,
           { executableFile },
         );
-        mutableEvent.handler = makeTaskForExecutable(
+        details.handler = makeTaskForExecutable(
           taskIdentifier,
           executableFile.fullPath,
         );

@@ -660,7 +660,7 @@ export function runTaskList(
 
   // Spawn our workers; they can share clients from the pool.
   const withPgClient = makeWithPgClientFromPool(pgPool);
-  const workerOptions: WorkerOptions = { ...options, abortSignal };
+  const workerOptions: WorkerOptions = { ...options, abortSignal, workerPool };
   for (let i = 0; i < concurrency; i++) {
     workers.push(makeNewWorker(workerOptions, tasks, withPgClient));
   }

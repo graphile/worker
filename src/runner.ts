@@ -57,7 +57,9 @@ export const runOnce = async (
     const workerOptions: WorkerOptions = {
       ...options,
       abortSignal: undefined,
+      workerPool: null,
     };
+    // TODO: how to handle graceful shutdown?!
     for (let i = 0; i < concurrency; i++) {
       promises.push(
         withPgClient((client) =>

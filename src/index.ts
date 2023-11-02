@@ -3,7 +3,13 @@ import type { PoolClient } from "pg";
 
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
-import { FileDetails, Task, WorkerEvents } from "./interfaces";
+import {
+  FileDetails,
+  Task,
+  TaskList,
+  WorkerEvents,
+  WorkerPool,
+} from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
 import { Logger } from "@graphile/logger";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
@@ -132,38 +138,36 @@ declare global {
       /**
        * Called before migrating the DB.
        */
-      premigrate(mutableEvent: { client: PoolClient }): PromiseOrDirect<void>;
+      premigrate(event: { readonly client: PoolClient }): PromiseOrDirect<void>;
 
       /**
        * Called after migrating the DB.
        */
-      postmigrate(mutableEvent: { client: PoolClient }): PromiseOrDirect<void>;
+      postmigrate(event: {
+        readonly client: PoolClient;
+      }): PromiseOrDirect<void>;
 
       /**
        * Used to build a given `taskIdentifier`'s handler given a list of files,
        * if possible.
        */
-      loadTaskFromFiles(
-        mutableEvent: {
-          /**
-           * If set, you should not replace this. If unset and you can support
-           * this task identifier (see `details`), you should set it.
-           */
-          handler?: Task;
-        },
-        details: {
-          /**
-           * The string that will identify this task (inferred from the file
-           * path).
-           */
-          taskIdentifier: string;
-          /**
-           * A list of the files (and associated metadata) that match this task
-           * identifier.
-           */
-          fileDetailsList: readonly FileDetails[];
-        },
-      ): PromiseOrDirect<void>;
+      loadTaskFromFiles(event: {
+        /**
+         * If set, you should not replace this. If unset and you can support
+         * this task identifier (see `details`), you should set it.
+         */
+        handler?: Task;
+        /**
+         * The string that will identify this task (inferred from the file
+         * path).
+         */
+        readonly taskIdentifier: string;
+        /**
+         * A list of the files (and associated metadata) that match this task
+         * identifier.
+         */
+        readonly fileDetailsList: readonly FileDetails[];
+      }): PromiseOrDirect<void>;
     }
   }
 }
