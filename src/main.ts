@@ -24,6 +24,7 @@ import SIGNALS, { Signal } from "./signals";
 import { failJobs } from "./sql/failJob";
 import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
+import { randomBytes } from "crypto";
 
 const ENABLE_DANGEROUS_LOGS =
   process.env.GRAPHILE_ENABLE_DANGEROUS_LOGS === "1";
@@ -348,6 +349,7 @@ export function runTaskList(
 
   // This is a representation of us that can be interacted with externally
   const workerPool: WorkerPool = {
+    id: `pool-${randomBytes(9).toString("hex")}`,
     _shuttingDown: false,
     abortSignal,
     release: async () => {

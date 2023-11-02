@@ -28,6 +28,7 @@ export function makeNewWorker(
     pollInterval = defaults.pollInterval,
     forbiddenFlags,
     abortSignal,
+    workerPool,
   } = options;
   const compiledSharedOptions = processSharedOptions(options, {
     scope: {
@@ -35,7 +36,7 @@ export function makeNewWorker(
       workerId,
     },
   });
-  const { logger, events, useNodeTime } = compiledSharedOptions;
+  const { logger, events, useNodeTime, hooks } = compiledSharedOptions;
   const promise = deferred() as Deferred<void> & {
     /** @internal */
     worker?: Worker;
@@ -70,6 +71,7 @@ export function makeNewWorker(
     if (cancelDoNext()) {
       promise.resolve();
     }
+    hooks.process("stopWorker", { workerId, workerPool, withPgClient });
 
     return promise;
   };
@@ -102,7 +104,7 @@ export function makeNewWorker(
   let contiguousErrors = 0;
   let again = false;
 
-  const doNext = async (): Promise<void> => {
+  const doNext = async (first = false): Promise<void> => {
     again = false;
     cancelDoNext();
     assert.ok(active, "doNext called when active was false");
@@ -122,6 +124,18 @@ export function makeNewWorker(
         } else if (forbiddenFlagsResult != null) {
           flagsToSkip = await forbiddenFlagsResult;
         }
+      }
+
+      if (first) {
+        const event = {
+          workerId,
+          flagsToSkip,
+          tasks,
+          workerPool,
+          withPgClient,
+        };
+        await hooks.process("startWorker", event);
+        flagsToSkip = event.flagsToSkip;
       }
 
       events.emit("worker:getJob:start", { worker });
@@ -368,7 +382,7 @@ export function makeNewWorker(
   };
 
   // Start!
-  doNext();
+  doNext(true);
 
   // For tests
   promise.worker = worker;

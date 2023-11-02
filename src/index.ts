@@ -7,6 +7,7 @@ import {
   FileDetails,
   Task,
   TaskList,
+  WithPgClient,
   WorkerEvents,
   WorkerPool,
 } from "./interfaces";
@@ -123,7 +124,7 @@ declare global {
         hooks?: {
           [key in keyof WorkerHooks]?: PluginHook<
             WorkerHooks[key] extends (...args: infer UArgs) => infer UResult
-              ? (opts: WorkerPluginContext, ...args: UArgs) => UResult
+              ? (ctx: WorkerPluginContext, ...args: UArgs) => UResult
               : never
           >;
         };
@@ -167,6 +168,20 @@ declare global {
          * identifier.
          */
         readonly fileDetailsList: readonly FileDetails[];
+      }): PromiseOrDirect<void>;
+
+      startWorker(event: {
+        readonly workerId: string;
+        flagsToSkip: null | string[];
+        readonly tasks: TaskList;
+        readonly workerPool: WorkerPool | null;
+        readonly withPgClient: WithPgClient;
+      }): PromiseOrDirect<void>;
+
+      stopWorker(event: {
+        readonly workerId: string;
+        readonly workerPool: WorkerPool | null;
+        readonly withPgClient: WithPgClient;
       }): PromiseOrDirect<void>;
     }
   }

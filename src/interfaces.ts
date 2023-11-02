@@ -388,6 +388,7 @@ export interface Worker {
 }
 
 export interface WorkerPool {
+  id: string;
   /** @deprecated Use gracefulShutdown instead */
   release: () => Promise<void>;
   gracefulShutdown: (message?: string) => Promise<void>;
