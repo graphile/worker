@@ -89,10 +89,12 @@ export function processSharedOptions(
     applyHooks(
       resolvedPreset.plugins,
       (p) => p.worker?.hooks,
-      (name, fn, _plugin) => {
+      (name, fn, plugin) => {
         const context: WorkerPluginContext = compiled!;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        hooks.hook(name, ((...args: any[]) => fn(context, ...args)) as any);
+        const cb = ((...args: any[]) => fn(context, ...args)) as any;
+        cb.displayName = `${plugin.name}_hook_${name}`;
+        hooks.hook(name, cb);
       },
     );
     _sharedOptionsCache.set(options, compiled);
@@ -236,7 +238,10 @@ export const getUtilsAndReleasersFromOptions = async (
   const shared = processSharedOptions(options, settings);
   const { concurrency = defaults.concurrentJobs } = options;
   const { hooks } = shared;
-  return withReleasers(async (releasers, release): Promise<CompiledOptions> => {
+  return withReleasers(async function getUtilsFromOptions(
+    releasers,
+    release,
+  ): Promise<CompiledOptions> {
     const pgPool: Pool = await assertPool(options, releasers);
     // @ts-ignore
     const max = pgPool?.options?.max || 10;
@@ -249,7 +254,7 @@ export const getUtilsAndReleasersFromOptions = async (
     const withPgClient = makeWithPgClientFromPool(pgPool);
 
     // Migrate
-    await withPgClient(async (client) => {
+    await withPgClient(async function migrateWithPgClient(client) {
       const event = { client };
       await hooks.process("premigrate", event);
       await migrate(options, event.client);
