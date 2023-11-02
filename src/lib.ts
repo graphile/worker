@@ -17,6 +17,7 @@ import {
 import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
 import { EMPTY_PRESET } from "./preset";
+import { version } from "./version";
 
 export interface CompiledSharedOptions {
   events: WorkerEvents;
@@ -86,7 +87,7 @@ export function processSharedOptions(
       resolvedPreset.plugins,
       (p) => p.worker?.hooks,
       (name, fn, _plugin) => {
-        const context = { compiledSharedOptions: compiled };
+        const context = { version, compiledSharedOptions: compiled };
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         hooks.hook(name, ((...args: any[]) => fn(context, ...args)) as any);

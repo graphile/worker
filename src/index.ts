@@ -21,8 +21,10 @@ export { makeWorkerUtils, quickAddJob } from "./workerUtils";
 
 export { getTasks };
 export { getCronItems };
+export { CompiledSharedOptions };
 
 export interface WorkerPluginContext {
+  version: string;
   compiledSharedOptions: CompiledSharedOptions;
 }
 
