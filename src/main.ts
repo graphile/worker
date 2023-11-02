@@ -581,6 +581,11 @@ export function runTaskList(
 
     function handleNotification(message: Notification) {
       if (changeListener?.client === client) {
+        events.emit("pool:listen:notification", {
+          workerPool,
+          message,
+          client,
+        });
         switch (message.channel) {
           case "jobs:insert": {
             // Find a worker that's available
@@ -612,11 +617,13 @@ export function runTaskList(
 
     function release() {
       changeListener = null;
-      client.removeListener("error", onErrorReleaseClientAndTryAgain);
       client.removeListener("notification", handleNotification);
+      events.emit("pool:listen:release", { workerPool, client });
       client.query('UNLISTEN "jobs:insert"').catch(() => {
         /* ignore errors */
       });
+      // TODO: ideally we'd only unregister error handler once all pending queries are complete.
+      client.removeListener("error", onErrorReleaseClientAndTryAgain);
       releaseClient();
     }
 
@@ -625,8 +632,8 @@ export function runTaskList(
 
     //----------------------------------------
 
-    events.emit("pool:listen:success", { workerPool, client });
     changeListener = { client, release };
+    events.emit("pool:listen:success", { workerPool, client });
     client.on("notification", handleNotification);
 
     // Subscribe to jobs:insert message

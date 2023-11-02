@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import type { EventEmitter } from "events";
 import type { Stats } from "fs";
-import type { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
+import type {
+  Notification,
+  Pool,
+  PoolClient,
+  QueryResult,
+  QueryResultRow,
+} from "pg";
 
 import type { Release } from "./lib";
 import type { Logger } from "./logger";
@@ -696,6 +702,24 @@ export type WorkerEventMap = {
   "pool:listen:error": {
     workerPool: WorkerPool;
     error: unknown;
+    client: PoolClient;
+  };
+
+  /**
+   * When a worker pool receives a notification
+   */
+  "pool:listen:notification": {
+    workerPool: WorkerPool;
+    message: Notification;
+    client: PoolClient;
+  };
+
+  /**
+   * When a worker pool listening client is no longer available
+   */
+  "pool:listen:release": {
+    workerPool: WorkerPool;
+    /** If you use this client, be careful to handle errors - it may be in an invalid state (errored, disconnected, etc). */
     client: PoolClient;
   };
 
