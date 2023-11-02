@@ -9,77 +9,71 @@ Graphile ecosystem. Find out
 - The Guild
 - Dovetail
 - Netflix
-- Chad Furman
 - Stellate
 - Accenture
 - We Love Micro
+- Trigger.dev
+- Seam
 
 ## Leaders
 
 - Qwick
-- Politics Rewired
+- politics-rewired
 - Joe Dennis
 - Robert Claypool
-- DocIQ
 - nigelrmtaylor
 - Principia Mentis
 - Luxor Labs
-- Ian Stewart
 - Axinom
-- PostHog
-- Nathanael Beisiegel
-- Notably
 - Taiste
-- latch.bio
+- Notably
+- Nathanael Beisiegel
+- LatchBio
+- Ian Stewart
 - Cintra
-- Trigger.dev
-- Giovanny Gutiérrez
 - BairesDev
 - FOLX Health
 - Two Bit Solutions
 - Beacon
 - Ndustrial
-- dimply
+- Dimply
+- Giovanny Gutiérrez
 
 ## Supporters
 
 - HR-ON
 - stlbucket
 - Sam Levin
-- Matt Bretl
 - Chris Watland
 - svarmony
 - James Rascoe
-- Simon Elliott
 - CJ Lazell
 - Daniel Einspanjer
+- Simon Elliott
+- Matt Bretl
 - Mansoor Razzaq
 - Alvin Ali Khaled
-- Keith Layne
+- nullachtvierzehn
 - Paul Melnikow
+- Keith Layne
 - Jimmy Liu
-- Splitgraph
-- Kadi Kraman
 - Benjamin Berman
 - Zymego
-- CartoLab
-- IFCHOR GROUP
-- Nicolas Penot
-- Gamma Peak
-- Boo
-- JYC
-- Ben Periton
-- Spear AI
-- SpaceFill
-- Vizcom
-- garpulon
 - Nate Smith
-- The Outbound Collective
+- IFCHOR GROUP
+- CartoLab
+- Nicolas Penot
+- JYC
 - Charlie Hadden
+- The Outbound Collective
 - Kiron Open Higher Education
-- Antonio Angelino
 - urtho
+- Vizcom Developer Repos
 - Andrew Joseph
 - Old Grammar
+- Spear AI
 - SIED 70
+- garpulon
 - Peter C. Romano
+- TitanFighter
+- dinodeSimon
