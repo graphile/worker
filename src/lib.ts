@@ -3,7 +3,7 @@ import { EventEmitter } from "events";
 import { applyHooks, AsyncHooks, resolvePresets } from "graphile-config";
 import { Client, Pool, PoolClient } from "pg";
 
-import { WorkerPreset } from ".";
+import { WorkerPluginContext, WorkerPreset } from ".";
 import { defaults } from "./config";
 import { MINUTE } from "./cronConstants";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
@@ -19,7 +19,9 @@ import { migrate } from "./migrate";
 import { EMPTY_PRESET } from "./preset";
 import { version } from "./version";
 
+// NOTE: when you add things here, you may also want to add them to WorkerPluginContext
 export interface CompiledSharedOptions {
+  version: string;
   events: WorkerEvents;
   logger: Logger;
   workerSchema: string;
@@ -71,6 +73,7 @@ export function processSharedOptions(
     }
     const hooks = new AsyncHooks<GraphileConfig.WorkerHooks>();
     compiled = {
+      version,
       events,
       logger,
       workerSchema,
@@ -87,8 +90,7 @@ export function processSharedOptions(
       resolvedPreset.plugins,
       (p) => p.worker?.hooks,
       (name, fn, _plugin) => {
-        const context = { version, compiledSharedOptions: compiled };
-
+        const context: WorkerPluginContext = compiled!;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         hooks.hook(name, ((...args: any[]) => fn(context, ...args)) as any);
       },

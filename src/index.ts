@@ -1,10 +1,11 @@
-import { PluginHook } from "graphile-config";
+import { AsyncHooks, PluginHook } from "graphile-config";
 import type { PoolClient } from "pg";
 
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
-import { FileDetails, Task } from "./interfaces";
+import { FileDetails, Task, WorkerEvents } from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
+import { Logger } from "@graphile/logger";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
 export * from "./interfaces";
 export { digestPreset } from "./lib";
@@ -25,7 +26,16 @@ export { CompiledSharedOptions };
 
 export interface WorkerPluginContext {
   version: string;
-  compiledSharedOptions: CompiledSharedOptions;
+  events: WorkerEvents;
+  logger: Logger;
+  workerSchema: string;
+  escapedWorkerSchema: string;
+  useNodeTime: boolean;
+  minResetLockedInterval: number;
+  maxResetLockedInterval: number;
+  hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
+  resolvedPreset?: GraphileConfig.ResolvedPreset;
+  gracefulShutdownAbortTimeout: number;
 }
 
 export type PromiseOrDirect<T> = T | Promise<T>;
@@ -107,7 +117,7 @@ declare global {
         hooks?: {
           [key in keyof WorkerHooks]?: PluginHook<
             WorkerHooks[key] extends (...args: infer UArgs) => infer UResult
-              ? (info: WorkerPluginContext, ...args: UArgs) => UResult
+              ? (opts: WorkerPluginContext, ...args: UArgs) => UResult
               : never
           >;
         };

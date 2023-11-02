@@ -11,15 +11,13 @@ export const LoadTaskFromJsPlugin: GraphileConfig.Plugin = {
 
   worker: {
     hooks: {
-      async loadTaskFromFiles(info, mutableEvent, details) {
+      async loadTaskFromFiles(ctx, mutableEvent, details) {
         // Check it hasn't already been handled
         if (mutableEvent.handler) {
           return;
         }
 
-        const {
-          compiledSharedOptions: { resolvedPreset },
-        } = info;
+        const { resolvedPreset } = ctx;
         const { fileDetailsList } = details;
 
         let jsFile: FileDetails | undefined = undefined;

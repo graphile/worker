@@ -19,14 +19,14 @@ export const LoadTaskFromExecutableFilePlugin: GraphileConfig.Plugin = {
 
   worker: {
     hooks: {
-      init(info) {
+      init(ctx) {
         if (!supportsExecutableBit) {
-          info.compiledSharedOptions.logger.warn(
+          ctx.logger.warn(
             `Executable file detection not yet supported on '${process.platform}'.`,
           );
         }
       },
-      async loadTaskFromFiles(info, mutableEvent, details) {
+      async loadTaskFromFiles(ctx, mutableEvent, details) {
         // Check it hasn't already been handled
         if (mutableEvent.handler) {
           return;
@@ -49,7 +49,7 @@ export const LoadTaskFromExecutableFilePlugin: GraphileConfig.Plugin = {
           return;
         }
 
-        info.compiledSharedOptions.logger.debug(
+        ctx.logger.debug(
           `Making executable file task '${taskIdentifier}' for '${executableFile.fullPath}'`,
           { executableFile },
         );
