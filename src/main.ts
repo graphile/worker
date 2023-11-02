@@ -580,7 +580,7 @@ export function runTaskList(
     }
 
     function handleNotification(message: Notification) {
-      if (changeListener?.client === client) {
+      if (changeListener?.client === client && !workerPool._shuttingDown) {
         events.emit("pool:listen:notification", {
           workerPool,
           message,
@@ -608,7 +608,7 @@ export function runTaskList(
           }
           default: {
             logger.debug(
-              `Unhandled NOTIFY message on channel '${message.channel}'`,
+              `Received NOTIFY message on channel '${message.channel}'`,
             );
           }
         }
