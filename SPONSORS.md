@@ -18,7 +18,7 @@ Graphile ecosystem. Find out
 ## Leaders
 
 - Qwick
-- politics-rewired
+- Politics Rewired
 - Joe Dennis
 - Robert Claypool
 - nigelrmtaylor
@@ -68,7 +68,7 @@ Graphile ecosystem. Find out
 - The Outbound Collective
 - Kiron Open Higher Education
 - urtho
-- Vizcom Developer Repos
+- Vizcom
 - Andrew Joseph
 - Old Grammar
 - Spear AI
