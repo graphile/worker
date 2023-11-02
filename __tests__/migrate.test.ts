@@ -93,3 +93,7 @@ test("aborts if database is more up to date than current worker", async () => {
     );
   });
 });
+
+afterAll(() => {
+  process.exitCode = 0;
+});

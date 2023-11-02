@@ -14,7 +14,7 @@ import {
   getUtilsAndReleasersFromOptions,
   Releasers,
 } from "./lib";
-import { runTaskList, runTaskListOnce } from "./main";
+import { _runTaskList, runTaskList, runTaskListOnce } from "./main";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
   const { release } = await getUtilsAndReleasersFromOptions(options);
@@ -46,28 +46,23 @@ export const runOnce = async (
   options: RunnerOptions,
   overrideTaskList?: TaskList,
 ): Promise<void> => {
-  const { concurrency = 1 } = options;
-  const { withPgClient, release, releasers } =
-    await getUtilsAndReleasersFromOptions(options);
+  const compiledSharedOptions = await getUtilsAndReleasersFromOptions(options);
+  const { withPgClient, release, releasers } = compiledSharedOptions;
   try {
     const taskList =
       overrideTaskList || (await assertTaskList(options, releasers));
+    const workerPool = _runTaskList(
+      compiledSharedOptions,
+      taskList,
+      withPgClient,
+      {
+        concurrency: options.concurrency ?? 1,
+        noHandleSignals: options.noHandleSignals,
+        continuous: false,
+      },
+    );
 
-    const promises: Promise<void>[] = [];
-    const workerOptions: WorkerOptions = {
-      ...options,
-      abortSignal: undefined,
-      workerPool: null,
-    };
-    // TODO: how to handle graceful shutdown?!
-    for (let i = 0; i < concurrency; i++) {
-      promises.push(
-        withPgClient((client) =>
-          runTaskListOnce(workerOptions, taskList, client),
-        ),
-      );
-    }
-    await Promise.all(promises);
+    return await workerPool.promise;
   } finally {
     await release();
   }

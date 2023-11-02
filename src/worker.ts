@@ -21,7 +21,7 @@ export function makeNewWorker(
   options: WorkerOptions,
   tasks: TaskList,
   withPgClient: WithPgClient,
-  continuous = true,
+  continuous: boolean,
 ): Worker {
   const {
     workerId = `worker-${randomBytes(9).toString("hex")}`,

@@ -398,6 +398,27 @@ export interface WorkerPool {
   abortSignal: AbortSignal;
   /** @internal */
   _shuttingDown: boolean;
+  /** @internal */
+  _active: boolean;
+  /** @internal */
+  _workers: Worker[];
+  /**
+   * Only works if concurrency === 1!
+   *
+   * @internal
+   */
+  worker: Worker | null;
+
+  then<TResult1 = void, TResult2 = never>(
+    onfulfilled?:
+      | ((value: void) => TResult1 | PromiseLike<TResult1>)
+      | undefined
+      | null,
+    onrejected?:
+      | ((reason: any) => TResult2 | PromiseLike<TResult2>)
+      | undefined
+      | null,
+  ): Promise<TResult1 | TResult2>;
 }
 
 export interface Runner {
@@ -567,7 +588,13 @@ export interface WorkerOptions extends WorkerSharedOptions {
 
   abortSignal?: AbortSignal;
 
-  workerPool: WorkerPool | null;
+  workerPool: WorkerPool;
+
+  /**
+   * If set true, we won't install signal handlers and it'll be up to you to
+   * handle graceful shutdown of the worker if the process receives a signal.
+   */
+  noHandleSignals?: boolean;
 }
 
 /**
