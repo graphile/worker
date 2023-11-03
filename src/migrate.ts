@@ -50,13 +50,16 @@ async function runMigration(
     escapedWorkerSchema,
   );
   await client.query("begin");
+  let migrationInsertComplete = false;
   try {
-    await client.query({
-      text,
-    });
+    // Must come first so we can detect concurrent migration
     await client.query({
       text: `insert into ${escapedWorkerSchema}.migrations (id) values ($1)`,
       values: [migrationNumber],
+    });
+    migrationInsertComplete = true;
+    await client.query({
+      text,
     });
     await client.query("select pg_notify($1, $2)", [
       "jobs:migrate",
@@ -65,6 +68,10 @@ async function runMigration(
     await client.query("commit");
   } catch (e) {
     await client.query("rollback");
+    if (!migrationInsertComplete && e.code === "23505") {
+      // Someone else did this migration! Success!
+      return;
+    }
     throw e;
   }
 }
