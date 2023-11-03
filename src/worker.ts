@@ -71,9 +71,9 @@ export function makeNewWorker(
     if (cancelDoNext()) {
       promise.resolve();
     }
-    hooks.process("stopWorker", { worker, withPgClient });
-
-    return promise;
+    return Promise.resolve(
+      hooks.process("stopWorker", { worker, withPgClient }),
+    ).then(() => promise);
   };
 
   const nudge = () => {
