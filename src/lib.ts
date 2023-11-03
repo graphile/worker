@@ -18,10 +18,27 @@ import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
 import { EMPTY_PRESET } from "./preset";
 import { version } from "./version";
+import { migrations } from "./generated/sql";
+
+const MAX_MIGRATION_NUMBER = Object.keys(migrations).reduce(
+  (memo, migrationFile) => {
+    const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
+    return Math.max(memo, migrationNumber);
+  },
+  0,
+);
+
+const BREAKING_MIGRATIONS = Object.entries(migrations)
+  .filter(([_, text]) => {
+    return text.startsWith("--! breaking");
+  })
+  .map(([migrationFile]) => parseInt(migrationFile.slice(0, 6), 10));
 
 // NOTE: when you add things here, you may also want to add them to WorkerPluginContext
 export interface CompiledSharedOptions {
   version: string;
+  maxMigrationNumber: number;
+  breakingMigrationNumbers: number[];
   events: WorkerEvents;
   logger: Logger;
   workerSchema: string;
@@ -74,6 +91,8 @@ export function processSharedOptions(
     const hooks = new AsyncHooks<GraphileConfig.WorkerHooks>();
     compiled = {
       version,
+      maxMigrationNumber: MAX_MIGRATION_NUMBER,
+      breakingMigrationNumbers: BREAKING_MIGRATIONS,
       events,
       logger,
       workerSchema,

@@ -1,3 +1,4 @@
+--! breaking-change
 alter table :GRAPHILE_WORKER_SCHEMA.jobs rename to _private_jobs;
 alter table :GRAPHILE_WORKER_SCHEMA.job_queues rename to _private_job_queues;
 alter table :GRAPHILE_WORKER_SCHEMA.tasks rename to _private_tasks;

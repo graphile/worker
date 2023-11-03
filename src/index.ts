@@ -35,6 +35,8 @@ export { CompiledSharedOptions };
 
 export interface WorkerPluginContext {
   version: string;
+  maxMigrationNumber: number;
+  breakingMigrationNumbers: number[];
   events: WorkerEvents;
   logger: Logger;
   workerSchema: string;
