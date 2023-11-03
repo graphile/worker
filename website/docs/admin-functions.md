@@ -6,7 +6,7 @@ sidebar_position: 100
 When implementing an administrative UI you may need more control over the jobs.
 For this we have added a few administrative functions that can be called in SQL
 or through the JS API. The JS API is exposed via a `WorkerUtils` instance; see
-[`makeWorkerUtils`](http://localhost:3000/docs/library/queue#makeworkerutils).
+[`makeWorkerUtils`](/docs/library/queue#makeworkerutils).
 
 :::warning
 
