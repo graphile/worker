@@ -71,7 +71,7 @@ export function makeNewWorker(
     if (cancelDoNext()) {
       promise.resolve();
     }
-    hooks.process("stopWorker", { workerId, workerPool, withPgClient });
+    hooks.process("stopWorker", { worker, withPgClient });
 
     return promise;
   };
@@ -90,6 +90,7 @@ export function makeNewWorker(
   };
 
   const worker: Worker = {
+    workerPool,
     nudge,
     workerId,
     release,
@@ -128,10 +129,9 @@ export function makeNewWorker(
 
       if (first) {
         const event = {
-          workerId,
+          worker,
           flagsToSkip,
           tasks,
-          workerPool,
           withPgClient,
         };
         await hooks.process("startWorker", event);

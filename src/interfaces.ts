@@ -380,6 +380,7 @@ export interface KnownCrontab {
 }
 
 export interface Worker {
+  workerPool: WorkerPool;
   nudge: () => boolean;
   workerId: string;
   release: () => void | Promise<void>;
@@ -402,6 +403,8 @@ export interface WorkerPool {
   _active: boolean;
   /** @internal */
   _workers: Worker[];
+  /** @internal */
+  _withPgClient: WithPgClient;
   /**
    * Only works if concurrency === 1!
    *
@@ -756,24 +759,40 @@ export type WorkerEventMap = {
   /**
    * When a worker pool is released
    */
-  "pool:release": { pool: WorkerPool };
+  "pool:release": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+  };
 
   /**
    * When a worker pool starts a graceful shutdown
    */
-  "pool:gracefulShutdown": { pool: WorkerPool; message: string };
+  "pool:gracefulShutdown": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+    message: string;
+  };
 
   /**
    * When a worker pool graceful shutdown throws an error
    */
-  "pool:gracefulShutdown:error": { pool: WorkerPool; error: unknown };
+  "pool:gracefulShutdown:error": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+    error: unknown;
+  };
 
   /**
    * When a worker pool graceful shutdown is successful, but one of the workers
    * throws an error from release()
    */
   "pool:gracefulShutdown:workerError": {
+    /** @deprecated Use workerPool for consistency */
     pool: WorkerPool;
+    workerPool: WorkerPool;
     error: unknown;
     job: Job | null;
   };
@@ -781,22 +800,40 @@ export type WorkerEventMap = {
   /**
    * When a worker pool graceful shutdown throws an error
    */
-  "pool:gracefulShutdown:complete": { pool: WorkerPool };
+  "pool:gracefulShutdown:complete": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+  };
 
   /**
    * When a worker pool starts a forceful shutdown
    */
-  "pool:forcefulShutdown": { pool: WorkerPool; message: string };
+  "pool:forcefulShutdown": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+    message: string;
+  };
 
   /**
    * When a worker pool forceful shutdown throws an error
    */
-  "pool:forcefulShutdown:error": { pool: WorkerPool; error: unknown };
+  "pool:forcefulShutdown:error": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+    error: unknown;
+  };
 
   /**
    * When a worker pool forceful shutdown throws an error
    */
-  "pool:forcefulShutdown:complete": { pool: WorkerPool };
+  "pool:forcefulShutdown:complete": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+  };
 
   /**
    * When a worker is created
@@ -935,7 +972,7 @@ export type WorkerEventMap = {
    */
   "resetLocked:started": {
     /** @internal Not sure this'll stay on pool */
-    pool: WorkerPool;
+    workerPool: WorkerPool;
   };
 
   /**
@@ -950,7 +987,7 @@ export type WorkerEventMap = {
     delay: number | null;
 
     /** @internal Not sure this'll stay on pool */
-    pool: WorkerPool;
+    workerPool: WorkerPool;
   };
 
   /**
@@ -966,7 +1003,7 @@ export type WorkerEventMap = {
     delay: number | null;
 
     /** @internal Not sure this'll stay on pool */
-    pool: WorkerPool;
+    workerPool: WorkerPool;
   };
 
   /**

@@ -10,6 +10,7 @@ import {
   WithPgClient,
   WorkerEvents,
   WorkerPool,
+  Worker,
 } from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
 import { Logger } from "@graphile/logger";
@@ -171,16 +172,14 @@ declare global {
       }): PromiseOrDirect<void>;
 
       startWorker(event: {
-        readonly workerId: string;
+        readonly worker: Worker;
         flagsToSkip: null | string[];
         readonly tasks: TaskList;
-        readonly workerPool: WorkerPool | null;
         readonly withPgClient: WithPgClient;
       }): PromiseOrDirect<void>;
 
       stopWorker(event: {
-        readonly workerId: string;
-        readonly workerPool: WorkerPool | null;
+        readonly worker: Worker;
         readonly withPgClient: WithPgClient;
       }): PromiseOrDirect<void>;
     }
