@@ -11,6 +11,7 @@ import {
   WorkerEvents,
   WorkerPool,
   Worker,
+  SharedOptions,
 } from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
 import { Logger } from "@graphile/logger";
@@ -41,6 +42,7 @@ export interface WorkerPluginContext {
   useNodeTime: boolean;
   minResetLockedInterval: number;
   maxResetLockedInterval: number;
+  options: SharedOptions;
   hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
   resolvedPreset?: GraphileConfig.ResolvedPreset;
   gracefulShutdownAbortTimeout: number;
