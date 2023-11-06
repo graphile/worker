@@ -123,7 +123,7 @@ function buildRunner(input: {
   const workerPool = runTaskList(options, taskList, pgPool);
   releasers.push(() => {
     if (!workerPool._shuttingDown) {
-      workerPool.gracefulShutdown("Runner is shutting down");
+      return workerPool.gracefulShutdown("Runner is shutting down");
     }
   });
 

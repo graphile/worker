@@ -231,7 +231,7 @@ export function runTaskList(
         clearTimeout(reconnectTimeout);
         reconnectTimeout = null;
       }
-      unlistenForChanges();
+      return unlistenForChanges();
     },
   });
 
@@ -239,13 +239,13 @@ export function runTaskList(
   let reconnectTimeout: NodeJS.Timeout | null = null;
   let changeListener: {
     client: PoolClient;
-    release: () => void;
+    release: () => Promise<void>;
   } | null = null;
 
   const unlistenForChanges = async () => {
     if (changeListener) {
       try {
-        changeListener.release();
+        await changeListener.release();
       } catch (e) {
         logger.error(
           `Error occurred whilst releasing listening client: ${e.message}`,
@@ -423,13 +423,21 @@ export function runTaskList(
     function release() {
       changeListener = null;
       client.removeListener("notification", handleNotification);
-      events.emit("pool:listen:release", { workerPool, client });
-      client.query('UNLISTEN "jobs:insert"').catch(() => {
-        /* ignore errors */
-      });
-      // TODO: ideally we'd only unregister error handler once all pending queries are complete.
+      // TODO: ideally we'd only stop handling errors once all pending queries are complete; but either way we shouldn't try again!
       client.removeListener("error", onErrorReleaseClientAndTryAgain);
-      releaseClient();
+      events.emit("pool:listen:release", { workerPool, client });
+      return client.query('UNLISTEN "jobs:insert"').then(
+        () => {
+          releaseClient();
+        },
+        (error) => {
+          /* ignore errors */
+          logger.error(`Error occurred attempting to UNLISTEN: ${error}`, {
+            error,
+          });
+          releaseClient();
+        },
+      );
     }
 
     // On error, release this client and try again
@@ -776,9 +784,10 @@ export function _runTaskList(
       () => {
         remove();
       },
-      (e) => {
+      (error) => {
         remove();
-        logger.error(`Worker exited with error: ${e}`);
+        console.trace(error);
+        logger.error(`Worker exited with error: ${error}`, { error });
       },
     );
   }

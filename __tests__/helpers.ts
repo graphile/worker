@@ -13,6 +13,7 @@ import {
   WorkerUtils,
 } from "../src/interfaces";
 import { migrate } from "../src/migrate";
+import { _allWorkerPools } from "../src/main";
 
 declare global {
   namespace GraphileWorker {
@@ -65,6 +66,12 @@ export async function withPgPool<T>(
     pool.end();
   }
 }
+
+afterEach(() => {
+  if (_allWorkerPools.length !== 0) {
+    throw new Error(`Current test failed to release all workers`);
+  }
+});
 
 export async function withPgClient<T>(
   cb: (client: pg.PoolClient) => Promise<T>,
