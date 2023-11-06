@@ -6,6 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build:sql": "node scripts/buildSqlModule.mjs",
+    "website:update": "node scripts/options.mjs",
     "prepack": "rm -Rf dist && npm run build:sql && tsc && chmod +x dist/cli.js",
     "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && npm run build:sql && tsc --watch",
     "lint": "yarn prettier:check && eslint --ext .js,.jsx,.ts,.tsx,.graphql .",
@@ -83,7 +84,8 @@
     "react-dom": "^18.2.0",
     "ts-jest": "^26.0.0",
     "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "zx": "^7.2.3"
   },
   "files": [
     "dist",
