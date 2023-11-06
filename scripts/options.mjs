@@ -3,7 +3,7 @@ import "zx/globals";
 import * as fs from "fs/promises";
 
 // Create a symlink so `import "graphile-worker"` works
-await $`ln -s .. node_modules/graphile-worker`;
+await $`ln -s .. node_modules/graphile-worker || true`;
 
 // Get the markdown output for options
 const output = await $`graphile config options`;
