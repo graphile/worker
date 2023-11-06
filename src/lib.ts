@@ -6,6 +6,7 @@ import { Client, Pool, PoolClient } from "pg";
 import { WorkerPluginContext, WorkerPreset } from ".";
 import { defaults } from "./config";
 import { MINUTE } from "./cronConstants";
+import { migrations } from "./generated/sql";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
 import {
   AddJobFunction,
@@ -18,7 +19,6 @@ import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
 import { EMPTY_PRESET } from "./preset";
 import { version } from "./version";
-import { migrations } from "./generated/sql";
 
 const MAX_MIGRATION_NUMBER = Object.keys(migrations).reduce(
   (memo, migrationFile) => {

@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { EventEmitter } from "events";
 import { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
@@ -12,7 +13,6 @@ import {
   Job,
   TaskList,
   WithPgClient,
-  Worker,
   WorkerEventMap,
   WorkerEvents,
   WorkerOptions,
@@ -25,7 +25,6 @@ import SIGNALS, { Signal } from "./signals";
 import { failJobs } from "./sql/failJob";
 import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
-import { randomBytes } from "crypto";
 
 const ENABLE_DANGEROUS_LOGS =
   process.env.GRAPHILE_ENABLE_DANGEROUS_LOGS === "1";
@@ -767,7 +766,7 @@ export function _runTaskList(
       continuous,
     );
     workerPool._workers.push(worker);
-    function remove() {
+    const remove = () => {
       if (continuous && workerPool._active && !workerPool._shuttingDown) {
         logger.error(
           `Worker exited, but pool is in continuous mode, is active, and is not shutting down... Did something go wrong?`,
@@ -778,7 +777,7 @@ export function _runTaskList(
         deactivate();
         terminate();
       }
-    }
+    };
     worker.promise.then(
       () => {
         remove();

@@ -422,7 +422,7 @@ export interface WorkerPool {
       | undefined
       | null,
     onrejected?:
-      | ((reason: any) => TResult2 | PromiseLike<TResult2>)
+      | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
       | undefined
       | null,
   ): Promise<TResult1 | TResult2>;

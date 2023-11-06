@@ -2,19 +2,13 @@ import * as assert from "assert";
 
 import { getParsedCronItemsFromOptions, runCron } from "./cron";
 import getTasks from "./getTasks";
-import {
-  ParsedCronItem,
-  Runner,
-  RunnerOptions,
-  TaskList,
-  WorkerOptions,
-} from "./interfaces";
+import { ParsedCronItem, Runner, RunnerOptions, TaskList } from "./interfaces";
 import {
   CompiledOptions,
   getUtilsAndReleasersFromOptions,
   Releasers,
 } from "./lib";
-import { _runTaskList, runTaskList, runTaskListOnce } from "./main";
+import { _runTaskList, runTaskList } from "./main";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
   const { release } = await getUtilsAndReleasersFromOptions(options);

@@ -1,11 +1,5 @@
 import defer, { Deferred } from "../src/deferred";
-import {
-  DbJob,
-  Task,
-  TaskList,
-  Worker,
-  WorkerSharedOptions,
-} from "../src/interfaces";
+import { DbJob, Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
 import { runTaskListOnce } from "../src/main";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,

@@ -1,3 +1,4 @@
+import { Logger } from "@graphile/logger";
 import { AsyncHooks, PluginHook } from "graphile-config";
 import type { PoolClient } from "pg";
 
@@ -5,16 +6,14 @@ import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
 import {
   FileDetails,
+  SharedOptions,
   Task,
   TaskList,
   WithPgClient,
-  WorkerEvents,
-  WorkerPool,
   Worker,
-  SharedOptions,
+  WorkerEvents,
 } from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
-import { Logger } from "@graphile/logger";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
 export * from "./interfaces";
 export { digestPreset } from "./lib";
