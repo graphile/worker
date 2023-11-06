@@ -583,15 +583,14 @@ export function _runTaskList(
         deactivate();
 
         // Remove all the workers - we're shutting them down manually
-        const workerPromises = workerPool._workers.map((worker) =>
-          worker.release(),
-        );
+        const workers = [...workerPool._workers];
+        const workerPromises = workers.map((worker) => worker.release());
         const workerReleaseResults = await Promise.allSettled(workerPromises);
         const jobsToRelease: Job[] = [];
         for (let i = 0; i < workerReleaseResults.length; i++) {
           const workerReleaseResult = workerReleaseResults[i];
           if (workerReleaseResult.status === "rejected") {
-            const worker = workerPool._workers[i];
+            const worker = workers[i];
             const job = worker.getActiveJob();
             events.emit("pool:gracefulShutdown:workerError", {
               pool: this,
@@ -615,9 +614,7 @@ export function _runTaskList(
           }
         }
         if (jobsToRelease.length > 0) {
-          const workerIds = workerPool._workers.map(
-            (worker) => worker.workerId,
-          );
+          const workerIds = workers.map((worker) => worker.workerId);
           logger.debug(
             `Releasing the jobs ${jobsToRelease
               .map((j) => j.id)
@@ -672,21 +669,18 @@ export function _runTaskList(
         deactivate();
 
         // Release all our workers' jobs
-        const jobsInProgress: Array<Job> = workerPool._workers
+        const workers = [...workerPool._workers];
+        const jobsInProgress: Array<Job> = workers
           .map((worker) => worker.getActiveJob())
           .filter((job): job is Job => !!job);
 
         // Remove all the workers - we're shutting them down manually
-        const workerPromises = workerPool._workers.map((worker) =>
-          worker.release(),
-        );
+        const workerPromises = workers.map((worker) => worker.release());
         // Ignore the results, we're shutting down anyway
-        Promise.allSettled(workerPromises);
+        await Promise.allSettled(workerPromises);
 
         if (jobsInProgress.length > 0) {
-          const workerIds = workerPool._workers.map(
-            (worker) => worker.workerId,
-          );
+          const workerIds = workers.map((worker) => worker.workerId);
           logger.debug(
             `Releasing the jobs ${jobsInProgress
               .map((j) => j.id)
