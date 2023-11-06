@@ -637,7 +637,7 @@ test("runs jobs asynchronously", () =>
 
       await sleepUntil(() => !!jobPromise);
 
-      const worker = workerPool.worker;
+      const worker = workerPool.worker!;
       expect(worker).toBeTruthy();
 
       // Job should have been called once only
