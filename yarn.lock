@@ -2833,6 +2833,13 @@
     "@typescript-eslint/types" "6.8.0"
     eslint-visitor-keys "^3.4.1"
 
+"@typescript/vfs@^1.5.0":
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/@typescript/vfs/-/vfs-1.5.0.tgz#ed942922724f9ace8c07c80b006c47e5e3833218"
+  integrity sha512-AJS307bPgbsZZ9ggCT3wwpg3VbTKMFNHfaY/uF0ahSkYYrPF2dSSKDNIDIQAHm9qJqbLvCsSJH7yN4Vs/CsMMg==
+  dependencies:
+    debug "^4.1.1"
+
 "@vue/compiler-core@3.3.4":
   version "3.3.4"
   resolved "https://registry.yarnpkg.com/@vue/compiler-core/-/compiler-core-3.3.4.tgz#7fbf591c1c19e1acd28ffd284526e98b4f581128"
@@ -5936,10 +5943,10 @@ graphemer@^1.4.0:
   resolved "https://registry.yarnpkg.com/graphemer/-/graphemer-1.4.0.tgz#fb2f1d55e0e3a1849aeffc90c4fa0dd53a0e66c6"
   integrity sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==
 
-graphile-config@^0.0.1-beta.3:
-  version "0.0.1-beta.3"
-  resolved "https://registry.yarnpkg.com/graphile-config/-/graphile-config-0.0.1-beta.3.tgz#d5d3ee621b23cab3c811a591f66d76b7e68d5a53"
-  integrity sha512-t+cP2UxTkZlye8VmyyYU/Ak5zGWOPKm9L9H7uMdfTaBjgPvyt88OiG3EoSj90DTETZQ++zgr4yHwapW8nDqoFA==
+graphile-config@^0.0.1-beta.4:
+  version "0.0.1-beta.4"
+  resolved "https://registry.yarnpkg.com/graphile-config/-/graphile-config-0.0.1-beta.4.tgz#9c5d2b018a628c7ed931134e4258adb8aa3e94f0"
+  integrity sha512-9JWXMcrHNHMGMHdlzoOR75OwmvTxYdquYYkx0zoHol0Tkh8KcDxWdF9+tQ+l2hBjazMAI6R14jztRK4EM5bY3A==
   dependencies:
     "@types/interpret" "^1.1.1"
     "@types/node" "^20.5.7"
@@ -5950,6 +5957,17 @@ graphile-config@^0.0.1-beta.3:
     semver "^7.5.4"
     tslib "^2.6.2"
     yargs "^17.7.2"
+
+graphile@^5.0.0-beta.16:
+  version "5.0.0-beta.16"
+  resolved "https://registry.yarnpkg.com/graphile/-/graphile-5.0.0-beta.16.tgz#5e321f2a48eb2c1a3e896ca96b99f42e38bb331a"
+  integrity sha512-m+TObvnCqW1O+ipC0RxLj5A3I5U9GsAgbCo58ArKgz5wKb8Hu445moFkvkNetjXAtiG1uy5msGgTRy6pV0AfUA==
+  dependencies:
+    "@typescript/vfs" "^1.5.0"
+    chalk "^4.1.2"
+    graphile-config "^0.0.1-beta.4"
+    tslib "^2.6.2"
+    typescript "^5.2.2"
 
 gray-matter@^4.0.3:
   version "4.0.3"
