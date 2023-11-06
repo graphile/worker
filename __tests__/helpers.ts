@@ -12,8 +12,8 @@ import {
   WorkerPoolOptions,
   WorkerUtils,
 } from "../src/interfaces";
-import { migrate } from "../src/migrate";
 import { _allWorkerPools } from "../src/main";
+import { migrate } from "../src/migrate";
 
 declare global {
   namespace GraphileWorker {
