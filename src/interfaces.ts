@@ -604,7 +604,7 @@ export interface WorkerOptions extends WorkerSharedOptions {
   noHandleSignals?: boolean;
 
   /** If false, worker won't start looking for jobs until you call `worker._start()` */
-  start?: boolean;
+  autostart?: boolean;
 }
 
 /**

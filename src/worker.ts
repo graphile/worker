@@ -29,7 +29,7 @@ export function makeNewWorker(
     forbiddenFlags,
     abortSignal,
     workerPool,
-    start = true,
+    autostart = true,
   } = options;
   const compiledSharedOptions = processSharedOptions(options, {
     scope: {
@@ -97,7 +97,7 @@ export function makeNewWorker(
     release,
     promise,
     getActiveJob: () => activeJob,
-    _start: start
+    _start: autostart
       ? null
       : () => {
           doNext(true);
@@ -389,7 +389,7 @@ export function makeNewWorker(
   };
 
   // Start!
-  if (start) {
+  if (autostart) {
     doNext(true);
   }
 

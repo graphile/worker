@@ -476,7 +476,7 @@ export function _runTaskList(
     noHandleSignals: boolean | undefined;
     continuous: boolean;
     /** If false, you need to call `pool._start()` to start execution */
-    start?: boolean;
+    autostart?: boolean;
     onDeactivate?: () => Promise<void> | void;
     onTerminate?: () => Promise<void> | void;
   },
@@ -485,11 +485,11 @@ export function _runTaskList(
     concurrency = defaults.concurrentJobs,
     noHandleSignals = false,
     continuous,
-    start: rawStart = true,
+    autostart: rawAutostart = true,
     onTerminate,
     onDeactivate,
   } = options;
-  let start = rawStart;
+  let autostart = rawAutostart;
   const { logger, events } = compiledSharedOptions;
 
   if (ENABLE_DANGEROUS_LOGS) {
@@ -733,10 +733,10 @@ export function _runTaskList(
     then(onfulfilled, onrejected) {
       return promise.then(onfulfilled, onrejected);
     },
-    _start: start
+    _start: autostart
       ? null
       : () => {
-          start = true;
+          autostart = true;
           workerPool._workers.forEach((worker) => worker._start!());
           workerPool._start = null;
         },
@@ -757,7 +757,7 @@ export function _runTaskList(
     ...compiledSharedOptions.options,
     abortSignal,
     workerPool,
-    start,
+    autostart,
   };
   for (let i = 0; i < concurrency; i++) {
     const worker = makeNewWorker(
@@ -805,7 +805,7 @@ export const runTaskListOnce = (
 
   const pool = _runTaskList(compiledSharedOptions, tasks, withPgClient, {
     concurrency: 1,
-    start: false,
+    autostart: false,
     noHandleSignals: options.noHandleSignals,
     continuous: false,
   });
