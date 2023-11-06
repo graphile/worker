@@ -426,18 +426,15 @@ export function runTaskList(
       // TODO: ideally we'd only stop handling errors once all pending queries are complete; but either way we shouldn't try again!
       client.removeListener("error", onErrorReleaseClientAndTryAgain);
       events.emit("pool:listen:release", { workerPool, client });
-      return client.query('UNLISTEN "jobs:insert"').then(
-        () => {
-          releaseClient();
-        },
-        (error) => {
+      return client
+        .query('UNLISTEN "jobs:insert"')
+        .catch((error) => {
           /* ignore errors */
           logger.error(`Error occurred attempting to UNLISTEN: ${error}`, {
             error,
           });
-          releaseClient();
-        },
-      );
+        })
+        .then(() => releaseClient());
     }
 
     // On error, release this client and try again
