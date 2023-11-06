@@ -29,6 +29,7 @@ export function makeNewWorker(
     forbiddenFlags,
     abortSignal,
     workerPool,
+    start = true,
   } = options;
   const compiledSharedOptions = processSharedOptions(options, {
     scope: {
@@ -96,6 +97,12 @@ export function makeNewWorker(
     release,
     promise,
     getActiveJob: () => activeJob,
+    _start: start
+      ? null
+      : () => {
+          doNext(true);
+          worker._start = null;
+        },
   };
 
   events.emit("worker:create", { worker, tasks });
@@ -382,7 +389,9 @@ export function makeNewWorker(
   };
 
   // Start!
-  doNext(true);
+  if (start) {
+    doNext(true);
+  }
 
   // For tests
   promise.worker = worker;

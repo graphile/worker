@@ -386,6 +386,8 @@ export interface Worker {
   release: () => void | Promise<void>;
   promise: Promise<void>;
   getActiveJob: () => Job | null;
+  /** @internal */
+  _start: (() => void) | null;
 }
 
 export interface WorkerPool {
@@ -405,6 +407,8 @@ export interface WorkerPool {
   _workers: Worker[];
   /** @internal */
   _withPgClient: WithPgClient;
+  /** @internal */
+  _start: (() => void) | null;
   /**
    * Only works if concurrency === 1!
    *
@@ -598,6 +602,9 @@ export interface WorkerOptions extends WorkerSharedOptions {
    * handle graceful shutdown of the worker if the process receives a signal.
    */
   noHandleSignals?: boolean;
+
+  /** If false, worker won't start looking for jobs until you call `worker._start()` */
+  start?: boolean;
 }
 
 /**

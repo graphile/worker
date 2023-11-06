@@ -475,6 +475,8 @@ export function _runTaskList(
     concurrency: number | undefined;
     noHandleSignals: boolean | undefined;
     continuous: boolean;
+    /** If false, you need to call `pool._start()` to start execution */
+    start?: boolean;
     onDeactivate?: () => Promise<void> | void;
     onTerminate?: () => Promise<void> | void;
   },
@@ -483,11 +485,12 @@ export function _runTaskList(
     concurrency = defaults.concurrentJobs,
     noHandleSignals = false,
     continuous,
+    start: rawStart = true,
     onTerminate,
     onDeactivate,
   } = options;
-  const { logger, events, minResetLockedInterval, maxResetLockedInterval } =
-    compiledSharedOptions;
+  let start = rawStart;
+  const { logger, events } = compiledSharedOptions;
 
   if (ENABLE_DANGEROUS_LOGS) {
     logger.debug(
@@ -730,6 +733,13 @@ export function _runTaskList(
     then(onfulfilled, onrejected) {
       return promise.then(onfulfilled, onrejected);
     },
+    _start: start
+      ? null
+      : () => {
+          start = true;
+          workerPool._workers.forEach((worker) => worker._start!());
+          workerPool._start = null;
+        },
   };
 
   abortSignal.addEventListener("abort", () => {
@@ -747,6 +757,7 @@ export function _runTaskList(
     ...compiledSharedOptions.options,
     abortSignal,
     workerPool,
+    start,
   };
   for (let i = 0; i < concurrency; i++) {
     const worker = makeNewWorker(
@@ -792,9 +803,27 @@ export const runTaskListOnce = (
   const withPgClient = makeWithPgClientFromClient(client);
   const compiledSharedOptions = processSharedOptions(options);
 
-  return _runTaskList(compiledSharedOptions, tasks, withPgClient, {
+  const pool = _runTaskList(compiledSharedOptions, tasks, withPgClient, {
     concurrency: 1,
+    start: false,
     noHandleSignals: options.noHandleSignals,
     continuous: false,
   });
+
+  const resetPromise = resetLockedAt(compiledSharedOptions, withPgClient);
+
+  resetPromise.then(
+    () => {
+      pool._start!();
+    },
+    (error) => {
+      compiledSharedOptions.logger.error(
+        `Error occurred resetting locked at; continuing regardless: ${error}`,
+        { error },
+      );
+      pool._start!();
+    },
+  );
+
+  return pool;
 };
