@@ -13,6 +13,54 @@ old JavaScript object) containing keys such as `extends` (to merge in extra
 presets), `plugins` (to add plugins) and in our case `worker` which contains the
 settings for Graphile Worker.
 
+## Examples
+
+Here's an example in JavaScript:
+
+```ts title="graphile.config.js"
+module.exports = {
+  worker: {
+    connectionString: process.env.DATABASE_URL,
+    maxPoolSize: 10,
+    pollInterval: 2000,
+    preparedStatements: true,
+    schema: "graphile_worker",
+    crontabFile: "crontab",
+    concurrentJobs: 1,
+    fileExtensions: [".js", ".cjs", ".mjs"],
+  },
+};
+```
+
+And an equivalent configuration in TypeScript:
+
+```ts title="graphile.config.ts"
+import type {} from "graphile-config";
+import type {} from "graphile-worker";
+
+const preset: GraphileConfig.Preset = {
+  worker: {
+    connectionString: process.env.DATABASE_URL,
+    maxPoolSize: 10,
+    pollInterval: 2000,
+    preparedStatements: true,
+    schema: "graphile_worker",
+    crontabFile: "crontab",
+    concurrentJobs: 1,
+    fileExtensions: [".js", ".cjs", ".mjs"],
+  },
+};
+
+export default preset;
+```
+
+:::info
+
+TypeScript uses the imports just so it understands what options are available,
+these will not be included in the output JavaScript.
+
+:::
+
 ## `worker` options
 
 The options available will be influenced by the plugins and presets you are
@@ -100,51 +148,3 @@ Type: `string | undefined`
 Override path to find tasks
 
 <!--END:OPTIONS-->
-
-## Examples
-
-Here's an example in JavaScript:
-
-```ts title="graphile.config.js"
-module.exports = {
-  worker: {
-    connectionString: process.env.DATABASE_URL,
-    maxPoolSize: 10,
-    pollInterval: 2000,
-    preparedStatements: true,
-    schema: "graphile_worker",
-    crontabFile: "crontab",
-    concurrentJobs: 1,
-    fileExtensions: [".js", ".cjs", ".mjs"],
-  },
-};
-```
-
-And an equivalent configuration in TypeScript:
-
-```ts title="graphile.config.ts"
-import type {} from "graphile-config";
-import type {} from "graphile-worker";
-
-const preset: GraphileConfig.Preset = {
-  worker: {
-    connectionString: process.env.DATABASE_URL,
-    maxPoolSize: 10,
-    pollInterval: 2000,
-    preparedStatements: true,
-    schema: "graphile_worker",
-    crontabFile: "crontab",
-    concurrentJobs: 1,
-    fileExtensions: [".js", ".cjs", ".mjs"],
-  },
-};
-
-export default preset;
-```
-
-:::info
-
-TypeScript uses the imports just so it understands what options are available,
-these will not be included in the output JavaScript.
-
-:::
