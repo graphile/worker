@@ -422,6 +422,7 @@ export function runTaskList(
     }
 
     function release() {
+      // No need to call changeListener.release() because the client errored
       changeListener = null;
       client.removeListener("notification", handleNotification);
       // TODO: ideally we'd only stop handling errors once all pending queries are complete; but either way we shouldn't try again!
