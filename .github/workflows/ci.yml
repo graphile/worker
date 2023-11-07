@@ -122,7 +122,7 @@ jobs:
       - run: yarn --frozen-lockfile
       - name: Install pg_dump
         run: |
-          sudo bash -c "echo deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main >> /etc/apt/sources.list.d/pgdg.list"
+          sudo bash -c "echo deb http://apt.postgresql.org/pub/repos/apt/ jammy-pgdg main >> /etc/apt/sources.list.d/pgdg.list"
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
           sudo apt-get -yqq install postgresql-client-11
