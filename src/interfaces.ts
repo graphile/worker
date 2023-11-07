@@ -428,7 +428,7 @@ export interface WorkerPool {
   ): Promise<TResult1 | TResult2>;
   catch<TResult = never>(
     onrejected?:
-      | ((reason: any) => TResult | PromiseLike<TResult>)
+      | ((reason: unknown) => TResult | PromiseLike<TResult>)
       | undefined
       | null,
   ): Promise<void | TResult>;
