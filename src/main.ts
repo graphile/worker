@@ -780,6 +780,11 @@ export function _runTaskList(
     workerPool,
     autostart,
   };
+  if (workerOptions.workerId && concurrency > 1) {
+    throw new Error(
+      `You must not set workerId when concurrency > 1; each worker must have a unique identifier`,
+    );
+  }
   for (let i = 0; i < concurrency; i++) {
     const worker = makeNewWorker(
       workerOptions,
