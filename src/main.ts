@@ -543,7 +543,8 @@ export function _runTaskList(
 
   // This is a representation of us that can be interacted with externally
   const workerPool: WorkerPool = {
-    id: `pool-${randomBytes(9).toString("hex")}`,
+    // "otpool" - "one time pool"
+    id: `${continuous ? "pool" : "otpool"}-${randomBytes(9).toString("hex")}`,
     _active: true,
     _shuttingDown: false,
     _workers: [],
