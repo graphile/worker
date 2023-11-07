@@ -731,6 +731,12 @@ export function _runTaskList(
     then(onfulfilled, onrejected) {
       return promise.then(onfulfilled, onrejected);
     },
+    catch(onrejected) {
+      return promise.catch(onrejected);
+    },
+    finally(onfinally) {
+      return promise.finally(onfinally);
+    },
     _start: autostart
       ? null
       : () => {

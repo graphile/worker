@@ -426,6 +426,13 @@ export interface WorkerPool {
       | undefined
       | null,
   ): Promise<TResult1 | TResult2>;
+  catch<TResult = never>(
+    onrejected?:
+      | ((reason: any) => TResult | PromiseLike<TResult>)
+      | undefined
+      | null,
+  ): Promise<void | TResult>;
+  finally(onfinally?: (() => void) | undefined | null): Promise<void>;
 }
 
 export interface Runner {
