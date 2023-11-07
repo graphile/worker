@@ -126,6 +126,8 @@ jobs:
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
           sudo apt-get -yqq install postgresql-client-11
+      - name: "Build code"
+        run: yarn prepack
       - name: "Check schema hasn't changed"
         run: |
           yarn db:dump
