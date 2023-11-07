@@ -516,8 +516,8 @@ export function _runTaskList(
   function deactivate() {
     if (workerPool._active) {
       workerPool._active = false;
-      onDeactivate?.();
       events.emit("pool:release", { pool: this, workerPool: this });
+      return onDeactivate?.();
     }
   }
 
@@ -587,12 +587,19 @@ export function _runTaskList(
       try {
         logger.debug(`Attempting graceful shutdown`);
         // Stop new jobs being added
-        deactivate();
+        const deactivatePromise = deactivate();
 
         // Remove all the workers - we're shutting them down manually
         const workers = [...workerPool._workers];
         const workerPromises = workers.map((worker) => worker.release());
-        const workerReleaseResults = await Promise.allSettled(workerPromises);
+        const [deactivateResult, ...workerReleaseResults] =
+          await Promise.allSettled([deactivatePromise, ...workerPromises]);
+        if (deactivateResult.status === "rejected") {
+          // Log but continue regardless
+          logger.error(`Deactivation failed: ${deactivateResult.reason}`, {
+            error: deactivateResult.reason,
+          });
+        }
         const jobsToRelease: Job[] = [];
         for (let i = 0; i < workerReleaseResults.length; i++) {
           const workerReleaseResult = workerReleaseResults[i];
@@ -673,7 +680,7 @@ export function _runTaskList(
       try {
         logger.debug(`Attempting forceful shutdown`);
         // Stop new jobs being added
-        deactivate();
+        const deactivatePromise = deactivate();
 
         // Release all our workers' jobs
         const workers = [...workerPool._workers];
@@ -684,7 +691,14 @@ export function _runTaskList(
         // Remove all the workers - we're shutting them down manually
         const workerPromises = workers.map((worker) => worker.release());
         // Ignore the results, we're shutting down anyway
-        await Promise.allSettled(workerPromises);
+        const [deactivateResult, ..._ignoreWorkerReleaseResults] =
+          await Promise.allSettled([deactivatePromise, ...workerPromises]);
+        if (deactivateResult.status === "rejected") {
+          // Log but continue regardless
+          logger.error(`Deactivation failed: ${deactivateResult.reason}`, {
+            error: deactivateResult.reason,
+          });
+        }
 
         if (jobsInProgress.length > 0) {
           const workerIds = workers.map((worker) => worker.workerId);
