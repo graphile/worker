@@ -615,6 +615,22 @@ export interface WorkerOptions extends WorkerSharedOptions {
 }
 
 /**
+ * Options for an individual worker
+ */
+export interface RunOnceOptions extends SharedOptions {
+  /**
+   * An identifier for this specific worker; if unset then a random ID will be assigned. Do not assign multiple workers the same worker ID!
+   */
+  workerId?: string;
+
+  /**
+   * If set true, we won't install signal handlers and it'll be up to you to
+   * handle graceful shutdown of the worker if the process receives a signal.
+   */
+  noHandleSignals?: boolean;
+}
+
+/**
  * Options for a worker pool.
  */
 export interface WorkerPoolOptions extends WorkerSharedOptions {

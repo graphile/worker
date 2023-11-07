@@ -11,6 +11,7 @@ import {
 } from "./helpers";
 import {
   Job,
+  RunOnceOptions,
   TaskList,
   WithPgClient,
   WorkerEventMap,
@@ -801,7 +802,7 @@ export function _runTaskList(
 }
 
 export const runTaskListOnce = (
-  options: WorkerPoolOptions,
+  options: RunOnceOptions,
   tasks: TaskList,
   client: PoolClient,
 ) => {
