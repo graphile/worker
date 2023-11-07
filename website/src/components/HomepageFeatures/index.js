@@ -8,7 +8,7 @@ import styles from "./styles.module.css";
 const FeatureList = [
   {
     title: "Reliable",
-    Svg: require("@site/static/img/undraw_docusaurus_mountain.svg").default,
+    Svg: require("@site/static/img/homepage/reliable.svg").default,
     description: (
       <>
         Automatic retries with automatic exponential backoff; built on Postgres'
@@ -18,7 +18,7 @@ const FeatureList = [
   },
   {
     title: "High Performance",
-    Svg: require("@site/static/img/undraw_docusaurus_react.svg").default,
+    Svg: require("@site/static/img/homepage/performance.svg").default,
     description: (
       <>
         Up to 10,000 jobs per second; keep your infrastructure simple (just
@@ -28,7 +28,7 @@ const FeatureList = [
   },
   {
     title: "Cron Jobs",
-    Svg: require("@site/static/img/undraw_docusaurus_tree.svg").default,
+    Svg: require("@site/static/img/homepage/cron-jobs.svg").default,
     description: (
       <>
         Set up repeating tasks with minute-by-minute granularity; optional
@@ -38,7 +38,7 @@ const FeatureList = [
   },
   {
     title: "Low latency",
-    Svg: require("@site/static/img/undraw_docusaurus_react.svg").default,
+    Svg: require("@site/static/img/homepage/latency.svg").default,
     description: (
       <>
         Jobs start in milliseconds thanks to Postgres' LISTEN/NOTIFY; delight
@@ -48,7 +48,7 @@ const FeatureList = [
   },
   {
     title: "Job Control",
-    Svg: require("@site/static/img/undraw_docusaurus_tree.svg").default,
+    Svg: require("@site/static/img/homepage/job-control.svg").default,
     description: (
       <>
         Schedule jobs to run in the future. Debounce jobs to avoid redundant
@@ -58,7 +58,7 @@ const FeatureList = [
   },
   {
     title: "Easy Migration",
-    Svg: require("@site/static/img/undraw_docusaurus_mountain.svg").default,
+    Svg: require("@site/static/img/homepage/migration.svg").default,
     description: (
       <>
         Want to migrate to a dedicated job queue later? No problem! Examples of
