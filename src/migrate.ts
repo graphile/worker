@@ -54,12 +54,16 @@ async function runMigration(
     /:GRAPHILE_WORKER_SCHEMA\b/g,
     escapedWorkerSchema,
   );
-  logger.debug(`Running migration ${migrationFile}`);
+  const breaking = BREAKING_MIGRATIONS.includes(migrationNumber);
+  logger.debug(
+    `Running ${
+      breaking ? "breaking" : "backwards-compatible"
+    } migration ${migrationFile}`,
+  );
   let migrationInsertComplete = false;
   await client.query("begin");
   try {
     // Must come first so we can detect concurrent migration
-    const breaking = BREAKING_MIGRATIONS.includes(migrationNumber);
     await client.query({
       text: `insert into ${escapedWorkerSchema}.migrations (id, breaking) values ($1, $2)`,
       values: [migrationNumber, breaking],
