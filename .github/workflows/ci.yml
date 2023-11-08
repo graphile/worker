@@ -127,7 +127,9 @@ jobs:
           sudo apt-get update
           sudo apt-get -yqq install postgresql-client-11
       - name: "Build code"
-        run: yarn prepack
+        run: |
+          yarn prepack
+          ln -s .. node_modules/graphile-worker || true
       - name: "Check schema hasn't changed"
         run: |
           yarn db:dump
