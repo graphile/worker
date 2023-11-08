@@ -399,17 +399,22 @@ export function runTaskList(
             break;
           }
           case "jobs:migrate": {
-            let payload: null | { migrationNumber?: number } = null;
+            let payload: null | {
+              migrationNumber?: number;
+              breaking?: boolean;
+            } = null;
             try {
               payload = message.payload ? JSON.parse(message.payload) : null;
             } catch (e) {
               /* noop */
             }
-            logger.warn(
-              `Graphile Worker detected migration to database schema revision '${payload?.migrationNumber}'; it would be unsafe to continue, so shutting down...`,
-            );
-            process.exitCode = 54;
-            workerPool.gracefulShutdown();
+            if (payload?.breaking) {
+              logger.warn(
+                `Graphile Worker detected breaking migration to database schema revision '${payload?.migrationNumber}'; it would be unsafe to continue, so shutting down...`,
+              );
+              process.exitCode = 54;
+              workerPool.gracefulShutdown();
+            }
             break;
           }
           default: {

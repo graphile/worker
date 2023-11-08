@@ -28,7 +28,7 @@ const MAX_MIGRATION_NUMBER = Object.keys(migrations).reduce(
   0,
 );
 
-const BREAKING_MIGRATIONS = Object.entries(migrations)
+export const BREAKING_MIGRATIONS = Object.entries(migrations)
   .filter(([_, text]) => {
     return text.startsWith("--! breaking");
   })
