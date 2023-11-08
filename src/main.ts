@@ -412,7 +412,7 @@ export function runTaskList(
               logger.warn(
                 `Graphile Worker detected breaking migration to database schema revision '${payload?.migrationNumber}'; it would be unsafe to continue, so shutting down...`,
               );
-              process.exitCode = 54;
+              process.exitCode = 57;
               workerPool.gracefulShutdown();
             }
             break;

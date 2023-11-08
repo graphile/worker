@@ -134,7 +134,7 @@ export async function migrate(
   }
 
   if (latestBreakingMigration && highestMigration < latestBreakingMigration) {
-    process.exitCode = 54;
+    process.exitCode = 57;
     throw new Error(
       `Database is using Graphile Worker schema revision ${latestMigration} which includes breaking migration ${latestBreakingMigration}, but the currently running worker only supports up to revision ${highestMigration}. It would be unsafe to continue; please ensure all versions of Graphile Worker are compatible.`,
     );
