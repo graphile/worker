@@ -1,6 +1,6 @@
 .features {
   composes: contents from "../../css/common.module.css";
-  background-color: #efffed;
+  background-color: var(--ifm-color-primary-lightest);
 }
 
 .featureSvg {

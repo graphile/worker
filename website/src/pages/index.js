@@ -7,6 +7,7 @@ import clsx from "clsx";
 import React from "react";
 
 import styles from "./index.module.css";
+import HomepageTestimonials from "../components/HomepageTestimonials";
 
 function HomepageHeader() {
   const { siteConfig } = useDocusaurusContext();
@@ -67,6 +68,7 @@ export default function Home() {
       <HomepageHeader />
       <main>
         <HomepageFeatures />
+        <HomepageTestimonials />
       </main>
     </Layout>
   );
