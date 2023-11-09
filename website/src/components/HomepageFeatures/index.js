@@ -27,22 +27,22 @@ const FeatureList = [
     ),
   },
   {
-    title: "Cron Jobs",
-    Svg: require("@site/static/img/homepage/cron-jobs.svg").default,
-    description: (
-      <>
-        Set up repeating tasks with minute-by-minute granularity; optional
-        backfill to cover times when your servers weren't running.
-      </>
-    ),
-  },
-  {
     title: "Low latency",
     Svg: require("@site/static/img/homepage/latency.svg").default,
     description: (
       <>
         Jobs start in milliseconds thanks to Postgres' LISTEN/NOTIFY; delight
         customers with near real-time background processing.
+      </>
+    ),
+  },
+  {
+    title: "Cron Jobs",
+    Svg: require("@site/static/img/homepage/cron-jobs.svg").default,
+    description: (
+      <>
+        Set up repeating tasks with minute-by-minute granularity; optional
+        backfill to cover times when your servers weren't running.
       </>
     ),
   },
@@ -70,13 +70,13 @@ const FeatureList = [
 
 function Feature({ Svg, title, description }) {
   return (
-    <div className={clsx("col col--4")}>
-      <div className="text--center">
+    <div className={clsx("col col--6 padding-vert--md", styles.feature)}>
+      <div className={styles.svgContainer}>
         <Svg className={styles.featureSvg} role="img" />
       </div>
-      <div className="text--center padding-horiz--md">
-        <h3>{title}</h3>
-        <p>{description}</p>
+      <div className={styles.featureDetails}>
+        <h2 className={styles.featureTitle}>{title}</h2>
+        <h3 className={styles.featureInfo}>{description}</h3>
       </div>
     </div>
   );
@@ -86,7 +86,7 @@ export default function HomepageFeatures() {
   return (
     <section className={styles.features}>
       <div className="container">
-        <div className="row">
+        <div className={clsx("row", styles.row)}>
           {FeatureList.map((props, idx) => (
             <Feature key={idx} {...props} />
           ))}
