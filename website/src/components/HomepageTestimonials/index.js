@@ -8,21 +8,9 @@ const TestimonialList = [
     image: require("@site/static/img/testimonials/discord.png").default,
     quote: (
       <>
-        Hey 👋 currently using Worker in production. Thank you, it&apos;s been a
-        fantastic library that has allowed us to really simplify our tech stack
-        to bootstrap projects.
-      </>
-    ),
-  },
-  {
-    author: "Max",
-    image: require("@site/static/img/testimonials/discord.png").default,
-    quote: (
-      <>
-        The Graphile suite empowered the team at Qwick to build our product out
-        rapidly and reliably &mdash; Worker let us scale out millions of tasks.
-        Graphile tooling has become the standard of quality and thoughtfulness
-        by which I judge all other libraries when evaluating them for use.
+        Hey 👋 currently using Worker in production. It&apos;s been a fantastic
+        library that has allowed us to really simplify our tech stack to
+        bootstrap projects.
       </>
     ),
   },
@@ -32,10 +20,20 @@ const TestimonialList = [
     quote: (
       <>
         I have Worker running along with postgrest and it is the perfect
-        companion. Great way to get a project started quickly! It helps keep the
-        dev ops side super simple &mdash; Graphile Worker runs right from within
-        the node project if you want it to &mdash; reducing costs and devops
-        complexity.
+        companion. It helps keep the dev ops side super simple &mdash; Graphile
+        Worker runs right from within the node project if you want it to &mdash;
+        reducing costs and devops complexity.
+      </>
+    ),
+  },
+  {
+    author: "Max",
+    image: require("@site/static/img/testimonials/discord.png").default,
+    quote: (
+      <>
+        Worker let us scale out millions of tasks. Graphile tooling has become
+        the standard of quality and thoughtfulness by which I judge all other
+        libraries when evaluating them for use.
       </>
     ),
   },
@@ -44,28 +42,26 @@ const TestimonialList = [
     image: require("@site/static/img/testimonials/news.png").default,
     quote: (
       <>
-        I use Postgres as a queue for some bits at work using Graphile Worker
-        and it works perfectly. No need for another moving part when the data I
-        need is in the db. Also avoids having to do outbox stuff.
+        I use Postgres as a queue using Graphile Worker and it works perfectly.
+        No need for another moving part when the data I need is in the db. Also
+        avoids having to do outbox stuff.
       </>
     ),
   },
 ];
 
-function Testimonial({ author, quote, title, image }) {
+function Testimonial({ author, quote, image }) {
   return (
-    <div className={clsx("col col--4", styles.testimonial)}>
-      <div className="quote">
-        <p>{quote}</p>
+    <div className={clsx(styles.testimonial)}>
+      <div className={styles.creditAvatar}>
+        <img src={image} />
       </div>
-      <div className={styles.credit}>
-        <div className={styles.creditAvatar}>
-          <img src={image} />
-        </div>
+      <div className="container">
         <div className={styles.creditAuthorDetails}>
-          <div className={styles.creditAuthor}>
-            <strong>{author}</strong>
-          </div>
+          <strong>{author}</strong>
+        </div>
+        <div className="quote">
+          <p>{quote}</p>
         </div>
       </div>
     </div>
@@ -74,9 +70,12 @@ function Testimonial({ author, quote, title, image }) {
 
 export default function HomepageTestimonials() {
   return (
-    <section className={styles.testimonials}>
-      <div className="container">
-        <div className={clsx("row", styles.row)}>
+    <section className={styles.testimonialSection}>
+      <div className={clsx("container", styles.testimonialContainer)}>
+        <div className={styles.blocktext}>
+          <p>Use The Stack You Have</p>
+        </div>
+        <div className={clsx("col")}>
           {TestimonialList.map((props, idx) => (
             <Testimonial key={idx} {...props} />
           ))}

@@ -1,7 +1,12 @@
-.testimonials {
+.testimonialSection {
   composes: contents from "../../css/common.module.css";
 
   /*background-color: var(--ifm-hero-background-color);*/
+}
+
+.testimonialContainer {
+  display: flex;
+  align-items: center;
 }
 
 [data-theme="dark"] .testimonials {
@@ -14,41 +19,36 @@
 
 .testimonial {
   composes: content from "@site/src/css/common.module.css";
-  max-width: 28rem;
-}
-
-.credit {
+  max-width: 32rem;
+  border: 1px solid var(--ifm-color-primary-darkest);
+  border-radius: 1rem;
+  box-shadow: 5px 5px 0px var(--ifm-color-primary-darkest);
   display: flex;
-  align-items: center;
-}
-
-.creditAvatar {
+  flex-direction: row;
+  margin: 2rem;
+  padding-top: 1rem;
   padding-right: 1rem;
 }
 
+.creditAvatar {
+  padding: 1rem;
+}
+
 .creditAvatar img {
-  border-radius: 50%;
   display: block;
-  height: var(--ifm-avatar-photo-size);
   overflow: hidden;
-  width: var(--ifm-avatar-photo-size);
-  border: 2px solid white;
-  box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.25);
+  /*width: var(--ifm-avatar-photo-size);*/
+  width: 100px;
 }
 
 .creditAuthorDetails {
   display: flex;
-  flex-direction: column;
 }
 
-.creditAuthor {
-}
-
-.creditTitle {
-  color: var(--ifm-color-primary-dark);
-  font-size: 0.8rem;
-}
-
-[data-theme="dark"] .creditTitle {
-  color: var(--ifm-color-primary-light);
+.blocktext {
+  color: var(--ifm-color-primary-darkest);
+  font-size: 7rem;
+  text-align: left;
+  font-weight: bold;
+  max-width: 32rem;
 }
