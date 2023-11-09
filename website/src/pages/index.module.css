@@ -36,6 +36,7 @@
   border-radius: 7px;
   border: 1px solid var(--ifm-color-primary);
   letter-spacing: 0.1rem;
+  /*color: var(--ifm-color-primary-darkest);*/
 }
 
 .buttonHero:hover {
