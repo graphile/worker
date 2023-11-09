@@ -1,6 +1,5 @@
 .features {
   composes: contents from "../../css/common.module.css";
-  color: var(--ifm-color-primary-darkest);
   background-color: #efffed;
 }
 
