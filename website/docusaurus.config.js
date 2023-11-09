@@ -66,6 +66,13 @@ const config = {
     ],
   ],
 
+  stylesheets: [
+    {
+      href: "https://fonts.googleapis.com/css2?family=Sarabun",
+      type: "text/css",
+    },
+  ],
+
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
@@ -74,7 +81,7 @@ const config = {
         title: "Graphile Worker",
         logo: {
           alt: "Graphile Worker",
-          src: "img/logo.svg",
+          src: "img/worker-logo.svg",
         },
         items: [
           {
@@ -85,7 +92,6 @@ const config = {
         ],
       },
       footer: {
-        style: "dark",
         links: [
           {
             title: "Community",

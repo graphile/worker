@@ -25,12 +25,12 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="4.7572176"
-     inkscape:cx="49.713934"
+     inkscape:cx="25.119725"
      inkscape:cy="2.9428967"
      inkscape:window-width="1196"
      inkscape:window-height="794"
-     inkscape:window-x="701"
-     inkscape:window-y="179"
+     inkscape:window-x="1965"
+     inkscape:window-y="647"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1" />
   <defs
@@ -41,7 +41,8 @@
      id="layer1">
     <g
        id="g47181"
-       transform="matrix(0.31232801,0,0,0.31232801,-3.7944407,-14.933166)">
+       transform="matrix(0.31232801,0,0,0.31232801,-3.7944407,-14.933166)"
+       style="fill:#f18532;fill-opacity:1">
       <path
          d="m 31.256254,228.71015 c -0.51188,0 -1.029053,-0.14816 -1.484489,-0.45861 -1.208616,-0.81844 -1.522589,-2.46592 -0.701322,-3.67242 L 101.69927,117.69804 c 0.49036,-0.71966 1.29822,-1.15358 2.16606,-1.16064 0.87136,-0.0141 1.68627,0.41275 2.18722,1.12537 l 75.20516,106.88108 c 0.83961,1.19239 0.55386,2.84339 -0.64205,3.68652 -1.19592,0.83962 -2.84339,0.55387 -3.68653,-0.64205 L 103.9253,123.83638 33.447004,227.55304 c -0.511528,0.75142 -1.34373,1.15711 -2.19075,1.15711"
          style="fill:#f18532;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:0.0352778"
