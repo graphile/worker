@@ -3,6 +3,7 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import CalloutSection from "@site/src/components/CalloutSection";
 import HomepageFeatures from "@site/src/components/HomepageFeatures";
 import HeroImage from "@site/static/img/homepage/ant-branch.svg";
+import SecondarySection from "@site/src/components/SecondarySection";
 import TertiarySection from "@site/src/components/TertiarySection";
 import Layout from "@theme/Layout";
 import clsx from "clsx";
@@ -84,6 +85,14 @@ export default function Home() {
           body={`Give your company access to the knowledge and experience of the Graphile team through your chat server and GitHub/GitLab organisation. Reference your code verbatim and arrange calls for any trickier topics.`}
           Svg={require("@site/static/img/homepage/support.svg").default}
           link={`https://www.graphile.org/support/`}
+          buttonText={`Learn more`}
+        />
+        <SecondarySection
+          title={`Graphile Starter`}
+          tagline={`A quick-start project for full-stack application development in React, Node.js, GraphQL and PostgreSQL`}
+          body={`Graphile Starter includes the foundations of a modern web application, with a full user registration system, session management, optimized job queue using Graphile Worker, pre-configured tooling, tests and much more.`}
+          Svg={require("@site/static/img/homepage/starter.svg").default}
+          link={`https://github.com/graphile/starter`}
           buttonText={`Learn more`}
         />
       </main>
