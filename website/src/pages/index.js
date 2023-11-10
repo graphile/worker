@@ -3,6 +3,7 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import CalloutSection from "@site/src/components/CalloutSection";
 import HomepageFeatures from "@site/src/components/HomepageFeatures";
 import HeroImage from "@site/static/img/homepage/ant-branch.svg";
+import TertiarySection from "@site/src/components/TertiarySection";
 import Layout from "@theme/Layout";
 import clsx from "clsx";
 import React from "react";
@@ -72,10 +73,18 @@ export default function Home() {
         <HomepageTestimonials />
         <CalloutSection
           title={`Crowd-funded open-source software`}
-          body={`We're extremely grateful to our sponsors, for helping to fund ongoing development on PostGraphile, Graphile Engine, Graphile Worker and Graphile Migrate.
+          body={`We're extremely grateful to our sponsors, for helping to fund ongoing development on Graphile Worker, Graphile Migrate, PostGraphile and the wider Graphile suite of tools.
           THANK YOU!`}
           link={`https://graphile.org/sponsor/`}
           buttonText={`Learn more about sponsors and sponsorship`}
+        />
+        <TertiarySection
+          title={`Development Support`}
+          tagline={`Priority text support straight from the maintainer`}
+          body={`Give your company access to the knowledge and experience of the Graphile team through your chat server and GitHub/GitLab organisation. Reference your code verbatim and arrange calls for any trickier topics.`}
+          Svg={require("@site/static/img/homepage/support.svg").default}
+          link={`https://www.graphile.org/support/`}
+          buttonText={`Learn more`}
         />
       </main>
     </Layout>
