@@ -1,8 +1,18 @@
-import { PluginHook } from "graphile-config";
+import { Logger } from "@graphile/logger";
+import { AsyncHooks, PluginHook } from "graphile-config";
+import type { PoolClient } from "pg";
 
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
-import { FileDetails, Task } from "./interfaces";
+import {
+  FileDetails,
+  SharedOptions,
+  Task,
+  TaskList,
+  WithPgClient,
+  Worker,
+  WorkerEvents,
+} from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
 export * from "./interfaces";
@@ -20,9 +30,23 @@ export { makeWorkerUtils, quickAddJob } from "./workerUtils";
 
 export { getTasks };
 export { getCronItems };
+export { CompiledSharedOptions };
 
 export interface WorkerPluginContext {
-  compiledSharedOptions: CompiledSharedOptions;
+  version: string;
+  maxMigrationNumber: number;
+  breakingMigrationNumbers: number[];
+  events: WorkerEvents;
+  logger: Logger;
+  workerSchema: string;
+  escapedWorkerSchema: string;
+  useNodeTime: boolean;
+  minResetLockedInterval: number;
+  maxResetLockedInterval: number;
+  options: SharedOptions;
+  hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
+  resolvedPreset?: GraphileConfig.ResolvedPreset;
+  gracefulShutdownAbortTimeout: number;
 }
 
 export type PromiseOrDirect<T> = T | Promise<T>;
@@ -104,7 +128,7 @@ declare global {
         hooks?: {
           [key in keyof WorkerHooks]?: PluginHook<
             WorkerHooks[key] extends (...args: infer UArgs) => infer UResult
-              ? (info: WorkerPluginContext, ...args: UArgs) => UResult
+              ? (ctx: WorkerPluginContext, ...args: UArgs) => UResult
               : never
           >;
         };
@@ -117,30 +141,50 @@ declare global {
       init(): PromiseOrDirect<void>;
 
       /**
+       * Called before migrating the DB.
+       */
+      premigrate(event: { readonly client: PoolClient }): PromiseOrDirect<void>;
+
+      /**
+       * Called after migrating the DB.
+       */
+      postmigrate(event: {
+        readonly client: PoolClient;
+      }): PromiseOrDirect<void>;
+
+      /**
        * Used to build a given `taskIdentifier`'s handler given a list of files,
        * if possible.
        */
-      loadTaskFromFiles(
-        mutableEvent: {
-          /**
-           * If set, you should not replace this. If unset and you can support
-           * this task identifier (see `details`), you should set it.
-           */
-          handler?: Task;
-        },
-        details: {
-          /**
-           * The string that will identify this task (inferred from the file
-           * path).
-           */
-          taskIdentifier: string;
-          /**
-           * A list of the files (and associated metadata) that match this task
-           * identifier.
-           */
-          fileDetailsList: readonly FileDetails[];
-        },
-      ): PromiseOrDirect<void>;
+      loadTaskFromFiles(event: {
+        /**
+         * If set, you should not replace this. If unset and you can support
+         * this task identifier (see `details`), you should set it.
+         */
+        handler?: Task;
+        /**
+         * The string that will identify this task (inferred from the file
+         * path).
+         */
+        readonly taskIdentifier: string;
+        /**
+         * A list of the files (and associated metadata) that match this task
+         * identifier.
+         */
+        readonly fileDetailsList: readonly FileDetails[];
+      }): PromiseOrDirect<void>;
+
+      startWorker(event: {
+        readonly worker: Worker;
+        flagsToSkip: null | string[];
+        readonly tasks: TaskList;
+        readonly withPgClient: WithPgClient;
+      }): PromiseOrDirect<void>;
+
+      stopWorker(event: {
+        readonly worker: Worker;
+        readonly withPgClient: WithPgClient;
+      }): PromiseOrDirect<void>;
     }
   }
 }

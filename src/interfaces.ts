@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import type { EventEmitter } from "events";
 import type { Stats } from "fs";
-import type { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
+import type {
+  Notification,
+  Pool,
+  PoolClient,
+  QueryResult,
+  QueryResultRow,
+} from "pg";
 
 import type { Release } from "./lib";
 import type { Logger } from "./logger";
@@ -374,14 +380,18 @@ export interface KnownCrontab {
 }
 
 export interface Worker {
+  workerPool: WorkerPool;
   nudge: () => boolean;
   workerId: string;
   release: () => void | Promise<void>;
   promise: Promise<void>;
   getActiveJob: () => Job | null;
+  /** @internal */
+  _start: (() => void) | null;
 }
 
 export interface WorkerPool {
+  id: string;
   /** @deprecated Use gracefulShutdown instead */
   release: () => Promise<void>;
   gracefulShutdown: (message?: string) => Promise<void>;
@@ -391,6 +401,38 @@ export interface WorkerPool {
   abortSignal: AbortSignal;
   /** @internal */
   _shuttingDown: boolean;
+  /** @internal */
+  _active: boolean;
+  /** @internal */
+  _workers: Worker[];
+  /** @internal */
+  _withPgClient: WithPgClient;
+  /** @internal */
+  _start: (() => void) | null;
+  /**
+   * Only works if concurrency === 1!
+   *
+   * @internal
+   */
+  worker: Worker | null;
+
+  then<TResult1 = void, TResult2 = never>(
+    onfulfilled?:
+      | ((value: void) => TResult1 | PromiseLike<TResult1>)
+      | undefined
+      | null,
+    onrejected?:
+      | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
+      | undefined
+      | null,
+  ): Promise<TResult1 | TResult2>;
+  catch<TResult = never>(
+    onrejected?:
+      | ((reason: unknown) => TResult | PromiseLike<TResult>)
+      | undefined
+      | null,
+  ): Promise<void | TResult>;
+  finally(onfinally?: (() => void) | undefined | null): Promise<void>;
 }
 
 export interface Runner {
@@ -559,6 +601,33 @@ export interface WorkerOptions extends WorkerSharedOptions {
   workerId?: string;
 
   abortSignal?: AbortSignal;
+
+  workerPool: WorkerPool;
+
+  /**
+   * If set true, we won't install signal handlers and it'll be up to you to
+   * handle graceful shutdown of the worker if the process receives a signal.
+   */
+  noHandleSignals?: boolean;
+
+  /** If false, worker won't start looking for jobs until you call `worker._start()` */
+  autostart?: boolean;
+}
+
+/**
+ * Options for an individual worker
+ */
+export interface RunOnceOptions extends SharedOptions {
+  /**
+   * An identifier for this specific worker; if unset then a random ID will be assigned. Do not assign multiple workers the same worker ID!
+   */
+  workerId?: string;
+
+  /**
+   * If set true, we won't install signal handlers and it'll be up to you to
+   * handle graceful shutdown of the worker if the process receives a signal.
+   */
+  noHandleSignals?: boolean;
 }
 
 /**
@@ -700,26 +769,60 @@ export type WorkerEventMap = {
   };
 
   /**
+   * When a worker pool receives a notification
+   */
+  "pool:listen:notification": {
+    workerPool: WorkerPool;
+    message: Notification;
+    client: PoolClient;
+  };
+
+  /**
+   * When a worker pool listening client is no longer available
+   */
+  "pool:listen:release": {
+    workerPool: WorkerPool;
+    /** If you use this client, be careful to handle errors - it may be in an invalid state (errored, disconnected, etc). */
+    client: PoolClient;
+  };
+
+  /**
    * When a worker pool is released
    */
-  "pool:release": { pool: WorkerPool };
+  "pool:release": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+  };
 
   /**
    * When a worker pool starts a graceful shutdown
    */
-  "pool:gracefulShutdown": { pool: WorkerPool; message: string };
+  "pool:gracefulShutdown": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+    message: string;
+  };
 
   /**
    * When a worker pool graceful shutdown throws an error
    */
-  "pool:gracefulShutdown:error": { pool: WorkerPool; error: unknown };
+  "pool:gracefulShutdown:error": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+    error: unknown;
+  };
 
   /**
    * When a worker pool graceful shutdown is successful, but one of the workers
    * throws an error from release()
    */
   "pool:gracefulShutdown:workerError": {
+    /** @deprecated Use workerPool for consistency */
     pool: WorkerPool;
+    workerPool: WorkerPool;
     error: unknown;
     job: Job | null;
   };
@@ -727,22 +830,40 @@ export type WorkerEventMap = {
   /**
    * When a worker pool graceful shutdown throws an error
    */
-  "pool:gracefulShutdown:complete": { pool: WorkerPool };
+  "pool:gracefulShutdown:complete": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+  };
 
   /**
    * When a worker pool starts a forceful shutdown
    */
-  "pool:forcefulShutdown": { pool: WorkerPool; message: string };
+  "pool:forcefulShutdown": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+    message: string;
+  };
 
   /**
    * When a worker pool forceful shutdown throws an error
    */
-  "pool:forcefulShutdown:error": { pool: WorkerPool; error: unknown };
+  "pool:forcefulShutdown:error": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+    error: unknown;
+  };
 
   /**
    * When a worker pool forceful shutdown throws an error
    */
-  "pool:forcefulShutdown:complete": { pool: WorkerPool };
+  "pool:forcefulShutdown:complete": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+  };
 
   /**
    * When a worker is created
@@ -881,7 +1002,7 @@ export type WorkerEventMap = {
    */
   "resetLocked:started": {
     /** @internal Not sure this'll stay on pool */
-    pool: WorkerPool;
+    workerPool: WorkerPool;
   };
 
   /**
@@ -896,7 +1017,7 @@ export type WorkerEventMap = {
     delay: number | null;
 
     /** @internal Not sure this'll stay on pool */
-    pool: WorkerPool;
+    workerPool: WorkerPool;
   };
 
   /**
@@ -912,7 +1033,7 @@ export type WorkerEventMap = {
     delay: number | null;
 
     /** @internal Not sure this'll stay on pool */
-    pool: WorkerPool;
+    workerPool: WorkerPool;
   };
 
   /**

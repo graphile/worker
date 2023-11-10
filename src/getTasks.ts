@@ -116,11 +116,10 @@ export default async function getTasks(
         GraphileConfig.WorkerHooks["loadTaskFromFiles"]
       >[0] = {
         handler: undefined,
-      };
-      await compiledSharedOptions.hooks.process("loadTaskFromFiles", event, {
         taskIdentifier,
         fileDetailsList,
-      });
+      };
+      await compiledSharedOptions.hooks.process("loadTaskFromFiles", event);
       const handler = event.handler;
       if (handler) {
         tasks[taskIdentifier] = handler;

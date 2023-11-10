@@ -12,6 +12,7 @@ import {
   WorkerPoolOptions,
   WorkerUtils,
 } from "../src/interfaces";
+import { _allWorkerPools } from "../src/main";
 import { migrate } from "../src/migrate";
 
 declare global {
@@ -65,6 +66,12 @@ export async function withPgPool<T>(
     pool.end();
   }
 }
+
+afterEach(() => {
+  if (_allWorkerPools.length !== 0) {
+    throw new Error(`Current test failed to release all workers`);
+  }
+});
 
 export async function withPgClient<T>(
   cb: (client: pg.PoolClient) => Promise<T>,

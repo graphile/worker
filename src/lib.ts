@@ -3,9 +3,10 @@ import { EventEmitter } from "events";
 import { applyHooks, AsyncHooks, resolvePresets } from "graphile-config";
 import { Client, Pool, PoolClient } from "pg";
 
-import { WorkerPreset } from ".";
+import { WorkerPluginContext, WorkerPreset } from ".";
 import { defaults } from "./config";
 import { MINUTE } from "./cronConstants";
+import { migrations } from "./generated/sql";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
 import {
   AddJobFunction,
@@ -17,8 +18,27 @@ import {
 import { defaultLogger, Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
 import { EMPTY_PRESET } from "./preset";
+import { version } from "./version";
 
+const MAX_MIGRATION_NUMBER = Object.keys(migrations).reduce(
+  (memo, migrationFile) => {
+    const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
+    return Math.max(memo, migrationNumber);
+  },
+  0,
+);
+
+export const BREAKING_MIGRATIONS = Object.entries(migrations)
+  .filter(([_, text]) => {
+    return text.startsWith("--! breaking");
+  })
+  .map(([migrationFile]) => parseInt(migrationFile.slice(0, 6), 10));
+
+// NOTE: when you add things here, you may also want to add them to WorkerPluginContext
 export interface CompiledSharedOptions {
+  version: string;
+  maxMigrationNumber: number;
+  breakingMigrationNumbers: number[];
   events: WorkerEvents;
   logger: Logger;
   workerSchema: string;
@@ -70,6 +90,9 @@ export function processSharedOptions(
     }
     const hooks = new AsyncHooks<GraphileConfig.WorkerHooks>();
     compiled = {
+      version,
+      maxMigrationNumber: MAX_MIGRATION_NUMBER,
+      breakingMigrationNumbers: BREAKING_MIGRATIONS,
       events,
       logger,
       workerSchema,
@@ -85,11 +108,12 @@ export function processSharedOptions(
     applyHooks(
       resolvedPreset.plugins,
       (p) => p.worker?.hooks,
-      (name, fn, _plugin) => {
-        const context = { compiledSharedOptions: compiled };
-
+      (name, fn, plugin) => {
+        const context: WorkerPluginContext = compiled!;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        hooks.hook(name, ((...args: any[]) => fn(context, ...args)) as any);
+        const cb = ((...args: any[]) => fn(context, ...args)) as any;
+        cb.displayName = `${plugin.name}_hook_${name}`;
+        hooks.hook(name, cb);
       },
     );
     _sharedOptionsCache.set(options, compiled);
@@ -232,7 +256,11 @@ export const getUtilsAndReleasersFromOptions = async (
 ): Promise<CompiledOptions> => {
   const shared = processSharedOptions(options, settings);
   const { concurrency = defaults.concurrentJobs } = options;
-  return withReleasers(async (releasers, release): Promise<CompiledOptions> => {
+  const { hooks } = shared;
+  return withReleasers(async function getUtilsFromOptions(
+    releasers,
+    release,
+  ): Promise<CompiledOptions> {
     const pgPool: Pool = await assertPool(options, releasers);
     // @ts-ignore
     const max = pgPool?.options?.max || 10;
@@ -245,7 +273,13 @@ export const getUtilsAndReleasersFromOptions = async (
     const withPgClient = makeWithPgClientFromPool(pgPool);
 
     // Migrate
-    await withPgClient((client) => migrate(options, client));
+    await withPgClient(async function migrateWithPgClient(client) {
+      const event = { client };
+      await hooks.process("premigrate", event);
+      await migrate(options, event.client);
+      await hooks.process("postmigrate", event);
+    });
+
     const addJob = makeAddJob(options, withPgClient);
 
     return {

@@ -6,6 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build:sql": "node scripts/buildSqlModule.mjs",
+    "website:update": "node scripts/options.mjs",
     "prepack": "rm -Rf dist && npm run build:sql && tsc && chmod +x dist/cli.js",
     "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && npm run build:sql && tsc --watch",
     "lint": "yarn prettier:check && eslint --ext .js,.jsx,.ts,.tsx,.graphql .",
@@ -48,7 +49,7 @@
     "@types/debug": "^4.1.10",
     "@types/pg": "^8.10.5",
     "cosmiconfig": "^8.3.6",
-    "graphile-config": "^0.0.1-beta.3",
+    "graphile-config": "^0.0.1-beta.4",
     "json5": "^2.2.3",
     "pg": "^8.11.3",
     "tslib": "^2.6.2",
@@ -73,6 +74,7 @@
     "eslint-plugin-jest": "^26.0.0",
     "eslint-plugin-simple-import-sort": "^10.0.0",
     "eslint_d": "^13.0.0",
+    "graphile": "^5.0.0-beta.16",
     "jest": "^26.0.0",
     "jest-time-helpers": "0.1.0",
     "pg-connection-string": "^2.6.2",
@@ -82,7 +84,8 @@
     "react-dom": "^18.2.0",
     "ts-jest": "^26.0.0",
     "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "zx": "^7.2.3"
   },
   "files": [
     "dist",

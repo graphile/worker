@@ -1,11 +1,5 @@
 import defer, { Deferred } from "../src/deferred";
-import {
-  DbJob,
-  Task,
-  TaskList,
-  Worker,
-  WorkerSharedOptions,
-} from "../src/interfaces";
+import { DbJob, Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
 import { runTaskListOnce } from "../src/main";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
@@ -635,15 +629,15 @@ test("runs jobs asynchronously", () =>
       const tasks: TaskList = {
         job3,
       };
-      const runPromise = runTaskListOnce(options, tasks, pgClient);
+      const workerPool = runTaskListOnce(options, tasks, pgClient);
       let executed = false;
-      runPromise.then(() => {
+      workerPool.then(() => {
         executed = true;
       });
 
       await sleepUntil(() => !!jobPromise);
 
-      const worker: Worker = runPromise["worker"];
+      const worker = workerPool.worker!;
       expect(worker).toBeTruthy();
 
       // Job should have been called once only
@@ -673,7 +667,7 @@ test("runs jobs asynchronously", () =>
       }
 
       jobPromise!.resolve();
-      await runPromise;
+      await workerPool;
       expect(executed).toBeTruthy();
 
       // Job should have been called once only
@@ -786,9 +780,9 @@ test("single worker runs jobs in series, purges all before exit", () =>
       const tasks: TaskList = {
         job3,
       };
-      const runPromise = runTaskListOnce(options, tasks, pgClient);
+      const workerPool = runTaskListOnce(options, tasks, pgClient);
       let executed = false;
-      runPromise.then(() => {
+      workerPool.then(() => {
         executed = true;
       });
 
@@ -807,7 +801,7 @@ test("single worker runs jobs in series, purges all before exit", () =>
       expect(jobPromises).toHaveLength(5);
       expect(job3).toHaveBeenCalledTimes(5);
 
-      await runPromise;
+      await workerPool;
       expect(executed).toBeTruthy();
 
       // Job should not have been called any more times

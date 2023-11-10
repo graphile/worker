@@ -343,7 +343,8 @@ ALTER TABLE graphile_worker._private_jobs ALTER COLUMN id ADD GENERATED ALWAYS A
 );
 CREATE TABLE graphile_worker.migrations (
     id integer NOT NULL,
-    ts timestamp with time zone DEFAULT now() NOT NULL
+    ts timestamp with time zone DEFAULT now() NOT NULL,
+    breaking boolean DEFAULT false NOT NULL
 );
 ALTER TABLE graphile_worker._private_tasks ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME graphile_worker.tasks_id_seq

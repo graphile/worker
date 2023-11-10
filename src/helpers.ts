@@ -103,7 +103,9 @@ export function makeJobHelpers(
 }
 
 export function makeWithPgClientFromPool(pgPool: Pool) {
-  return async <T>(callback: (pgClient: PoolClient) => Promise<T>) => {
+  return async function withPgClientFromPool<T>(
+    callback: (pgClient: PoolClient) => Promise<T>,
+  ) {
     const client = await pgPool.connect();
     try {
       return await callback(client);

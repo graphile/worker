@@ -11,15 +11,13 @@ export const LoadTaskFromJsPlugin: GraphileConfig.Plugin = {
 
   worker: {
     hooks: {
-      async loadTaskFromFiles(info, mutableEvent, details) {
+      async loadTaskFromFiles(ctx, details) {
         // Check it hasn't already been handled
-        if (mutableEvent.handler) {
+        if (details.handler) {
           return;
         }
 
-        const {
-          compiledSharedOptions: { resolvedPreset },
-        } = info;
+        const { resolvedPreset } = ctx;
         const { fileDetailsList } = details;
 
         let jsFile: FileDetails | undefined = undefined;
@@ -51,7 +49,7 @@ export const LoadTaskFromJsPlugin: GraphileConfig.Plugin = {
               : rawMod;
           const task = mod.default || mod;
           if (isValidTask(task)) {
-            mutableEvent.handler = task;
+            details.handler = task;
           } else {
             throw new Error(
               `Invalid task '${name}' - expected function, received ${

@@ -2,30 +2,17 @@ import * as assert from "assert";
 
 import { getParsedCronItemsFromOptions, runCron } from "./cron";
 import getTasks from "./getTasks";
-import {
-  ParsedCronItem,
-  Runner,
-  RunnerOptions,
-  TaskList,
-  WorkerOptions,
-} from "./interfaces";
+import { ParsedCronItem, Runner, RunnerOptions, TaskList } from "./interfaces";
 import {
   CompiledOptions,
   getUtilsAndReleasersFromOptions,
   Releasers,
 } from "./lib";
-import { runTaskList, runTaskListOnce } from "./main";
-import { migrate } from "./migrate";
+import { _runTaskList, runTaskList } from "./main";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
-  const { withPgClient, release } = await getUtilsAndReleasersFromOptions(
-    options,
-  );
-  try {
-    await withPgClient((client) => migrate(options, client));
-  } finally {
-    await release();
-  }
+  const { release } = await getUtilsAndReleasersFromOptions(options);
+  await release();
 };
 
 async function assertTaskList(
@@ -53,26 +40,23 @@ export const runOnce = async (
   options: RunnerOptions,
   overrideTaskList?: TaskList,
 ): Promise<void> => {
-  const { concurrency = 1 } = options;
-  const { withPgClient, release, releasers } =
-    await getUtilsAndReleasersFromOptions(options);
+  const compiledSharedOptions = await getUtilsAndReleasersFromOptions(options);
+  const { withPgClient, release, releasers } = compiledSharedOptions;
   try {
     const taskList =
       overrideTaskList || (await assertTaskList(options, releasers));
+    const workerPool = _runTaskList(
+      compiledSharedOptions,
+      taskList,
+      withPgClient,
+      {
+        concurrency: options.concurrency ?? 1,
+        noHandleSignals: options.noHandleSignals,
+        continuous: false,
+      },
+    );
 
-    const promises: Promise<void>[] = [];
-    const workerOptions: WorkerOptions = {
-      ...options,
-      abortSignal: undefined,
-    };
-    for (let i = 0; i < concurrency; i++) {
-      promises.push(
-        withPgClient((client) =>
-          runTaskListOnce(workerOptions, taskList, client),
-        ),
-      );
-    }
-    await Promise.all(promises);
+    return await workerPool.promise;
   } finally {
     await release();
   }
@@ -139,7 +123,7 @@ function buildRunner(input: {
   const workerPool = runTaskList(options, taskList, pgPool);
   releasers.push(() => {
     if (!workerPool._shuttingDown) {
-      workerPool.gracefulShutdown("Runner is shutting down");
+      return workerPool.gracefulShutdown("Runner is shutting down");
     }
   });
 

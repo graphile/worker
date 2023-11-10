@@ -1,3 +1,4 @@
+--! breaking-change
 alter type :GRAPHILE_WORKER_SCHEMA.job_spec alter attribute max_attempts type smallint;
 alter type :GRAPHILE_WORKER_SCHEMA.job_spec alter attribute priority type smallint;
 
