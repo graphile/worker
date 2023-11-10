@@ -73,7 +73,7 @@ export default function HomepageTestimonials() {
     <section className={styles.testimonialSection}>
       <div className={clsx("container", styles.testimonialContainer)}>
         <div className={styles.blocktext}>
-          <p>Use The Stack You Have</p>
+          <p>Use The&nbsp;Stack You&nbsp;Have</p>
         </div>
         <div className={clsx("col")}>
           {TestimonialList.map((props, idx) => (
