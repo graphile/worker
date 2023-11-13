@@ -2,7 +2,11 @@ import { PoolClient } from "pg";
 
 import { migrations } from "./generated/sql";
 import { WorkerSharedOptions } from "./interfaces";
-import { BREAKING_MIGRATIONS, processSharedOptions } from "./lib";
+import {
+  BREAKING_MIGRATIONS,
+  CompiledSharedOptions,
+  processSharedOptions,
+} from "./lib";
 
 function checkPostgresVersion(versionString: string) {
   const version = parseInt(versionString, 10);
@@ -23,8 +27,11 @@ async function fetchAndCheckPostgresVersion(client: PoolClient) {
   checkPostgresVersion(row.server_version_num);
 }
 
-async function installSchema(options: WorkerSharedOptions, client: PoolClient) {
-  const { escapedWorkerSchema } = processSharedOptions(options);
+async function installSchema(
+  compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
+  client: PoolClient,
+) {
+  const { escapedWorkerSchema } = compiledSharedOptions;
 
   await fetchAndCheckPostgresVersion(client);
 
@@ -43,12 +50,12 @@ async function installSchema(options: WorkerSharedOptions, client: PoolClient) {
 }
 
 async function runMigration(
-  options: WorkerSharedOptions,
+  compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
   client: PoolClient,
   migrationFile: keyof typeof migrations,
   migrationNumber: number,
 ) {
-  const { escapedWorkerSchema, logger } = processSharedOptions(options);
+  const { escapedWorkerSchema, logger } = compiledSharedOptions;
   const rawText = migrations[migrationFile];
   const text = rawText.replace(
     /:GRAPHILE_WORKER_SCHEMA\b/g,
@@ -91,10 +98,10 @@ async function runMigration(
 }
 
 export async function migrate(
-  options: WorkerSharedOptions,
+  compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
   client: PoolClient,
 ) {
-  const { escapedWorkerSchema, logger } = processSharedOptions(options);
+  const { escapedWorkerSchema, logger } = compiledSharedOptions;
   let latestMigration: number | null = null;
   let latestBreakingMigration: number | null = null;
   for (let attempts = 0; attempts < 2; attempts++) {
@@ -112,7 +119,7 @@ export async function migrate(
       checkPostgresVersion(row.server_version_num);
     } catch (e) {
       if (attempts === 0 && (e.code === "42P01" || e.code === "42703")) {
-        await installSchema(options, client);
+        await installSchema(compiledSharedOptions, client);
       } else {
         throw e;
       }
@@ -129,7 +136,12 @@ export async function migrate(
     }
     if (latestMigration == null || migrationNumber > latestMigration) {
       migrated = true;
-      await runMigration(options, client, migrationFile, migrationNumber);
+      await runMigration(
+        compiledSharedOptions,
+        client,
+        migrationFile,
+        migrationNumber,
+      );
     }
   }
 

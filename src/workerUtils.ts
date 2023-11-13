@@ -9,19 +9,21 @@ import { migrate } from "./migrate";
 export async function makeWorkerUtils(
   options: WorkerUtilsOptions,
 ): Promise<WorkerUtils> {
+  const compiledSharedOptions = await getUtilsAndReleasersFromOptions(options, {
+    scope: {
+      label: "WorkerUtils",
+    },
+  });
   const { logger, escapedWorkerSchema, release, withPgClient, addJob } =
-    await getUtilsAndReleasersFromOptions(options, {
-      scope: {
-        label: "WorkerUtils",
-      },
-    });
+    compiledSharedOptions;
 
   return {
     withPgClient,
     logger,
     release,
     addJob,
-    migrate: () => withPgClient((pgClient) => migrate(options, pgClient)),
+    migrate: () =>
+      withPgClient((pgClient) => migrate(compiledSharedOptions, pgClient)),
 
     async completeJobs(ids) {
       const { rows } = await withPgClient((client) =>

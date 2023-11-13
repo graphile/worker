@@ -1,21 +1,14 @@
 import { Pool, PoolClient } from "pg";
 
-import {
-  AddJobFunction,
-  Job,
-  JobHelpers,
-  SharedOptions,
-  WithPgClient,
-  WorkerSharedOptions,
-} from "./interfaces";
-import { processSharedOptions } from "./lib";
+import { AddJobFunction, Job, JobHelpers, WithPgClient } from "./interfaces";
+import { CompiledSharedOptions, processSharedOptions } from "./lib";
 import { Logger } from "./logger";
 
 export function makeAddJob(
-  options: WorkerSharedOptions,
+  compiledSharedOptions: CompiledSharedOptions,
   withPgClient: WithPgClient,
 ): AddJobFunction {
-  const { escapedWorkerSchema, useNodeTime } = processSharedOptions(options);
+  const { escapedWorkerSchema, useNodeTime } = compiledSharedOptions;
   return (identifier, payload, spec = {}) => {
     return withPgClient(async (pgClient) => {
       const { rows } = await pgClient.query(
@@ -59,19 +52,19 @@ export function makeAddJob(
 }
 
 export function makeJobHelpers(
-  options: SharedOptions,
+  compiledSharedOptions: CompiledSharedOptions,
   job: Job,
   {
     withPgClient,
-    logger: overrideLogger,
     abortSignal,
+    logger: overrideLogger,
   }: {
     withPgClient: WithPgClient;
-    logger?: Logger;
     abortSignal: AbortSignal | undefined;
+    logger?: Logger;
   },
 ): JobHelpers {
-  const baseLogger = overrideLogger || processSharedOptions(options).logger;
+  const baseLogger = overrideLogger ?? compiledSharedOptions.logger;
   const logger = baseLogger.scope({
     label: "job",
     taskIdentifier: job.task_identifier,
@@ -84,7 +77,7 @@ export function makeJobHelpers(
     withPgClient,
     query: (queryText, values) =>
       withPgClient((pgClient) => pgClient.query(queryText, values)),
-    addJob: makeAddJob(options, withPgClient),
+    addJob: makeAddJob(compiledSharedOptions, withPgClient),
 
     // TODO: add an API for giving workers more helpers
   };

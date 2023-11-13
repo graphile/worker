@@ -35,7 +35,9 @@ export const BREAKING_MIGRATIONS = Object.entries(migrations)
   .map(([migrationFile]) => parseInt(migrationFile.slice(0, 6), 10));
 
 // NOTE: when you add things here, you may also want to add them to WorkerPluginContext
-export interface CompiledSharedOptions {
+export interface CompiledSharedOptions<
+  T extends SharedOptions = SharedOptions,
+> {
   version: string;
   maxMigrationNumber: number;
   breakingMigrationNumbers: number[];
@@ -46,7 +48,7 @@ export interface CompiledSharedOptions {
   useNodeTime: boolean;
   minResetLockedInterval: number;
   maxResetLockedInterval: number;
-  options: SharedOptions;
+  options: T;
   hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
   resolvedPreset?: GraphileConfig.ResolvedPreset;
   gracefulShutdownAbortTimeout: number;
@@ -57,11 +59,13 @@ interface ProcessSharedOptionsSettings {
 }
 
 const _sharedOptionsCache = new WeakMap<SharedOptions, CompiledSharedOptions>();
-export function processSharedOptions(
-  options: SharedOptions,
+export function processSharedOptions<T extends SharedOptions>(
+  options: T,
   { scope }: ProcessSharedOptionsSettings = {},
-): CompiledSharedOptions {
-  let compiled = _sharedOptionsCache.get(options);
+): CompiledSharedOptions<T> {
+  let compiled = _sharedOptionsCache.get(options) as
+    | CompiledSharedOptions<T>
+    | undefined;
   if (!compiled) {
     const {
       logger = defaultLogger,
@@ -137,22 +141,29 @@ export function processSharedOptions(
 export type Releasers = Array<() => void | Promise<void>>;
 
 export async function assertPool(
-  options: SharedOptions,
+  compiledSharedOptions: CompiledSharedOptions,
   releasers: Releasers,
 ): Promise<Pool> {
-  const { logger } = processSharedOptions(options);
+  const { logger, options } = compiledSharedOptions;
+  const {
+    preset,
+    maxPoolSize = preset?.worker?.maxPoolSize ?? defaults.maxPoolSize,
+  } = options;
   assert.ok(
     !options.pgPool || !options.connectionString,
     "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
   );
   let pgPool: Pool;
-  const connectionString = options.connectionString || process.env.DATABASE_URL;
+  const connectionString =
+    options.connectionString ||
+    options.preset?.worker?.connectionString ||
+    process.env.DATABASE_URL;
   if (options.pgPool) {
     pgPool = options.pgPool;
   } else if (connectionString) {
     pgPool = new Pool({
       connectionString,
-      max: options.maxPoolSize,
+      max: maxPoolSize,
     });
     releasers.push(() => {
       pgPool.end();
@@ -160,7 +171,7 @@ export async function assertPool(
   } else if (process.env.PGDATABASE) {
     pgPool = new Pool({
       /* Pool automatically pulls settings from envvars */
-      max: options.maxPoolSize,
+      max: maxPoolSize,
     });
     releasers.push(() => {
       pgPool.end();
@@ -259,14 +270,19 @@ export const getUtilsAndReleasersFromOptions = async (
   options: RunnerOptions,
   settings: ProcessSharedOptionsSettings = {},
 ): Promise<CompiledOptions> => {
-  const shared = processSharedOptions(options, settings);
-  const { concurrency = defaults.concurrentJobs } = options;
-  const { hooks } = shared;
+  const compiledSharedOptions = processSharedOptions(options, settings);
+  const {
+    hooks,
+    options: {
+      preset,
+      concurrency = preset?.worker?.concurrentJobs ?? defaults.concurrentJobs,
+    },
+  } = compiledSharedOptions;
   return withReleasers(async function getUtilsFromOptions(
     releasers,
     release,
   ): Promise<CompiledOptions> {
-    const pgPool: Pool = await assertPool(options, releasers);
+    const pgPool: Pool = await assertPool(compiledSharedOptions, releasers);
     // @ts-ignore
     const max = pgPool?.options?.max || 10;
     if (max < concurrency) {
@@ -281,14 +297,14 @@ export const getUtilsAndReleasersFromOptions = async (
     await withPgClient(async function migrateWithPgClient(client) {
       const event = { client };
       await hooks.process("premigrate", event);
-      await migrate(options, event.client);
+      await migrate(compiledSharedOptions, event.client);
       await hooks.process("postmigrate", event);
     });
 
-    const addJob = makeAddJob(options, withPgClient);
+    const addJob = makeAddJob(compiledSharedOptions, withPgClient);
 
     return {
-      ...shared,
+      ...compiledSharedOptions,
       pgPool,
       withPgClient,
       addJob,

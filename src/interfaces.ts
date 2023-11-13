@@ -9,7 +9,7 @@ import type {
   QueryResultRow,
 } from "pg";
 
-import type { Release } from "./lib";
+import type { CompiledSharedOptions, Release } from "./lib";
 import type { Logger } from "./logger";
 import type { Signal } from "./signals";
 
@@ -200,6 +200,8 @@ export type TaskList = {
 export interface WatchedTaskList {
   tasks: TaskList;
   release: () => void;
+  /** @internal */
+  compiledSharedOptions: CompiledSharedOptions;
 }
 
 export interface WatchedCronItems {
