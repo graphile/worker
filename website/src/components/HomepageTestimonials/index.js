@@ -1,4 +1,5 @@
 import styles from "@site/src/components/HomepageTestimonials/styles.module.css";
+import TestimonialImage from "@site/static/img/homepage/ant-leaf.svg";
 import clsx from "clsx";
 import React from "react";
 
@@ -72,8 +73,16 @@ export default function HomepageTestimonials() {
   return (
     <section className={styles.testimonialSection}>
       <div className={clsx("container", styles.testimonialContainer)}>
-        <div className={styles.blocktext}>
-          <p>Use The&nbsp;Stack You&nbsp;Have.</p>
+        <div className={clsx("col", styles.blocktextContainer)}>
+          <div className={styles.blocktext}>
+            <p>Use The&nbsp;Stack You&nbsp;Have</p>
+          </div>
+          <div>
+            <TestimonialImage
+              title="Coder sat at monitor"
+              className={styles.testimonialImage}
+            />
+          </div>
         </div>
         <div className={clsx("col")}>
           {TestimonialList.map((props, idx) => (

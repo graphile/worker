@@ -19,7 +19,7 @@
 
 .testimonial {
   composes: content from "@site/src/css/common.module.css";
-  max-width: 32rem;
+  max-width: 40rem;
   border: 1px solid var(--ifm-color-primary-darkest);
   border-radius: 1rem;
   box-shadow: 5px 5px 0px var(--ifm-color-primary-darkest);
@@ -28,6 +28,9 @@
   margin: 2rem;
   padding-top: 1rem;
   padding-right: 1rem;
+}
+.testimonial:nth-child(2n) {
+  margin-left: 6rem;
 }
 
 .creditAvatar {
@@ -45,11 +48,18 @@
   display: flex;
 }
 
+.blocktextContainer {
+  text-align: center;
+  max-width: 24rem;
+}
+
 .blocktext {
   color: var(--ifm-color-primary-darkest);
-  font-size: 7rem;
+  font-size: 4rem;
   font-weight: bold;
-  max-width: 36rem;
-  text-align: center;
   font-family: "Fredericka the Great", sans-serif;
+}
+
+.testimonialImage {
+  height: auto;
 }
