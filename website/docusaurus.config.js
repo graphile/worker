@@ -71,6 +71,10 @@ const config = {
       href: "https://fonts.googleapis.com/css2?family=Sarabun",
       type: "text/css",
     },
+    {
+      href: "https://fonts.googleapis.com/css2?family=Fredericka+the+Great&text=Use%20The%20Stack%20You%20Have.",
+      type: "text/css",
+    },
   ],
 
   themeConfig:

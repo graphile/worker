@@ -6,7 +6,7 @@
 
 .testimonialContainer {
   display: flex;
-  align-items: center;
+  align-items: top;
 }
 
 [data-theme="dark"] .testimonials {
@@ -48,8 +48,8 @@
 .blocktext {
   color: var(--ifm-color-primary-darkest);
   font-size: 7rem;
-  text-align: left;
   font-weight: bold;
-  max-width: 32rem;
+  max-width: 36rem;
   text-align: center;
+  font-family: "Fredericka the Great", sans-serif;
 }
