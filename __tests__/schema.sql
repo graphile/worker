@@ -105,6 +105,9 @@ begin
         updated_at = now()
       returning *
       into v_job;
+    if v_job.revision = 0 then
+      perform pg_notify('jobs:insert', '{"count":1}');
+    end if;
     return v_job;
   else
     raise exception 'Invalid job_key_mode value, expected ''replace'', ''preserve_run_at'' or ''unsafe_dedupe''.' using errcode = 'GWBKM';
@@ -140,6 +143,8 @@ begin
   where spec.job_key is not null
   and jobs.key = spec.job_key
   and is_available is not true;
+  -- WARNING: this count is not 100% accurate; 'on conflict' clause will cause it to be an overestimate
+  perform pg_notify('jobs:insert', '{"count":' || array_length(specs, 1)::text || '}');
   -- TODO: is there a risk that a conflict could occur depending on the
   -- isolation level?
   return query insert into "graphile_worker"._private_jobs as jobs (
@@ -249,6 +254,7 @@ begin
     )
   returning * into v_job;
   if not (v_job is null) then
+    perform pg_notify('jobs:insert', '{"count":-1}');
     return v_job;
   end if;
   -- Otherwise prevent job from retrying, and clear the key
@@ -279,14 +285,6 @@ CREATE FUNCTION graphile_worker.reschedule_jobs(job_ids bigint[], run_at timesta
       locked_at < NOW() - interval '4 hours'
     )
     returning *;
-$$;
-CREATE FUNCTION graphile_worker.tg_jobs__after_insert() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-begin
-  perform pg_notify('jobs:insert', '');
-  return new;
-end;
 $$;
 CREATE TABLE graphile_worker._private_job_queues (
     id integer NOT NULL,
@@ -372,7 +370,6 @@ ALTER TABLE ONLY graphile_worker._private_tasks
     ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
 CREATE INDEX jobs_main_index ON graphile_worker._private_jobs USING btree (priority, run_at) INCLUDE (id, task_id, job_queue_id) WHERE (is_available = true);
 CREATE INDEX jobs_no_queue_index ON graphile_worker._private_jobs USING btree (priority, run_at) INCLUDE (id, task_id) WHERE ((is_available = true) AND (job_queue_id IS NULL));
-CREATE TRIGGER _900_after_insert AFTER INSERT ON graphile_worker._private_jobs FOR EACH STATEMENT EXECUTE PROCEDURE graphile_worker.tg_jobs__after_insert();
 ALTER TABLE graphile_worker._private_job_queues ENABLE ROW LEVEL SECURITY;
 ALTER TABLE graphile_worker._private_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE graphile_worker._private_known_crontabs ENABLE ROW LEVEL SECURITY;

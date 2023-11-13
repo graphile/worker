@@ -325,3 +325,16 @@ export function digestPreset(preset: GraphileConfig.Preset) {
     tasksFolder,
   };
 }
+
+export function tryParseJson<T = object>(
+  json: string | null | undefined,
+): T | null {
+  if (json == null) {
+    return null;
+  }
+  try {
+    return JSON.parse(json);
+  } catch (e) {
+    return null;
+  }
+}

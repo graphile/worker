@@ -20,7 +20,11 @@ import {
   WorkerPool,
   WorkerPoolOptions,
 } from "./interfaces";
-import { CompiledSharedOptions, processSharedOptions } from "./lib";
+import {
+  CompiledSharedOptions,
+  processSharedOptions,
+  tryParseJson,
+} from "./lib";
 import { Logger } from "./logger";
 import SIGNALS, { Signal } from "./signals";
 import { failJobs } from "./sql/failJob";
@@ -394,20 +398,21 @@ export function runTaskList(
         });
         switch (message.channel) {
           case "jobs:insert": {
-            // Find a worker that's available
-            workerPool._workers.some((worker) => worker.nudge());
+            const payload = tryParseJson<{
+              count: number;
+            }>(message.payload);
+            let n = payload?.count ?? 1;
+            if (n > 0) {
+              // Nudge up to `n` workers
+              workerPool._workers.some((worker) => worker.nudge() && --n <= 0);
+            }
             break;
           }
           case "jobs:migrate": {
-            let payload: null | {
+            const payload = tryParseJson<{
               migrationNumber?: number;
               breaking?: boolean;
-            } = null;
-            try {
-              payload = message.payload ? JSON.parse(message.payload) : null;
-            } catch (e) {
-              /* noop */
-            }
+            }>(message.payload);
             if (payload?.breaking) {
               logger.warn(
                 `Graphile Worker detected breaking migration to database schema revision '${payload?.migrationNumber}'; it would be unsafe to continue, so shutting down...`,
