@@ -399,7 +399,6 @@ export function runTaskList(
         switch (message.channel) {
           case "jobs:insert": {
             const payload = tryParseJson<{
-              xid: string;
               count: number;
             }>(message.payload);
             let n = payload?.count ?? 1;
