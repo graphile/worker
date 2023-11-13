@@ -69,6 +69,12 @@ imported.
 Logging: changed format of task completion/failure logs to include attempts/max
 attempts and to reduce duplicate parenthesis.
 
+Replaces job announcement trigger with calls directly in `add_job` / `add_jobs`
+to reduce queuing overhead.
+
+Fixes bug where queuing 100 jobs in a single statement would only nudge a single
+inactive worker. Now as many workers as necessary and available will be nudged.
+
 ### v0.15.1
 
 Fixes issues with graceful worker shutdowns:
