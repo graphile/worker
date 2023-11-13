@@ -2153,18 +2153,18 @@ $$;
   on job_queues.id = jobs.job_queue_id
 );
 `,
-  "000018.sql": String.raw`DROP TRIGGER _900_after_insert ON graphile_worker._private_jobs;
-DROP FUNCTION graphile_worker.tg_jobs__after_insert;
+  "000018.sql": String.raw`DROP TRIGGER _900_after_insert ON :GRAPHILE_WORKER_SCHEMA._private_jobs;
+DROP FUNCTION :GRAPHILE_WORKER_SCHEMA.tg_jobs__after_insert;
 
-CREATE OR REPLACE FUNCTION graphile_worker.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text) RETURNS graphile_worker._private_jobs
+CREATE OR REPLACE FUNCTION :GRAPHILE_WORKER_SCHEMA.add_job(identifier text, payload json DEFAULT NULL::json, queue_name text DEFAULT NULL::text, run_at timestamp with time zone DEFAULT NULL::timestamp with time zone, max_attempts integer DEFAULT NULL::integer, job_key text DEFAULT NULL::text, priority integer DEFAULT NULL::integer, flags text[] DEFAULT NULL::text[], job_key_mode text DEFAULT 'replace'::text) RETURNS :GRAPHILE_WORKER_SCHEMA._private_jobs
     LANGUAGE plpgsql
     AS $$
 declare
-  v_job "graphile_worker"._private_jobs;
+  v_job :GRAPHILE_WORKER_SCHEMA._private_jobs;
 begin
   if (job_key is null or job_key_mode is null or job_key_mode in ('replace', 'preserve_run_at')) then
     select * into v_job
-    from "graphile_worker".add_jobs(
+    from :GRAPHILE_WORKER_SCHEMA.add_jobs(
       ARRAY[(
         identifier,
         payload,
@@ -2174,19 +2174,19 @@ begin
         job_key,
         priority::smallint,
         flags
-      )::"graphile_worker".job_spec],
+      ):::GRAPHILE_WORKER_SCHEMA.job_spec],
       (job_key_mode = 'preserve_run_at')
     )
     limit 1;
     return v_job;
   elsif job_key_mode = 'unsafe_dedupe' then
     -- Ensure all the tasks exist
-    insert into "graphile_worker"._private_tasks as tasks (identifier)
+    insert into :GRAPHILE_WORKER_SCHEMA._private_tasks as tasks (identifier)
     values (add_job.identifier)
     on conflict do nothing;
     -- Ensure all the queues exist
     if add_job.queue_name is not null then
-      insert into "graphile_worker"._private_job_queues as job_queues (queue_name)
+      insert into :GRAPHILE_WORKER_SCHEMA._private_job_queues as job_queues (queue_name)
       values (add_job.queue_name)
       on conflict do nothing;
     end if;
@@ -2197,7 +2197,7 @@ begin
     -- after the existing job started executing, but no further job is being
     -- scheduled), but it is useful in very rare circumstances for
     -- de-duplication. If in doubt, DO NOT USE THIS.
-    insert into "graphile_worker"._private_jobs as jobs (
+    insert into :GRAPHILE_WORKER_SCHEMA._private_jobs as jobs (
       job_queue_id,
       task_id,
       payload,
@@ -2219,8 +2219,8 @@ begin
           select jsonb_object_agg(flag, true)
           from unnest(add_job.flags) as item(flag)
         )
-      from "graphile_worker"._private_tasks as tasks
-      left join "graphile_worker"._private_job_queues as job_queues
+      from :GRAPHILE_WORKER_SCHEMA._private_tasks as tasks
+      left join :GRAPHILE_WORKER_SCHEMA._private_job_queues as job_queues
       on job_queues.queue_name = add_job.queue_name
       where tasks.identifier = add_job.identifier
     on conflict (key)
@@ -2240,17 +2240,17 @@ begin
 end;
 $$;
 
-CREATE OR REPLACE FUNCTION graphile_worker.add_jobs(specs graphile_worker.job_spec[], job_key_preserve_run_at boolean DEFAULT false) RETURNS SETOF graphile_worker._private_jobs
+CREATE OR REPLACE FUNCTION :GRAPHILE_WORKER_SCHEMA.add_jobs(specs :GRAPHILE_WORKER_SCHEMA.job_spec[], job_key_preserve_run_at boolean DEFAULT false) RETURNS SETOF :GRAPHILE_WORKER_SCHEMA._private_jobs
     LANGUAGE plpgsql
     AS $$
 begin
   -- Ensure all the tasks exist
-  insert into "graphile_worker"._private_tasks as tasks (identifier)
+  insert into :GRAPHILE_WORKER_SCHEMA._private_tasks as tasks (identifier)
   select distinct spec.identifier
   from unnest(specs) spec
   on conflict do nothing;
   -- Ensure all the queues exist
-  insert into "graphile_worker"._private_job_queues as job_queues (queue_name)
+  insert into :GRAPHILE_WORKER_SCHEMA._private_job_queues as job_queues (queue_name)
   select distinct spec.queue_name
   from unnest(specs) spec
   where spec.queue_name is not null
@@ -2260,7 +2260,7 @@ begin
   -- executing (i.e. it's world state is out of date, and the fact add_job
   -- has been called again implies there's new information that needs to be
   -- acted upon).
-  update "graphile_worker"._private_jobs as jobs
+  update :GRAPHILE_WORKER_SCHEMA._private_jobs as jobs
   set
     key = null,
     attempts = jobs.max_attempts,
@@ -2275,7 +2275,7 @@ begin
 
   -- TODO: is there a risk that a conflict could occur depending on the
   -- isolation level?
-  return query insert into "graphile_worker"._private_jobs as jobs (
+  return query insert into :GRAPHILE_WORKER_SCHEMA._private_jobs as jobs (
     job_queue_id,
     task_id,
     payload,
@@ -2298,9 +2298,9 @@ begin
         from unnest(spec.flags) as item(flag)
       )
     from unnest(specs) spec
-    inner join "graphile_worker"._private_tasks as tasks
+    inner join :GRAPHILE_WORKER_SCHEMA._private_tasks as tasks
     on tasks.identifier = spec.identifier
-    left join "graphile_worker"._private_job_queues as job_queues
+    left join :GRAPHILE_WORKER_SCHEMA._private_job_queues as job_queues
     on job_queues.queue_name = spec.queue_name
   on conflict (key) do update set
     job_queue_id = excluded.job_queue_id,
@@ -2329,14 +2329,14 @@ begin
 end;
 $$;
 
-CREATE OR REPLACE FUNCTION graphile_worker.remove_job(job_key text) RETURNS graphile_worker._private_jobs
+CREATE OR REPLACE FUNCTION :GRAPHILE_WORKER_SCHEMA.remove_job(job_key text) RETURNS :GRAPHILE_WORKER_SCHEMA._private_jobs
     LANGUAGE plpgsql STRICT
     AS $$
 declare
-  v_job "graphile_worker"._private_jobs;
+  v_job :GRAPHILE_WORKER_SCHEMA._private_jobs;
 begin
   -- Delete job if not locked
-  delete from "graphile_worker"._private_jobs as jobs
+  delete from :GRAPHILE_WORKER_SCHEMA._private_jobs as jobs
     where key = job_key
     and (
       locked_at is null
@@ -2349,7 +2349,7 @@ begin
     return v_job;
   end if;
   -- Otherwise prevent job from retrying, and clear the key
-  update "graphile_worker"._private_jobs as jobs
+  update :GRAPHILE_WORKER_SCHEMA._private_jobs as jobs
   set
     key = null,
     attempts = jobs.max_attempts,
