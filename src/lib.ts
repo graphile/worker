@@ -263,7 +263,7 @@ interface ProcessOptionsExtensions {
 }
 
 export interface CompiledOptions
-  extends CompiledSharedOptions,
+  extends CompiledSharedOptions<RunnerOptions>,
     ProcessOptionsExtensions {}
 
 export const getUtilsAndReleasersFromOptions = async (
