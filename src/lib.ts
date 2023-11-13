@@ -117,7 +117,12 @@ export function processSharedOptions(
       },
     );
     _sharedOptionsCache.set(options, compiled);
-    hooks.process("init");
+    Promise.resolve(hooks.process("init")).catch((error) => {
+      logger.error(
+        `One of the plugins you are using raised an error during 'init'; but errors during 'init' are currently ignored. Continuing. Error: ${error}`,
+        { error },
+      );
+    });
   }
   if (scope) {
     return {
