@@ -12,13 +12,10 @@ import {
 import {
   Job,
   RunOnceOptions,
-  RunnerOptions,
-  SharedOptions,
   TaskList,
   WithPgClient,
   WorkerEventMap,
   WorkerEvents,
-  WorkerOptions,
   WorkerPool,
   WorkerPoolOptions,
 } from "./interfaces";

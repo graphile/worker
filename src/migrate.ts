@@ -2,11 +2,7 @@ import { PoolClient } from "pg";
 
 import { migrations } from "./generated/sql";
 import { WorkerSharedOptions } from "./interfaces";
-import {
-  BREAKING_MIGRATIONS,
-  CompiledSharedOptions,
-  processSharedOptions,
-} from "./lib";
+import { BREAKING_MIGRATIONS, CompiledSharedOptions } from "./lib";
 
 function checkPostgresVersion(versionString: string) {
   const version = parseInt(versionString, 10);

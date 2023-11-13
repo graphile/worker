@@ -1,7 +1,7 @@
 import { Pool, PoolClient } from "pg";
 
 import { AddJobFunction, Job, JobHelpers, WithPgClient } from "./interfaces";
-import { CompiledSharedOptions, processSharedOptions } from "./lib";
+import { CompiledSharedOptions } from "./lib";
 import { Logger } from "./logger";
 
 export function makeAddJob(
