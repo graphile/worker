@@ -93,6 +93,7 @@ async function runMigration(
   }
 }
 
+/** @internal */
 export async function migrate(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
   client: PoolClient,

@@ -497,10 +497,13 @@ export function _runTaskList(
   },
 ): WorkerPool {
   const {
-    options: { preset, noHandleSignals = false },
-  } = compiledSharedOptions;
+    preset,
+    noHandleSignals = false,
+    concurrency: baseConcurrency = preset?.worker?.concurrentJobs ??
+      defaults.concurrentJobs,
+  } = compiledSharedOptions.options;
   const {
-    concurrency = preset?.worker?.concurrentJobs ?? defaults.concurrentJobs,
+    concurrency = baseConcurrency,
     continuous,
     autostart: rawAutostart = true,
     onTerminate,

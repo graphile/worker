@@ -630,6 +630,9 @@ export interface RunOnceOptions extends SharedOptions {
    * handle graceful shutdown of the worker if the process receives a signal.
    */
   noHandleSignals?: boolean;
+
+  /** Single worker only! */
+  concurrency?: 1;
 }
 
 /**
