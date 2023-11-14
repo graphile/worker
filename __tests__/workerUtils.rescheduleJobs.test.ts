@@ -22,13 +22,8 @@ test("completes the jobs, leaves others unaffected", () =>
       connectionString: TEST_CONNECTION_STRING,
     });
 
-    const {
-      failedJob,
-      regularJob1,
-      lockedJob,
-      regularJob2,
-      untouchedJob,
-    } = await makeSelectionOfJobs(utils, pgClient);
+    const { failedJob, regularJob1, lockedJob, regularJob2, untouchedJob } =
+      await makeSelectionOfJobs(utils, pgClient);
 
     const jobs = [failedJob, regularJob1, lockedJob, regularJob2];
     const jobIds = jobs.map((j) => j.id);
