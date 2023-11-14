@@ -5,7 +5,6 @@ import { defaults } from "./config";
 import deferred, { Deferred } from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
-  DbJob,
   Job,
   PromiseOrDirect,
   TaskList,
@@ -234,7 +233,6 @@ export function makeNewWorker(
        * **MUST** release the job once we've attempted it (success or error).
        */
       const startTimestamp = process.hrtime();
-      let result: void | PromiseOrDirect<unknown>[] = undefined;
       try {
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
@@ -244,7 +242,7 @@ export function makeNewWorker(
           logger,
           abortSignal,
         });
-        result = await task(job.payload, helpers);
+        await task(job.payload, helpers);
       } catch (error) {
         err = error;
       }
