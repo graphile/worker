@@ -3,6 +3,8 @@
   align-items: center;
   width: 100%;
   color: var(--ifm-color-primary-darkest);
+  margin-top: 2rem;
+  margin-bottom: 2rem;
 }
 
 [data-theme="dark"] .tertiarySection {
@@ -29,7 +31,6 @@
 }
 
 .tertiarySvg {
-  max-width: 75%;
+  max-width: 100%;
   height: auto;
-  margin-bottom: 2rem;
 }

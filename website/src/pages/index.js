@@ -95,6 +95,21 @@ export default function Home() {
           link={`https://github.com/graphile/starter`}
           buttonText={`Learn more`}
         />
+        <TertiarySection
+          title={`Advanced planning and execution engine for GraphQL`}
+          tagline={`The latest project from the Graphile team`}
+          body={
+            <>
+              Gra<em>fast</em>&rsquo;s plan-based approach helps developers
+              avoid common pitfalls and achieve better backend efficiency,
+              leading to increased scalability and incredible performance your
+              customers will love.
+            </>
+          }
+          Svg={require("@site/static/img/homepage/grafast.svg").default}
+          link={`https://grafast.org`}
+          buttonText={`Grafast.org`}
+        />
       </main>
     </Layout>
   );
