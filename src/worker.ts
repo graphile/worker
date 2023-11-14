@@ -6,7 +6,6 @@ import deferred, { Deferred } from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
   Job,
-  PromiseOrDirect,
   TaskList,
   WithPgClient,
   Worker,
