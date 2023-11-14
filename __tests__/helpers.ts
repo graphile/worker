@@ -12,6 +12,7 @@ import {
   WorkerPoolOptions,
   WorkerUtils,
 } from "../src/interfaces";
+import { processSharedOptions } from "../src/lib";
 import { _allWorkerPools } from "../src/main";
 import { migrate } from "../src/migrate";
 
@@ -111,12 +112,13 @@ export async function reset(
   await pgPoolOrClient.query(
     `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
   );
+  const compiledSharedOptions = processSharedOptions(options);
   if (isPoolClient(pgPoolOrClient)) {
-    await migrate(options, pgPoolOrClient);
+    await migrate(compiledSharedOptions, pgPoolOrClient);
   } else {
     const client = await pgPoolOrClient.connect();
     try {
-      await migrate(options, client);
+      await migrate(compiledSharedOptions, client);
     } finally {
       client.release();
     }

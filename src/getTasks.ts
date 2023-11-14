@@ -136,6 +136,7 @@ export default async function getTasks(
   let released = false;
   return {
     tasks,
+    compiledSharedOptions,
     release: () => {
       if (released) {
         return;

@@ -138,7 +138,7 @@ declare global {
       /**
        * Called when Graphile Worker starts up.
        */
-      init(): PromiseOrDirect<void>;
+      init(): void;
 
       /**
        * Called before migrating the DB.

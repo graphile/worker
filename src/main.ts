@@ -16,7 +16,6 @@ import {
   WithPgClient,
   WorkerEventMap,
   WorkerEvents,
-  WorkerOptions,
   WorkerPool,
   WorkerPoolOptions,
 } from "./interfaces";
@@ -212,17 +211,15 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
 }
 
 export function runTaskList(
-  options: WorkerPoolOptions,
+  rawOptions: WorkerPoolOptions,
   tasks: TaskList,
   pgPool: Pool,
 ): WorkerPool {
-  const compiledSharedOptions = processSharedOptions(options);
+  const compiledSharedOptions = processSharedOptions(rawOptions);
   const { events, logger, minResetLockedInterval, maxResetLockedInterval } =
     compiledSharedOptions;
   const withPgClient = makeWithPgClientFromPool(pgPool);
   const workerPool = _runTaskList(compiledSharedOptions, tasks, withPgClient, {
-    concurrency: options.concurrency,
-    noHandleSignals: options.noHandleSignals,
     continuous: true,
     onTerminate() {
       return resetLockedAtPromise;
@@ -484,12 +481,14 @@ export function runTaskList(
 }
 
 export function _runTaskList(
-  compiledSharedOptions: CompiledSharedOptions,
+  compiledSharedOptions: CompiledSharedOptions<
+    RunOnceOptions | WorkerPoolOptions
+  >,
   tasks: TaskList,
   withPgClient: WithPgClient,
   options: {
-    concurrency: number | undefined;
-    noHandleSignals: boolean | undefined;
+    concurrency?: number | undefined;
+    noHandleSignals?: boolean | undefined;
     continuous: boolean;
     /** If false, you need to call `pool._start()` to start execution */
     autostart?: boolean;
@@ -498,8 +497,13 @@ export function _runTaskList(
   },
 ): WorkerPool {
   const {
-    concurrency = defaults.concurrentJobs,
+    preset,
     noHandleSignals = false,
+    concurrency: baseConcurrency = preset?.worker?.concurrentJobs ??
+      defaults.concurrentJobs,
+  } = compiledSharedOptions.options;
+  const {
+    concurrency = baseConcurrency,
     continuous,
     autostart: rawAutostart = true,
     onTerminate,
@@ -784,24 +788,25 @@ export function _runTaskList(
   events.emit("pool:create", { workerPool });
 
   // Spawn our workers; they can share clients from the pool.
-  const workerOptions: WorkerOptions = {
-    ...compiledSharedOptions.options,
-    abortSignal,
-    workerPool,
-    autostart,
-  };
-  if (workerOptions.workerId && concurrency > 1) {
+  const workerId =
+    "workerId" in compiledSharedOptions.options
+      ? compiledSharedOptions.options.workerId
+      : undefined;
+  if (workerId != null && concurrency > 1) {
     throw new Error(
       `You must not set workerId when concurrency > 1; each worker must have a unique identifier`,
     );
   }
   for (let i = 0; i < concurrency; i++) {
-    const worker = makeNewWorker(
-      workerOptions,
+    const worker = makeNewWorker(compiledSharedOptions, {
       tasks,
       withPgClient,
       continuous,
-    );
+      abortSignal,
+      workerPool,
+      autostart,
+      workerId,
+    });
     workerPool._workers.push(worker);
     const remove = () => {
       if (continuous && workerPool._active && !workerPool._shuttingDown) {

@@ -8,7 +8,7 @@ const options: WorkerSharedOptions = {};
 describe("commonjs", () => {
   test("gets tasks from folder", () =>
     withPgClient(async (client) => {
-      const { tasks, release } = await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures/tasks`,
       );
@@ -19,10 +19,14 @@ Array [
   "wouldyoulike_default",
 ]
 `);
-      const helpers = makeJobHelpers(options, makeMockJob("would you like"), {
-        withPgClient: makeWithPgClientFromClient(client),
-        abortSignal: undefined,
-      });
+      const helpers = makeJobHelpers(
+        compiledSharedOptions,
+        makeMockJob("would you like"),
+        {
+          withPgClient: makeWithPgClientFromClient(client),
+          abortSignal: undefined,
+        },
+      );
       expect(await tasks.wouldyoulike!(helpers.job.payload, helpers)).toEqual(
         "some sausages",
       );
@@ -34,7 +38,7 @@ Array [
 
   test("get tasks from file (vanilla)", () =>
     withPgClient(async (client) => {
-      const { tasks, release } = await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures/tasksFile.js`,
       );
@@ -46,10 +50,14 @@ Array [
 ]
 `);
 
-      const helpers = makeJobHelpers(options, makeMockJob("task1"), {
-        withPgClient: makeWithPgClientFromClient(client),
-        abortSignal: undefined,
-      });
+      const helpers = makeJobHelpers(
+        compiledSharedOptions,
+        makeMockJob("task1"),
+        {
+          withPgClient: makeWithPgClientFromClient(client),
+          abortSignal: undefined,
+        },
+      );
       expect(await tasks.task1!(helpers.job.payload, helpers)).toEqual("hi");
       expect(await tasks.task2!(helpers.job.payload, helpers)).toEqual("hello");
 
@@ -58,7 +66,7 @@ Array [
 
   test("get tasks from file (default)", () =>
     withPgClient(async (client) => {
-      const { tasks, release } = await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures/tasksFile_default.js`,
       );
@@ -70,7 +78,7 @@ Array [
 ]
 `);
 
-      const helpers = makeJobHelpers(options, makeMockJob("t1"), {
+      const helpers = makeJobHelpers(compiledSharedOptions, makeMockJob("t1"), {
         withPgClient: makeWithPgClientFromClient(client),
         abortSignal: undefined,
       });
@@ -88,7 +96,7 @@ Array [
 describe("esm", () => {
   test("gets tasks from folder", () =>
     withPgClient(async (client) => {
-      const { tasks, release } = await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures-esm/tasks`,
       );
@@ -99,10 +107,14 @@ Array [
   "wouldyoulike_default",
 ]
 `);
-      const helpers = makeJobHelpers(options, makeMockJob("would you like"), {
-        withPgClient: makeWithPgClientFromClient(client),
-        abortSignal: undefined,
-      });
+      const helpers = makeJobHelpers(
+        compiledSharedOptions,
+        makeMockJob("would you like"),
+        {
+          withPgClient: makeWithPgClientFromClient(client),
+          abortSignal: undefined,
+        },
+      );
       expect(await tasks.wouldyoulike!(helpers.job.payload, helpers)).toEqual(
         "some sausages",
       );
@@ -114,7 +126,7 @@ Array [
 
   test("get tasks from file (vanilla)", () =>
     withPgClient(async (client) => {
-      const { tasks, release } = await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures-esm/tasksFile.js`,
       );
@@ -126,10 +138,14 @@ Array [
 ]
 `);
 
-      const helpers = makeJobHelpers(options, makeMockJob("task1"), {
-        withPgClient: makeWithPgClientFromClient(client),
-        abortSignal: undefined,
-      });
+      const helpers = makeJobHelpers(
+        compiledSharedOptions,
+        makeMockJob("task1"),
+        {
+          withPgClient: makeWithPgClientFromClient(client),
+          abortSignal: undefined,
+        },
+      );
       expect(await tasks.task1!(helpers.job.payload, helpers)).toEqual("hi");
       expect(await tasks.task2!(helpers.job.payload, helpers)).toEqual("hello");
 
@@ -138,7 +154,7 @@ Array [
 
   test("get tasks from file (default)", () =>
     withPgClient(async (client) => {
-      const { tasks, release } = await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures-esm/tasksFile_default.js`,
       );
@@ -150,7 +166,7 @@ Array [
 ]
 `);
 
-      const helpers = makeJobHelpers(options, makeMockJob("t1"), {
+      const helpers = makeJobHelpers(compiledSharedOptions, makeMockJob("t1"), {
         withPgClient: makeWithPgClientFromClient(client),
         abortSignal: undefined,
       });

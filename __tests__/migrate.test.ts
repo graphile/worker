@@ -1,5 +1,6 @@
 import { WorkerSharedOptions } from "../src";
 import { migrations } from "../src/generated/sql";
+import { processSharedOptions } from "../src/lib";
 import { migrate } from "../src/migrate";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
@@ -29,7 +30,8 @@ test("migration installs schema; second migration does no harm", async () => {
     expect(graphileWorkerNamespaceBeforeMigration).toBeFalsy();
 
     // Perform migration
-    await migrate(options, pgClient);
+    const compiledSharedOptions = processSharedOptions(options);
+    await migrate(compiledSharedOptions, pgClient);
 
     // Assert migrations table exists and has relevant entries
     const { rows: migrationRows } = await pgClient.query(
@@ -50,9 +52,9 @@ test("migration installs schema; second migration does no harm", async () => {
     }
 
     // Assert that re-migrating causes no issues
-    await migrate(options, pgClient);
-    await migrate(options, pgClient);
-    await migrate(options, pgClient);
+    await migrate(compiledSharedOptions, pgClient);
+    await migrate(compiledSharedOptions, pgClient);
+    await migrate(compiledSharedOptions, pgClient);
     {
       const jobsRows = await getJobs(pgClient);
       expect(jobsRows).toHaveLength(1);
@@ -83,8 +85,10 @@ insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations (id) values (1);
   // We need to use a fresh connection after dropping the schema because the SQL
   // functions' plans get cached using the stale OIDs.
   await withPgClient(async (pgClient) => {
+    const compiledSharedOptions = processSharedOptions(options);
+
     // Perform migration
-    await migrate(options, pgClient);
+    await migrate(compiledSharedOptions, pgClient);
 
     // Assert migrations table exists and has relevant entries
     const { rows: migrationRows } = await pgClient.query(
@@ -109,9 +113,9 @@ insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations (id) values (1);
     }
 
     // Assert that re-migrating causes no issues
-    await migrate(options, pgClient);
-    await migrate(options, pgClient);
-    await migrate(options, pgClient);
+    await migrate(compiledSharedOptions, pgClient);
+    await migrate(compiledSharedOptions, pgClient);
+    await migrate(compiledSharedOptions, pgClient);
     {
       const jobsRows = await getJobs(pgClient);
       expect(jobsRows).toHaveLength(1);
@@ -138,8 +142,10 @@ test("aborts if database is more up to date than current worker", async () => {
     );
     expect(graphileWorkerNamespaceBeforeMigration).toBeFalsy();
 
+    const compiledSharedOptions = processSharedOptions(options);
+
     // Perform migration
-    await migrate(options, pgClient);
+    await migrate(compiledSharedOptions, pgClient);
 
     // Insert a more up to date migration
     await pgClient.query(
@@ -147,7 +153,7 @@ test("aborts if database is more up to date than current worker", async () => {
     );
 
     await expect(
-      migrate(options, pgClient),
+      migrate(compiledSharedOptions, pgClient),
     ).rejects.toThrowErrorMatchingInlineSnapshot(
       `"Database is using Graphile Worker schema revision 999999 which includes breaking migration 999999, but the currently running worker only supports up to revision 18. It would be unsafe to continue; please ensure all versions of Graphile Worker are compatible."`,
     );

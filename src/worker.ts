@@ -10,34 +10,48 @@ import {
   TaskList,
   WithPgClient,
   Worker,
-  WorkerOptions,
+  WorkerPool,
+  WorkerSharedOptions,
 } from "./interfaces";
-import { processSharedOptions } from "./lib";
+import { CompiledSharedOptions } from "./lib";
 import { completeJob } from "./sql/completeJob";
 import { failJob } from "./sql/failJob";
 import { getJob } from "./sql/getJob";
 
 export function makeNewWorker(
-  options: WorkerOptions,
-  tasks: TaskList,
-  withPgClient: WithPgClient,
-  continuous: boolean,
+  compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
+  params: {
+    tasks: TaskList;
+    withPgClient: WithPgClient;
+    continuous: boolean;
+    abortSignal: AbortSignal;
+    workerPool: WorkerPool;
+    autostart?: boolean;
+    workerId?: string;
+  },
 ): Worker {
   const {
-    workerId = `worker-${randomBytes(9).toString("hex")}`,
-    pollInterval = defaults.pollInterval,
-    forbiddenFlags,
+    tasks,
+    withPgClient,
+    continuous,
     abortSignal,
     workerPool,
     autostart = true,
-  } = options;
-  const compiledSharedOptions = processSharedOptions(options, {
+    workerId = `worker-${randomBytes(9).toString("hex")}`,
+  } = params;
+  const { events, useNodeTime, hooks } = compiledSharedOptions;
+  const logger = compiledSharedOptions.logger.scope({
     scope: {
       label: "worker",
       workerId,
     },
   });
-  const { logger, events, useNodeTime, hooks } = compiledSharedOptions;
+  const {
+    preset,
+    forbiddenFlags,
+    pollInterval = preset?.worker?.pollInterval ?? defaults.pollInterval,
+  } = compiledSharedOptions.options;
+
   const promise = deferred() as Deferred<void> & {
     /** @internal */
     worker?: Worker;
@@ -224,7 +238,7 @@ export function makeNewWorker(
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
         assert.ok(task, `Unsupported task '${job.task_identifier}'`);
-        const helpers = makeJobHelpers(options, job, {
+        const helpers = makeJobHelpers(compiledSharedOptions, job, {
           withPgClient,
           logger,
           abortSignal,

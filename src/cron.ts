@@ -16,7 +16,7 @@ import {
   TimestampDigest,
   WorkerEvents,
 } from "./interfaces";
-import { processSharedOptions, Releasers } from "./lib";
+import { CompiledOptions, processSharedOptions, Releasers } from "./lib";
 
 interface CronRequirements {
   pgPool: Pool;
@@ -494,11 +494,19 @@ export const runCron = (
   };
 };
 
+/** @internal */
 export async function getParsedCronItemsFromOptions(
-  options: RunnerOptions,
+  compiledOptions: CompiledOptions,
   releasers: Releasers,
 ): Promise<Array<ParsedCronItem>> {
-  const { crontabFile, parsedCronItems, crontab } = options;
+  const {
+    options: {
+      preset,
+      crontabFile = preset?.worker?.crontabFile,
+      parsedCronItems,
+      crontab,
+    },
+  } = compiledOptions;
 
   if (!crontabFile && !parsedCronItems && !crontab) {
     return [];
@@ -521,7 +529,10 @@ export async function getParsedCronItemsFromOptions(
       "`crontabFile` and `parsedCronItems` must not be set at the same time.",
     );
 
-    const watchedCronItems = await getCronItems(options, crontabFile);
+    const watchedCronItems = await getCronItems(
+      compiledOptions.options,
+      crontabFile,
+    );
     releasers.push(() => watchedCronItems.release());
     return watchedCronItems.items;
   } else {
