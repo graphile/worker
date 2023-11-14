@@ -1,5 +1,36 @@
 # Release notes
 
+### v0.13.1-bridge.0
+
+v0.14.0 and v0.16.0 have significant changes that require you to shut down the
+workers before upgrading (unless you're using Worker Pro). This release intends
+to give you a bridge to make moving to v0.14.0 and v0.16.0 easier by fixing the
+graceful shutdown logic and integrating the plugin system and hooks that you can
+use to make this migration easier on yourself (or to use the Worker Pro plugin).
+
+**IMPORTANT**: `--watch` mode is no longer supported. We've removed this from
+v0.16.0 (see the release notes for that version), you should use `node --watch`
+or similar instead. This also removes `fauxRequire` and all the problems that
+that had.
+
+- Fixes graceful shutdown (both manually via `.gracefulShutdown()` or
+  `.forcefulShutdown()` and via signal handling)
+- Tracks whether migrations are breaking or not, and:
+  - refuses to start if an unsupported breaking migration is present in the
+    database
+  - gracefully shuts down if another worker performs a breaking migration
+    - NOTE: this is not sufficiently safe, it's just a backstop. You should shut
+      down your workers or use Worker Pro for breaking upgrades because the
+      `complete_job`/`fail_job` methods may change and existing legacy workers
+      may not be able to release their jobs
+- Adds `graphile-config` support for presets and plugins
+- Adds more events and hooks
+- Uses inlined SQL to help workaround some bundling issues
+- `runTaskListOnce` now uses a WorkerPool internally (to better integrate with
+  the gracefulShutdown logic)
+- Fix `WorkerPool.promise` to only resolve once everything is handled
+- A huge number of internal changes
+
 ### v0.13.0
 
 - Remove dependency on `pgcrypto` database extension (thanks @noinkling)
