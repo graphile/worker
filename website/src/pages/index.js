@@ -36,7 +36,7 @@ function HomepageHeader() {
                   "button button--primary button--lg margin-left--none margin-right--md",
                   styles.buttonHero,
                 )}
-                to="/postgraphile/next"
+                to="/docs"
               >
                 Documentation
               </Link>
@@ -46,7 +46,7 @@ function HomepageHeader() {
                   styles.buttonHero,
                   styles.buttonHeroOutline,
                 )}
-                to="/postgraphile/next"
+                to="docs/cli#quickstart"
               >
                 Overview - 5min ⏱
               </Link>
