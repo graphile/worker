@@ -30,7 +30,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
     );
     await pgPool.query(
       `\
-update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs
+update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs
 set
   locked_by = 'some_worker_id',
   locked_at = now() - (
@@ -39,7 +39,7 @@ set
     else interval '4 hours 1 minute'
     end
   )
-where task_id = (select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks as tasks where identifier = 'job1') and payload->>'id' like 'locked_%';
+where task_identifier = 'job1' and payload->>'id' like 'locked_%';
 `,
     );
 
@@ -78,7 +78,7 @@ where task_id = (select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks
     expect(states).toEqual(["started", "success"]);
     await sleep(20);
     const { rows: jobs } = await pgPool.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
     );
     expect(jobs.length).toEqual(3);
     const unlocked = jobs.find((j) => j.payload.id === "unlocked");
