@@ -12,6 +12,7 @@ import {
   WorkerUtils,
 } from "../src/interfaces";
 import { migrate } from "../src/migrate";
+import { processSharedOptions } from "../src/lib";
 
 export {
   DAY,
@@ -31,7 +32,7 @@ jest.setTimeout(15000);
 // process.env.GRAPHILE_LOGGER_DEBUG = "1";
 
 export const TEST_CONNECTION_STRING =
-  process.env.TEST_CONNECTION_STRING || "graphile_worker_test";
+  process.env.TEST_CONNECTION_STRING || "postgres:///graphile_worker_test";
 
 const parsed = parse(TEST_CONNECTION_STRING);
 
@@ -84,7 +85,7 @@ export async function withTransaction<T>(
 }
 
 function isPoolClient(o: pg.Pool | pg.PoolClient): o is pg.PoolClient {
-  return typeof o["release"] === "function";
+  return "release" in o && typeof o.release === "function";
 }
 
 export async function reset(
@@ -94,12 +95,13 @@ export async function reset(
   await pgPoolOrClient.query(
     `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
   );
+  const compiledSharedOptions = processSharedOptions(options);
   if (isPoolClient(pgPoolOrClient)) {
-    await migrate(options, pgPoolOrClient);
+    await migrate(compiledSharedOptions, pgPoolOrClient);
   } else {
     const client = await pgPoolOrClient.connect();
     try {
-      await migrate(options, client);
+      await migrate(compiledSharedOptions, client);
     } finally {
       client.release();
     }

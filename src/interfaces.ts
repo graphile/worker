@@ -313,7 +313,6 @@ export interface DbJob {
   locked_at: Date | null;
   locked_by: string | null;
   flags: { [flag: string]: true } | null;
-  is_available: boolean;
 }
 
 export interface Job extends DbJob {}
