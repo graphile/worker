@@ -1,3 +1,4 @@
+import { defaults } from "../config";
 import { DbJob, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
@@ -7,69 +8,26 @@ export async function failJob(
   workerId: string,
   job: DbJob,
   message: string,
-  replacementPayload: undefined | unknown[],
 ): Promise<void> {
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: { noPreparedStatements },
+    options: {
+      preset,
+      noPreparedStatements = (preset?.worker?.preparedStatements === false
+        ? true
+        : undefined) ?? defaults.preparedStatements === false,
+    },
   } = compiledSharedOptions;
 
   // TODO: retry logic, in case of server connection interruption
-  if (job.job_queue_id != null) {
-    await withPgClient((client) =>
-      client.query({
-        text: `\
-with j as (
-update ${escapedWorkerSchema}._private_jobs as jobs
-set
-last_error = $2::text,
-run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
-locked_by = null,
-locked_at = null,
-payload = coalesce($4::json, jobs.payload)
-where id = $1::bigint and locked_by = $3::text
-returning *
-)
-update ${escapedWorkerSchema}._private_job_queues as job_queues
-set locked_by = null, locked_at = null
-from j
-where job_queues.id = j.job_queue_id and job_queues.locked_by = $3::text;`,
-        values: [
-          job.id,
-          message,
-          workerId,
-          replacementPayload != null
-            ? JSON.stringify(replacementPayload)
-            : null,
-        ],
-        name: noPreparedStatements ? undefined : `fail_job_q/${workerSchema}`,
-      }),
-    );
-  } else {
-    await withPgClient((client) =>
-      client.query({
-        text: `\
-update ${escapedWorkerSchema}._private_jobs as jobs
-set
-last_error = $2::text,
-run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
-locked_by = null,
-locked_at = null,
-payload = coalesce($4::json, jobs.payload)
-where id = $1::bigint and locked_by = $3::text;`,
-        values: [
-          job.id,
-          message,
-          workerId,
-          replacementPayload != null
-            ? JSON.stringify(replacementPayload)
-            : null,
-        ],
-        name: noPreparedStatements ? undefined : `fail_job/${workerSchema}`,
-      }),
-    );
-  }
+  await withPgClient((client) =>
+    client.query({
+      text: `SELECT FROM ${escapedWorkerSchema}.fail_job($1, $2, $3);`,
+      values: [workerId, job.id, message],
+      name: noPreparedStatements ? undefined : `fail_job/${workerSchema}`,
+    }),
+  );
 }
 
 export async function failJobs(
@@ -85,25 +43,21 @@ export async function failJobs(
     options: { noPreparedStatements },
   } = compiledSharedOptions;
 
+  // TODO: retry logic, in case of server connection interruption
   const { rows: failedJobs } = await withPgClient((client) =>
     client.query<DbJob>({
       text: `\
-with j as (
-update ${escapedWorkerSchema}._private_jobs as jobs
-set
-last_error = $2::text,
-run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
-locked_by = null,
-locked_at = null
-where id = any($1::int[]) and locked_by = any($3::text[])
-returning *
-), queues as (
-update ${escapedWorkerSchema}._private_job_queues as job_queues
-set locked_by = null, locked_at = null
-from j
-where job_queues.id = j.job_queue_id and job_queues.locked_by = any($3::text[])
+with jobs_to_fail as (
+  select job_id, jobs.locked_by
+  from unnest($1::bigint[]) j(job_id)
+  inner join ${escapedWorkerSchema}.jobs
+  on (j.job_id = jobs.id)
+  where jobs.locked_by = any($3::text[])
 )
-select * from j;`,
+select fj.*
+from jobs_to_fail jtf
+inner join lateral ${escapedWorkerSchema}.fail_job(jtf.locked_by, jtf.job_id, $2) fj
+on true;`,
       values: [jobs.map((job) => job.id), message, workerIds],
       name: noPreparedStatements ? undefined : `fail_jobs/${workerSchema}`,
     }),

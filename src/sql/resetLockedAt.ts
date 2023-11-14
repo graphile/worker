@@ -1,3 +1,4 @@
+import { defaults } from "../config";
 import { WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
@@ -8,7 +9,12 @@ export async function resetLockedAt(
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: { noPreparedStatements },
+    options: {
+      preset,
+      noPreparedStatements = (preset?.worker?.preparedStatements === false
+        ? true
+        : undefined) ?? defaults.preparedStatements === false,
+    },
     useNodeTime,
   } = compiledSharedOptions;
 
@@ -18,11 +24,11 @@ export async function resetLockedAt(
     client.query({
       text: `\
 with j as (
-update ${escapedWorkerSchema}._private_jobs as jobs
+update ${escapedWorkerSchema}.jobs
 set locked_at = null, locked_by = null, run_at = greatest(run_at, now())
 where locked_at < ${now} - interval '4 hours'
 )
-update ${escapedWorkerSchema}._private_job_queues as job_queues
+update ${escapedWorkerSchema}.job_queues
 set locked_at = null, locked_by = null
 where locked_at < ${now} - interval '4 hours'`,
       values: useNodeTime ? [new Date().toISOString()] : [],

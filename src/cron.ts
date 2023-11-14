@@ -15,7 +15,7 @@ import {
   TimestampDigest,
   WorkerEvents,
 } from "./interfaces";
-import { processSharedOptions, Releasers } from "./lib";
+import { CompiledOptions, processSharedOptions, Releasers } from "./lib";
 
 interface CronRequirements {
   pgPool: Pool;
@@ -174,10 +174,8 @@ async function registerAndBackfillItems(
     `SELECT * FROM ${escapedWorkerSchema}.known_crontabs`,
   );
 
-  const {
-    backfillItemsAndDates,
-    unknownIdentifiers,
-  } = getBackfillAndUnknownItems(parsedCronItems, rows);
+  const { backfillItemsAndDates, unknownIdentifiers } =
+    getBackfillAndUnknownItems(parsedCronItems, rows);
 
   if (unknownIdentifiers.length) {
     // They're known now.

@@ -1,3 +1,4 @@
+import { defaults } from "../config";
 import { DbJob, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
@@ -10,38 +11,20 @@ export async function completeJob(
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: { noPreparedStatements },
+    options: {
+      preset,
+      noPreparedStatements = (preset?.worker?.preparedStatements === false
+        ? true
+        : undefined) ?? defaults.preparedStatements === false,
+    },
   } = compiledSharedOptions;
 
   // TODO: retry logic, in case of server connection interruption
-  if (job.job_queue_id != null) {
-    await withPgClient((client) =>
-      client.query({
-        text: `\
-with j as (
-delete from ${escapedWorkerSchema}._private_jobs as jobs
-where id = $1::bigint
-returning *
-)
-update ${escapedWorkerSchema}._private_job_queues as job_queues
-set locked_by = null, locked_at = null
-from j
-where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
-        values: [job.id, workerId],
-        name: noPreparedStatements
-          ? undefined
-          : `complete_job_q/${workerSchema}`,
-      }),
-    );
-  } else {
-    await withPgClient((client) =>
-      client.query({
-        text: `\
-delete from ${escapedWorkerSchema}._private_jobs as jobs
-where id = $1::bigint`,
-        values: [job.id],
-        name: noPreparedStatements ? undefined : `complete_job/${workerSchema}`,
-      }),
-    );
-  }
+  await withPgClient((client) =>
+    client.query({
+      text: `SELECT FROM ${escapedWorkerSchema}.complete_job($1, $2);`,
+      values: [workerId, job.id],
+      name: noPreparedStatements ? undefined : `complete_job/${workerSchema}`,
+    }),
+  );
 }

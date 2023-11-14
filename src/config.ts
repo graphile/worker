@@ -21,7 +21,7 @@ export const defaults = {
     1,
   maxPoolSize:
     enforceNumberOrUndefined("maxPoolSize", cosmiconfig?.maxPoolSize) || 10,
-  preparedStatements: true,
+  preparedStatements: true as boolean,
   crontabFile: `${process.cwd()}/crontab`,
   tasksFolder: `${process.cwd()}/tasks`,
   gracefulShutdownAbortTimeout: 5000,
