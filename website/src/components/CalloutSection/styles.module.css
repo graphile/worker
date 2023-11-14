@@ -42,3 +42,10 @@
   border: 1px solid var(--ifm-color-primary);
   background-color: var(--ifm-color-primary);
 }
+
+@media screen and (max-width: 600px) {
+  .inner {
+    display: flex;
+    flex-direction: column;
+  }
+}

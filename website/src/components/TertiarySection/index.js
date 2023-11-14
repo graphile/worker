@@ -15,7 +15,7 @@ export default function TertiaryContent({
     <section className={styles.tertiarySection}>
       <div className="container">
         <div className={clsx("row", styles.tertiaryRow)}>
-          <div className="col col--6">
+          <div className={clsx("col col--6")}>
             <div>
               <h2 className={styles.header}>{title}</h2>
               <h3 className={styles.tagline}>{tagline}</h3>
@@ -31,7 +31,7 @@ export default function TertiaryContent({
               </Link>
             </div>
           </div>
-          <div className="col col--6">
+          <div className={clsx("col col--6", styles.svgCol)}>
             <Svg className={styles.tertiarySvg} role="img" />
           </div>
         </div>

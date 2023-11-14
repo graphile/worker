@@ -15,6 +15,10 @@
   align-items: center;
 }
 
+.svgCol {
+  text-align: right;
+}
+
 .header {
   composes: header from "@site/src/css/common.module.css";
 }

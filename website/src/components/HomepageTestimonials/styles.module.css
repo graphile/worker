@@ -32,6 +32,9 @@
 .testimonial:nth-child(2n) {
   margin-left: 6rem;
 }
+.testimonial:nth-child(2n + 1) {
+  margin-right: 6rem;
+}
 
 .creditAvatar {
   padding: 1rem;
@@ -62,4 +65,37 @@
 
 .testimonialImage {
   height: auto;
+}
+
+@media screen and (max-width: 996px) {
+  .testimonialContainer {
+    display: block;
+  }
+  .blocktextContainer {
+    max-width: initial;
+  }
+  .blocktext {
+    font-size: 2rem;
+  }
+  .testimonialImage {
+    display: none;
+  }
+  .testimonial {
+    margin: 2rem 0;
+  }
+  .testimonial:nth-child(2n) {
+    margin-left: 2rem;
+  }
+  .testimonial:nth-child(2n + 1) {
+    margin-right: 2rem;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .creditAvatar {
+    display: none;
+  }
+  .testimonial {
+    margin: 1rem 0 !important;
+  }
 }

@@ -31,6 +31,10 @@
   color: var(--ifm-color-primary);
 }
 
+.svgCol {
+  text-align: left;
+}
+
 svg {
   max-width: 100%;
 }

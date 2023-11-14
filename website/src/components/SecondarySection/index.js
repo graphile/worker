@@ -15,7 +15,7 @@ export default function SecondaryContent({
     <section className={styles.secondarySection}>
       <div className="container">
         <div className={clsx("row", styles.secondaryRow)}>
-          <div className="col col--6">
+          <div className={clsx("col col--6", styles.svgCol)}>
             <Svg className={styles.secondarySvg} role="img" />
           </div>
           <div className="col col--6">
