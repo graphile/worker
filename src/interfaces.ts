@@ -1,9 +1,17 @@
-import { EventEmitter } from "events";
-import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
+/* eslint-disable @typescript-eslint/ban-types */
+import type { EventEmitter } from "events";
+import type { Stats } from "fs";
+import type {
+  Notification,
+  Pool,
+  PoolClient,
+  QueryResult,
+  QueryResultRow,
+} from "pg";
 
-import { Release } from "./lib";
-import { Logger } from "./logger";
-import { Signal } from "./signals";
+import type { CompiledSharedOptions, Release } from "./lib";
+import type { Logger } from "./logger";
+import type { Signal } from "./signals";
 
 /*
  * Terminology:
@@ -27,16 +35,20 @@ export type WithPgClient = <T = void>(
  * The `addJob` interface is implemented in many places in the library, all
  * conforming to this.
  */
-export type AddJobFunction = (
+export type AddJobFunction = <
+  TIdentifier extends keyof GraphileWorker.Tasks | (string & {}) = string,
+>(
   /**
    * The name of the task that will be executed for this job.
    */
-  identifier: string,
+  identifier: TIdentifier,
 
   /**
    * The payload (typically a JSON object) that will be passed to the task executor.
    */
-  payload?: unknown,
+  payload: TIdentifier extends keyof GraphileWorker.Tasks
+    ? GraphileWorker.Tasks[TIdentifier]
+    : unknown,
 
   /**
    * Additional details about how the job should be handled.
@@ -78,8 +90,15 @@ export interface JobHelpers extends Helpers {
    */
   query<R extends QueryResultRow>(
     queryText: string,
-    values?: any[],
+    values?: unknown[],
   ): Promise<QueryResult<R>>;
+
+  /**
+   * An AbortSignal that will be triggered when the job should exit.
+   *
+   * @experimental
+   */
+  abortSignal?: AbortSignal;
 }
 
 /**
@@ -110,7 +129,7 @@ export interface WorkerUtils extends Helpers {
    * deleted jobs will be returned (note that this may be fewer jobs than you
    * requested).
    */
-  completeJobs: (ids: string[]) => Promise<Job[]>;
+  completeJobs: (ids: string[]) => Promise<DbJob[]>;
 
   /**
    * Marks the specified jobs (by their ids) as failed permanently, assuming
@@ -118,7 +137,7 @@ export interface WorkerUtils extends Helpers {
    * `max_attempts`. The updated jobs will be returned (note that this may be
    * fewer jobs than you requested).
    */
-  permanentlyFailJobs: (ids: string[], reason?: string) => Promise<Job[]>;
+  permanentlyFailJobs: (ids: string[], reason?: string) => Promise<DbJob[]>;
 
   /**
    * Updates the specified scheduling properties of the jobs (assuming they are
@@ -138,28 +157,44 @@ export interface WorkerUtils extends Helpers {
       attempts?: number;
       maxAttempts?: number;
     },
-  ) => Promise<Job[]>;
+  ) => Promise<DbJob[]>;
 }
 
-export type Task = (
-  payload: unknown,
-  helpers: JobHelpers,
-) => void | Promise<void>;
+export type PromiseOrDirect<T> = Promise<T> | T;
 
-export function isValidTask(fn: unknown): fn is Task {
+export type Task<
+  TName extends keyof GraphileWorker.Tasks | (string & {}) = string & {},
+> = (
+  payload: TName extends keyof GraphileWorker.Tasks
+    ? GraphileWorker.Tasks[TName]
+    : unknown,
+  helpers: JobHelpers,
+) => PromiseOrDirect<void>;
+
+export function isValidTask<T extends string = keyof GraphileWorker.Tasks>(
+  fn: unknown,
+): fn is Task<T> {
   if (typeof fn === "function") {
     return true;
   }
   return false;
 }
 
-export interface TaskList {
-  [name: string]: Task;
-}
+export type TaskList = {
+  [Key in
+    | keyof GraphileWorker.Tasks
+    | (string & {})]?: Key extends keyof GraphileWorker.Tasks
+    ? Task<Key>
+    : // The `any` here is required otherwise declaring something as a `TaskList` can cause issues.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Task<any>;
+};
 
 export interface WatchedTaskList {
   tasks: TaskList;
   release: () => void;
+  /** @internal */
+  compiledSharedOptions: CompiledSharedOptions;
 }
 
 export interface WatchedCronItems {
@@ -223,7 +258,7 @@ export interface ParsedCronItem {
   options: CronItemOptions;
 
   /** A payload object to merge into the default cron payload object for the scheduled job */
-  payload: { [key: string]: any };
+  payload: { [key: string]: unknown } | null;
 
   /** An identifier so that we can prevent double-scheduling of a task and determine whether or not to backfill. */
   identifier: string;
@@ -247,31 +282,41 @@ export interface CronItem {
   options?: CronItemOptions;
 
   /** A payload object to merge into the default cron payload object for the scheduled job */
-  payload?: { [key: string]: any };
+  payload?: { [key: string]: unknown };
 
   /** An identifier so that we can prevent double-scheduling of a task and determine whether or not to backfill. */
   identifier?: string;
 }
 
 /** Represents records in the `jobs` table */
-export interface Job {
+export interface DbJob {
   id: string;
   queue_name: string | null;
   task_identifier: string;
   payload: unknown;
+  /** Lower number means it should run sooner */
   priority: number;
+  /** When it was due to run */
   run_at: Date;
+  /** How many times it has been attempted */
   attempts: number;
+  /** The limit for the number of times it should be attempted */
   max_attempts: number;
+  /** If attempts > 0, why did it fail last? */
   last_error: string | null;
   created_at: Date;
   updated_at: Date;
+  /** "job_key" - unique identifier for easy update from user code */
   key: string | null;
+  /** A count of the revision numbers */
   revision: number;
   locked_at: Date | null;
   locked_by: string | null;
   flags: { [flag: string]: true } | null;
+  is_available: boolean;
 }
+
+export interface Job extends DbJob {}
 
 /** Represents records in the `known_crontabs` table */
 export interface KnownCrontab {
@@ -281,17 +326,59 @@ export interface KnownCrontab {
 }
 
 export interface Worker {
+  workerPool: WorkerPool;
   nudge: () => boolean;
   workerId: string;
-  release: () => void;
+  release: () => void | Promise<void>;
   promise: Promise<void>;
   getActiveJob: () => Job | null;
+  /** @internal */
+  _start: (() => void) | null;
 }
 
 export interface WorkerPool {
+  id: string;
+  /** @deprecated Use gracefulShutdown instead */
   release: () => Promise<void>;
-  gracefulShutdown: (message: string) => Promise<void>;
+  gracefulShutdown: (message?: string) => Promise<void>;
+  forcefulShutdown: (message: string) => Promise<void>;
   promise: Promise<void>;
+  /** @experimental */
+  abortSignal: AbortSignal;
+  /** @internal */
+  _shuttingDown: boolean;
+  /** @internal */
+  _active: boolean;
+  /** @internal */
+  _workers: Worker[];
+  /** @internal */
+  _withPgClient: WithPgClient;
+  /** @internal */
+  _start: (() => void) | null;
+  /**
+   * Only works if concurrency === 1!
+   *
+   * @internal
+   */
+  worker: Worker | null;
+
+  then<TResult1 = void, TResult2 = never>(
+    onfulfilled?:
+      | ((value: void) => TResult1 | PromiseLike<TResult1>)
+      | undefined
+      | null,
+    onrejected?:
+      | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
+      | undefined
+      | null,
+  ): Promise<TResult1 | TResult2>;
+  catch<TResult = never>(
+    onrejected?:
+      | ((reason: unknown) => TResult | PromiseLike<TResult>)
+      | undefined
+      | null,
+  ): Promise<void | TResult>;
+  finally(onfinally?: (() => void) | undefined | null): Promise<void>;
 }
 
 export interface Runner {
@@ -410,6 +497,34 @@ export interface SharedOptions {
    * false.)
    */
   useNodeTime?: boolean;
+
+  /**
+   * **Experimental**
+   *
+   * How often should we scan for jobs that have been locked too long and
+   * release them? This is the minimum interval, we'll choose a time between
+   * this and `maxResetLockedInterval`.
+   */
+  minResetLockedInterval?: number;
+
+  /**
+   * **Experimental**
+   *
+   * The upper bound of how long we'll wait between scans for jobs that have
+   * been locked too long. See `minResetLockedInterval`.
+   */
+  maxResetLockedInterval?: number;
+
+  preset?: GraphileConfig.Preset;
+
+  /**
+   * How long in milliseconds after a gracefulShutdown is triggered should
+   * we wait to trigger the AbortController, which should cancel supported
+   * asynchronous actions?
+   *
+   * @defaultValue `5000`
+   */
+  gracefulShutdownAbortTimeout?: number;
 }
 
 /**
@@ -430,6 +545,38 @@ export interface WorkerOptions extends WorkerSharedOptions {
    * An identifier for this specific worker; if unset then a random ID will be assigned. Do not assign multiple workers the same worker ID!
    */
   workerId?: string;
+
+  abortSignal?: AbortSignal;
+
+  workerPool: WorkerPool;
+
+  /**
+   * If set true, we won't install signal handlers and it'll be up to you to
+   * handle graceful shutdown of the worker if the process receives a signal.
+   */
+  noHandleSignals?: boolean;
+
+  /** If false, worker won't start looking for jobs until you call `worker._start()` */
+  autostart?: boolean;
+}
+
+/**
+ * Options for an individual worker
+ */
+export interface RunOnceOptions extends SharedOptions {
+  /**
+   * An identifier for this specific worker; if unset then a random ID will be assigned. Do not assign multiple workers the same worker ID!
+   */
+  workerId?: string;
+
+  /**
+   * If set true, we won't install signal handlers and it'll be up to you to
+   * handle graceful shutdown of the worker if the process receives a signal.
+   */
+  noHandleSignals?: boolean;
+
+  /** Single worker only! */
+  concurrency?: 1;
 }
 
 /**
@@ -453,7 +600,7 @@ export interface WorkerPoolOptions extends WorkerSharedOptions {
  */
 export interface RunnerOptions extends WorkerPoolOptions {
   /**
-   * Task names and handler, e.g. from `getTasks` (use this if you need watch mode)
+   * Task names and handler, e.g. from `getTasks`
    */
   taskList?: TaskList;
 
@@ -501,7 +648,7 @@ export interface JobAndCronIdentifier {
 
 export interface WorkerUtilsOptions extends SharedOptions {}
 
-type BaseEventMap = Record<string, any>;
+type BaseEventMap = Record<string, unknown>;
 type EventMapKey<TEventMap extends BaseEventMap> = string & keyof TEventMap;
 type EventCallback<TPayload> = (params: TPayload) => void;
 
@@ -560,24 +707,106 @@ export type WorkerEventMap = {
    */
   "pool:listen:error": {
     workerPool: WorkerPool;
-    error: any;
+    error: unknown;
+    client: PoolClient;
+  };
+
+  /**
+   * When a worker pool receives a notification
+   */
+  "pool:listen:notification": {
+    workerPool: WorkerPool;
+    message: Notification;
+    client: PoolClient;
+  };
+
+  /**
+   * When a worker pool listening client is no longer available
+   */
+  "pool:listen:release": {
+    workerPool: WorkerPool;
+    /** If you use this client, be careful to handle errors - it may be in an invalid state (errored, disconnected, etc). */
     client: PoolClient;
   };
 
   /**
    * When a worker pool is released
    */
-  "pool:release": { pool: WorkerPool };
+  "pool:release": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+  };
 
   /**
    * When a worker pool starts a graceful shutdown
    */
-  "pool:gracefulShutdown": { pool: WorkerPool; message: string };
+  "pool:gracefulShutdown": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+    message: string;
+  };
 
   /**
    * When a worker pool graceful shutdown throws an error
    */
-  "pool:gracefulShutdown:error": { pool: WorkerPool; error: any };
+  "pool:gracefulShutdown:error": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+    error: unknown;
+  };
+
+  /**
+   * When a worker pool graceful shutdown is successful, but one of the workers
+   * throws an error from release()
+   */
+  "pool:gracefulShutdown:workerError": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+    error: unknown;
+    job: Job | null;
+  };
+
+  /**
+   * When a worker pool graceful shutdown throws an error
+   */
+  "pool:gracefulShutdown:complete": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+  };
+
+  /**
+   * When a worker pool starts a forceful shutdown
+   */
+  "pool:forcefulShutdown": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+    message: string;
+  };
+
+  /**
+   * When a worker pool forceful shutdown throws an error
+   */
+  "pool:forcefulShutdown:error": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+    error: unknown;
+  };
+
+  /**
+   * When a worker pool forceful shutdown throws an error
+   */
+  "pool:forcefulShutdown:complete": {
+    /** @deprecated Use workerPool for consistency */
+    pool: WorkerPool;
+    workerPool: WorkerPool;
+  };
 
   /**
    * When a worker is created
@@ -592,7 +821,7 @@ export type WorkerEventMap = {
   /**
    * When a worker stops (normally after a release)
    */
-  "worker:stop": { worker: Worker; error?: any };
+  "worker:stop": { worker: Worker; error?: unknown };
 
   /**
    * When a worker is about to ask the database for a job to execute
@@ -602,7 +831,7 @@ export type WorkerEventMap = {
   /**
    * When a worker calls get_job but there are no available jobs
    */
-  "worker:getJob:error": { worker: Worker; error: any };
+  "worker:getJob:error": { worker: Worker; error: unknown };
 
   /**
    * When a worker calls get_job but there are no available jobs
@@ -612,7 +841,11 @@ export type WorkerEventMap = {
   /**
    * When a worker is created
    */
-  "worker:fatalError": { worker: Worker; error: any; jobError: any | null };
+  "worker:fatalError": {
+    worker: Worker;
+    error: unknown;
+    jobError: unknown | null;
+  };
 
   /**
    * When a job is retrieved by get_job
@@ -627,18 +860,28 @@ export type WorkerEventMap = {
   /**
    * When a job throws an error
    */
-  "job:error": { worker: Worker; job: Job; error: any };
+  "job:error": {
+    worker: Worker;
+    job: Job;
+    error: unknown;
+    batchJobErrors?: unknown[];
+  };
 
   /**
    * When a job fails permanently (emitted after job:error when appropriate)
    */
-  "job:failed": { worker: Worker; job: Job; error: any };
+  "job:failed": {
+    worker: Worker;
+    job: Job;
+    error: unknown;
+    batchJobErrors?: unknown[];
+  };
 
   /**
    * When a job has finished executing and the result (success or failure) has
    * been written back to the database
    */
-  "job:complete": { worker: Worker; job: Job; error: any };
+  "job:complete": { worker: Worker; job: Job; error: unknown };
 
   /** **Experimental** When the cron starts working (before backfilling) */
   "cron:starting": { cron: Cron; start: Date };
@@ -702,9 +945,14 @@ export type WorkerEventMap = {
   gracefulShutdown: { signal: Signal };
 
   /**
+   * When the runner is terminated by a signal _again_ after 5 seconds
+   */
+  forcefulShutdown: { signal: Signal };
+
+  /**
    * When the runner is stopped
    */
-  stop: {};
+  stop: Record<string, never>;
 };
 
 export type WorkerEvents = TypedEventEmitter<WorkerEventMap>;
@@ -718,4 +966,16 @@ export interface TimestampDigest {
   date: number;
   month: number;
   dow: number;
+}
+
+/** Details of a file (guaranteed not to be a directory, nor a symlink) */
+export interface FileDetails {
+  /** The full path to the file (possibly relative to the current working directory) */
+  fullPath: string;
+  /** The stats of the file */
+  stats: Stats;
+  /** The name of the file, excluding any extensions */
+  baseName: string;
+  /** The extensions of the file, e.g. `""` for no extensions, `".js"` or even `".test.js"`. */
+  extension: string;
 }

@@ -1,4 +1,5 @@
-import { Job, TaskSpec, WorkerUtils, WorkerUtilsOptions } from "./interfaces";
+/* eslint-disable @typescript-eslint/ban-types */
+import { DbJob, TaskSpec, WorkerUtils, WorkerUtilsOptions } from "./interfaces";
 import { getUtilsAndReleasersFromOptions } from "./lib";
 import { migrate } from "./migrate";
 
@@ -8,29 +9,26 @@ import { migrate } from "./migrate";
 export async function makeWorkerUtils(
   options: WorkerUtilsOptions,
 ): Promise<WorkerUtils> {
-  const {
-    logger,
-    escapedWorkerSchema,
-    release,
-    withPgClient,
-    addJob,
-  } = await getUtilsAndReleasersFromOptions(options, {
+  const compiledSharedOptions = await getUtilsAndReleasersFromOptions(options, {
     scope: {
       label: "WorkerUtils",
     },
   });
+  const { logger, escapedWorkerSchema, release, withPgClient, addJob } =
+    compiledSharedOptions;
 
   return {
     withPgClient,
     logger,
     release,
     addJob,
-    migrate: () => withPgClient((pgClient) => migrate(options, pgClient)),
+    migrate: () =>
+      withPgClient((pgClient) => migrate(compiledSharedOptions, pgClient)),
 
     async completeJobs(ids) {
       const { rows } = await withPgClient((client) =>
-        client.query<Job>(
-          `select * from ${escapedWorkerSchema}.complete_jobs($1)`,
+        client.query<DbJob>(
+          `select * from ${escapedWorkerSchema}.complete_jobs($1::bigint[])`,
           [ids],
         ),
       );
@@ -39,8 +37,8 @@ export async function makeWorkerUtils(
 
     async permanentlyFailJobs(ids, reason) {
       const { rows } = await withPgClient((client) =>
-        client.query<Job>(
-          `select * from ${escapedWorkerSchema}.permanently_fail_jobs($1, $2)`,
+        client.query<DbJob>(
+          `select * from ${escapedWorkerSchema}.permanently_fail_jobs($1::bigint[], $2::text)`,
           [ids, reason || null],
         ),
       );
@@ -49,13 +47,13 @@ export async function makeWorkerUtils(
 
     async rescheduleJobs(ids, options) {
       const { rows } = await withPgClient((client) =>
-        client.query<Job>(
+        client.query<DbJob>(
           `select * from ${escapedWorkerSchema}.reschedule_jobs(
-            $1,
-            run_at := $2,
-            priority := $3,
-            attempts := $4,
-            max_attempts := $5
+            $1::bigint[],
+            run_at := $2::timestamptz,
+            priority := $3::int,
+            attempts := $4::int,
+            max_attempts := $5::int
           )`,
           [
             ids,
@@ -76,15 +74,19 @@ export async function makeWorkerUtils(
  * this more than once in your process you should instead create a WorkerUtils
  * instance for efficiency and performance sake.
  */
-export async function quickAddJob(
+export async function quickAddJob<
+  TIdentifier extends keyof GraphileWorker.Tasks | (string & {}) = string,
+>(
   options: WorkerUtilsOptions,
-  identifier: string,
-  payload: unknown = {},
+  identifier: TIdentifier,
+  payload: TIdentifier extends keyof GraphileWorker.Tasks
+    ? GraphileWorker.Tasks[TIdentifier]
+    : unknown,
   spec: TaskSpec = {},
 ) {
   const utils = await makeWorkerUtils(options);
   try {
-    return await utils.addJob(identifier, payload, spec);
+    return await utils.addJob<TIdentifier>(identifier, payload, spec);
   } finally {
     await utils.release();
   }
