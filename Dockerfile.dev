@@ -1,4 +1,4 @@
-FROM node:12-alpine
+FROM node:18-alpine
 RUN apk add --no-cache bash
 
 ENTRYPOINT ["yarn"]
@@ -12,6 +12,7 @@ RUN yarn install --frozen-lockfile && yarn cache clean
 COPY ./__tests__ ./__tests__
 COPY ./sql ./sql
 COPY ./src  ./src
+COPY ./scripts ./scripts
 COPY ./perfTest  ./perfTest
 COPY ./tsconfig.json ./
 COPY ./jest.config.js ./

@@ -5,3 +5,5 @@ yarn-error.log*
 .vscode
 node_modules/
 /tasks/
+/rewired/
+_LOCAL/

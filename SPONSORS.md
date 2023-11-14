@@ -6,64 +6,74 @@ Graphile ecosystem. Find out
 
 ## Featured
 
-- Surge
-- Story.ai
-- Chad Furman
 - The Guild
-- Fanatics
 - Dovetail
-- Enzuzo
-- Qwick
+- Netflix
+- Stellate
+- Accenture
+- We Love Micro
+- Trigger.dev
+- Seam
 
 ## Leaders
 
-- Robert Claypool
-- Joe Dennis
-- domonda
-- Jack Dinker
+- Qwick
 - Politics Rewired
-- DocIQ
+- Joe Dennis
+- Robert Claypool
 - nigelrmtaylor
 - Principia Mentis
-- HR-ON
 - Luxor Labs
-- PostHog
-- Taiste
 - Axinom
+- Taiste
 - Notably
 - Nathanael Beisiegel
-- William Baxter
-- SuperRare Labs
-- IaSQL
-- latch.bio
+- LatchBio
+- Ian Stewart
+- Cintra
+- BairesDev
+- FOLX Health
+- Two Bit Solutions
+- Beacon
+- Ndustrial
+- Dimply
+- Giovanny Gutiérrez
 
 ## Supporters
 
-- Postlight
-- Philipp Litzenberger
+- HR-ON
+- stlbucket
 - Sam Levin
-- Matt Bretl
 - Chris Watland
-- Mark
 - svarmony
-- Simon Elliott
 - James Rascoe
 - CJ Lazell
+- Daniel Einspanjer
+- Simon Elliott
+- Matt Bretl
 - Mansoor Razzaq
-- Jimmy Liu
-- Keith Layne
-- Olli Selamaa
-- Paul Melnikow
 - Alvin Ali Khaled
-- Dani Kenan
-- Stéphane Klein
-- Splitgraph
-- Kadi Kraman
-- Andrew Poland
-- OnThisSpot
+- nullachtvierzehn
+- Paul Melnikow
+- Keith Layne
+- Jimmy Liu
 - Benjamin Berman
 - Zymego
-- ARK
-- Sen Palanisami
-- nick
+- Nate Smith
+- IFCHOR GROUP
 - CartoLab
+- Nicolas Penot
+- JYC
+- Charlie Hadden
+- The Outbound Collective
+- Kiron Open Higher Education
+- urtho
+- Vizcom
+- Andrew Joseph
+- Old Grammar
+- Spear AI
+- SIED 70
+- garpulon
+- Peter C. Romano
+- TitanFighter
+- dinodeSimon
