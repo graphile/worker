@@ -175,9 +175,9 @@ export async function getJobQueues(pgClient: pg.Pool | pg.PoolClient) {
 select job_queues.*, count(jobs.*)::int as job_count
 from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues
 left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs on (
-  jobs.job_queue_id = job_queues.id
+  jobs.queue_name = job_queues.queue_name
 )
-group by job_queues.id
+group by job_queues.queue_name
 order by job_queues.queue_name asc`,
   );
   return rows;
