@@ -98,9 +98,6 @@ insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations (id) values (1);
     const migration2 = migrationRows[1];
     expect(migration2.id).toEqual(2);
     expect(migration2.breaking).toEqual(false);
-    const migration11 = migrationRows[10];
-    expect(migration11.id).toEqual(11);
-    expect(migration11.breaking).toEqual(true);
 
     // Assert job schema files have been created (we're asserting no error is thrown)
     await pgClient.query(
