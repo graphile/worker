@@ -284,16 +284,12 @@ export const runCron = (
   requirements: CronRequirements,
 ): Cron => {
   const { pgPool } = requirements;
-  const {
-    logger,
-    escapedWorkerSchema,
-    events,
-    useNodeTime,
-  } = processSharedOptions(options);
+  const { logger, escapedWorkerSchema, events, useNodeTime } =
+    processSharedOptions(options);
 
   const promise = defer();
   let released = false;
-  let timeout: NodeJS.Timer | null = null;
+  let timeout: NodeJS.Timeout | null = null;
 
   let stopCalled = false;
   function stop(e?: Error) {
@@ -342,7 +338,8 @@ export const runCron = (
     // The backfill may have taken a moment, we should continue from where the
     // worker started and catch up as quickly as we can. This does **NOT**
     // count as a backfill.
-    let nextTimestamp = unsafeRoundToMinute(new Date(+start), true);
+    /** This timestamp will be mutated! */
+    const nextTimestamp = unsafeRoundToMinute(new Date(+start), true);
 
     const scheduleNextLoop = () => {
       if (released) {
@@ -486,45 +483,56 @@ export const runCron = (
   };
 };
 
+/** @internal */
 export async function getParsedCronItemsFromOptions(
-  options: RunnerOptions,
+  compiledOptions: CompiledOptions,
   releasers: Releasers,
 ): Promise<Array<ParsedCronItem>> {
-  const { crontabFile, parsedCronItems, crontab } = options;
+  const {
+    options: {
+      preset,
+      crontabFile = preset?.worker?.crontabFile,
+      parsedCronItems,
+      crontab,
+    },
+  } = compiledOptions;
 
   if (!crontabFile && !parsedCronItems && !crontab) {
     return [];
   }
 
   if (crontab) {
-    assert(
+    assert.ok(
       !crontabFile,
       "`crontab` and `crontabFile` must not be set at the same time.",
     );
-    assert(
+    assert.ok(
       !parsedCronItems,
       "`crontab` and `parsedCronItems` must not be set at the same time.",
     );
 
     return parseCrontab(crontab);
   } else if (crontabFile) {
-    assert(
+    assert.ok(
       !parsedCronItems,
       "`crontabFile` and `parsedCronItems` must not be set at the same time.",
     );
 
-    const watchedCronItems = await getCronItems(options, crontabFile, false);
+    const watchedCronItems = await getCronItems(
+      compiledOptions.options,
+      crontabFile,
+    );
     releasers.push(() => watchedCronItems.release());
     return watchedCronItems.items;
   } else {
-    assert(parsedCronItems != null, "Expected `parsedCronItems` to be set.");
+    assert.ok(parsedCronItems != null, "Expected `parsedCronItems` to be set.");
     // Basic check to ensure that users remembered to call
     // `parseCronItems`/`parseCrontab`; not intended to be a full check, just a
     // quick one to catch the obvious errors. Keep in mind that
     // `parsedCronItems` is mutable so it may be changed later to contain more
     // entries; we can't keep performing these checks everywhere for
     // performance reasons.
-    assert(
+    assert.ok(
       Array.isArray(parsedCronItems),
       "Expected `parsedCronItems` to be an array; you must use a helper e.g. `parseCrontab()` or `parseCronItems()` to produce this value.",
     );

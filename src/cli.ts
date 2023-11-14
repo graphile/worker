@@ -1,11 +1,13 @@
 #!/usr/bin/env node
+import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
 import { defaults } from "./config";
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
 import { run, runOnce } from "./index";
-import { RunnerOptions } from "./interfaces";
+import { digestPreset } from "./lib";
+import { EMPTY_PRESET, WorkerPreset } from "./preset";
 import { runMigrations } from "./runner";
 
 const argv = yargs
@@ -70,54 +72,73 @@ const argv = yargs
     default: false,
   })
   .boolean("no-prepared-statements")
+  .option("config", {
+    alias: "C",
+    description: "The path to the config file",
+    normalize: true,
+  })
+  .string("config")
   .strict(true).argv;
 
-if (argv._.length > 0) {
-  console.error(`Unrecognized additional arguments: '${argv._.join("', '")}'`);
-  console.error();
-  yargs.showHelp();
-  process.exit(1);
-}
-
-const isInteger = (n: number): boolean => {
-  return isFinite(n) && Math.round(n) === n;
+const isInteger = (n: number | undefined): boolean => {
+  return typeof n === "number" && isFinite(n) && Math.round(n) === n;
 };
 
+function stripUndefined<T extends object>(
+  t: T,
+): { [Key in keyof T as T[Key] extends undefined ? never : Key]: T[Key] } {
+  return Object.fromEntries(
+    Object.entries(t).filter(([_, value]) => value !== undefined),
+  ) as T;
+}
+
+function argvToPreset(inArgv: Awaited<typeof argv>): GraphileConfig.Preset {
+  return {
+    worker: stripUndefined({
+      connectionString: inArgv["connection"],
+      maxPoolSize: isInteger(inArgv["max-pool-size"])
+        ? inArgv["max-pool-size"]
+        : undefined,
+      pollInterval: isInteger(inArgv["poll-interval"])
+        ? inArgv["poll-interval"]
+        : undefined,
+      preparedStatements: !inArgv["no-prepared-statements"],
+      schema: inArgv.schema,
+      crontabFile: inArgv["crontab"],
+      concurrentJobs: isInteger(inArgv.jobs) ? inArgv.jobs : undefined,
+    }),
+  };
+}
+
 async function main() {
-  const DATABASE_URL = argv.connection || process.env.DATABASE_URL || undefined;
-  const SCHEMA = argv.schema || undefined;
+  const userPreset = await loadConfig(argv.config);
   const ONCE = argv.once;
   const SCHEMA_ONLY = argv["schema-only"];
   const WATCH = argv.watch;
 
-  if (SCHEMA_ONLY && WATCH) {
-    throw new Error("Cannot specify both --watch and --schema-only");
+  if (WATCH) {
+    throw new Error(
+      "`--watch` mode is no longer supported; please use an external file watcher e.g. `node --watch node_modules/.bin/graphile-worker -c postgres://...` instead",
+    );
   }
+
   if (SCHEMA_ONLY && ONCE) {
     throw new Error("Cannot specify both --once and --schema-only");
   }
-  if (WATCH && ONCE) {
-    throw new Error("Cannot specify both --watch and --once");
-  }
 
-  if (!DATABASE_URL && !process.env.PGDATABASE) {
+  const {
+    runnerOptions: options,
+    tasksFolder,
+    crontabFile,
+  } = digestPreset({
+    extends: [WorkerPreset, userPreset ?? EMPTY_PRESET, argvToPreset(argv)],
+  });
+
+  if (!options.connectionString) {
     throw new Error(
       "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
     );
   }
-
-  const options: RunnerOptions = {
-    schema: SCHEMA || defaults.schema,
-    concurrency: isInteger(argv.jobs) ? argv.jobs : defaults.concurrentJobs,
-    maxPoolSize: isInteger(argv["max-pool-size"])
-      ? argv["max-pool-size"]
-      : defaults.maxPoolSize,
-    pollInterval: isInteger(argv["poll-interval"])
-      ? argv["poll-interval"]
-      : defaults.pollInterval,
-    connectionString: DATABASE_URL,
-    noPreparedStatements: !!argv["no-prepared-statements"],
-  };
 
   if (SCHEMA_ONLY) {
     await runMigrations(options);
@@ -125,12 +146,8 @@ async function main() {
     return;
   }
 
-  const watchedTasks = await getTasks(options, `${process.cwd()}/tasks`, WATCH);
-  const watchedCronItems = await getCronItems(
-    options,
-    argv.crontab || `${process.cwd()}/crontab`,
-    WATCH,
-  );
+  const watchedTasks = await getTasks(options, tasksFolder);
+  const watchedCronItems = await getCronItems(options, crontabFile);
 
   if (ONCE) {
     await runOnce(options, watchedTasks.tasks);
@@ -143,6 +160,15 @@ async function main() {
     // Continue forever(ish)
     await promise;
   }
+  watchedTasks.release();
+  watchedCronItems.release();
+  const timer = setTimeout(() => {
+    console.error(
+      `Worker failed to exit naturally after 10 seconds; terminating manually. This may indicate a bug in Graphile Worker.`,
+    );
+    process.exit(1);
+  }, 10000);
+  timer.unref();
 }
 
 main().catch((e) => {

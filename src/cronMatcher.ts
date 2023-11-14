@@ -8,6 +8,8 @@ import { ParsedCronItem, TimestampDigest } from "./interfaces";
 /**
  * Returns true if the cronItem should fire for the given timestamp digest,
  * false otherwise.
+ *
+ * @internal
  */
 export function cronItemMatches(
   cronItem: ParsedCronItem,
