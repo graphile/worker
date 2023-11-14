@@ -6,7 +6,7 @@ const { default: deferred } = require("../dist/deferred");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const options = {
-  concurrecy: 1,
+  concurrency: 1,
 };
 
 async function main() {
@@ -76,7 +76,7 @@ async function main() {
     )}ms, avg: ${average.toFixed(2)}ms`,
   );
 
-  await workerPool.release();
+  await workerPool.gracefulShutdown();
   await pgPool.end();
   console.log("Done");
 }

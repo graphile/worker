@@ -1,3 +1,4 @@
+--! breaking-change
 alter table :GRAPHILE_WORKER_SCHEMA.jobs alter column queue_name drop not null;
 
 create or replace function :GRAPHILE_WORKER_SCHEMA.add_job(
