@@ -36,6 +36,11 @@
 .button {
   composes: buttonHero from "@site/src/css/common.module.css";
   text-transform: uppercase;
+  max-width: 100%;
+}
+
+.button:before {
+  content: "Learn about sponsors and sponsorship";
 }
 
 [data-theme="dark"] .button {
@@ -47,5 +52,14 @@
   .inner {
     display: flex;
     flex-direction: column;
+  }
+  .button:before {
+    content: "Learn about sponsorship";
+  }
+}
+
+@media screen and (max-width: 400px) {
+  .button:before {
+    content: "Sponsorship";
   }
 }

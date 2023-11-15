@@ -77,7 +77,7 @@ export default function Home() {
           body={`We're extremely grateful to our sponsors, for helping to fund ongoing development on Graphile Worker, Graphile Migrate, PostGraphile and the wider Graphile suite of tools.
           THANK YOU!`}
           link={`https://graphile.org/sponsor/`}
-          buttonText={`Learn more about sponsors and sponsorship`}
+          buttonText={``}
         />
         <TertiarySection
           title={`Development Support`}
