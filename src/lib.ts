@@ -294,11 +294,8 @@ export const getUtilsAndReleasersFromOptions = async (
     const withPgClient = makeWithPgClientFromPool(pgPool);
 
     // Migrate
-    await withPgClient(async function migrateWithPgClient(client) {
-      const event = { client };
-      await hooks.process("premigrate", event);
-      await migrate(compiledSharedOptions, event.client);
-      await hooks.process("postmigrate", event);
+    await withPgClient(function migrateWithPgClient(client) {
+      return migrate(compiledSharedOptions, client);
     });
 
     const addJob = makeAddJob(compiledSharedOptions, withPgClient);

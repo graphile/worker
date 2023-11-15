@@ -1018,3 +1018,5 @@ export interface FileDetails {
   /** The extensions of the file, e.g. `""` for no extensions, `".js"` or even `".test.js"`. */
   extension: string;
 }
+
+export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
