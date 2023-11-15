@@ -243,7 +243,9 @@ export async function assertPool(
     _rawOptions,
   } = compiledSharedOptions;
   assert.ok(
-    !_rawOptions.pgPool || !connectionString,
+    // NOTE: we explicitly want `_rawOptions.connectionString` here - we don't
+    // mind if `connectionString` is set as part of the preset.
+    !_rawOptions.pgPool || !_rawOptions.connectionString,
     "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
   );
   let pgPool: Pool;
