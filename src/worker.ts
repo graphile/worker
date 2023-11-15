@@ -2,7 +2,7 @@ import * as assert from "assert";
 import { randomBytes } from "crypto";
 
 import { defaults } from "./config";
-import deferred, { Deferred } from "./deferred";
+import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
   Job,
