@@ -272,7 +272,7 @@ export const getUtilsAndReleasersFromOptions = async (
 ): Promise<CompiledOptions> => {
   const compiledSharedOptions = processSharedOptions(options, settings);
   const {
-    hooks,
+    logger,
     options: {
       preset,
       concurrency = preset?.worker?.concurrentJobs ?? defaults.concurrentJobs,
@@ -286,8 +286,9 @@ export const getUtilsAndReleasersFromOptions = async (
     // @ts-ignore
     const max = pgPool?.options?.max || 10;
     if (max < concurrency) {
-      console.warn(
+      logger.warn(
         `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`,
+        { max, concurrency },
       );
     }
 
