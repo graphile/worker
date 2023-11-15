@@ -30,7 +30,8 @@
 }
 
 .buttonHero:hover {
-  border: 1px solid var(--ifm-color-primary-dark);
+  border: 1px solid var(--ifm-color-primary-darker);
+  background-color: var(--ifm-color-primary-darker);
 }
 
 .buttonHeroOutline {
@@ -38,7 +39,8 @@
 }
 
 .buttonHeroOutline:hover {
-  color: var(--ifm-color-primary-dark);
+  color: var(--ifm-color-primary-darker);
+  background-color: #ffffff;
 }
 
 .hero {
@@ -73,5 +75,9 @@
   }
   .buttonHero {
     width: 100%;
+  }
+  .hero {
+    font-size: 1.8rem;
+    font-weight: bold;
   }
 }

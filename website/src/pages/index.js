@@ -48,7 +48,7 @@ function HomepageHeader() {
                 )}
                 to="docs/cli#quickstart"
               >
-                Overview - 5min ⏱
+                Quickstart
               </Link>
             </div>
           </div>

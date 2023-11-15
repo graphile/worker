@@ -60,7 +60,7 @@
   color: var(--ifm-color-primary-darkest);
   font-size: 4rem;
   font-weight: bold;
-  font-family: "Fredericka the Great", sans-serif;
+  font-family: "Fredericka the Great", Helvetica, Verdana, Arial, sans-serif;
 }
 
 .testimonialImage {

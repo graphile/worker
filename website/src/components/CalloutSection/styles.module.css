@@ -43,18 +43,27 @@
   content: "Learn about sponsors and sponsorship";
 }
 
+.button:hover {
+  background-color: var(--ifm-color-primary-darker);
+  border: 1px solid var(--ifm-color-primary-darker);
+}
+
 [data-theme="dark"] .button {
   border: 1px solid var(--ifm-color-primary);
   background-color: var(--ifm-color-primary);
 }
 
-@media screen and (max-width: 600px) {
+@media screen and (max-width: 995px) {
   .inner {
     display: flex;
     flex-direction: column;
   }
   .button:before {
     content: "Learn about sponsorship";
+  }
+  .header {
+    font-size: 1.8rem;
+    font-weight: bold;
   }
 }
 

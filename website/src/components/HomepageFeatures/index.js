@@ -27,7 +27,7 @@ const FeatureList = [
     ),
   },
   {
-    title: "Low latency",
+    title: "Low Latency",
     Svg: require("@site/static/img/homepage/latency.svg").default,
     description: (
       <>

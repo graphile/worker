@@ -31,6 +31,11 @@
   color: var(--ifm-color-primary);
 }
 
+.button:hover {
+  color: var(--ifm-color-primary-darker);
+  border: 1px solid var(--ifm-color-primary-darker);
+}
+
 .svgCol {
   text-align: left;
 }
@@ -50,5 +55,13 @@ svg {
   }
   .button {
     width: 100%;
+  }
+  .header {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  .tagline {
+    font-size: 1rem;
+    font-weight: bold;
   }
 }

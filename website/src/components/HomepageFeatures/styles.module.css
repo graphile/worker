@@ -35,6 +35,26 @@
   composes: tagline from "@site/src/css/common.module.css";
 }
 
+@media screen and (max-width: 996px) {
+  .feature:nth-child(1) {
+    order: 1;
+  }
+  .feature:nth-child(2) {
+    order: 2;
+  }
+  .feature:nth-child(3) {
+    order: 4;
+  }
+  .feature:nth-child(4) {
+    order: 3;
+  }
+  .feature:nth-child(5) {
+    order: 5;
+  }
+  .feature:nth-child(6) {
+    order: 6;
+  }
+}
 @media screen and (max-width: 600px) {
   .featureDetails {
     padding-left: 1rem;
