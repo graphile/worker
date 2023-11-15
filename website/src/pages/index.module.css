@@ -11,12 +11,6 @@
   display: flex;
 }
 
-@media screen and (max-width: 996px) {
-  .heroBanner {
-    padding: 1rem;
-  }
-}
-
 .heroRow {
   align-items: center;
 }
@@ -68,4 +62,16 @@
 
 .githubButton {
   width: 8rem;
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 1rem;
+  }
+  .buttons {
+    flex-direction: column;
+  }
+  .buttonHero {
+    width: 100%;
+  }
 }
