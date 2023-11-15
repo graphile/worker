@@ -530,9 +530,7 @@ export function _runTaskList(
   function deactivate() {
     if (workerPool._active) {
       workerPool._active = false;
-      return Promise.resolve(onDeactivate?.()).finally(() => {
-        events.emit("pool:release", { pool: workerPool, workerPool });
-      });
+      return onDeactivate?.();
     }
   }
 
@@ -777,6 +775,10 @@ export function _runTaskList(
           workerPool._start = null;
         },
   };
+
+  promise.finally(() => {
+    events.emit("pool:release", { pool: workerPool, workerPool });
+  });
 
   abortSignal.addEventListener("abort", () => {
     if (!workerPool._shuttingDown) {
