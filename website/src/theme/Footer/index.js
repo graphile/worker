@@ -1,6 +1,7 @@
-import React from "react";
-import Footer from "@theme-original/Footer";
 import FooterImage from "@site/static/img/homepage/ant-footer.svg";
+import Footer from "@theme-original/Footer";
+import React from "react";
+
 import styles from "./index.module.css";
 
 export default function FooterWrapper(props) {
