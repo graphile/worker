@@ -19,11 +19,7 @@ import {
 } from "./interfaces";
 import { Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
-import {
-  EMPTY_PRESET,
-  WorkerPreset,
-  workerPresetWorkerOptions,
-} from "./preset";
+import { WorkerPreset, workerPresetWorkerOptions } from "./preset";
 import { version } from "./version";
 
 const MAX_MIGRATION_NUMBER = Object.keys(migrations).reduce(
@@ -166,8 +162,6 @@ export function processSharedOptions<
   if (!compiled) {
     const resolvedPreset = resolvePresets([
       WorkerPreset,
-      // User preset
-      options.preset ?? EMPTY_PRESET,
       // Explicit options override the preset
       legacyOptionsToPreset(options),
     ]) as ResolvedWorkerPreset;
