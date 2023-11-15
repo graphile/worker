@@ -36,6 +36,12 @@
   margin-right: 6rem;
 }
 
+[data-theme="dark"] .testimonial {
+  background: #2c2f33;
+  border: 1px var(--ifm-color-primary-darker);
+  box-shadow: 5px 5px 0px var(--ifm-color-primary-darker);
+}
+
 .creditAvatar {
   padding: 1rem;
 }
@@ -69,6 +75,18 @@
 
 .testimonialImage {
   height: auto;
+}
+
+.testimonialImage :global(.darkest) {
+  fill: var(--ifm-color-primary-darkest);
+}
+
+[data-theme="dark"] .testimonialImage :global(.darkest) {
+  fill: var(--ifm-color-primary-darker);
+}
+
+.testimonialImage :global(.primary) {
+  fill: var(--ifm-color-primary);
 }
 
 @media screen and (max-width: 996px) {

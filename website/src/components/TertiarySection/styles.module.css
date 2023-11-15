@@ -44,6 +44,22 @@
   height: auto;
 }
 
+.tertiarySvg :global(.darkest) {
+  fill: var(--ifm-color-primary-darkest);
+}
+
+.tertiarySvg :global(.primary) {
+  fill: var(--ifm-color-primary);
+}
+
+[data-theme="dark"] .tertiarySvg :global(.darker) {
+  fill: var(--ifm-color-primary-darkest);
+}
+
+[data-theme="dark"] .tertiarySvg :global(.darkest) {
+  fill: var(--ifm-color-primary-darker);
+}
+
 @media screen and (max-width: 996px) {
   .svgCol {
     text-align: center;
