@@ -216,8 +216,13 @@ export function runTaskList(
   pgPool: Pool,
 ): WorkerPool {
   const compiledSharedOptions = processSharedOptions(rawOptions);
-  const { events, logger, minResetLockedInterval, maxResetLockedInterval } =
-    compiledSharedOptions;
+  const {
+    events,
+    logger,
+    resolvedPreset: {
+      worker: { minResetLockedInterval, maxResetLockedInterval },
+    },
+  } = compiledSharedOptions;
   const withPgClient = makeWithPgClientFromPool(pgPool);
   const workerPool = _runTaskList(compiledSharedOptions, tasks, withPgClient, {
     continuous: true,
@@ -497,11 +502,11 @@ export function _runTaskList(
   },
 ): WorkerPool {
   const {
-    preset,
-    noHandleSignals = false,
-    concurrency: baseConcurrency = preset?.worker?.concurrentJobs ??
-      defaults.concurrentJobs,
-  } = compiledSharedOptions.options;
+    resolvedPreset: {
+      worker: { concurrentJobs: baseConcurrency, gracefulShutdownAbortTimeout },
+    },
+    _rawOptions: { noHandleSignals = false },
+  } = compiledSharedOptions;
   const {
     concurrency = baseConcurrency,
     continuous,
@@ -514,8 +519,8 @@ export function _runTaskList(
 
   if (ENABLE_DANGEROUS_LOGS) {
     logger.debug(
-      `Worker pool options are ${inspect(compiledSharedOptions.options)}`,
-      { options: compiledSharedOptions.options },
+      `Worker pool options are ${inspect(compiledSharedOptions._rawOptions)}`,
+      { options: compiledSharedOptions._rawOptions },
     );
   }
 
@@ -590,7 +595,7 @@ export function _runTaskList(
 
       const abortTimer = setTimeout(() => {
         abortController.abort();
-      }, compiledSharedOptions.gracefulShutdownAbortTimeout);
+      }, gracefulShutdownAbortTimeout);
       abortTimer.unref();
 
       events.emit("pool:gracefulShutdown", {
@@ -792,8 +797,8 @@ export function _runTaskList(
 
   // Spawn our workers; they can share clients from the pool.
   const workerId =
-    "workerId" in compiledSharedOptions.options
-      ? compiledSharedOptions.options.workerId
+    "workerId" in compiledSharedOptions._rawOptions
+      ? compiledSharedOptions._rawOptions.workerId
       : undefined;
   if (workerId != null && concurrency > 1) {
     throw new Error(

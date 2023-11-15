@@ -5,9 +5,9 @@ import * as yargs from "yargs";
 import { defaults } from "./config";
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
-import { run, runOnce } from "./index";
-import { digestPreset } from "./lib";
-import { EMPTY_PRESET, WorkerPreset } from "./preset";
+import { RunnerOptions, run, runOnce } from "./index";
+import { processSharedOptions } from "./lib";
+import { EMPTY_PRESET } from "./preset";
 import { runMigrations } from "./runner";
 
 const argv = yargs
@@ -126,15 +126,14 @@ async function main() {
     throw new Error("Cannot specify both --once and --schema-only");
   }
 
-  const {
-    runnerOptions: options,
-    tasksFolder,
-    crontabFile,
-  } = digestPreset({
-    extends: [WorkerPreset, userPreset ?? EMPTY_PRESET, argvToPreset(argv)],
-  });
+  const options: RunnerOptions = {
+    preset: {
+      extends: [userPreset ?? EMPTY_PRESET, argvToPreset(argv)],
+    },
+  };
+  const compiledSharedOptions = processSharedOptions(options);
 
-  if (!options.connectionString) {
+  if (!compiledSharedOptions.resolvedPreset.worker.connectionString) {
     throw new Error(
       "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
     );
@@ -146,8 +145,14 @@ async function main() {
     return;
   }
 
-  const watchedTasks = await getTasks(options, tasksFolder);
-  const watchedCronItems = await getCronItems(options, crontabFile);
+  const watchedTasks = await getTasks(
+    options,
+    options.taskDirectory ?? defaults.taskDirectory,
+  );
+  const watchedCronItems = await getCronItems(
+    options,
+    options.crontabFile ?? defaults.crontabFile,
+  );
 
   if (ONCE) {
     await runOnce(options, watchedTasks.tasks);

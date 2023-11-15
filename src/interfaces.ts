@@ -9,9 +9,14 @@ import type {
   QueryResultRow,
 } from "pg";
 
-import type { CompiledSharedOptions, Release } from "./lib";
+import type {
+  CompiledSharedOptions,
+  Release,
+  ResolvedWorkerPreset,
+} from "./lib";
 import type { Logger } from "./logger";
 import type { Signal } from "./signals";
+import { AsyncHooks } from "graphile-config";
 
 /*
  * Terminology:
@@ -1020,3 +1025,17 @@ export interface FileDetails {
 }
 
 export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+
+export interface WorkerPluginContext {
+  version: string;
+  maxMigrationNumber: number;
+  breakingMigrationNumbers: number[];
+  events: WorkerEvents;
+  logger: Logger;
+  workerSchema: string;
+  escapedWorkerSchema: string;
+  /** @internal */
+  _rawOptions: SharedOptions;
+  hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
+  resolvedPreset: ResolvedWorkerPreset;
+}

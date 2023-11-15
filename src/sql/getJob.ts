@@ -22,11 +22,8 @@ export async function getJob(
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: {
-      preset,
-      noPreparedStatements = (preset?.worker?.preparedStatements === false
-        ? true
-        : undefined) ?? defaults.preparedStatements === false,
+    resolvedPreset: {
+      worker: { preparedStatements },
     },
   } = compiledSharedOptions;
 
@@ -46,7 +43,7 @@ export async function getJob(
         flagsToSkip && flagsToSkip.length ? flagsToSkip : null,
         useNodeTime ? new Date().toISOString() : null,
       ],
-      name: noPreparedStatements ? undefined : `get_job/${workerSchema}`,
+      name: !preparedStatements ? undefined : `get_job/${workerSchema}`,
     }),
   );
 

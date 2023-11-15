@@ -1,22 +1,22 @@
-import { Logger } from "@graphile/logger";
-import { AsyncHooks, PluginHook } from "graphile-config";
+import { PluginHook } from "graphile-config";
 import type { PoolClient } from "pg";
 
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
 import {
   FileDetails,
-  SharedOptions,
+  PromiseOrDirect,
   Task,
   TaskList,
   WithPgClient,
   Worker,
   WorkerEvents,
+  WorkerPluginContext,
 } from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
+import { Logger } from "@graphile/logger";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
 export * from "./interfaces";
-export { digestPreset } from "./lib";
 export {
   consoleLogFactory,
   LogFunctionFactory,
@@ -31,25 +31,6 @@ export { makeWorkerUtils, quickAddJob } from "./workerUtils";
 export { getTasks };
 export { getCronItems };
 export { CompiledSharedOptions };
-
-export interface WorkerPluginContext {
-  version: string;
-  maxMigrationNumber: number;
-  breakingMigrationNumbers: number[];
-  events: WorkerEvents;
-  logger: Logger;
-  workerSchema: string;
-  escapedWorkerSchema: string;
-  useNodeTime: boolean;
-  minResetLockedInterval: number;
-  maxResetLockedInterval: number;
-  options: SharedOptions;
-  hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
-  resolvedPreset?: GraphileConfig.ResolvedPreset;
-  gracefulShutdownAbortTimeout: number;
-}
-
-export type PromiseOrDirect<T> = T | Promise<T>;
 
 declare global {
   namespace GraphileWorker {
@@ -105,7 +86,7 @@ declare global {
        *
        * @defaultValue `process.cwd() + "/tasks"`
        */
-      tasksFolder?: string;
+      taskDirectory?: string;
       /**
        * Override path to crontab file.
        *
@@ -134,6 +115,36 @@ declare global {
        * @defaultValue `5000`
        */
       gracefulShutdownAbortTimeout?: number;
+
+      /**
+       * Set `true` to use the time as recorded by Node.js rather than
+       * PostgreSQL. It's strongly recommended that you ensure the Node.js and
+       * PostgreSQL times are synchronized, making this setting moot.
+       */
+      useNodeTime?: boolean;
+
+      /**
+       * **Experimental**
+       *
+       * How often should we scan for jobs that have been locked too long and
+       * release them? This is the minimum interval, we'll choose a time between
+       * this and `maxResetLockedInterval`.
+       */
+      minResetLockedInterval?: number;
+      /**
+       * **Experimental**
+       *
+       * The upper bound of how long we'll wait between scans for jobs that have
+       * been locked too long. See `minResetLockedInterval`.
+       */
+      maxResetLockedInterval?: number;
+
+      /**
+       * A Logger instance.
+       */
+      logger?: Logger;
+
+      events?: WorkerEvents;
     }
     interface Preset {
       worker?: WorkerOptions;

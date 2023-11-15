@@ -1,4 +1,3 @@
-import { defaults } from "../config";
 import { DbJob, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
@@ -12,11 +11,8 @@ export async function failJob(
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: {
-      preset,
-      noPreparedStatements = (preset?.worker?.preparedStatements === false
-        ? true
-        : undefined) ?? defaults.preparedStatements === false,
+    resolvedPreset: {
+      worker: { preparedStatements },
     },
   } = compiledSharedOptions;
 
@@ -25,7 +21,7 @@ export async function failJob(
     client.query({
       text: `SELECT FROM ${escapedWorkerSchema}.fail_job($1, $2, $3);`,
       values: [workerId, job.id, message],
-      name: noPreparedStatements ? undefined : `fail_job/${workerSchema}`,
+      name: !preparedStatements ? undefined : `fail_job/${workerSchema}`,
     }),
   );
 }
@@ -40,7 +36,9 @@ export async function failJobs(
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: { noPreparedStatements },
+    resolvedPreset: {
+      worker: { preparedStatements },
+    },
   } = compiledSharedOptions;
 
   // TODO: retry logic, in case of server connection interruption
@@ -59,7 +57,7 @@ from jobs_to_fail jtf
 inner join lateral ${escapedWorkerSchema}.fail_job(jtf.locked_by, jtf.job_id, $2) fj
 on true;`,
       values: [jobs.map((job) => job.id), message, workerIds],
-      name: noPreparedStatements ? undefined : `fail_jobs/${workerSchema}`,
+      name: !preparedStatements ? undefined : `fail_jobs/${workerSchema}`,
     }),
   );
   return failedJobs;

@@ -282,8 +282,14 @@ export const runCron = (
   requirements: CronRequirements,
 ): Cron => {
   const { pgPool } = requirements;
-  const { logger, escapedWorkerSchema, events, useNodeTime } =
-    processSharedOptions(options);
+  const {
+    logger,
+    escapedWorkerSchema,
+    events,
+    resolvedPreset: {
+      worker: { useNodeTime },
+    },
+  } = processSharedOptions(options);
 
   const promise = defer();
   let released = false;
@@ -487,12 +493,10 @@ export async function getParsedCronItemsFromOptions(
   releasers: Releasers,
 ): Promise<Array<ParsedCronItem>> {
   const {
-    options: {
-      preset,
-      crontabFile = preset?.worker?.crontabFile,
-      parsedCronItems,
-      crontab,
+    resolvedPreset: {
+      worker: { crontabFile },
     },
+    _rawOptions: { parsedCronItems, crontab },
   } = compiledOptions;
 
   if (!crontabFile && !parsedCronItems && !crontab) {
@@ -501,29 +505,12 @@ export async function getParsedCronItemsFromOptions(
 
   if (crontab) {
     assert.ok(
-      !crontabFile,
-      "`crontab` and `crontabFile` must not be set at the same time.",
-    );
-    assert.ok(
       !parsedCronItems,
       "`crontab` and `parsedCronItems` must not be set at the same time.",
     );
 
     return parseCrontab(crontab);
-  } else if (crontabFile) {
-    assert.ok(
-      !parsedCronItems,
-      "`crontabFile` and `parsedCronItems` must not be set at the same time.",
-    );
-
-    const watchedCronItems = await getCronItems(
-      compiledOptions.options,
-      crontabFile,
-    );
-    releasers.push(() => watchedCronItems.release());
-    return watchedCronItems.items;
-  } else {
-    assert.ok(parsedCronItems != null, "Expected `parsedCronItems` to be set.");
+  } else if (parsedCronItems) {
     // Basic check to ensure that users remembered to call
     // `parseCronItems`/`parseCrontab`; not intended to be a full check, just a
     // quick one to catch the obvious errors. Keep in mind that
@@ -550,6 +537,13 @@ export async function getParsedCronItemsFromOptions(
     }
 
     return parsedCronItems;
+  } else {
+    const watchedCronItems = await getCronItems(
+      compiledOptions._rawOptions,
+      crontabFile,
+    );
+    releasers.push(() => watchedCronItems.release());
+    return watchedCronItems.items;
   }
 }
 

@@ -20,24 +20,27 @@ async function assertTaskList(
   compiledOptions: CompiledOptions,
   releasers: Releasers,
 ): Promise<TaskList> {
-  const { options } = compiledOptions;
+  const {
+    resolvedPreset: {
+      worker: { taskDirectory },
+    },
+    _rawOptions: { taskList },
+  } = compiledOptions;
   assert.ok(
-    !options.taskDirectory || !options.taskList,
+    !taskDirectory || !taskList,
     "Exactly one of either `taskDirectory` or `taskList` should be set",
   );
-  if (options.taskList) {
-    return options.taskList;
-  } else if (options.taskDirectory) {
+  if (taskList) {
+    return taskList;
+  } else if (taskDirectory) {
     const watchedTasks = await getTasks(
-      compiledOptions.options,
-      options.taskDirectory,
+      compiledOptions._rawOptions,
+      taskDirectory,
     );
     releasers.push(() => watchedTasks.release());
     return watchedTasks.tasks;
   } else {
-    throw new Error(
-      "You must specify either `options.taskList` or `options.taskDirectory`",
-    );
+    throw new Error("You must specify either `taskList` or `taskDirectory`");
   }
 }
 
@@ -113,13 +116,13 @@ function buildRunner(input: {
   parsedCronItems: ParsedCronItem[];
 }): Runner {
   const { compiledOptions, taskList, parsedCronItems } = input;
-  const { events, pgPool, releasers, release, addJob, options, logger } =
+  const { events, pgPool, releasers, release, addJob, logger } =
     compiledOptions;
 
   const cron = runCron(compiledOptions, parsedCronItems, { pgPool, events });
   releasers.push(() => cron.release());
 
-  const workerPool = runTaskList(options, taskList, pgPool);
+  const workerPool = runTaskList(compiledOptions._rawOptions, taskList, pgPool);
   releasers.push(() => {
     if (!workerPool._shuttingDown) {
       return workerPool.gracefulShutdown("Runner is shutting down");

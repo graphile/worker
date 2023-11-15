@@ -23,7 +23,7 @@ export const defaults = {
     enforceNumberOrUndefined("maxPoolSize", cosmiconfig?.maxPoolSize) || 10,
   preparedStatements: true as boolean,
   crontabFile: `${process.cwd()}/crontab`,
-  tasksFolder: `${process.cwd()}/tasks`,
+  taskDirectory: `${process.cwd()}/tasks`,
   gracefulShutdownAbortTimeout: 5000,
 } satisfies GraphileConfig.WorkerOptions;
 

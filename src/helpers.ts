@@ -8,7 +8,12 @@ export function makeAddJob(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: WithPgClient,
 ): AddJobFunction {
-  const { escapedWorkerSchema, useNodeTime } = compiledSharedOptions;
+  const {
+    escapedWorkerSchema,
+    resolvedPreset: {
+      worker: { useNodeTime },
+    },
+  } = compiledSharedOptions;
   return (identifier, payload, spec = {}) => {
     return withPgClient(async (pgClient) => {
       const { rows } = await pgClient.query(

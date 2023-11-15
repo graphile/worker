@@ -38,18 +38,20 @@ export function makeNewWorker(
     autostart = true,
     workerId = `worker-${randomBytes(9).toString("hex")}`,
   } = params;
-  const { events, useNodeTime, hooks } = compiledSharedOptions;
+  const {
+    events,
+    resolvedPreset: {
+      worker: { useNodeTime, pollInterval },
+    },
+    hooks,
+    _rawOptions: { forbiddenFlags },
+  } = compiledSharedOptions;
   const logger = compiledSharedOptions.logger.scope({
     scope: {
       label: "worker",
       workerId,
     },
   });
-  const {
-    preset,
-    forbiddenFlags,
-    pollInterval = preset?.worker?.pollInterval ?? defaults.pollInterval,
-  } = compiledSharedOptions.options;
 
   const workerDeferred = deferred();
 
