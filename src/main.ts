@@ -274,10 +274,10 @@ export function runTaskList(
         resetLockedAtPromise = undefined;
         if (workerPool._active) {
           const delay = resetLockedDelay();
-          events.emit("resetLocked:success", { workerPool: this, delay });
+          events.emit("resetLocked:success", { workerPool, delay });
           resetLockedTimeout = setTimeout(resetLocked, delay);
         } else {
-          events.emit("resetLocked:success", { workerPool: this, delay: null });
+          events.emit("resetLocked:success", { workerPool, delay: null });
         }
       },
       (e) => {
@@ -286,7 +286,7 @@ export function runTaskList(
         if (workerPool._active) {
           const delay = resetLockedDelay();
           events.emit("resetLocked:failure", {
-            workerPool: this,
+            workerPool,
             error: e,
             delay,
           });
@@ -299,7 +299,7 @@ export function runTaskList(
           );
         } else {
           events.emit("resetLocked:failure", {
-            workerPool: this,
+            workerPool,
             error: e,
             delay: null,
           });
@@ -312,7 +312,7 @@ export function runTaskList(
         }
       },
     );
-    events.emit("resetLocked:started", { workerPool: this });
+    events.emit("resetLocked:started", { workerPool });
   };
 
   // Reset locked in the first 60 seconds, not immediately because we don't
@@ -530,7 +530,7 @@ export function _runTaskList(
   function deactivate() {
     if (workerPool._active) {
       workerPool._active = false;
-      events.emit("pool:release", { pool: this, workerPool: this });
+      events.emit("pool:release", { pool: workerPool, workerPool });
       return onDeactivate?.();
     }
   }
@@ -595,8 +595,8 @@ export function _runTaskList(
       abortTimer.unref();
 
       events.emit("pool:gracefulShutdown", {
-        pool: this,
-        workerPool: this,
+        pool: workerPool,
+        workerPool,
         message,
       });
       try {
@@ -622,8 +622,8 @@ export function _runTaskList(
             const worker = workers[i];
             const job = worker.getActiveJob();
             events.emit("pool:gracefulShutdown:workerError", {
-              pool: this,
-              workerPool: this,
+              pool: workerPool,
+              workerPool,
               error: workerReleaseResult.reason,
               job,
             });
@@ -665,14 +665,14 @@ export function _runTaskList(
           });
         }
         events.emit("pool:gracefulShutdown:complete", {
-          pool: this,
-          workerPool: this,
+          pool: workerPool,
+          workerPool,
         });
         logger.debug("Graceful shutdown complete");
       } catch (e) {
         events.emit("pool:gracefulShutdown:error", {
-          pool: this,
-          workerPool: this,
+          pool: workerPool,
+          workerPool,
           error: e,
         });
         logger.error(`Error occurred during graceful shutdown: ${e.message}`, {
@@ -688,8 +688,8 @@ export function _runTaskList(
      */
     async forcefulShutdown(message: string) {
       events.emit("pool:forcefulShutdown", {
-        pool: this,
-        workerPool: this,
+        pool: workerPool,
+        workerPool,
         message,
       });
       try {
@@ -740,14 +740,14 @@ export function _runTaskList(
           logger.debug("No active jobs to release");
         }
         events.emit("pool:forcefulShutdown:complete", {
-          pool: this,
-          workerPool: this,
+          pool: workerPool,
+          workerPool,
         });
         logger.debug("Forceful shutdown complete");
       } catch (e) {
         events.emit("pool:forcefulShutdown:error", {
-          pool: this,
-          workerPool: this,
+          pool: workerPool,
+          workerPool,
           error: e,
         });
         logger.error(`Error occurred during forceful shutdown: ${e.message}`, {
