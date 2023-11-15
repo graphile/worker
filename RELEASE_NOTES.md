@@ -13,6 +13,11 @@ v0.16.0 (see the release notes for that version), you should use `node --watch`
 or similar instead. This also removes `fauxRequire` and all the problems that
 that had.
 
+**IMPORTANT**: Node versions before v20 and Postgres versions before v12 are no
+longer supported. (Node v18 _should_ work, but it segfaults when running the
+tests which is likely a jest/`node --experimental-vm-modules` issue which won't
+affect you at runtime.)
+
 - Fixes graceful shutdown (both manually via `.gracefulShutdown()` or
   `.forcefulShutdown()` and via signal handling)
 - Tracks whether migrations are breaking or not, and:
@@ -29,6 +34,20 @@ that had.
 - `runTaskListOnce` now uses a WorkerPool internally (to better integrate with
   the gracefulShutdown logic)
 - Fix `WorkerPool.promise` to only resolve once everything is handled
+- EXPERIMENTAL; see v0.16.0 for documentation:
+  - Adds support for loading tasks from nested folders (e.g.
+    `tasks/foo/bar/baz.js` will add support for a task with identifier
+    `foo/bar/baz`)
+  - Adds support for turning executable files into tasks (i.e. a task written in
+    python, Rust, or bash)
+  - Adds support for loading TypeScript tasks directly (no need to compile to
+    JS, but if you do the JS will have priority)
+  - You may see warnings like
+    `WARNING: Failed to load task 'README.md' - no supported handlers found for path: '/path/to/tasks/README.md'` -
+    you can ignore them (or you can move non-task files out of the `tasks`
+    folder)
+  - Undocumented, experimental and untested preliminary support for cancellable
+    jobs via `AbortSignal`; upgrade to v0.16.0+ if you want to actually use this
 - A huge number of internal changes
 
 ### v0.13.0
