@@ -1,3 +1,4 @@
+import { Logger } from "@graphile/logger";
 import { PluginHook } from "graphile-config";
 import type { PoolClient } from "pg";
 
@@ -14,7 +15,6 @@ import {
   WorkerPluginContext,
 } from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
-import { Logger } from "@graphile/logger";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
 export * from "./interfaces";
 export {

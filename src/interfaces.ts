@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import type { EventEmitter } from "events";
 import type { Stats } from "fs";
+import { AsyncHooks } from "graphile-config";
 import type {
   Notification,
   Pool,
@@ -16,7 +17,6 @@ import type {
 } from "./lib";
 import type { Logger } from "./logger";
 import type { Signal } from "./signals";
-import { AsyncHooks } from "graphile-config";
 
 /*
  * Terminology:

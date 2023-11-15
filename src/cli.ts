@@ -5,7 +5,7 @@ import * as yargs from "yargs";
 import { defaults } from "./config";
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
-import { RunnerOptions, run, runOnce } from "./index";
+import { run, RunnerOptions, runOnce } from "./index";
 import { processSharedOptions } from "./lib";
 import { EMPTY_PRESET } from "./preset";
 import { runMigrations } from "./runner";

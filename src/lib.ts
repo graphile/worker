@@ -3,27 +3,27 @@ import { EventEmitter } from "events";
 import { applyHooks, AsyncHooks, resolvePresets } from "graphile-config";
 import { Client, Pool, PoolClient } from "pg";
 
-import { WorkerPreset, workerPresetWorkerOptions } from "./preset";
-import {
-  RunOnceOptions,
-  WorkerSharedOptions,
-  WorkerOptions,
-  WorkerUtilsOptions,
-  WorkerPluginContext,
-} from "./interfaces";
-import { defaults } from "./config";
 import { migrations } from "./generated/sql";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
 import {
   AddJobFunction,
   RunnerOptions,
+  RunOnceOptions,
   SharedOptions,
   WithPgClient,
   WorkerEvents,
+  WorkerOptions,
+  WorkerPluginContext,
+  WorkerSharedOptions,
+  WorkerUtilsOptions,
 } from "./interfaces";
-import { defaultLogger, Logger, LogScope } from "./logger";
+import { Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
-import { EMPTY_PRESET } from "./preset";
+import {
+  EMPTY_PRESET,
+  WorkerPreset,
+  workerPresetWorkerOptions,
+} from "./preset";
 import { version } from "./version";
 
 const MAX_MIGRATION_NUMBER = Object.keys(migrations).reduce(
@@ -84,7 +84,9 @@ function legacyOptionsToPreset(options: SomeOptions): GraphileConfig.Preset {
     worker: {} as Partial<GraphileConfig.WorkerOptions>,
   } satisfies GraphileConfig.Preset;
   for (const key of Object.keys(options) as (keyof SomeOptions)[]) {
-    if (options[key] == null) continue;
+    if (options[key] == null) {
+      continue;
+    }
     switch (key) {
       case "forbiddenFlags":
       case "pgPool": {

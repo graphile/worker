@@ -1,4 +1,3 @@
-import { defaults } from "../config";
 import { WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 

@@ -3,7 +3,6 @@ import { EventEmitter } from "events";
 import { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
-import { defaults } from "./config";
 import deferred from "./deferred";
 import {
   makeWithPgClientFromClient,

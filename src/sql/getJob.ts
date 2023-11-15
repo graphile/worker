@@ -1,4 +1,3 @@
-import { defaults } from "../config";
 import { DbJob, Job, TaskList, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
