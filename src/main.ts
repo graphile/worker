@@ -530,8 +530,9 @@ export function _runTaskList(
   function deactivate() {
     if (workerPool._active) {
       workerPool._active = false;
-      events.emit("pool:release", { pool: workerPool, workerPool });
-      return onDeactivate?.();
+      return Promise.resolve(onDeactivate?.()).finally(() => {
+        events.emit("pool:release", { pool: workerPool, workerPool });
+      });
     }
   }
 
