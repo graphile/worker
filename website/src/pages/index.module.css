@@ -50,12 +50,24 @@
 }
 
 [data-theme="dark"] .hero {
-  color: var(--ifm-color-primary-lightest);
+  color: var(--ifm-color-primary-light);
 }
 
 .heroImage {
   max-width: 70%;
   height: auto;
+}
+
+.heroImage :global(.darkest) {
+  fill: var(--ifm-color-primary-darkest);
+}
+
+[data-theme="dark"] .heroImage :global(.darkest) {
+  fill: var(--ifm-color-primary-darker);
+}
+
+.heroImage :global(.primary) {
+  fill: var(--ifm-color-primary);
 }
 
 .github {

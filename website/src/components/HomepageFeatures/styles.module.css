@@ -3,6 +3,10 @@
   background-color: var(--ifm-color-primary-lightest);
 }
 
+[data-theme="dark"] .features {
+  background-color: var(--ifm-color-primary-darkest);
+}
+
 .featureSvg {
   height: 100px;
   width: 100px;

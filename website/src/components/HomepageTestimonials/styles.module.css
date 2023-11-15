@@ -63,6 +63,10 @@
   font-family: "Fredericka the Great", Helvetica, Verdana, Arial, sans-serif;
 }
 
+[data-theme="dark"] .blocktext {
+  color: var(--ifm-color-primary-light);
+}
+
 .testimonialImage {
   height: auto;
 }
