@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
+
 import styles from "@site/src/components/HomepageTestimonials/styles.module.css";
 import TestimonialImage from "@site/static/img/homepage/ant-leaf.svg";
 import clsx from "clsx";
