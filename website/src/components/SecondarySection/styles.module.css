@@ -38,3 +38,17 @@
 svg {
   max-width: 100%;
 }
+
+@media screen and (max-width: 996px) {
+  .svgCol {
+    text-align: center;
+    padding-top: 1rem;
+  }
+  .tertiarySvg {
+    max-width: 75%;
+    height: auto;
+  }
+  .button {
+    width: 100%;
+  }
+}

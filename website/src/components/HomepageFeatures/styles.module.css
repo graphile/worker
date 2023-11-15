@@ -34,3 +34,9 @@
 .featureInfo {
   composes: tagline from "@site/src/css/common.module.css";
 }
+
+@media screen and (max-width: 600px) {
+  .featureDetails {
+    padding-left: 1rem;
+  }
+}
