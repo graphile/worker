@@ -91,9 +91,9 @@ export const run = async (
     try {
       await release();
     } catch (e2) {
-      console.error(
+      compiledOptions.logger.error(
         `Error occurred whilst attempting to release options after error occurred`,
-        e2,
+        { error: e, secondError: e2 },
       );
     }
     throw e;
@@ -113,7 +113,7 @@ function buildRunner(input: {
   parsedCronItems: ParsedCronItem[];
 }): Runner {
   const { compiledOptions, taskList, parsedCronItems } = input;
-  const { events, pgPool, releasers, release, addJob, options } =
+  const { events, pgPool, releasers, release, addJob, options, logger } =
     compiledOptions;
 
   const cron = runCron(compiledOptions, parsedCronItems, { pgPool, events });
@@ -133,10 +133,10 @@ function buildRunner(input: {
       events.emit("stop", {});
       try {
         await release();
-      } catch (e) {
-        console.error(
-          `Error occurred whilst attempting to release runner options`,
-          e,
+      } catch (error) {
+        logger.error(
+          `Error occurred whilst attempting to release runner options: ${error.message}`,
+          { error },
         );
       }
     } else {
@@ -159,14 +159,17 @@ function buildRunner(input: {
     () => {
       /* noop */
     },
-    async (e) => {
+    async (error) => {
       if (running) {
-        console.error(`Stopping worker due to an error: ${e}`);
+        logger.error(`Stopping worker due to an error: ${error}`, { error });
         await stop();
       } else {
-        console.error(`Error occurred, but worker is already stopping: ${e}`);
+        logger.error(
+          `Error occurred, but worker is already stopping: ${error}`,
+          { error },
+        );
       }
-      return Promise.reject(e);
+      return Promise.reject(error);
     },
   );
 

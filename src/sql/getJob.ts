@@ -1,3 +1,4 @@
+import { defaults } from "../config";
 import { DbJob, Job, TaskList, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 import { getTaskDetails } from "../taskIdentifiers";
@@ -22,7 +23,12 @@ export async function getJob(
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: { noPreparedStatements },
+    options: {
+      preset,
+      noPreparedStatements = (preset?.worker?.preparedStatements === false
+        ? true
+        : undefined) ?? defaults.preparedStatements === false,
+    },
   } = compiledSharedOptions;
   const taskDetailsPromise = getTaskDetails(
     compiledSharedOptions,

@@ -1,3 +1,4 @@
+import { defaults } from "../config";
 import { WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
@@ -8,7 +9,12 @@ export async function resetLockedAt(
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: { noPreparedStatements },
+    options: {
+      preset,
+      noPreparedStatements = (preset?.worker?.preparedStatements === false
+        ? true
+        : undefined) ?? defaults.preparedStatements === false,
+    },
     useNodeTime,
   } = compiledSharedOptions;
 

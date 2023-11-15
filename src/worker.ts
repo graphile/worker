@@ -2,7 +2,7 @@ import * as assert from "assert";
 import { randomBytes } from "crypto";
 
 import { defaults } from "./config";
-import deferred, { Deferred } from "./deferred";
+import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
   Job,
@@ -52,10 +52,15 @@ export function makeNewWorker(
     pollInterval = preset?.worker?.pollInterval ?? defaults.pollInterval,
   } = compiledSharedOptions.options;
 
-  const promise = deferred() as Deferred<void> & {
+  const workerDeferred = deferred();
+
+  const promise: Promise<void> & {
     /** @internal */
     worker?: Worker;
-  };
+  } = workerDeferred.finally(() => {
+    return hooks.process("stopWorker", { worker, withPgClient });
+  });
+
   promise.then(
     () => {
       events.emit("worker:stop", { worker });
@@ -84,11 +89,9 @@ export function makeNewWorker(
     active = false;
     events.emit("worker:release", { worker });
     if (cancelDoNext()) {
-      promise.resolve();
+      workerDeferred.resolve();
     }
-    return Promise.resolve(
-      hooks.process("stopWorker", { worker, withPgClient }),
-    ).then(() => promise);
+    return Promise.resolve(promise);
   };
 
   const nudge = () => {
@@ -189,11 +192,11 @@ export function makeNewWorker(
           // Error occurred fetching a job; try again...
           doNextTimer = setTimeout(() => doNext(), pollInterval);
         } else {
-          promise.reject(err);
+          workerDeferred.reject(err);
         }
         return;
       } else {
-        promise.reject(err);
+        workerDeferred.reject(err);
         release();
         return;
       }
@@ -213,10 +216,10 @@ export function makeNewWorker(
             doNextTimer = setTimeout(() => doNext(), pollInterval);
           }
         } else {
-          promise.resolve();
+          workerDeferred.resolve();
         }
       } else {
-        promise.resolve();
+        workerDeferred.resolve();
         release();
       }
       return;
@@ -387,7 +390,7 @@ export function makeNewWorker(
         `Failed to release job '${job.id}' ${when}; committing seppuku\n${fatalError.message}`,
         { fatalError, job },
       );
-      promise.reject(fatalError);
+      workerDeferred.reject(fatalError);
       release();
       return;
     } finally {
@@ -398,7 +401,7 @@ export function makeNewWorker(
     if (active) {
       doNext();
     } else {
-      promise.resolve();
+      workerDeferred.resolve();
     }
   };
 

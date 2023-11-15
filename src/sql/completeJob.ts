@@ -1,3 +1,4 @@
+import { defaults } from "../config";
 import { DbJob, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
@@ -10,7 +11,12 @@ export async function completeJob(
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: { noPreparedStatements },
+    options: {
+      preset,
+      noPreparedStatements = (preset?.worker?.preparedStatements === false
+        ? true
+        : undefined) ?? defaults.preparedStatements === false,
+    },
   } = compiledSharedOptions;
 
   // TODO: retry logic, in case of server connection interruption

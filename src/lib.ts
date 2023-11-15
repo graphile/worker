@@ -272,7 +272,7 @@ export const getUtilsAndReleasersFromOptions = async (
 ): Promise<CompiledOptions> => {
   const compiledSharedOptions = processSharedOptions(options, settings);
   const {
-    hooks,
+    logger,
     options: {
       preset,
       concurrency = preset?.worker?.concurrentJobs ?? defaults.concurrentJobs,
@@ -286,19 +286,17 @@ export const getUtilsAndReleasersFromOptions = async (
     // @ts-ignore
     const max = pgPool?.options?.max || 10;
     if (max < concurrency) {
-      console.warn(
+      logger.warn(
         `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`,
+        { max, concurrency },
       );
     }
 
     const withPgClient = makeWithPgClientFromPool(pgPool);
 
     // Migrate
-    await withPgClient(async function migrateWithPgClient(client) {
-      const event = { client };
-      await hooks.process("premigrate", event);
-      await migrate(compiledSharedOptions, event.client);
-      await hooks.process("postmigrate", event);
+    await withPgClient(function migrateWithPgClient(client) {
+      return migrate(compiledSharedOptions, client);
     });
 
     const addJob = makeAddJob(compiledSharedOptions, withPgClient);
