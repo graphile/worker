@@ -20,6 +20,8 @@ affect you at runtime.)
 
 - Fixes graceful shutdown (both manually via `.gracefulShutdown()` or
   `.forcefulShutdown()` and via signal handling)
+- Removes `maxContinguousErrors` setting which was poorly implemented and caused
+  more issues than it solved
 - Tracks whether migrations are breaking or not, and:
   - refuses to start if an unsupported breaking migration is present in the
     database
