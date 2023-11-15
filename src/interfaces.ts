@@ -864,22 +864,12 @@ export type WorkerEventMap = {
   /**
    * When a job throws an error
    */
-  "job:error": {
-    worker: Worker;
-    job: Job;
-    error: unknown;
-    batchJobErrors?: unknown[];
-  };
+  "job:error": { worker: Worker; job: Job; error: unknown };
 
   /**
    * When a job fails permanently (emitted after job:error when appropriate)
    */
-  "job:failed": {
-    worker: Worker;
-    job: Job;
-    error: unknown;
-    batchJobErrors?: unknown[];
-  };
+  "job:failed": { worker: Worker; job: Job; error: unknown };
 
   /**
    * When a job has finished executing and the result (success or failure) has
