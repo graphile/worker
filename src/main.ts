@@ -405,7 +405,7 @@ export function runTaskList(
             }
             break;
           }
-          case "jobs:migrate": {
+          case "worker:migrate": {
             const payload = tryParseJson<{
               migrationNumber?: number;
               breaking?: boolean;
@@ -461,7 +461,7 @@ export function runTaskList(
       attempts = 0;
     }, onErrorReleaseClientAndTryAgain);
     client
-      .query('LISTEN "jobs:migrate"')
+      .query('LISTEN "worker:migrate"')
       .then(null, onErrorReleaseClientAndTryAgain);
 
     const supportedTaskNames = Object.keys(tasks);

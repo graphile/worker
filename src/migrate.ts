@@ -80,7 +80,7 @@ async function runMigration(
       text,
     });
     await event.client.query("select pg_notify($1, $2)", [
-      "jobs:migrate",
+      "worker:migrate",
       JSON.stringify({ migrationNumber, breaking }),
     ]);
     await event.client.query("commit");
