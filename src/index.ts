@@ -56,6 +56,22 @@ declare global {
     interface Tasks {
       /* extend this through declaration merging */
     }
+    interface MigrateEvent {
+      /**
+       * The client used to run the migration. Replacing this is not officially
+       * supported, but...
+       */
+      client: PoolClient;
+      /**
+       * The Postgres version number, e.g. 120000 for PostgreSQL 12.0
+       */
+      readonly postgresVersion: number;
+      /**
+       * Somewhere to store temporary data from plugins, only used during
+       * premigrate, postmigrate, prebootstrap and postbootstrap
+       */
+      readonly scratchpad: Record<string, any>;
+    }
   }
 
   namespace GraphileConfig {
@@ -141,16 +157,24 @@ declare global {
       init(): void;
 
       /**
+       * Called before installing the Graphile Worker DB schema (or upgrading it).
+       */
+      prebootstrap(event: GraphileWorker.MigrateEvent): PromiseOrDirect<void>;
+
+      /**
+       * Called after installing the Graphile Worker DB schema (or upgrading it).
+       */
+      postbootstrap(event: GraphileWorker.MigrateEvent): PromiseOrDirect<void>;
+
+      /**
        * Called before migrating the DB.
        */
-      premigrate(event: { readonly client: PoolClient }): PromiseOrDirect<void>;
+      premigrate(event: GraphileWorker.MigrateEvent): PromiseOrDirect<void>;
 
       /**
        * Called after migrating the DB.
        */
-      postmigrate(event: {
-        readonly client: PoolClient;
-      }): PromiseOrDirect<void>;
+      postmigrate(event: GraphileWorker.MigrateEvent): PromiseOrDirect<void>;
 
       /**
        * Used to build a given `taskIdentifier`'s handler given a list of files,
