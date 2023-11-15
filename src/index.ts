@@ -70,7 +70,7 @@ declare global {
        * Somewhere to store temporary data from plugins, only used during
        * premigrate, postmigrate, prebootstrap and postbootstrap
        */
-      readonly scratchpad: Record<string, any>;
+      readonly scratchpad: Record<string, unknown>;
     }
   }
 
