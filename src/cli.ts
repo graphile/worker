@@ -132,7 +132,10 @@ async function main() {
     },
   });
 
-  if (!compiledSharedOptions.resolvedPreset.worker.connectionString) {
+  if (
+    !compiledSharedOptions.resolvedPreset.worker.connectionString &&
+    !process.env.PGDATABASE
+  ) {
     throw new Error(
       "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
     );
