@@ -26,10 +26,6 @@ async function assertTaskList(
     },
     _rawOptions: { taskList },
   } = compiledOptions;
-  assert.ok(
-    !taskDirectory || !taskList,
-    "Exactly one of either `taskDirectory` or `taskList` should be set",
-  );
   if (taskList) {
     return taskList;
   } else if (taskDirectory) {

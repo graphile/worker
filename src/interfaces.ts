@@ -604,7 +604,7 @@ export interface WorkerPoolOptions extends WorkerSharedOptions {
  */
 export interface RunnerOptions extends WorkerPoolOptions {
   /**
-   * Task names and handler, e.g. from `getTasks`
+   * Task names and handler, e.g. from `getTasks`. Overrides `taskDirectory`
    */
   taskList?: TaskList;
 
@@ -614,7 +614,8 @@ export interface RunnerOptions extends WorkerPoolOptions {
   taskDirectory?: string;
 
   /**
-   * A crontab string to use instead of reading a crontab file
+   * A crontab string to use instead of reading a crontab file. Overrides
+   * `crontabFile`
    */
   crontab?: string;
 
@@ -627,7 +628,7 @@ export interface RunnerOptions extends WorkerPoolOptions {
    * Programmatically generated cron items. **BE VERY CAREFUL** if you use this
    * manually, there are requirements on this type that TypeScript cannot
    * express, and if you don't adhere to them then you'll get unexpected
-   * behaviours.
+   * behaviours. Overrides `crontabFile`
    */
   parsedCronItems?: Array<ParsedCronItem>;
 }
