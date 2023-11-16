@@ -10,11 +10,7 @@ import type {
   QueryResultRow,
 } from "pg";
 
-import type {
-  CompiledSharedOptions,
-  Release,
-  ResolvedWorkerPreset,
-} from "./lib";
+import type { Release, ResolvedWorkerPreset } from "./lib";
 import type { Logger } from "./logger";
 import type { Signal } from "./signals";
 
