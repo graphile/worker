@@ -68,11 +68,13 @@ type SomeOptions = SharedOptions &
   Partial<WorkerSharedOptions> &
   Partial<WorkerOptions> &
   Partial<RunOnceOptions> &
-  Partial<WorkerUtilsOptions>;
+  Partial<WorkerUtilsOptions> &
+  Partial<RunnerOptions>;
 
 /**
  * Important: ensure you still handle `forbiddenFlags`, `pgPool`, `workerId`,
- * `autostart`, `workerPool`, `abortSignal`, `noHandleSignals`!
+ * `autostart`, `workerPool`, `abortSignal`, `noHandleSignals`, `taskList`,
+ * `crontab`, `parsedCronItems`!
  */
 function legacyOptionsToPreset(options: SomeOptions): GraphileConfig.Preset {
   const preset = {
@@ -90,7 +92,10 @@ function legacyOptionsToPreset(options: SomeOptions): GraphileConfig.Preset {
       case "autostart":
       case "workerPool":
       case "abortSignal":
-      case "noHandleSignals": {
+      case "noHandleSignals":
+      case "taskList":
+      case "crontab":
+      case "parsedCronItems": {
         // ignore
         break;
       }
@@ -144,6 +149,14 @@ function legacyOptionsToPreset(options: SomeOptions): GraphileConfig.Preset {
       }
       case "concurrency": {
         preset.worker.concurrentJobs = options[key]!;
+        break;
+      }
+      case "taskDirectory": {
+        preset.worker.taskDirectory = options[key]!;
+        break;
+      }
+      case "crontabFile": {
+        preset.worker.crontabFile = options[key]!;
         break;
       }
       default: {
