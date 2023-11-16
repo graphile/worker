@@ -6,7 +6,7 @@ import {
   getUtilsAndReleasersFromOptions,
   Releasers,
 } from "./lib";
-import { _runTaskList, runTaskList } from "./main";
+import { _runTaskList, runTaskListInternal } from "./main";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
   const { release } = await getUtilsAndReleasersFromOptions(options);
@@ -43,20 +43,34 @@ export const runOnce = async (
   overrideTaskList?: TaskList,
 ): Promise<void> => {
   const compiledOptions = await getUtilsAndReleasersFromOptions(options);
-  const { withPgClient, release, releasers } = compiledOptions;
   try {
-    const taskList =
-      overrideTaskList || (await assertTaskList(compiledOptions, releasers));
-    const workerPool = _runTaskList(compiledOptions, taskList, withPgClient, {
-      concurrency: options.concurrency ?? 1,
-      noHandleSignals: options.noHandleSignals,
-      continuous: false,
-    });
-
-    return await workerPool.promise;
+    return await runOnceInternal(compiledOptions, overrideTaskList);
   } finally {
-    await release();
+    await compiledOptions.release();
   }
+};
+
+export const runOnceInternal = async (
+  compiledOptions: CompiledOptions,
+  overrideTaskList?: TaskList,
+): Promise<void> => {
+  const {
+    withPgClient,
+    releasers,
+    resolvedPreset: {
+      worker: { concurrentJobs: concurrency },
+    },
+    _rawOptions: { noHandleSignals },
+  } = compiledOptions;
+  const taskList =
+    overrideTaskList || (await assertTaskList(compiledOptions, releasers));
+  const workerPool = _runTaskList(compiledOptions, taskList, withPgClient, {
+    concurrency,
+    noHandleSignals,
+    continuous: false,
+  });
+
+  return await workerPool.promise;
 };
 
 export const run = async (
@@ -65,36 +79,47 @@ export const run = async (
   overrideParsedCronItems?: Array<ParsedCronItem>,
 ): Promise<Runner> => {
   const compiledOptions = await getUtilsAndReleasersFromOptions(rawOptions);
-  const { release, releasers } = compiledOptions;
-
   try {
-    const taskList =
-      overrideTaskList || (await assertTaskList(compiledOptions, releasers));
-
-    const parsedCronItems =
-      overrideParsedCronItems ||
-      (await getParsedCronItemsFromOptions(compiledOptions, releasers));
-
-    // The result of 'buildRunner' must be returned immediately, so that the
-    // user can await its promise property immediately. If this is broken then
-    // unhandled promise rejections could occur in some circumstances, causing
-    // a process crash in Node v16+.
-    return buildRunner({
+    return await runInternal(
       compiledOptions,
-      taskList,
-      parsedCronItems,
-    });
-  } catch (e) {
+      overrideTaskList,
+      overrideParsedCronItems,
+    );
+  } finally {
     try {
-      await release();
-    } catch (e2) {
+      await compiledOptions.release();
+    } catch (error) {
       compiledOptions.logger.error(
-        `Error occurred whilst attempting to release options after error occurred`,
-        { error: e, secondError: e2 },
+        `Error occurred whilst attempting to release options`,
+        { error: error },
       );
     }
-    throw e;
   }
+};
+
+export const runInternal = async (
+  compiledOptions: CompiledOptions,
+  overrideTaskList?: TaskList,
+  overrideParsedCronItems?: Array<ParsedCronItem>,
+): Promise<Runner> => {
+  const { releasers } = compiledOptions;
+
+  const taskList =
+    overrideTaskList || (await assertTaskList(compiledOptions, releasers));
+
+  const parsedCronItems =
+    overrideParsedCronItems ||
+    (await getParsedCronItemsFromOptions(compiledOptions, releasers));
+
+  // The result of 'buildRunner' must be returned immediately, so that the
+  // user can await its promise property immediately. If this is broken then
+  // unhandled promise rejections could occur in some circumstances, causing
+  // a process crash in Node v16+.
+  return buildRunner({
+    compiledOptions,
+    taskList,
+    parsedCronItems,
+  });
 };
 
 /**
@@ -110,13 +135,12 @@ function buildRunner(input: {
   parsedCronItems: ParsedCronItem[];
 }): Runner {
   const { compiledOptions, taskList, parsedCronItems } = input;
-  const { events, pgPool, releasers, release, addJob, logger } =
-    compiledOptions;
+  const { events, pgPool, releasers, addJob, logger } = compiledOptions;
 
   const cron = runCron(compiledOptions, parsedCronItems, { pgPool, events });
   releasers.push(() => cron.release());
 
-  const workerPool = runTaskList(compiledOptions._rawOptions, taskList, pgPool);
+  const workerPool = runTaskListInternal(compiledOptions, taskList, pgPool);
   releasers.push(() => {
     if (!workerPool._shuttingDown) {
       return workerPool.gracefulShutdown("Runner is shutting down");
@@ -128,14 +152,6 @@ function buildRunner(input: {
     if (running) {
       running = false;
       events.emit("stop", {});
-      try {
-        await release();
-      } catch (error) {
-        logger.error(
-          `Error occurred whilst attempting to release runner options: ${error.message}`,
-          { error },
-        );
-      }
     } else {
       throw new Error("Runner is already stopped");
     }

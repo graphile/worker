@@ -4,10 +4,9 @@ import * as yargs from "yargs";
 
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
-import { run, runOnce } from "./index";
-import { processSharedOptions } from "./lib";
+import { getUtilsAndReleasersFromOptions } from "./lib";
 import { EMPTY_PRESET, WorkerPreset } from "./preset";
-import { runMigrations } from "./runner";
+import { runInternal, runOnceInternal } from "./runner";
 
 const defaults = WorkerPreset.worker!;
 
@@ -125,56 +124,59 @@ async function main() {
     throw new Error("Cannot specify both --once and --schema-only");
   }
 
-  const compiledSharedOptions = processSharedOptions({
+  const compiledOptions = await getUtilsAndReleasersFromOptions({
     preset: {
       extends: [userPreset ?? EMPTY_PRESET, argvToPreset(argv)],
     },
   });
+  try {
+    if (
+      !compiledOptions.resolvedPreset.worker.connectionString &&
+      !process.env.PGDATABASE
+    ) {
+      throw new Error(
+        "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
+      );
+    }
 
-  if (
-    !compiledSharedOptions.resolvedPreset.worker.connectionString &&
-    !process.env.PGDATABASE
-  ) {
-    throw new Error(
-      "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
+
+    if (SCHEMA_ONLY) {
+      console.log("Schema updated");
+      return;
+    }
+
+    const watchedTasks = await getTasks(
+      compiledOptions._rawOptions,
+      compiledOptions.resolvedPreset.worker.taskDirectory,
     );
-  }
-
-  if (SCHEMA_ONLY) {
-    await runMigrations(compiledSharedOptions._rawOptions);
-    console.log("Schema updated");
-    return;
-  }
-
-  const watchedTasks = await getTasks(
-    compiledSharedOptions._rawOptions,
-    compiledSharedOptions.resolvedPreset.worker.taskDirectory,
-  );
-  const watchedCronItems = await getCronItems(
-    compiledSharedOptions._rawOptions,
-    compiledSharedOptions.resolvedPreset.worker.crontabFile,
-  );
-
-  if (ONCE) {
-    await runOnce(compiledSharedOptions._rawOptions, watchedTasks.tasks);
-  } else {
-    const { promise } = await run(
-      compiledSharedOptions._rawOptions,
-      watchedTasks.tasks,
-      watchedCronItems.items,
+    compiledOptions.releasers.push(() => watchedTasks.release());
+    const watchedCronItems = await getCronItems(
+      compiledOptions._rawOptions,
+      compiledOptions.resolvedPreset.worker.crontabFile,
     );
-    // Continue forever(ish)
-    await promise;
+    compiledOptions.releasers.push(() => watchedCronItems.release());
+
+    if (ONCE) {
+      await runOnceInternal(compiledOptions, watchedTasks.tasks);
+    } else {
+      const { promise } = await runInternal(
+        compiledOptions,
+        watchedTasks.tasks,
+        watchedCronItems.items,
+      );
+      // Continue forever(ish)
+      await promise;
+    }
+  } finally {
+    await compiledOptions.release();
+    const timer = setTimeout(() => {
+      console.error(
+        `Worker failed to exit naturally after 10 seconds; terminating manually. This may indicate a bug in Graphile Worker.`,
+      );
+      process.exit(1);
+    }, 10000);
+    timer.unref();
   }
-  watchedTasks.release();
-  watchedCronItems.release();
-  const timer = setTimeout(() => {
-    console.error(
-      `Worker failed to exit naturally after 10 seconds; terminating manually. This may indicate a bug in Graphile Worker.`,
-    );
-    process.exit(1);
-  }, 10000);
-  timer.unref();
 }
 
 main().catch((e) => {

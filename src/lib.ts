@@ -196,6 +196,11 @@ export function processSharedOptions<
   options: T,
   { scope }: ProcessSharedOptionsSettings = {},
 ): CompiledSharedOptions<T> {
+  if ("_rawOptions" in options) {
+    throw new Error(
+      `Fed processed options to processSharedOptions; this is invalid.`,
+    );
+  }
   let compiled = _sharedOptionsCache.get(options) as
     | CompiledSharedOptions<T>
     | undefined;
@@ -359,7 +364,13 @@ export async function withReleasers<T>(
   callback: (releasers: Releasers, release: Release) => Promise<T>,
 ): Promise<T> {
   const releasers: Releasers = [];
+  let released = false;
   const release: Release = async () => {
+    if (released) {
+      throw new Error(`Internal error: compiledOptions was released twice.`);
+    } else {
+      released = true;
+    }
     let firstError: Error | null = null;
     // Call releasers in reverse order - LIFO queue.
     for (let i = releasers.length - 1; i >= 0; i--) {
@@ -401,6 +412,11 @@ export const getUtilsAndReleasersFromOptions = async (
   options: RunnerOptions,
   settings: ProcessSharedOptionsSettings = {},
 ): Promise<CompiledOptions> => {
+  if ("_rawOptions" in options) {
+    throw new Error(
+      `Fed processed options to getUtilsAndReleasersFromOptions; this is invalid.`,
+    );
+  }
   const compiledSharedOptions = processSharedOptions(options, settings);
   const {
     logger,

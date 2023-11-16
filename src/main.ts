@@ -215,6 +215,14 @@ export function runTaskList(
   pgPool: Pool,
 ): WorkerPool {
   const compiledSharedOptions = processSharedOptions(rawOptions);
+  return runTaskListInternal(compiledSharedOptions, tasks, pgPool);
+}
+
+export function runTaskListInternal(
+  compiledSharedOptions: CompiledSharedOptions<WorkerPoolOptions>,
+  tasks: TaskList,
+  pgPool: Pool,
+): WorkerPool {
   const {
     events,
     logger,
