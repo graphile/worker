@@ -82,8 +82,10 @@ const argv = yargs
   .string("config")
   .strict(true).argv;
 
-const isInteger = (n: number | undefined): boolean => {
-  return typeof n === "number" && isFinite(n) && Math.round(n) === n;
+const integerOrUndefined = (n: number | undefined): number | undefined => {
+  return typeof n === "number" && isFinite(n) && Math.round(n) === n
+    ? n
+    : undefined;
 };
 
 function stripUndefined<T extends object>(
@@ -98,16 +100,12 @@ function argvToPreset(inArgv: Awaited<typeof argv>): GraphileConfig.Preset {
   return {
     worker: stripUndefined({
       connectionString: inArgv["connection"],
-      maxPoolSize: isInteger(inArgv["max-pool-size"])
-        ? inArgv["max-pool-size"]
-        : undefined,
-      pollInterval: isInteger(inArgv["poll-interval"])
-        ? inArgv["poll-interval"]
-        : undefined,
+      maxPoolSize: integerOrUndefined(inArgv["max-pool-size"]),
+      pollInterval: integerOrUndefined(inArgv["poll-interval"]),
       preparedStatements: !inArgv["no-prepared-statements"],
       schema: inArgv.schema,
       crontabFile: inArgv["crontab"],
-      concurrentJobs: isInteger(inArgv.jobs) ? inArgv.jobs : undefined,
+      concurrentJobs: integerOrUndefined(inArgv.jobs),
     }),
   };
 }
