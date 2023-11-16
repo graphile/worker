@@ -19,7 +19,8 @@ import {
 } from "./interfaces";
 import { Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
-import { WorkerPreset, workerPresetWorkerOptions } from "./preset";
+import { makeWorkerPresetWorkerOptions } from "./config";
+import { WorkerPreset } from "./preset";
 import { version } from "./version";
 
 const MAX_MIGRATION_NUMBER = Object.keys(migrations).reduce(
@@ -37,7 +38,8 @@ export const BREAKING_MIGRATIONS = Object.entries(migrations)
   .map(([migrationFile]) => parseInt(migrationFile.slice(0, 6), 10));
 
 export type ResolvedWorkerPreset = GraphileConfig.ResolvedPreset & {
-  worker: GraphileConfig.WorkerOptions & typeof workerPresetWorkerOptions;
+  worker: GraphileConfig.WorkerOptions &
+    ReturnType<typeof makeWorkerPresetWorkerOptions>;
 };
 
 // NOTE: when you add things here, you may also want to add them to WorkerPluginContext
@@ -77,6 +79,18 @@ type SomeOptions = SharedOptions &
  * `crontab`, `parsedCronItems`!
  */
 function legacyOptionsToPreset(options: SomeOptions): GraphileConfig.Preset {
+  if ("_rawOptions" in options) {
+    console.trace(
+      "GraphileWorkerInternalError: CompiledSharedOptions used where SharedOptions was expected.",
+    );
+    throw new Error(
+      "GraphileWorkerInternalError: CompiledSharedOptions used where SharedOptions was expected.",
+    );
+  }
+  assert.ok(
+    !options.taskList || !options.taskDirectory,
+    "Exactly one of either `taskDirectory` or `taskList` should be set",
+  );
   const preset = {
     extends: [] as GraphileConfig.Preset[],
     worker: {} as Partial<GraphileConfig.WorkerOptions>,

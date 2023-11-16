@@ -15,7 +15,12 @@ import {
   TimestampDigest,
   WorkerEvents,
 } from "./interfaces";
-import { CompiledOptions, processSharedOptions, Releasers } from "./lib";
+import {
+  CompiledOptions,
+  CompiledSharedOptions,
+  processSharedOptions,
+  Releasers,
+} from "./lib";
 
 interface CronRequirements {
   pgPool: Pool;
@@ -277,7 +282,7 @@ const ONE_MINUTE = 60 * 1000;
  * @param requirements - the helpers that this task needs
  */
 export const runCron = (
-  options: RunnerOptions,
+  compiledSharedOptions: CompiledSharedOptions<RunnerOptions>,
   parsedCronItems: ParsedCronItem[],
   requirements: CronRequirements,
 ): Cron => {
@@ -289,7 +294,7 @@ export const runCron = (
     resolvedPreset: {
       worker: { useNodeTime },
     },
-  } = processSharedOptions(options);
+  } = compiledSharedOptions;
 
   const promise = defer();
   let released = false;

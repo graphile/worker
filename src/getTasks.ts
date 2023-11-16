@@ -87,7 +87,7 @@ export default async function getTasks(
   const pathStat = await tryStat(taskPath);
   if (!pathStat) {
     throw new Error(
-      `Could not find tasks to execute - '${taskPath}' does not exist`,
+      `Could not find tasks to execute - taskDirectory '${taskPath}' does not exist`,
     );
   }
 

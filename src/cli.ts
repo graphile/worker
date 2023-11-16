@@ -2,13 +2,15 @@
 import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
-import { defaults } from "./config";
+import { WorkerPreset } from "./preset";
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
-import { run, RunnerOptions, runOnce } from "./index";
+import { run, runOnce } from "./index";
 import { processSharedOptions } from "./lib";
 import { EMPTY_PRESET } from "./preset";
 import { runMigrations } from "./runner";
+
+const defaults = WorkerPreset.worker!;
 
 const argv = yargs
   .parserConfiguration({
@@ -126,12 +128,11 @@ async function main() {
     throw new Error("Cannot specify both --once and --schema-only");
   }
 
-  const options: RunnerOptions = {
+  const compiledSharedOptions = processSharedOptions({
     preset: {
       extends: [userPreset ?? EMPTY_PRESET, argvToPreset(argv)],
     },
-  };
-  const compiledSharedOptions = processSharedOptions(options);
+  });
 
   if (!compiledSharedOptions.resolvedPreset.worker.connectionString) {
     throw new Error(
@@ -140,25 +141,25 @@ async function main() {
   }
 
   if (SCHEMA_ONLY) {
-    await runMigrations(options);
+    await runMigrations(compiledSharedOptions._rawOptions);
     console.log("Schema updated");
     return;
   }
 
   const watchedTasks = await getTasks(
-    options,
-    options.taskDirectory ?? defaults.taskDirectory,
+    compiledSharedOptions._rawOptions,
+    compiledSharedOptions.resolvedPreset.worker.taskDirectory,
   );
   const watchedCronItems = await getCronItems(
-    options,
-    options.crontabFile ?? defaults.crontabFile,
+    compiledSharedOptions._rawOptions,
+    compiledSharedOptions.resolvedPreset.worker.crontabFile,
   );
 
   if (ONCE) {
-    await runOnce(options, watchedTasks.tasks);
+    await runOnce(compiledSharedOptions._rawOptions, watchedTasks.tasks);
   } else {
     const { promise } = await run(
-      options,
+      compiledSharedOptions._rawOptions,
       watchedTasks.tasks,
       watchedCronItems.items,
     );
