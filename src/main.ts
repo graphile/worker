@@ -440,7 +440,7 @@ export function runTaskList(
       client.removeListener("error", onErrorReleaseClientAndTryAgain);
       events.emit("pool:listen:release", { workerPool, client });
       return client
-        .query('UNLISTEN "jobs:insert"')
+        .query('UNLISTEN "jobs:insert"; UNLISTEN "worker:migrate";')
         .catch((error) => {
           /* ignore errors */
           logger.error(`Error occurred attempting to UNLISTEN: ${error}`, {
@@ -460,13 +460,10 @@ export function runTaskList(
     client.on("notification", handleNotification);
 
     // Subscribe to jobs:insert message
-    client.query('LISTEN "jobs:insert"').then(() => {
+    client.query('LISTEN "jobs:insert"; LISTEN "worker:migrate";').then(() => {
       // Successful listen; reset attempts
       attempts = 0;
     }, onErrorReleaseClientAndTryAgain);
-    client
-      .query('LISTEN "worker:migrate"')
-      .then(null, onErrorReleaseClientAndTryAgain);
 
     const supportedTaskNames = Object.keys(tasks);
 
