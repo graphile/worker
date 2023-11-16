@@ -162,11 +162,19 @@ function buildRunner(input: {
 
   let running = true;
   const stop = async () => {
+    compiledOptions.logger.debug("Runner stopping");
     if (running) {
       running = false;
       events.emit("stop", {});
       try {
-        await release();
+        const promises: Array<PromiseOrDirect<void>> = [];
+        if (cron._active) {
+          promises.push(cron.release());
+        }
+        if (workerPool._active) {
+          promises.push(workerPool.gracefulShutdown());
+        }
+        await Promise.all(promises).then(release);
       } catch (error) {
         logger.error(
           `Error occurred whilst attempting to release runner options: ${error.message}`,
