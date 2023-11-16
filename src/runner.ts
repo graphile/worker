@@ -1,5 +1,3 @@
-import * as assert from "assert";
-
 import { getParsedCronItemsFromOptions, runCron } from "./cron";
 import getTasks from "./getTasks";
 import { ParsedCronItem, Runner, RunnerOptions, TaskList } from "./interfaces";

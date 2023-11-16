@@ -1,6 +1,8 @@
 import { Pool } from "pg";
 
+import { makeWorkerPresetWorkerOptions } from "../src/config";
 import { RunnerOptions } from "../src/interfaces";
+import { WorkerPreset } from "../src/preset";
 import { runOnce } from "../src/runner";
 import {
   PGDATABASE,
@@ -8,8 +10,6 @@ import {
   TEST_CONNECTION_STRING,
   withPgPool,
 } from "./helpers";
-import { WorkerPreset } from "../src/preset";
-import { makeWorkerPresetWorkerOptions } from "../src/config";
 
 function setEnvvars(env: { [key: string]: string | undefined }) {
   Object.entries(env).forEach(([key, val]) => {

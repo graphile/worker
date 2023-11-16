@@ -15,12 +15,7 @@ import {
   TimestampDigest,
   WorkerEvents,
 } from "./interfaces";
-import {
-  CompiledOptions,
-  CompiledSharedOptions,
-  processSharedOptions,
-  Releasers,
-} from "./lib";
+import { CompiledOptions, CompiledSharedOptions, Releasers } from "./lib";
 
 interface CronRequirements {
   pgPool: Pool;

@@ -3,6 +3,7 @@ import { EventEmitter } from "events";
 import { applyHooks, AsyncHooks, resolvePresets } from "graphile-config";
 import { Client, Pool, PoolClient } from "pg";
 
+import { makeWorkerPresetWorkerOptions } from "./config";
 import { migrations } from "./generated/sql";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
 import {
@@ -19,7 +20,6 @@ import {
 } from "./interfaces";
 import { Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
-import { makeWorkerPresetWorkerOptions } from "./config";
 import { WorkerPreset } from "./preset";
 import { version } from "./version";
 

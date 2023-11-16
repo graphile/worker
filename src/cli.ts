@@ -2,12 +2,11 @@
 import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
-import { WorkerPreset } from "./preset";
 import getCronItems from "./getCronItems";
 import getTasks from "./getTasks";
 import { run, runOnce } from "./index";
 import { processSharedOptions } from "./lib";
-import { EMPTY_PRESET } from "./preset";
+import { EMPTY_PRESET, WorkerPreset } from "./preset";
 import { runMigrations } from "./runner";
 
 const defaults = WorkerPreset.worker!;
