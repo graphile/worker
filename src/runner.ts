@@ -15,7 +15,7 @@ import {
 import { _runTaskList, runTaskListInternal } from "./main";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
-  const { release } = await getUtilsAndReleasersFromOptions(options);
+  const [, release] = await getUtilsAndReleasersFromOptions(options);
   await release();
 };
 
@@ -48,12 +48,10 @@ export const runOnce = async (
   options: RunnerOptions,
   overrideTaskList?: TaskList,
 ): Promise<void> => {
-  const compiledOptions = await getUtilsAndReleasersFromOptions(options);
-  return runOnceInternal(
-    compiledOptions,
-    overrideTaskList,
-    compiledOptions.release,
+  const [compiledOptions, release] = await getUtilsAndReleasersFromOptions(
+    options,
   );
+  return runOnceInternal(compiledOptions, overrideTaskList, release);
 };
 
 export const runOnceInternal = async (
@@ -89,12 +87,14 @@ export const run = async (
   overrideTaskList?: TaskList,
   overrideParsedCronItems?: Array<ParsedCronItem>,
 ): Promise<Runner> => {
-  const compiledOptions = await getUtilsAndReleasersFromOptions(rawOptions);
+  const [compiledOptions, release] = await getUtilsAndReleasersFromOptions(
+    rawOptions,
+  );
   return runInternal(
     compiledOptions,
     overrideTaskList,
     overrideParsedCronItems,
-    compiledOptions.release,
+    release,
   );
 };
 

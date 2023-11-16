@@ -8,6 +8,7 @@ import { migrations } from "./generated/sql";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
 import {
   AddJobFunction,
+  PromiseOrDirect,
   RunnerOptions,
   RunOnceOptions,
   SharedOptions,
@@ -358,7 +359,7 @@ export async function assertPool(
   return pgPool;
 }
 
-export type Release = () => Promise<void>;
+export type Release = () => PromiseOrDirect<void>;
 
 export async function withReleasers<T>(
   callback: (releasers: Releasers, release: Release) => Promise<T>,
@@ -400,7 +401,6 @@ interface ProcessOptionsExtensions {
   pgPool: Pool;
   withPgClient: WithPgClient;
   addJob: AddJobFunction;
-  release: Release;
   releasers: Releasers;
 }
 
@@ -408,10 +408,15 @@ export interface CompiledOptions
   extends CompiledSharedOptions<RunnerOptions>,
     ProcessOptionsExtensions {}
 
+type CompiledOptionsAndRelease = [
+  compiledOptions: CompiledOptions,
+  release: (error?: Error) => PromiseOrDirect<void>,
+];
+
 export const getUtilsAndReleasersFromOptions = async (
   options: RunnerOptions,
   settings: ProcessSharedOptionsSettings = {},
-): Promise<CompiledOptions> => {
+): Promise<CompiledOptionsAndRelease> => {
   if ("_rawOptions" in options) {
     throw new Error(
       `Fed processed options to getUtilsAndReleasersFromOptions; this is invalid.`,
@@ -427,7 +432,7 @@ export const getUtilsAndReleasersFromOptions = async (
   return withReleasers(async function getUtilsFromOptions(
     releasers,
     release,
-  ): Promise<CompiledOptions> {
+  ): Promise<CompiledOptionsAndRelease> {
     const pgPool: Pool = await assertPool(compiledSharedOptions, releasers);
     // @ts-ignore
     const max = pgPool?.options?.max || 10;
@@ -447,14 +452,16 @@ export const getUtilsAndReleasersFromOptions = async (
 
     const addJob = makeAddJob(compiledSharedOptions, withPgClient);
 
-    return {
-      ...compiledSharedOptions,
-      pgPool,
-      withPgClient,
-      addJob,
+    return [
+      {
+        ...compiledSharedOptions,
+        pgPool,
+        withPgClient,
+        addJob,
+        releasers,
+      },
       release,
-      releasers,
-    };
+    ];
   });
 };
 

@@ -124,7 +124,7 @@ async function main() {
     throw new Error("Cannot specify both --once and --schema-only");
   }
 
-  const compiledOptions = await getUtilsAndReleasersFromOptions({
+  const [compiledOptions, release] = await getUtilsAndReleasersFromOptions({
     preset: {
       extends: [userPreset ?? EMPTY_PRESET, argvToPreset(argv)],
     },
@@ -172,7 +172,7 @@ async function main() {
       await promise;
     }
   } finally {
-    await compiledOptions.release();
+    await release();
     const timer = setTimeout(() => {
       console.error(
         `Worker failed to exit naturally after 10 seconds; terminating manually. This may indicate a bug in Graphile Worker.`,
