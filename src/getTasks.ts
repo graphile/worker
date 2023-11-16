@@ -83,7 +83,9 @@ export async function getTasks(
   taskPath: string,
 ): Promise<WatchedTaskList> {
   const compiledSharedOptions = processSharedOptions(options);
-  return getTasksInternal(compiledSharedOptions, taskPath);
+  const result = await getTasksInternal(compiledSharedOptions, taskPath);
+  // This assign is used in `__tests__/getTasks.test.ts`
+  return Object.assign(result, { compiledSharedOptions });
 }
 
 export async function getTasksInternal(
@@ -143,7 +145,6 @@ export async function getTasksInternal(
   let released = false;
   return {
     tasks,
-    compiledSharedOptions,
     release: () => {
       if (released) {
         return;

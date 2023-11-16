@@ -198,8 +198,6 @@ export type TaskList = {
 export interface WatchedTaskList {
   tasks: TaskList;
   release: () => void;
-  /** @internal */
-  compiledSharedOptions: CompiledSharedOptions;
 }
 
 export interface WatchedCronItems {
