@@ -64,15 +64,15 @@ export interface CompiledSharedOptions<
 interface ProcessSharedOptionsSettings {
   scope?: LogScope;
 }
-type SomeOptions =
-  | SharedOptions
-  | WorkerSharedOptions
-  | WorkerOptions
-  | RunOnceOptions
-  | WorkerUtilsOptions;
+type SomeOptions = SharedOptions &
+  Partial<WorkerSharedOptions> &
+  Partial<WorkerOptions> &
+  Partial<RunOnceOptions> &
+  Partial<WorkerUtilsOptions>;
 
 /**
- * Important: ensure you still handle `forbiddenFlags` and `pgPool`!
+ * Important: ensure you still handle `forbiddenFlags`, `pgPool`, `workerId`,
+ * `autostart`, `workerPool`, `abortSignal`, `noHandleSignals`!
  */
 function legacyOptionsToPreset(options: SomeOptions): GraphileConfig.Preset {
   const preset = {
@@ -85,7 +85,12 @@ function legacyOptionsToPreset(options: SomeOptions): GraphileConfig.Preset {
     }
     switch (key) {
       case "forbiddenFlags":
-      case "pgPool": {
+      case "pgPool":
+      case "workerId":
+      case "autostart":
+      case "workerPool":
+      case "abortSignal":
+      case "noHandleSignals": {
         // ignore
         break;
       }
@@ -131,6 +136,14 @@ function legacyOptionsToPreset(options: SomeOptions): GraphileConfig.Preset {
       }
       case "gracefulShutdownAbortTimeout": {
         preset.worker.gracefulShutdownAbortTimeout = options[key]!;
+        break;
+      }
+      case "pollInterval": {
+        preset.worker.pollInterval = options[key]!;
+        break;
+      }
+      case "concurrency": {
+        preset.worker.concurrentJobs = options[key]!;
         break;
       }
       default: {
