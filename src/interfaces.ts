@@ -327,7 +327,7 @@ export interface Worker {
   workerPool: WorkerPool;
   nudge: () => boolean;
   workerId: string;
-  release: () => void | Promise<void>;
+  release: (force?: boolean) => void | Promise<void>;
   promise: Promise<void>;
   getActiveJob: () => Job | null;
   /** @internal */

@@ -712,8 +712,9 @@ export function _runTaskList(
           .filter((job): job is Job => !!job);
 
         // Remove all the workers - we're shutting them down manually
-        const workerPromises = workers.map((worker) => worker.release());
+        const workerPromises = workers.map((worker) => worker.release(true));
         // Ignore the results, we're shutting down anyway
+        // TODO: add a timeout
         const [deactivateResult, ..._ignoreWorkerReleaseResults] =
           await Promise.allSettled([deactivatePromise, ...workerPromises]);
         if (deactivateResult.status === "rejected") {

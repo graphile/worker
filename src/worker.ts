@@ -82,16 +82,21 @@ export function makeNewWorker(
   };
   let active = true;
 
-  const release = () => {
-    if (!active) {
-      return promise;
-    }
-    active = false;
-    events.emit("worker:release", { worker });
-    if (cancelDoNext()) {
+  const release = (force = false) => {
+    if (active) {
+      active = false;
+      events.emit("worker:release", { worker });
+
+      if (cancelDoNext()) {
+        workerDeferred.resolve();
+      } else if (force) {
+        // TODO: do `abortController.abort()` instead
+        workerDeferred.resolve();
+      }
+    } else if (force) {
       workerDeferred.resolve();
     }
-    return Promise.resolve(promise);
+    return promise;
   };
 
   const nudge = () => {

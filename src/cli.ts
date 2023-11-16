@@ -174,7 +174,7 @@ async function main() {
   } finally {
     const timer = setTimeout(() => {
       console.error(
-        `Worker failed to exit naturally after 10 seconds; terminating manually. This may indicate a bug in Graphile Worker.`,
+        `Worker failed to exit naturally after 10 seconds; terminating manually. This may indicate a bug in Graphile Worker, or it might be that you triggered a forceful shutdown and some of your executing tasks have yet to exit.`,
       );
       process.exit(1);
     }, 10000);
