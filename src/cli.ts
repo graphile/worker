@@ -139,7 +139,6 @@ async function main() {
       );
     }
 
-
     if (SCHEMA_ONLY) {
       console.log("Schema updated");
       return;
@@ -157,12 +156,17 @@ async function main() {
     compiledOptions.releasers.push(() => watchedCronItems.release());
 
     if (ONCE) {
-      await runOnceInternal(compiledOptions, watchedTasks.tasks);
+      await runOnceInternal(compiledOptions, watchedTasks.tasks, () => {
+        /* noop */
+      });
     } else {
       const { promise } = await runInternal(
         compiledOptions,
         watchedTasks.tasks,
         watchedCronItems.items,
+        () => {
+          /*noop*/
+        },
       );
       // Continue forever(ish)
       await promise;

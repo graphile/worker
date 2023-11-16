@@ -395,6 +395,8 @@ export interface Runner {
 export interface Cron {
   release(): Promise<void>;
   promise: Promise<void>;
+  /** @internal */
+  _active: boolean;
 }
 
 export interface TaskSpec {

@@ -292,17 +292,16 @@ export const runCron = (
   } = compiledSharedOptions;
 
   const promise = defer();
-  let released = false;
   let timeout: NodeJS.Timeout | null = null;
 
   let stopCalled = false;
   function stop(e?: Error) {
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
     if (!stopCalled) {
       stopCalled = true;
-      if (timeout) {
-        clearTimeout(timeout);
-        timeout = null;
-      }
       if (e) {
         promise.reject(e);
       } else {
@@ -316,7 +315,7 @@ export const runCron = (
   }
 
   async function cronMain() {
-    if (released) {
+    if (!cron._active) {
       return stop();
     }
 
@@ -335,7 +334,7 @@ export const runCron = (
 
     events.emit("cron:started", { cron: this, start });
 
-    if (released) {
+    if (!cron._active) {
       return stop();
     }
 
@@ -346,7 +345,7 @@ export const runCron = (
     const nextTimestamp = unsafeRoundToMinute(new Date(+start), true);
 
     const scheduleNextLoop = () => {
-      if (released) {
+      if (!cron._active) {
         return stop();
       }
       // + 1 millisecond to try and ensure this happens in the next minute
@@ -359,7 +358,7 @@ export const runCron = (
 
     async function loop() {
       try {
-        if (released) {
+        if (!cron._active) {
           return stop();
         }
 
@@ -449,7 +448,7 @@ export const runCron = (
             jobsAndIdentifiers,
           });
 
-          if (released) {
+          if (!cron._active) {
             return stop();
           }
         }
@@ -470,12 +469,11 @@ export const runCron = (
     scheduleNextLoop();
   }
 
-  cronMain().catch(stop);
-
-  return {
+  const cron: Cron = {
+    _active: true,
     release() {
-      if (!released) {
-        released = true;
+      if (cron._active) {
+        cron._active = false;
         if (timeout) {
           // Next loop is queued; lets cancel it early
           stop();
@@ -485,6 +483,10 @@ export const runCron = (
     },
     promise,
   };
+
+  cronMain().catch(stop);
+
+  return cron;
 };
 
 /** @internal */
