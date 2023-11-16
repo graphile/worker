@@ -4,7 +4,7 @@ import { Pool } from "pg";
 import { cronItemMatches } from "./cronMatcher";
 import { parseCrontab } from "./crontab";
 import defer from "./deferred";
-import getCronItems from "./getCronItems";
+import { getCronItemsInternal } from "./getCronItems";
 import {
   Cron,
   CronJob,
@@ -540,8 +540,8 @@ export async function getParsedCronItemsFromOptions(
 
     return parsedCronItems;
   } else {
-    const watchedCronItems = await getCronItems(
-      compiledOptions._rawOptions,
+    const watchedCronItems = await getCronItemsInternal(
+      compiledOptions,
       crontabFile,
     );
     releasers.push(() => watchedCronItems.release());

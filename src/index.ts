@@ -2,8 +2,8 @@ import { Logger } from "@graphile/logger";
 import { PluginHook } from "graphile-config";
 import type { PoolClient } from "pg";
 
-import getCronItems from "./getCronItems";
-import getTasks from "./getTasks";
+import { getCronItems } from "./getCronItems";
+import { getTasks } from "./getTasks";
 import {
   FileDetails,
   PromiseOrDirect,

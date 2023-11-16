@@ -2,8 +2,8 @@
 import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
-import getCronItems from "./getCronItems";
-import getTasks from "./getTasks";
+import { getCronItemsInternal } from "./getCronItems";
+import { getTasksInternal } from "./getTasks";
 import { getUtilsAndReleasersFromOptions } from "./lib";
 import { EMPTY_PRESET, WorkerPreset } from "./preset";
 import { runInternal, runOnceInternal } from "./runner";
@@ -144,13 +144,13 @@ async function main() {
       return;
     }
 
-    const watchedTasks = await getTasks(
-      compiledOptions._rawOptions,
+    const watchedTasks = await getTasksInternal(
+      compiledOptions,
       compiledOptions.resolvedPreset.worker.taskDirectory,
     );
     compiledOptions.releasers.push(() => watchedTasks.release());
-    const watchedCronItems = await getCronItems(
-      compiledOptions._rawOptions,
+    const watchedCronItems = await getCronItemsInternal(
+      compiledOptions,
       compiledOptions.resolvedPreset.worker.crontabFile,
     );
     compiledOptions.releasers.push(() => watchedCronItems.release());

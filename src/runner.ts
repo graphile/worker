@@ -1,5 +1,5 @@
 import { getParsedCronItemsFromOptions, runCron } from "./cron";
-import getTasks from "./getTasks";
+import { getTasksInternal } from "./getTasks";
 import {
   ParsedCronItem,
   PromiseOrDirect,
@@ -33,10 +33,7 @@ async function assertTaskList(
   if (taskList) {
     return taskList;
   } else if (taskDirectory) {
-    const watchedTasks = await getTasks(
-      compiledOptions._rawOptions,
-      taskDirectory,
-    );
+    const watchedTasks = await getTasksInternal(compiledOptions, taskDirectory);
     releasers.push(() => watchedTasks.release());
     return watchedTasks.tasks;
   } else {

@@ -78,11 +78,18 @@ async function loadFileIntoTasks(
   }
 }
 
-export default async function getTasks(
+export async function getTasks(
   options: SharedOptions,
   taskPath: string,
 ): Promise<WatchedTaskList> {
   const compiledSharedOptions = processSharedOptions(options);
+  return getTasksInternal(compiledSharedOptions, taskPath);
+}
+
+export async function getTasksInternal(
+  compiledSharedOptions: CompiledSharedOptions,
+  taskPath: string,
+): Promise<WatchedTaskList> {
   const { logger } = compiledSharedOptions;
   const pathStat = await tryStat(taskPath);
   if (!pathStat) {
