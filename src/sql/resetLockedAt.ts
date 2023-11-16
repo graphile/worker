@@ -20,7 +20,7 @@ export async function resetLockedAt(
       text: `\
 with j as (
 update ${escapedWorkerSchema}.jobs
-set locked_at = null, locked_by = null, run_at = greatest(run_at, now())
+set locked_at = null, locked_by = null, run_at = greatest(run_at, ${now})
 where locked_at < ${now} - interval '4 hours'
 )
 update ${escapedWorkerSchema}.job_queues
