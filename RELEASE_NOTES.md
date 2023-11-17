@@ -2,15 +2,25 @@
 
 ### v0.16.0
 
+**THIS RELEASE INTRODUCES SIGNIFICANT CHANGES**, in preparation for moving
+towards the 1.0 release. Please read these notes carefully.
+
+**IMPORTANT**: this release is incompatible with previous releases - do not run
+earlier workers against this releases database schema or Bad Things will happen.
+You should shut down all workers before migrating to this version, or use
+[Worker Pro](https://worker.graphile.org/docs/pro).
+
 **DROPS SUPPORT FOR NODE <18**. As of 24th October 2023, Node 20 is the active
 LTS and Node 18 is maintainence LTS; previous versions are no longer supported.
 
-**RENAMES** all of the tables `*` to `_private_*` to make it clear that you
-should not rely on their schema being stable. We might change them in a patch
-release. This has always been the case, but the naming makes this clearer.
+**RENAMES** all of the tables `graphile_worker.*` to
+`graphile_worker._private_*` to make it clear that you should not rely on their
+schema being stable. We might change them in a patch release. This has always
+been the case, but the naming makes this clearer.
 
 **ADDS** `graphile_worker.jobs` view as a public interface to view details of
-jobs. NOTE: this interface DELIBERATELY excludes the `payload` field.
+jobs. NOTE: this interface DELIBERATELY excludes the `payload` field. NOTE: do
+not poll this, it will impact performance.
 
 **REMOVES `maxContiguousErrors`**. See #307; it wasn't fit for purpose, so best
 to remove it for now.
@@ -107,6 +117,7 @@ towards the 1.0 release. Please read these notes carefully.
 
 **IMPORTANT**: this release is incompatible with previous releases - do not run
 earlier workers against this releases database schema or Bad Things will happen.
+You should shut down all workers before migrating to this version.
 
 **IMPORTANT**: the initial migration, `000011`, in this release cannot run if
 there are any locked jobs - it will throw a "division by zero" error in this
