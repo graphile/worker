@@ -2231,7 +2231,7 @@ begin
       returning *
       into v_job;
     if v_job.revision = 0 then
-      perform pg_notify('jobs:insert', '{"count":1}');
+      perform pg_notify('jobs:insert', '{"r":' || random()::text || ',"count":1}');
     end if;
     return v_job;
   else
@@ -2271,7 +2271,7 @@ begin
   and is_available is not true;
 
   -- WARNING: this count is not 100% accurate; 'on conflict' clause will cause it to be an overestimate
-  perform pg_notify('jobs:insert', '{"count":' || array_length(specs, 1)::text || '}');
+  perform pg_notify('jobs:insert', '{"r":' || random()::text || ',"count":' || array_length(specs, 1)::text || '}');
 
   -- TODO: is there a risk that a conflict could occur depending on the
   -- isolation level?
@@ -2345,7 +2345,7 @@ begin
     )
   returning * into v_job;
   if not (v_job is null) then
-    perform pg_notify('jobs:insert', '{"count":-1}');
+    perform pg_notify('jobs:insert', '{"r":' || random()::text || ',"count":-1}');
     return v_job;
   end if;
   -- Otherwise prevent job from retrying, and clear the key
