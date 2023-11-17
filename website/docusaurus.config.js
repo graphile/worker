@@ -20,7 +20,7 @@ const config = {
   <meta name="msapplication-config" content="/img/browserconfig.xml">
   <meta name="theme-color" content="#ffffff">
   */
-  favicon: "img/favicon.ico",
+  favicon: "favicon.ico",
 
   url: "https://worker.graphile.org",
   baseUrl: "/",
@@ -77,6 +77,39 @@ const config = {
     },
   ],
 
+  headTags: [
+    {
+      tagName: "link",
+      attributes: {
+        rel: "apple-touch-icon",
+        sizes: "180x180",
+        href: "/apple-touch-icon.png",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "icon",
+        type: "image/png",
+        sizes: "32x32",
+        href: "/favicon-32x32.png",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "icon",
+        type: "image/png",
+        sizes: "16x16",
+        href: "/favicon-16x16.png",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: { rel: "manifest", href: "/site.webmanifest" },
+    },
+  ],
+
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
@@ -85,7 +118,7 @@ const config = {
         title: "Graphile Worker",
         logo: {
           alt: "Graphile Worker",
-          src: "img/worker-logo.svg",
+          src: "img/logo.optimized.svg",
         },
         items: [
           {
