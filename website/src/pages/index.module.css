@@ -4,24 +4,92 @@
  */
 
 .heroBanner {
-  padding: 4rem 0;
+  padding: 2rem 0;
   text-align: center;
   position: relative;
   overflow: hidden;
+  display: flex;
 }
 
-@media screen and (max-width: 996px) {
-  .heroBanner {
-    padding: 2rem;
-  }
+.heroRow {
+  align-items: center;
 }
 
 .buttons {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-transform: uppercase;
 }
 .buttons > * {
   margin: 0.5rem;
+}
+
+.buttonHero {
+  composes: buttonHero from "@site/src/css/common.module.css";
+}
+
+.buttonHero:hover {
+  border: 1px solid var(--ifm-color-primary-darker);
+  background-color: var(--ifm-color-primary-darker);
+}
+
+.buttonHeroOutline {
+  color: var(--ifm-color-primary);
+}
+
+.buttonHeroOutline:hover {
+  color: var(--ifm-color-primary-darker);
+  background-color: #ffffff;
+}
+
+.hero {
+  color: var(--ifm-color-primary-darkest);
+  font-size: 2.5rem;
+  text-align: left;
+}
+
+[data-theme="dark"] .hero {
+  color: var(--ifm-color-primary-light);
+}
+
+.heroImage {
+  max-width: 70%;
+  height: auto;
+}
+
+.heroImage :global(.darkest) {
+  fill: var(--ifm-color-primary-darkest);
+}
+
+[data-theme="dark"] .heroImage :global(.darkest) {
+  fill: var(--ifm-color-primary-darker);
+}
+
+.heroImage :global(.primary) {
+  fill: var(--ifm-color-primary);
+}
+
+.github {
+  text-align: left;
+}
+
+.githubButton {
+  width: 8rem;
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 1rem;
+  }
+  .buttons {
+    flex-direction: column;
+  }
+  .buttonHero {
+    width: 100%;
+  }
+  .hero {
+    font-size: 1.8rem;
+    font-weight: bold;
+  }
 }

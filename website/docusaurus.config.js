@@ -20,7 +20,7 @@ const config = {
   <meta name="msapplication-config" content="/img/browserconfig.xml">
   <meta name="theme-color" content="#ffffff">
   */
-  favicon: "img/favicon.ico",
+  favicon: "favicon.ico",
 
   url: "https://worker.graphile.org",
   baseUrl: "/",
@@ -66,6 +66,50 @@ const config = {
     ],
   ],
 
+  stylesheets: [
+    {
+      href: "https://fonts.googleapis.com/css2?family=Sarabun",
+      type: "text/css",
+    },
+    {
+      href: "https://fonts.googleapis.com/css2?family=Fredericka+the+Great&text=Use%20The%20Stack%20You%20Have.",
+      type: "text/css",
+    },
+  ],
+
+  headTags: [
+    {
+      tagName: "link",
+      attributes: {
+        rel: "apple-touch-icon",
+        sizes: "180x180",
+        href: "/apple-touch-icon.png",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "icon",
+        type: "image/png",
+        sizes: "32x32",
+        href: "/favicon-32x32.png",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "icon",
+        type: "image/png",
+        sizes: "16x16",
+        href: "/favicon-16x16.png",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: { rel: "manifest", href: "/site.webmanifest" },
+    },
+  ],
+
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
@@ -74,9 +118,14 @@ const config = {
         title: "Graphile Worker",
         logo: {
           alt: "Graphile Worker",
-          src: "img/logo.svg",
+          src: "img/logo.optimized.svg",
         },
         items: [
+          {
+            href: "https://graphile.org/sponsor/",
+            label: "Sponsor",
+            position: "right",
+          },
           {
             href: "https://github.com/graphile/worker",
             label: "GitHub",
@@ -88,11 +137,40 @@ const config = {
         style: "dark",
         links: [
           {
+            title: "Docs",
+            items: [
+              {
+                label: "Worker Introduction",
+                href: "/docs",
+              },
+              {
+                label: "Worker Quickstart",
+                href: "/docs/cli#quickstart",
+              },
+              {
+                html: '<a class="footer__link-item" href="https://postgraphile.org/">PostGraphile</a>',
+              },
+              {
+                html: '<a class="footer__link-item" href="https://grafast.org">Gra<em>fast</em></a>',
+              },
+              {
+                html: '<a class="footer__link-item" href="https://build.graphile.org/">Graphile Build</a>',
+              },
+              {
+                html: '<a class="footer__link-item" href="https://star.graphile.org">Graphile*</a>',
+              },
+            ],
+          },
+          {
             title: "Community",
             items: [
               {
                 label: "Discord",
                 href: "https://discord.gg/graphile",
+              },
+              {
+                label: "Mastodon",
+                href: "https://fosstodon.org/@graphile",
               },
               {
                 label: "Twitter",
@@ -106,6 +184,10 @@ const config = {
               {
                 label: "GitHub",
                 href: "https://github.com/graphile/worker",
+              },
+              {
+                label: "Sponsor",
+                href: "https://graphile.org/sponsor",
               },
             ],
           },

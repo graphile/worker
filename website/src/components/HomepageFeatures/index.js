@@ -8,7 +8,7 @@ import styles from "./styles.module.css";
 const FeatureList = [
   {
     title: "Reliable",
-    Svg: require("@site/static/img/undraw_docusaurus_mountain.svg").default,
+    Svg: require("@site/static/img/homepage/reliable.svg").default,
     description: (
       <>
         Automatic retries with automatic exponential backoff; built on Postgres'
@@ -18,7 +18,7 @@ const FeatureList = [
   },
   {
     title: "High Performance",
-    Svg: require("@site/static/img/undraw_docusaurus_react.svg").default,
+    Svg: require("@site/static/img/homepage/performance.svg").default,
     description: (
       <>
         Up to 10,000 jobs per second; keep your infrastructure simple (just
@@ -27,18 +27,8 @@ const FeatureList = [
     ),
   },
   {
-    title: "Cron Jobs",
-    Svg: require("@site/static/img/undraw_docusaurus_tree.svg").default,
-    description: (
-      <>
-        Set up repeating tasks with minute-by-minute granularity; optional
-        backfill to cover times when your servers weren't running.
-      </>
-    ),
-  },
-  {
-    title: "Low latency",
-    Svg: require("@site/static/img/undraw_docusaurus_react.svg").default,
+    title: "Low Latency",
+    Svg: require("@site/static/img/homepage/latency.svg").default,
     description: (
       <>
         Jobs start in milliseconds thanks to Postgres' LISTEN/NOTIFY; delight
@@ -47,8 +37,18 @@ const FeatureList = [
     ),
   },
   {
+    title: "Cron Jobs",
+    Svg: require("@site/static/img/homepage/cron-jobs.svg").default,
+    description: (
+      <>
+        Set up repeating tasks with minute-by-minute granularity; optional
+        backfill to cover times when your servers weren't running.
+      </>
+    ),
+  },
+  {
     title: "Job Control",
-    Svg: require("@site/static/img/undraw_docusaurus_tree.svg").default,
+    Svg: require("@site/static/img/homepage/job-control.svg").default,
     description: (
       <>
         Schedule jobs to run in the future. Debounce jobs to avoid redundant
@@ -58,7 +58,7 @@ const FeatureList = [
   },
   {
     title: "Easy Migration",
-    Svg: require("@site/static/img/undraw_docusaurus_mountain.svg").default,
+    Svg: require("@site/static/img/homepage/migration.svg").default,
     description: (
       <>
         Want to migrate to a dedicated job queue later? No problem! Examples of
@@ -70,13 +70,13 @@ const FeatureList = [
 
 function Feature({ Svg, title, description }) {
   return (
-    <div className={clsx("col col--4")}>
-      <div className="text--center">
+    <div className={clsx("col col--6 padding-vert--md", styles.feature)}>
+      <div className={styles.svgContainer}>
         <Svg className={styles.featureSvg} role="img" />
       </div>
-      <div className="text--center padding-horiz--md">
-        <h3>{title}</h3>
-        <p>{description}</p>
+      <div className={styles.featureDetails}>
+        <h2 className={styles.featureTitle}>{title}</h2>
+        <h3 className={styles.featureInfo}>{description}</h3>
       </div>
     </div>
   );
@@ -86,7 +86,7 @@ export default function HomepageFeatures() {
   return (
     <section className={styles.features}>
       <div className="container">
-        <div className="row">
+        <div className={clsx("row", styles.row)}>
           {FeatureList.map((props, idx) => (
             <Feature key={idx} {...props} />
           ))}

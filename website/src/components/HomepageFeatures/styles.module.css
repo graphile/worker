@@ -1,11 +1,66 @@
 .features {
-  display: flex;
-  align-items: center;
-  padding: 2rem 0;
-  width: 100%;
+  composes: contents from "../../css/common.module.css";
+  background-color: var(--ifm-color-primary-lightest);
+}
+
+[data-theme="dark"] .features {
+  background-color: var(--ifm-color-primary-darkest);
 }
 
 .featureSvg {
-  height: 200px;
-  width: 200px;
+  height: 100px;
+  width: 100px;
+}
+
+.svgContainer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex-grow: 1;
+  max-width: 25%;
+}
+
+.row {
+  composes: row from "@site/src/css/common.module.css";
+}
+
+.feature {
+  composes: content from "@site/src/css/common.module.css";
+  flex-direction: row;
+}
+
+.featureDetails {
+  display: flex;
+  flex-direction: column;
+  max-width: 75%;
+}
+
+.featureInfo {
+  composes: tagline from "@site/src/css/common.module.css";
+}
+
+@media screen and (max-width: 996px) {
+  .feature:nth-child(1) {
+    order: 1;
+  }
+  .feature:nth-child(2) {
+    order: 2;
+  }
+  .feature:nth-child(3) {
+    order: 4;
+  }
+  .feature:nth-child(4) {
+    order: 3;
+  }
+  .feature:nth-child(5) {
+    order: 5;
+  }
+  .feature:nth-child(6) {
+    order: 6;
+  }
+}
+@media screen and (max-width: 600px) {
+  .featureDetails {
+    padding-left: 1rem;
+  }
 }

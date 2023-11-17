@@ -1,0 +1,123 @@
+.testimonialSection {
+  composes: contents from "../../css/common.module.css";
+
+  /*background-color: var(--ifm-hero-background-color);*/
+}
+
+.testimonialContainer {
+  display: flex;
+  align-items: top;
+}
+
+[data-theme="dark"] .testimonials {
+  background-color: var(--ifm-color-primary-darkest);
+}
+
+.row {
+  composes: row from "@site/src/css/common.module.css";
+}
+
+.testimonial {
+  composes: content from "@site/src/css/common.module.css";
+  max-width: 40rem;
+  border: 1px solid var(--ifm-color-primary-darkest);
+  border-radius: 1rem;
+  box-shadow: 5px 5px 0px var(--ifm-color-primary-darkest);
+  display: flex;
+  flex-direction: row;
+  margin: 2rem;
+  padding-top: 1rem;
+  padding-right: 1rem;
+}
+.testimonial:nth-child(2n) {
+  margin-left: 6rem;
+}
+.testimonial:nth-child(2n + 1) {
+  margin-right: 6rem;
+}
+
+[data-theme="dark"] .testimonial {
+  background: #2c2f33;
+  border: 1px var(--ifm-color-primary-darker);
+  box-shadow: 5px 5px 0px var(--ifm-color-primary-darker);
+}
+
+.creditAvatar {
+  padding: 1rem;
+}
+
+.creditAvatar img {
+  display: block;
+  overflow: hidden;
+  /*width: var(--ifm-avatar-photo-size);*/
+  width: 100px;
+}
+
+.creditAuthorDetails {
+  display: flex;
+}
+
+.blocktextContainer {
+  text-align: center;
+  max-width: 24rem;
+}
+
+.blocktext {
+  color: var(--ifm-color-primary-darkest);
+  font-size: 4rem;
+  font-weight: bold;
+  font-family: "Fredericka the Great", Helvetica, Verdana, Arial, sans-serif;
+}
+
+[data-theme="dark"] .blocktext {
+  color: var(--ifm-color-primary-light);
+}
+
+.testimonialImage {
+  height: auto;
+}
+
+.testimonialImage :global(.darkest) {
+  fill: var(--ifm-color-primary-darkest);
+}
+
+[data-theme="dark"] .testimonialImage :global(.darkest) {
+  fill: var(--ifm-color-primary-darker);
+}
+
+.testimonialImage :global(.primary) {
+  fill: var(--ifm-color-primary);
+}
+
+@media screen and (max-width: 996px) {
+  .testimonialContainer {
+    display: block;
+  }
+  .blocktextContainer {
+    max-width: initial;
+  }
+  .blocktext {
+    font-size: 2rem;
+  }
+  .testimonialImage {
+    display: none;
+  }
+  .testimonial {
+    margin: 2rem 0;
+  }
+  .testimonial:nth-child(2n) {
+    margin-left: 2rem;
+  }
+  .testimonial:nth-child(2n + 1) {
+    margin-right: 2rem;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .creditAvatar {
+    display: none;
+  }
+  .testimonial {
+    margin: 1rem 0 !important;
+  }
+}

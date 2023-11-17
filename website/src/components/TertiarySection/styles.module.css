@@ -1,0 +1,83 @@
+.tertiarySection {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  color: var(--ifm-color-primary-darkest);
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+[data-theme="dark"] .tertiarySection {
+  color: var(--ifm-color-primary-lightest);
+}
+
+.tertiaryRow {
+  align-items: center;
+}
+
+.svgCol {
+  text-align: right;
+}
+
+.header {
+  composes: header from "@site/src/css/common.module.css";
+}
+
+.tagline {
+  composes: tagline from "@site/src/css/common.module.css";
+}
+
+.button {
+  composes: heroButton from "@site/src/css/common.module.css";
+  text-transform: uppercase;
+  border: 1px solid var(--ifm-color-primary);
+  color: var(--ifm-color-primary);
+}
+
+.button:hover {
+  color: var(--ifm-color-primary-darker);
+  border: 1px solid var(--ifm-color-primary-darker);
+}
+
+.tertiarySvg {
+  max-width: 100%;
+  height: auto;
+}
+
+.tertiarySvg :global(.darkest) {
+  fill: var(--ifm-color-primary-darkest);
+}
+
+.tertiarySvg :global(.primary) {
+  fill: var(--ifm-color-primary);
+}
+
+[data-theme="dark"] .tertiarySvg :global(.darker) {
+  fill: var(--ifm-color-primary-darkest);
+}
+
+[data-theme="dark"] .tertiarySvg :global(.darkest) {
+  fill: var(--ifm-color-primary-darker);
+}
+
+@media screen and (max-width: 996px) {
+  .svgCol {
+    text-align: center;
+    padding-top: 1rem;
+  }
+  .tertiarySvg {
+    max-width: 75%;
+    height: auto;
+  }
+  .button {
+    width: 100%;
+  }
+  .header {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  .tagline {
+    font-size: 1rem;
+    font-weight: bold;
+  }
+}

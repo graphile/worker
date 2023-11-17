@@ -1,70 +1,130 @@
-<svg width="1200" height="1200" version="1.1" viewBox="0 -0 1200 1200" xmlns="http://www.w3.org/2000/svg">
-<!--
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg
+  width="1200"
+  height="1200"
+  version="1.1"
+  viewBox="0 -100 1200 1200"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <!-- This file is Copyright © 2023 Benjie Gillam. All rights reserved. -->
+  <style type="text/css">
+    polygon {
+      stroke-width: 0;
+      shape-rendering: geometricPrecision;
+    }
+    .seg0 {
+      fill: #d45c00;
+      stroke: #d45c00;
+    }
+    .path0 {
+      fill: none;
+      stroke: #d45c00;
+      stroke-width: 50px;
+    }
 
-This file is Copyright Â© 2023 Benjie Gillam. All rights reserved.
+    .seg1 {
+      fill: #fd6e01;
+      stroke: #fd6e01;
+    }
+    .path1 {
+      fill: none;
+      stroke: #fd6e01;
+      stroke-width: 50px;
+    }
 
--->
-<style type="text/css">
-polygon {
-  stroke-width: 0;
-  shape-rendering: geometricPrecision;
-}
-.seg0 {
-  fill: #cd4948;
-  stroke: #cd4948;
-}
-.seg1 {
-  fill: #fd504e;
-  stroke: #fd504e;
-}
-.seg2 {
-  fill: #c0201c;
-  stroke: #c0201c;
-}
-.seg3 {
-  fill: #7e120e;
-  stroke: #7e120e;
-}
-.seg4 {
-  fill: #610f0d;
-  stroke: #610f0d;
-}
+    .seg2 {
+      fill: #fa8e3b;
+      stroke: #fa8e3b;
+    }
+    .path2 {
+      fill: none;
+      stroke: #fa8e3b;
+      stroke-width: 50px;
+    }
 
-.spanner {
-  fill: #ccc;
-  stroke: #555;
-  stroke-width: 8;
-  stroke-linejoin: round;
-}
+    .seg3 {
+      fill: #a74413;
+      stroke: #a74413;
+    }
+    .path3 {
+      fill: none;
+      stroke: #a74413;
+      stroke-width: 50px;
+    }
 
-</style>
+    .seg4 {
+      fill: #7e120e;
+      stroke: #7e120e;
+    }
+    .path4 {
+      fill: none;
+      stroke: #7e120e;
+      stroke-width: 50px;
+    }
+
+    .face .eye {
+      fill: #ffffff;
+      stroke: #ffffff;
+    }
+    .face .tusk {
+      stroke: #000000;
+      fill: #ffffff;
+    }
+    .face .no-stroke {
+      stroke: transparent;
+      stroke-opacity: 0;
+    }
+    .face .tusk,
+    .face .stroke-only,
+    .heart-outline {
+      stroke: #082744;
+      stroke-width: 8;
+      stroke-linejoin: round;
+    }
+    .face .stroke-only,
+    .heart-outline {
+      fill: transparent;
+      fill-opacity: 0;
+    }
+  </style>
 
   <desc>Worker Ant</desc>
 
-
-
+  <polygon
+    points="600,800 647.9166666666666,836.6666666666666 638.125,983.125 615.625,1041.25 1100,615 770,412.5 600,800"
+    class="seg3"
+  ></polygon>
+  <polygon
+    points="600,800 552.0833333333334,836.6666666666666 561.875,983.125 584.375,1041.25 100,615 430,412.5 600,800"
+    class="seg3"
+  ></polygon>
 
   <g class="base">
-    <polygon points="100,615 25,360 260,25 715,615" class="seg2"></polygon>
-    <polygon points="25,360 260,25 600,130 715,615" class="seg1"></polygon>
-    <polygon points="260,25 600,130 940,25 715,615" class="seg2"></polygon>
-    <polygon points="600,130 940,25 1175,360 715,615" class="seg1"></polygon>
-    <polygon points="940,25 1175,360 1100,615 715,615" class="seg2"></polygon>
-    <polygon points="1175,360 1100,615 600,1055 715,615" class="seg3"></polygon>
-    <polygon points="1100,615 600,1055 100,615 715,615" class="seg4"></polygon>
-    <polygon points="600,1055 100,615 25,360 715,615" class="seg3"></polygon>
-    <polygon points="100,615 25,360 715,615" class="seg2"></polygon>
-    
+    <polygon points="100,615 25,360 260,25 600,800" class="seg2"></polygon>
+    <polygon points="25,360 260,25 600,130 600,800" class="seg0"></polygon>
+    <polygon points="260,25 600,130 940,25 600,800" class="seg1"></polygon>
+    <polygon points="600,130 940,25 1175,360 600,800" class="seg0"></polygon>
+    <polygon points="940,25 1175,360 1100,615 600,800" class="seg1"></polygon>
+    <polygon points="1175,360 1100,615  600,800" class="seg2"></polygon>
+
+    <polygon points="100,615 25,360 600,800" class="seg2"></polygon>
   </g>
 
-
-  <g class="spanner">
-
-    <!-- polygon points="200,0 400,0 550,150 550,350 1200,1000 1200,1100 1100,1200 1000,1200 350,550 150,550 0,400 0,200 200,400 350,350 400,200" class="tusk left-tusk" -->
-    <polygon points="250,50 450,50 600,200 600,400 1050,850 1050,950 950,1050 850,1050 400,600 200,600 50,450 50,250 250,450 400,400 450,250" class="spanner"></polygon>
-
-
-
-  </g>
-
+  <polygon
+    points="120.83333333333333,433.3333333333333 408.3333333333333,653.3333333333333 183.33333333333331,645.8333333333334 120.83333333333333,433.3333333333333"
+    class="seg4"
+  ></polygon>
+  <polygon
+    points="1079.1666666666667,433.3333333333333 791.6666666666667,653.3333333333333 1016.6666666666667,645.8333333333334 1079.1666666666667,433.3333333333333"
+    class="seg4"
+  ></polygon>
+  <path
+    d="M486.6666666666667,541.6666666666667 L260,25 L90,-27.5 L21.45833333333333,70.20833333333334"
+    class="path4"
+  ></path>
+  <path
+    d="M713.3333333333333,541.6666666666667 L940,25 L1110,-27.5 L1178.5416666666667,70.20833333333334"
+    class="path4"
+  ></path>
 </svg>

@@ -1,0 +1,19 @@
+/**
+ * CSS files with the .module.css suffix will be treated as CSS modules
+ * and scoped locally.
+ */
+
+.imageContainer {
+  margin-right: auto;
+  margin-left: auto;
+  padding-bottom: 0;
+  height: 20px;
+}
+
+.footerImage :global(.antcolor) {
+  fill: #303846;
+}
+
+[data-theme="dark"] .footerImage :global(.antcolor) {
+  fill: var(--ifm-color-primary);
+}
