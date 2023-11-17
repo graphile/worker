@@ -1,23 +1,13 @@
 #!/usr/bin/env node
+
+/* eslint-disable @typescript-eslint/no-var-requires */
+
 const fs = require("fs");
 const juice = require("juice");
 const SVGO = require("svgo");
-const { spawnSync } = require("child_process");
-
-function run(cmd, args) {
-  const result = spawnSync(cmd, args);
-  if (result.status !== 0) {
-    console.log(result.stdout.toString("utf8"));
-    console.log(result.stderr.toString("utf8"));
-    console.log(result.status);
-    process.exit(1);
-  }
-}
 
 async function main() {
-  for (const file of [
-    "logo.optimized.svg",
-  ]) {
+  for (const file of ["logo.optimized.svg"]) {
     const svgo = new SVGO({
       plugins: [
         {
@@ -139,29 +129,16 @@ async function main() {
 
     const optimizedFilePath = `${__dirname}/${file.replace(
       /svg$/,
-      "optimized.svg"
+      "optimized.svg",
     )}`;
     if (optimizedFilePath === filePath) {
       throw new Error("Should not overwrite!");
     }
     fs.writeFileSync(optimizedFilePath, optimisedSvg);
-    /*
-    run("convert", [
-      //"-density",
-      //"1200",
-      "-size",
-      "900x900",
-      "-background",
-      "none",
-      optimizedFilePath,
-      optimizedFilePath + ".png",
-    ]);
-    run("optipng", ["-clobber", "-o0", optimizedFilePath + ".png"]);
-    */
   }
 }
 
-main().catch(e => {
+main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
