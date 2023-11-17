@@ -15,14 +15,13 @@ export async function getJob(
   withPgClient: WithPgClient,
   tasks: TaskList,
   workerId: string,
-  useNodeTime: boolean,
   flagsToSkip: string[] | null,
 ): Promise<Job | undefined> {
   const {
     escapedWorkerSchema,
     workerSchema,
     resolvedPreset: {
-      worker: { preparedStatements },
+      worker: { preparedStatements, useNodeTime },
     },
   } = compiledSharedOptions;
 

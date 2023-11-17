@@ -40,7 +40,7 @@ export function makeNewWorker(
   const {
     events,
     resolvedPreset: {
-      worker: { useNodeTime, pollInterval },
+      worker: { pollInterval },
     },
     hooks,
     _rawOptions: { forbiddenFlags },
@@ -173,7 +173,6 @@ export function makeNewWorker(
         withPgClient,
         tasks,
         workerId,
-        useNodeTime,
         flagsToSkip,
       );
 
