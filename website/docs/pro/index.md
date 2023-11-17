@@ -18,12 +18,11 @@ _Paying for Worker Pro helps to fund the ongoing maintenance of Graphile Worker
 and other Graphile projects, and is **free for sponsors** on the $100/mo tier or
 above._
 
-:::tip
+:::tip Launch offer
 
-_As of November 2023_ Worker Pro is currently available to all sponsors on the
-$25/mo tier and above while more features are being developed and added. The
-price will increase to the $100/mo tier in the future when Worker Pro is feature
-complete.
+Worker Pro currently has a limited feature set; for a limited time get access by
+sponsoring at **just $25+/mo** and, as a thank you for being an early adopter,
+keep this preferential rate for at least 18 months after the launch offer ends.
 
 :::
 
