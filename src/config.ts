@@ -1,5 +1,8 @@
 import { cosmiconfigSync } from "cosmiconfig";
 
+import { MINUTE, SECOND } from "./cronConstants";
+import { defaultLogger } from "./logger";
+
 const cosmiconfigResult = cosmiconfigSync("graphile-worker").search();
 const cosmiconfig = cosmiconfigResult?.config;
 
@@ -7,25 +10,31 @@ const cosmiconfig = cosmiconfigResult?.config;
  * Defaults to use for various options throughout the codebase, sourced from
  * environmental variables, cosmiconfig, and finally sensible defaults.
  */
-export const defaults = {
-  // TODO: infer full connection string from PG* envvars
-  connectionString: process.env.DATABASE_URL || process.env.PGDATABASE,
-  schema:
-    process.env.GRAPHILE_WORKER_SCHEMA ||
-    enforceStringOrUndefined("schema", cosmiconfig?.schema) ||
-    "graphile_worker",
-  pollInterval:
-    enforceNumberOrUndefined("pollInterval", cosmiconfig?.pollInterval) || 2000,
-  concurrentJobs:
-    enforceNumberOrUndefined("concurrentJobs", cosmiconfig?.concurrentJobs) ||
-    1,
-  maxPoolSize:
-    enforceNumberOrUndefined("maxPoolSize", cosmiconfig?.maxPoolSize) || 10,
-  preparedStatements: true as boolean,
-  crontabFile: `${process.cwd()}/crontab`,
-  tasksFolder: `${process.cwd()}/tasks`,
-  gracefulShutdownAbortTimeout: 5000,
-} satisfies GraphileConfig.WorkerOptions;
+export const makeWorkerPresetWorkerOptions = () =>
+  ({
+    connectionString: process.env.DATABASE_URL,
+    schema:
+      process.env.GRAPHILE_WORKER_SCHEMA ||
+      enforceStringOrUndefined("schema", cosmiconfig?.schema) ||
+      "graphile_worker",
+    pollInterval:
+      enforceNumberOrUndefined("pollInterval", cosmiconfig?.pollInterval) ||
+      2000,
+    concurrentJobs:
+      enforceNumberOrUndefined("concurrentJobs", cosmiconfig?.concurrentJobs) ||
+      1,
+    maxPoolSize:
+      enforceNumberOrUndefined("maxPoolSize", cosmiconfig?.maxPoolSize) || 10,
+    preparedStatements: true as boolean,
+    crontabFile: `${process.cwd()}/crontab`,
+    taskDirectory: `${process.cwd()}/tasks`,
+    fileExtensions: [".js", ".cjs", ".mjs"],
+    logger: defaultLogger,
+    minResetLockedInterval: 8 * MINUTE,
+    maxResetLockedInterval: 10 * MINUTE,
+    gracefulShutdownAbortTimeout: 5 * SECOND,
+    useNodeTime: false,
+  } satisfies GraphileConfig.WorkerOptions);
 
 function enforceStringOrUndefined(
   keyName: string,

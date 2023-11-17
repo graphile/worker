@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import { randomBytes } from "crypto";
 
-import { defaults } from "./config";
 import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
@@ -39,18 +38,20 @@ export function makeNewWorker(
     autostart = true,
     workerId = `worker-${randomBytes(9).toString("hex")}`,
   } = params;
-  const { events, useNodeTime, hooks } = compiledSharedOptions;
+  const {
+    events,
+    resolvedPreset: {
+      worker: { pollInterval },
+    },
+    hooks,
+    _rawOptions: { forbiddenFlags },
+  } = compiledSharedOptions;
   const logger = compiledSharedOptions.logger.scope({
     scope: {
       label: "worker",
       workerId,
     },
   });
-  const {
-    preset,
-    forbiddenFlags,
-    pollInterval = preset?.worker?.pollInterval ?? defaults.pollInterval,
-  } = compiledSharedOptions.options;
 
   const workerDeferred = deferred();
 
@@ -82,13 +83,18 @@ export function makeNewWorker(
   };
   let active = true;
 
-  const release = () => {
-    if (!active) {
-      return promise;
-    }
-    active = false;
-    events.emit("worker:release", { worker });
-    if (cancelDoNext()) {
+  const release = (force = false) => {
+    if (active) {
+      active = false;
+      events.emit("worker:release", { worker });
+
+      if (cancelDoNext()) {
+        workerDeferred.resolve();
+      } else if (force) {
+        // TODO: do `abortController.abort()` instead
+        workerDeferred.resolve();
+      }
+    } else if (force) {
       workerDeferred.resolve();
     }
     return Promise.resolve(promise);
@@ -168,7 +174,6 @@ export function makeNewWorker(
         withPgClient,
         tasks,
         workerId,
-        useNodeTime,
         flagsToSkip,
       );
 

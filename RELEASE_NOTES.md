@@ -162,6 +162,87 @@ or smaller than about `-100` anyway.)
   giving interim jobs a chance to be executed (and lessening the impact of queue
   stalling through hanging tasks).
 
+### v0.13.1-bridge.0
+
+**TL;DR: upgrade to this and add Worker Pro before migrating to v0.14.0 or
+v0.16.0.**
+
+This release is a "bridge" release to make migration to v0.14.0 and v0.16.0
+easier. Since v0.14.0 and v0.16.0 include breaking database changes, no active
+workers should be running when the migrations happen, and once the migrations
+have happened older workers are no longer supported and their usage may lead to
+weird and undesirable behaviors.
+
+Normally we'd recommend that you "scale to zero" before performing these kinds
+of migrations, to ensure that no older workers will be running against the DB at
+the same time; however this release adds support for the (proprietary) Worker
+Pro plugin which (when used consistently across your entire worker fleet)
+enables your workers to coordinate, triggering legacy workers to cleanly shut
+down (and waiting for them to do so) before migrating the database. The Worker
+Pro plugin also details the intent to upgrade, meaning if new legacy workers
+start up in the interrim, they will also not start looking for jobs since they
+know they will be out of date soon. As soon as all running tasks have finished
+processing (or a configurable timeout has elapsed) the migration will go ahead.
+
+The Worker Pro plugin mentioned above is enabled by the addition of support for
+`graphile-config`, the standardized plugin and preset system for the entire
+Graphile suite. Thanks to this integration, we've been able to add a
+plugin/hooks system that you can use to customize the behavior of Worker
+(including implementing some of the behaviors described in the previous
+paragraph yourself, should you so desire).
+
+This release also adds a startup check that will abort startup if the database
+already contains breaking migrations that are unsupported by the current worker
+version, and a significant number of back-ported fixes and new features that
+didn't require database migrations (including important fixes to the graceful
+shutdown system).
+
+**IMPORTANT**: `--watch` mode is no longer supported. We've removed this from
+v0.16.0 (see the release notes for that version), you should use `node --watch`
+or similar instead. This also removes `fauxRequire` and all the problems that
+that had.
+
+**IMPORTANT**: Node versions before v20 and Postgres versions before v12 are no
+longer supported. (Node v18 _should_ work, but it segfaults when running the
+tests which is likely a jest/`node --experimental-vm-modules` issue which is
+unlikely affect you at runtime.)
+
+- Fixes graceful shutdown (both manually via `.gracefulShutdown()` or
+  `.forcefulShutdown()` and via signal handling)
+- Removes `maxContinguousErrors` setting which was poorly implemented and caused
+  more issues than it solved
+- Tracks whether migrations are breaking or not, and:
+  - refuses to start if an unsupported breaking migration is present in the
+    database
+  - gracefully shuts down if another worker performs a breaking migration
+    - NOTE: this is not sufficiently safe, it's just a backstop. If the
+      migration breaks completing or failing of jobs then your worker will be
+      unable to release in-progress tasks even if they're finished; and the
+      worker performing the migrations will not wait for legacy workers to
+      complete. You should shut down your workers before upgrading, or use
+      Worker Pro to handle the situation automatically for you.
+- Adds `graphile-config` support for presets and plugins
+- Adds more events and hooks
+- Uses JS-ified SQL migrations to help workaround some bundling issues
+- `runTaskListOnce` now uses a WorkerPool internally (to better integrate with
+  the gracefulShutdown logic)
+- Fix `WorkerPool.promise` to only resolve once everything is handled
+- EXPERIMENTAL; see v0.16.0 for documentation:
+  - Adds support for loading tasks from nested folders (e.g.
+    `tasks/foo/bar/baz.js` will add support for a task with identifier
+    `foo/bar/baz`)
+  - Adds support for turning executable files into tasks (i.e. a task written in
+    python, Rust, or bash)
+  - Adds support for loading TypeScript tasks directly (no need to compile to
+    JS, but if you do the JS will have priority)
+  - You may see warnings like
+    `WARNING: Failed to load task 'README.md' - no supported handlers found for path: '/path/to/tasks/README.md'` -
+    you can ignore them (or you can move non-task files out of the `tasks`
+    folder)
+  - Undocumented, experimental and untested preliminary support for cancellable
+    jobs via `AbortSignal`; upgrade to v0.16.0+ if you want to actually use this
+- A huge number of internal changes
+
 ### v0.13.0
 
 - Remove dependency on `pgcrypto` database extension (thanks @noinkling)

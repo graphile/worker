@@ -78,16 +78,25 @@ async function loadFileIntoTasks(
   }
 }
 
-export default async function getTasks(
+export async function getTasks(
   options: SharedOptions,
   taskPath: string,
 ): Promise<WatchedTaskList> {
   const compiledSharedOptions = processSharedOptions(options);
+  const result = await getTasksInternal(compiledSharedOptions, taskPath);
+  // This assign is used in `__tests__/getTasks.test.ts`
+  return Object.assign(result, { compiledSharedOptions });
+}
+
+export async function getTasksInternal(
+  compiledSharedOptions: CompiledSharedOptions,
+  taskPath: string,
+): Promise<WatchedTaskList> {
   const { logger } = compiledSharedOptions;
   const pathStat = await tryStat(taskPath);
   if (!pathStat) {
     throw new Error(
-      `Could not find tasks to execute - '${taskPath}' does not exist`,
+      `Could not find tasks to execute - taskDirectory '${taskPath}' does not exist`,
     );
   }
 

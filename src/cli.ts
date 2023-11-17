@@ -2,13 +2,13 @@
 import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
-import { defaults } from "./config";
-import getCronItems from "./getCronItems";
-import getTasks from "./getTasks";
-import { run, runOnce } from "./index";
-import { digestPreset } from "./lib";
+import { getCronItemsInternal } from "./getCronItems";
+import { getTasksInternal } from "./getTasks";
+import { getUtilsAndReleasersFromOptions } from "./lib";
 import { EMPTY_PRESET, WorkerPreset } from "./preset";
-import { runMigrations } from "./runner";
+import { runInternal, runOnceInternal } from "./runner";
+
+const defaults = WorkerPreset.worker!;
 
 const argv = yargs
   .parserConfiguration({
@@ -73,8 +73,10 @@ const argv = yargs
   .string("config")
   .strict(true).argv;
 
-const isInteger = (n: number | undefined): boolean => {
-  return typeof n === "number" && isFinite(n) && Math.round(n) === n;
+const integerOrUndefined = (n: number | undefined): number | undefined => {
+  return typeof n === "number" && isFinite(n) && Math.round(n) === n
+    ? n
+    : undefined;
 };
 
 function stripUndefined<T extends object>(
@@ -89,16 +91,12 @@ function argvToPreset(inArgv: Awaited<typeof argv>): GraphileConfig.Preset {
   return {
     worker: stripUndefined({
       connectionString: inArgv["connection"],
-      maxPoolSize: isInteger(inArgv["max-pool-size"])
-        ? inArgv["max-pool-size"]
-        : undefined,
-      pollInterval: isInteger(inArgv["poll-interval"])
-        ? inArgv["poll-interval"]
-        : undefined,
+      maxPoolSize: integerOrUndefined(inArgv["max-pool-size"]),
+      pollInterval: integerOrUndefined(inArgv["poll-interval"]),
       preparedStatements: !inArgv["no-prepared-statements"],
       schema: inArgv.schema,
       crontabFile: inArgv["crontab"],
-      concurrentJobs: isInteger(inArgv.jobs) ? inArgv.jobs : undefined,
+      concurrentJobs: integerOrUndefined(inArgv.jobs),
     }),
   };
 }
@@ -112,49 +110,65 @@ async function main() {
     throw new Error("Cannot specify both --once and --schema-only");
   }
 
-  const {
-    runnerOptions: options,
-    tasksFolder,
-    crontabFile,
-  } = digestPreset({
-    extends: [WorkerPreset, userPreset ?? EMPTY_PRESET, argvToPreset(argv)],
+  const [compiledOptions, release] = await getUtilsAndReleasersFromOptions({
+    preset: {
+      extends: [userPreset ?? EMPTY_PRESET, argvToPreset(argv)],
+    },
   });
+  try {
+    if (
+      !compiledOptions.resolvedPreset.worker.connectionString &&
+      !process.env.PGDATABASE
+    ) {
+      throw new Error(
+        "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
+      );
+    }
 
-  if (!options.connectionString) {
-    throw new Error(
-      "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
+    if (SCHEMA_ONLY) {
+      console.log("Schema updated");
+      return;
+    }
+
+    const watchedTasks = await getTasksInternal(
+      compiledOptions,
+      compiledOptions.resolvedPreset.worker.taskDirectory,
     );
-  }
-
-  if (SCHEMA_ONLY) {
-    await runMigrations(options);
-    console.log("Schema updated");
-    return;
-  }
-
-  const watchedTasks = await getTasks(options, tasksFolder);
-  const watchedCronItems = await getCronItems(options, crontabFile);
-
-  if (ONCE) {
-    await runOnce(options, watchedTasks.tasks);
-  } else {
-    const { promise } = await run(
-      options,
-      watchedTasks.tasks,
-      watchedCronItems.items,
+    compiledOptions.releasers.push(() => watchedTasks.release());
+    const watchedCronItems = await getCronItemsInternal(
+      compiledOptions,
+      compiledOptions.resolvedPreset.worker.crontabFile,
     );
-    // Continue forever(ish)
-    await promise;
+    compiledOptions.releasers.push(() => watchedCronItems.release());
+
+    if (ONCE) {
+      await runOnceInternal(compiledOptions, watchedTasks.tasks, () => {
+        /* noop */
+      });
+    } else {
+      const { promise } = await runInternal(
+        compiledOptions,
+        watchedTasks.tasks,
+        watchedCronItems.items,
+        () => {
+          /*noop*/
+        },
+      );
+      // Continue forever(ish)
+      await promise;
+    }
+  } finally {
+    const timer = setTimeout(() => {
+      console.error(
+        `Worker failed to exit naturally after 1 second; terminating manually. This may indicate a bug in Graphile Worker, or it might be that you triggered a forceful shutdown and some of your executing tasks have yet to exit.`,
+      );
+      process.exit(1);
+    }, 1000);
+    timer.unref();
+    compiledOptions.logger.debug("CLI shutting down...");
+    await release();
+    compiledOptions.logger.debug("CLI shutdown complete.");
   }
-  watchedTasks.release();
-  watchedCronItems.release();
-  const timer = setTimeout(() => {
-    console.error(
-      `Worker failed to exit naturally after 10 seconds; terminating manually. This may indicate a bug in Graphile Worker.`,
-    );
-    process.exit(1);
-  }, 10000);
-  timer.unref();
 }
 
 main().catch((e) => {
