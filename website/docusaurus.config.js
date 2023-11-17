@@ -115,16 +115,16 @@ const config = {
                 href: "/docs/cli#quickstart",
               },
               {
-                html: '<a class="footer__link-item" href="https://grafast.org">Gra<em>fast</em></a>',
+                html: '<a class="footer__link-item" href="https://postgraphile.org/">PostGraphile</a>',
               },
               {
-                html: '<a class="footer__link-item" href="https://star.graphile.org">Graphile*</a>',
+                html: '<a class="footer__link-item" href="https://grafast.org">Gra<em>fast</em></a>',
               },
               {
                 html: '<a class="footer__link-item" href="https://build.graphile.org/">Graphile Build</a>',
               },
               {
-                html: '<a class="footer__link-item" href="https://postgraphile.org/">PostGraphile</a>',
+                html: '<a class="footer__link-item" href="https://star.graphile.org">Graphile*</a>',
               },
             ],
           },
