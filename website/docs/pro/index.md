@@ -82,6 +82,23 @@ This will tell `npm` (and `yarn`, etc) that any `@graphile-pro/*` package should
 instead be installed from the GitHub Packages package registry rather than from
 the regular npm package registry.
 
+:::tip
+
+You need to authenticate to GitHub packages, one way to do this is to create a
+`.npmrc` file in your home directory (this is **different** to the `.npmrc` in
+your project folder mentioned above), and enter into it:
+
+```text title="~/.npmrc"
+//npm.pkg.github.com/:_authToken=TOKEN
+```
+
+Replace `TOKEN` with a GitHub personal access token with the `read:packages`
+scope (it might be nested under `write:packages`); you can generate a personal
+access token at
+[https://github.com/settings/tokens](https://github.com/settings/tokens).
+
+:::
+
 Then (assuming you have your
 [GitHub Packages authentication configured](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry#authenticating-with-a-personal-access-token))
 you can install as you would any other module:
