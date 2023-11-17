@@ -15,35 +15,34 @@ Worker Pro adds the following to the Graphile Worker options:
 
 Type: `number | undefined`
 
-How often in milliseconds a worker should check in as active. Defaults to 1
+How often, in milliseconds, a worker should check in as active. Defaults to 1
 minute.
 
 ### worker.sweepInterval
 
 Type: `number | undefined`
 
-How often in milliseconds to check for and release inactive workers. Defaults to
-3 minutes.
+How often, in milliseconds, to check for and release inactive workers. Defaults
+to 3 minutes.
 
 ### worker.sweepThreshold
 
 Type: `number | undefined`
 
-How long in milliseconds since the last heartbeat a worker emitted may elapse
-before that worker is considered inactive and eligible to be force-released.
-Defaults to 4 hours, but we recommend you set it to a shorter time - how long
-you think a legitimate networking interruption might last where tasks may still
+How many milliseconds, since the last emitted heartbeat, may elapse before that
+worker is considered inactive and eligible to be force-released. Defaults to 4
+hours, but we recommend you set it to a shorter time &mdash; how long you think
+a legitimate networking interruption might last where tasks may still
 successfully complete.
 
 ### worker.maxMigrationWaitTime
 
 Type: `number | undefined`
 
-How long in milliseconds to wait for active old workers to cleanly exit before
-performing going ahead and migrating to the newer database schema anyway.
-Defaults to 4 hours, but we recommend you set it to a smaller duration: the
-longest time you expect one of your jobs to take to execute, plus a bit of
-padding.
+How long, in milliseconds, to wait for active old workers to cleanly exit before
+performing the migration to the newer database schema anyway. Defaults to 4
+hours, but we recommend you set it to a smaller duration: the longest time you
+expect one of your jobs to take to execute, plus a bit of padding.
 
 ## Example
 

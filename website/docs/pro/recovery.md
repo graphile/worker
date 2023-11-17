@@ -9,29 +9,30 @@ not have a chance to unlock its active jobs, and they remain locked for up to 4
 hours. For some jobs, not being attempted again for 4 hours could be far too
 long.
 
-Worker Pro tracks running workers via a "heartbeat," and when a worker has not
-checked in for a configurable amount of time we can assume that this Worker is
-no longer active (crashed, was terminated, server shut down, etc) and release
-its jobs back to the pool to be executed.
+Worker Pro tracks running workers via a &ldquo;heartbeat&rdquo;, and when a
+worker has not checked in for a configurable amount of time we can assume that
+this worker is no longer active (crashed, was terminated, server shut down, etc)
+and release its jobs back to the pool to be executed.
 
 :::note
 
 Due to [CAP theorem](https://en.wikipedia.org/wiki/CAP_theorem) we cannot know
-it's definitely safe to release jobs. In a standard production setup for
-Graphile Worker, you'll have multiple (1 or more) workers, each worker may be
-running on the same or different hardware, and they'll all be talking to one
-primary PostgreSQL server which will most likely be running on different
+it&apos;s definitely safe to release jobs. In a standard production setup for
+Graphile Worker, you&apos;ll have multiple (1 or more) workers, each worker may
+be running on the same or different hardware, and they&apos;ll all be talking to
+one primary PostgreSQL server which will most likely be running on different
 hardware again.
 
-It's possible for a worker to check out a job from the database and then lose
-connection to the database. The worker can continue to process its work (lets
-say doing a speech-to-text analysis of a long video) in the hopes the database
-connection will be restored by the time it completes. If our "cleanup process"
-runs before this happens then we might end up accidentally releasing and
-re-attempting the job when the worker is still in progress. This is why the
-default 4 hour timeout exists in Graphile Worker, but in Pro we make it
-configurable for you - it's up to you to determine how long you think a "net
-split" might persist between your worker and database.
+It&apos;s possible for a worker to check out a job from the database and then
+lose connection to the database. The worker can continue to process its work
+(lets say doing a speech-to-text analysis of a long video) in the hopes the
+database connection will be restored by the time it completes. If our
+&ldquo;cleanup process&rdquo; runs before this happens then we might end up
+accidentally releasing and re-attempting the job when the worker is still in
+progress. This is why the default 4 hour timeout exists in Graphile Worker, but
+in Pro we make it configurable for you &mdash; it&apos;s up to you to determine
+how long you think a &ldquo;net split&rdquo; might persist between your worker
+and database.
 
 :::
 

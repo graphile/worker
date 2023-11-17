@@ -18,6 +18,15 @@ _Paying for Worker Pro helps to fund the ongoing maintenance of Graphile Worker
 and other Graphile projects, and is **free for sponsors** on the $100/mo tier or
 above._
 
+:::tip
+
+_As of November 2023_ Worker Pro is currently available to all sponsors on the
+$25/mo tier and above while more features are being developed and added. The
+price will increase to the $100/mo tier in the future when Worker Pro is feature
+complete.
+
+:::
+
 ## Getting access
 
 Worker Pro is currently in sponsors-only early access; any sponsor on $100+/mo
@@ -28,10 +37,10 @@ about Worker Pro.
 
 ### Source available
 
-Worker Pro is not open source, but it is "source available;" the source code is
-licensed in a way that forbids publishing and redistribution but is otherwise
-very flexible, allowing you to make your own modifications for internal usage
-should you need to do so:
+Worker Pro is not open source, but it is &ldquo;source available&rdquo; the
+source code is licensed in a way that forbids publishing and redistribution but
+is otherwise very flexible, allowing you to make your own modifications for
+internal usage should you need to do so:
 
 ```md
 Copyright © 2023 Benjie Gillam
@@ -122,21 +131,21 @@ Paying $100/mo for Worker Pro via Graphile Store (not available at time of
 writing) gives you access to Worker Pro but that is all, you are not a sponsor
 and you are not entitled to other
 [sponsor perks](https://github.com/sponsors/benjie/). We strongly encourage you
-to sponsor Graphile instead, there's only upsides!
+to sponsor Graphile instead, there&apos;s only upsides!
 
-Some companies claim they "cannot" use sponsorship platforms; if your company is
-one of these then either you need to make do without the additional sponsor
-perks, or you need to help your organization to see the value of supporting the
-software that their business relies upon. Once you've successfully gained
-approval for sponsorship, you may discover other valuable open source projects
-within your stack that you could benefit from supporting. Ready to enhance the
-entire open source ecosystem together?
+Some companies claim they &ldquo;cannot&rdquo; use sponsorship platforms; if
+your company is one of these then either you need to make do without the
+additional sponsor perks, or you need to help your organization to see the value
+of supporting the software that their business relies upon. Once you&apos;ve
+successfully gained approval for sponsorship, you may discover other valuable
+open source projects within your stack that you could benefit from supporting.
+Ready to enhance the entire open source ecosystem together?
 
 ### Is Worker Pro needed for production usage?
 
 No, absolutely not! Graphile Worker existed without these features for 5 years
-so they are not "essential," they're "nice to have" features, especially for
-larger teams or systems with more complex deployments.
+so they are not &ldquo;essential&rdquo; they're &ldquo;nice to have&rdquo;
+features, especially for larger teams or systems with more complex deployments.
 
 ### Can I implement these features myself instead?
 
@@ -146,12 +155,12 @@ significantly cheaper and easier to use Worker Pro than to build the solution
 yourself, and Worker Pro has been designed by the maintainer of Graphile Worker
 so it thinks carefully about all the edge cases, but if your needs are limited
 or your budget is constrained then please go ahead and use the plugin and events
-system to implement a similar solution. (Please note that it's extremely
-unlikely we'll accept your solution as a pull request.)
+system to implement a similar solution. (Please note that it&apos;s extremely
+unlikely we&apos;ll accept your solution as a pull request.)
 
 :::tip Not for profit?
 
-If your budget is constrained because you're a charity or non-profit
+If your budget is constrained because you&apos;re a charity or non-profit
 organization (including community projects such as Makerspaces) please get in
 touch and we may be able to offer you a discount.
 
@@ -166,7 +175,7 @@ underlying open source project for you and your users.
 
 We retain copyright in Worker Pro, so if you are going to implement and
 distribute your own solution, ensure that you do it without using or being
-"inspired by" the source code to Graphile Pro. Figure out your own independent
-solution, please.
+&ldquo;inspired by&rdquo; the source code to Graphile Pro. Figure out your own
+independent solution, please.
 
 :::
