@@ -75,21 +75,23 @@ export default function HomepageTestimonials() {
   return (
     <section className={styles.testimonialSection}>
       <div className={clsx("container", styles.testimonialContainer)}>
-        <div className={clsx("col", styles.blocktextContainer)}>
-          <div className={styles.blocktext}>
-            <p>Use The&nbsp;Stack You&nbsp;Have</p>
+        <div className="row">
+          <div className={clsx("col", styles.blocktextContainer)}>
+            <div className={styles.blocktext}>
+              <p>Use The&nbsp;Stack You&nbsp;Have</p>
+            </div>
+            <div>
+              <TestimonialImage
+                title="Coder sat at monitor"
+                className={styles.testimonialImage}
+              />
+            </div>
           </div>
-          <div>
-            <TestimonialImage
-              title="Coder sat at monitor"
-              className={styles.testimonialImage}
-            />
+          <div className={clsx("col")}>
+            {TestimonialList.map((props, idx) => (
+              <Testimonial key={idx} {...props} />
+            ))}
           </div>
-        </div>
-        <div className={clsx("col")}>
-          {TestimonialList.map((props, idx) => (
-            <Testimonial key={idx} {...props} />
-          ))}
         </div>
       </div>
     </section>
