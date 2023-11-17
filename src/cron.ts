@@ -4,7 +4,7 @@ import { Pool } from "pg";
 import { cronItemMatches } from "./cronMatcher";
 import { parseCrontab } from "./crontab";
 import defer from "./deferred";
-import getCronItems from "./getCronItems";
+import { getCronItemsInternal } from "./getCronItems";
 import {
   Cron,
   CronJob,
@@ -15,7 +15,7 @@ import {
   TimestampDigest,
   WorkerEvents,
 } from "./interfaces";
-import { processSharedOptions, Releasers } from "./lib";
+import { CompiledOptions, CompiledSharedOptions, Releasers } from "./lib";
 
 interface CronRequirements {
   pgPool: Pool;
@@ -174,10 +174,8 @@ async function registerAndBackfillItems(
     `SELECT * FROM ${escapedWorkerSchema}.known_crontabs`,
   );
 
-  const {
-    backfillItemsAndDates,
-    unknownIdentifiers,
-  } = getBackfillAndUnknownItems(parsedCronItems, rows);
+  const { backfillItemsAndDates, unknownIdentifiers } =
+    getBackfillAndUnknownItems(parsedCronItems, rows);
 
   if (unknownIdentifiers.length) {
     // They're known now.
@@ -279,7 +277,7 @@ const ONE_MINUTE = 60 * 1000;
  * @param requirements - the helpers that this task needs
  */
 export const runCron = (
-  options: RunnerOptions,
+  compiledSharedOptions: CompiledSharedOptions<RunnerOptions>,
   parsedCronItems: ParsedCronItem[],
   requirements: CronRequirements,
 ): Cron => {
@@ -288,21 +286,22 @@ export const runCron = (
     logger,
     escapedWorkerSchema,
     events,
-    useNodeTime,
-  } = processSharedOptions(options);
+    resolvedPreset: {
+      worker: { useNodeTime },
+    },
+  } = compiledSharedOptions;
 
   const promise = defer();
-  let released = false;
-  let timeout: NodeJS.Timer | null = null;
+  let timeout: NodeJS.Timeout | null = null;
 
   let stopCalled = false;
   function stop(e?: Error) {
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
     if (!stopCalled) {
       stopCalled = true;
-      if (timeout) {
-        clearTimeout(timeout);
-        timeout = null;
-      }
       if (e) {
         promise.reject(e);
       } else {
@@ -316,7 +315,7 @@ export const runCron = (
   }
 
   async function cronMain() {
-    if (released) {
+    if (!cron._active) {
       return stop();
     }
 
@@ -335,17 +334,18 @@ export const runCron = (
 
     events.emit("cron:started", { cron: this, start });
 
-    if (released) {
+    if (!cron._active) {
       return stop();
     }
 
     // The backfill may have taken a moment, we should continue from where the
     // worker started and catch up as quickly as we can. This does **NOT**
     // count as a backfill.
-    let nextTimestamp = unsafeRoundToMinute(new Date(+start), true);
+    /** This timestamp will be mutated! */
+    const nextTimestamp = unsafeRoundToMinute(new Date(+start), true);
 
     const scheduleNextLoop = () => {
-      if (released) {
+      if (!cron._active) {
         return stop();
       }
       // + 1 millisecond to try and ensure this happens in the next minute
@@ -358,7 +358,7 @@ export const runCron = (
 
     async function loop() {
       try {
-        if (released) {
+        if (!cron._active) {
           return stop();
         }
 
@@ -448,7 +448,7 @@ export const runCron = (
             jobsAndIdentifiers,
           });
 
-          if (released) {
+          if (!cron._active) {
             return stop();
           }
         }
@@ -469,12 +469,11 @@ export const runCron = (
     scheduleNextLoop();
   }
 
-  cronMain().catch(stop);
-
-  return {
+  const cron: Cron = {
+    _active: true,
     release() {
-      if (!released) {
-        released = true;
+      if (cron._active) {
+        cron._active = false;
         if (timeout) {
           // Next loop is queued; lets cancel it early
           stop();
@@ -484,47 +483,43 @@ export const runCron = (
     },
     promise,
   };
+
+  cronMain().catch(stop);
+
+  return cron;
 };
 
+/** @internal */
 export async function getParsedCronItemsFromOptions(
-  options: RunnerOptions,
+  compiledOptions: CompiledOptions,
   releasers: Releasers,
 ): Promise<Array<ParsedCronItem>> {
-  const { crontabFile, parsedCronItems, crontab } = options;
+  const {
+    resolvedPreset: {
+      worker: { crontabFile },
+    },
+    _rawOptions: { parsedCronItems, crontab },
+  } = compiledOptions;
 
   if (!crontabFile && !parsedCronItems && !crontab) {
     return [];
   }
 
   if (crontab) {
-    assert(
-      !crontabFile,
-      "`crontab` and `crontabFile` must not be set at the same time.",
-    );
-    assert(
+    assert.ok(
       !parsedCronItems,
       "`crontab` and `parsedCronItems` must not be set at the same time.",
     );
 
     return parseCrontab(crontab);
-  } else if (crontabFile) {
-    assert(
-      !parsedCronItems,
-      "`crontabFile` and `parsedCronItems` must not be set at the same time.",
-    );
-
-    const watchedCronItems = await getCronItems(options, crontabFile, false);
-    releasers.push(() => watchedCronItems.release());
-    return watchedCronItems.items;
-  } else {
-    assert(parsedCronItems != null, "Expected `parsedCronItems` to be set.");
+  } else if (parsedCronItems) {
     // Basic check to ensure that users remembered to call
     // `parseCronItems`/`parseCrontab`; not intended to be a full check, just a
     // quick one to catch the obvious errors. Keep in mind that
     // `parsedCronItems` is mutable so it may be changed later to contain more
     // entries; we can't keep performing these checks everywhere for
     // performance reasons.
-    assert(
+    assert.ok(
       Array.isArray(parsedCronItems),
       "Expected `parsedCronItems` to be an array; you must use a helper e.g. `parseCrontab()` or `parseCronItems()` to produce this value.",
     );
@@ -544,6 +539,13 @@ export async function getParsedCronItemsFromOptions(
     }
 
     return parsedCronItems;
+  } else {
+    const watchedCronItems = await getCronItemsInternal(
+      compiledOptions,
+      crontabFile,
+    );
+    releasers.push(() => watchedCronItems.release());
+    return watchedCronItems.items;
   }
 }
 

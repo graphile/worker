@@ -390,7 +390,8 @@ CREATE TABLE graphile_worker.known_crontabs (
 );
 CREATE TABLE graphile_worker.migrations (
     id integer NOT NULL,
-    ts timestamp with time zone DEFAULT now() NOT NULL
+    ts timestamp with time zone DEFAULT now() NOT NULL,
+    breaking boolean DEFAULT false NOT NULL
 );
 ALTER TABLE ONLY graphile_worker.jobs ALTER COLUMN id SET DEFAULT nextval('graphile_worker.jobs_id_seq'::regclass);
 ALTER TABLE ONLY graphile_worker.job_queues

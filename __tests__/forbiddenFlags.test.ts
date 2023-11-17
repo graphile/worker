@@ -2,10 +2,11 @@ import {
   makeWorkerUtils,
   runTaskListOnce,
   Task,
+  TaskList,
   WorkerSharedOptions,
 } from "../src/index";
 import {
-  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  getJobs,
   reset,
   TEST_CONNECTION_STRING,
   withPgClient,
@@ -24,19 +25,17 @@ test("supports the flags API", () =>
     const utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
-    await utils.addJob("job1", { a: 1 }, { flags: ["a", "b"] });
+    await utils.addJob("job3", { a: 1 }, { flags: ["a", "b"] });
     await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
-    const { rows: jobs } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-    );
+    const jobs = await getJobs(pgClient);
     expect(jobs).toHaveLength(1);
     expect(jobs[0]).toHaveProperty("flags");
     expect(jobs[0].flags).toEqual({ a: true, b: true });
 
     const task: Task = jest.fn();
-    const taskList = { task };
+    const taskList: TaskList = { task };
     await runTaskListOnce(options, taskList, pgClient);
   }));
 
@@ -60,7 +59,7 @@ test.each([
     const shouldSkip = jest.fn();
 
     const job: Task = async (_payload, helpers) => {
-      const flags = helpers.job.flags || [];
+      const flags = helpers.job.flags || {};
 
       if (flags[badFlag]) {
         shouldSkip();
@@ -81,9 +80,7 @@ test.each([
     try {
       await runTaskListOnce({ forbiddenFlags }, { "flag-test": job }, pgClient);
 
-      const { rows: jobs } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-      );
+      const jobs = await getJobs(pgClient);
       expect(jobs).toHaveLength(1);
       expect(jobs[0].attempts).toEqual(0);
       expect(jobs[0].flags).toEqual({ c: true, d: true });
@@ -124,7 +121,7 @@ test.each([
     const ranWithDFlag = jest.fn();
 
     const job: Task = async (_payload, helpers) => {
-      const flags = helpers.job.flags || [];
+      const flags = helpers.job.flags || {};
 
       if (flags[badFlag]) {
         ranWithDFlag();
@@ -145,9 +142,7 @@ test.each([
     try {
       await runTaskListOnce({ forbiddenFlags }, { "flag-test": job }, pgClient);
 
-      const { rows: jobs } = await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs`,
-      );
+      const jobs = await getJobs(pgClient);
       expect(jobs).toHaveLength(0);
 
       expect(ranWithoutDFlag).toHaveBeenCalledTimes(1);

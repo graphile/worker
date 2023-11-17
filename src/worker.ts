@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import { randomBytes } from "crypto";
 
-import { defaults } from "./config";
 import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
@@ -9,36 +8,59 @@ import {
   TaskList,
   WithPgClient,
   Worker,
-  WorkerOptions,
+  WorkerPool,
+  WorkerSharedOptions,
 } from "./interfaces";
-import { processSharedOptions } from "./lib";
+import { CompiledSharedOptions } from "./lib";
+import { completeJob } from "./sql/completeJob";
+import { failJob } from "./sql/failJob";
+import { getJob } from "./sql/getJob";
 
 export function makeNewWorker(
-  options: WorkerOptions,
-  tasks: TaskList,
-  withPgClient: WithPgClient,
-  continuous = true,
+  compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
+  params: {
+    tasks: TaskList;
+    withPgClient: WithPgClient;
+    continuous: boolean;
+    abortSignal: AbortSignal;
+    workerPool: WorkerPool;
+    autostart?: boolean;
+    workerId?: string;
+  },
 ): Worker {
   const {
+    tasks,
+    withPgClient,
+    continuous,
+    abortSignal,
+    workerPool,
+    autostart = true,
     workerId = `worker-${randomBytes(9).toString("hex")}`,
-    pollInterval = defaults.pollInterval,
-    noPreparedStatements,
-    forbiddenFlags,
-  } = options;
+  } = params;
   const {
-    workerSchema,
-    escapedWorkerSchema,
-    logger,
-    maxContiguousErrors,
     events,
-    useNodeTime,
-  } = processSharedOptions(options, {
+    resolvedPreset: {
+      worker: { pollInterval },
+    },
+    hooks,
+    _rawOptions: { forbiddenFlags },
+  } = compiledSharedOptions;
+  const logger = compiledSharedOptions.logger.scope({
     scope: {
       label: "worker",
       workerId,
     },
   });
-  const promise = deferred();
+
+  const workerDeferred = deferred();
+
+  const promise: Promise<void> & {
+    /** @internal */
+    worker?: Worker;
+  } = workerDeferred.finally(() => {
+    return hooks.process("stopWorker", { worker, withPgClient });
+  });
+
   promise.then(
     () => {
       events.emit("worker:stop", { worker });
@@ -49,7 +71,7 @@ export function makeNewWorker(
   );
   let activeJob: Job | null = null;
 
-  let doNextTimer: NodeJS.Timer | null = null;
+  let doNextTimer: NodeJS.Timeout | null = null;
   const cancelDoNext = () => {
     if (doNextTimer !== null) {
       clearTimeout(doNextTimer);
@@ -60,21 +82,25 @@ export function makeNewWorker(
   };
   let active = true;
 
-  const release = () => {
-    if (!active) {
-      return;
-    }
-    active = false;
-    events.emit("worker:release", { worker });
-    if (cancelDoNext()) {
-      // Nothing in progress; resolve the promise
-      promise.resolve();
+  const release = (force = false) => {
+    if (active) {
+      active = false;
+      events.emit("worker:release", { worker });
+
+      if (cancelDoNext()) {
+        workerDeferred.resolve();
+      } else if (force) {
+        // TODO: do `abortController.abort()` instead
+        workerDeferred.resolve();
+      }
+    } else if (force) {
+      workerDeferred.resolve();
     }
     return promise;
   };
 
   const nudge = () => {
-    assert(active, "nudge called after worker terminated");
+    assert.ok(active, "nudge called after worker terminated");
     if (doNextTimer) {
       // Must be idle; call early
       doNext();
@@ -87,11 +113,18 @@ export function makeNewWorker(
   };
 
   const worker: Worker = {
+    workerPool,
     nudge,
     workerId,
     release,
     promise,
     getActiveJob: () => activeJob,
+    _start: autostart
+      ? null
+      : () => {
+          doNext(true);
+          worker._start = null;
+        },
   };
 
   events.emit("worker:create", { worker, tasks });
@@ -101,17 +134,14 @@ export function makeNewWorker(
   let contiguousErrors = 0;
   let again = false;
 
-  const doNext = async (): Promise<void> => {
+  const doNext = async (first = false): Promise<void> => {
     again = false;
     cancelDoNext();
-    assert(active, "doNext called when active was false");
-    assert(!activeJob, "There should be no active job");
+    assert.ok(active, "doNext called when active was false");
+    assert.ok(!activeJob, "There should be no active job");
 
     // Find us a job
     try {
-      const supportedTaskNames = Object.keys(tasks);
-      assert(supportedTaskNames.length, "No runnable tasks!");
-
       let flagsToSkip: null | string[] = null;
 
       if (Array.isArray(forbiddenFlags)) {
@@ -126,23 +156,24 @@ export function makeNewWorker(
         }
       }
 
+      if (first) {
+        const event = {
+          worker,
+          flagsToSkip,
+          tasks,
+          withPgClient,
+        };
+        await hooks.process("startWorker", event);
+        flagsToSkip = event.flagsToSkip;
+      }
+
       events.emit("worker:getJob:start", { worker });
-      const {
-        rows: [jobRow],
-      } = await withPgClient((client) =>
-        client.query({
-          text:
-            // TODO: breaking change; change this to more optimal:
-            // `SELECT id, queue_name, task_identifier, payload FROM ...`,
-            `SELECT * FROM ${escapedWorkerSchema}.get_job($1, $2, forbidden_flags := $3::text[], now := coalesce($4::timestamptz, now())); `,
-          values: [
-            workerId,
-            supportedTaskNames,
-            flagsToSkip && flagsToSkip.length ? flagsToSkip : null,
-            useNodeTime ? new Date().toISOString() : null,
-          ],
-          name: noPreparedStatements ? undefined : `get_job/${workerSchema}`,
-        }),
+      const jobRow = await getJob(
+        compiledSharedOptions,
+        withPgClient,
+        tasks,
+        workerId,
+        flagsToSkip,
       );
 
       // `doNext` cannot be executed concurrently, so we know this is safe.
@@ -159,27 +190,17 @@ export function makeNewWorker(
       if (continuous) {
         contiguousErrors++;
         logger.debug(
-          `Failed to acquire job: ${err.message} (${contiguousErrors}/${maxContiguousErrors})`,
+          `Failed to acquire job: ${err.message} (${contiguousErrors} contiguous fails)`,
         );
-        if (contiguousErrors >= maxContiguousErrors) {
-          promise.reject(
-            new Error(
-              `Failed ${contiguousErrors} times in a row to acquire job; latest error: ${err.message}`,
-            ),
-          );
-          release();
-          return;
+        if (active) {
+          // Error occurred fetching a job; try again...
+          doNextTimer = setTimeout(() => doNext(), pollInterval);
         } else {
-          if (active) {
-            // Error occurred fetching a job; try again...
-            doNextTimer = setTimeout(() => doNext(), pollInterval);
-          } else {
-            promise.reject(err);
-          }
-          return;
+          workerDeferred.reject(err);
         }
+        return;
       } else {
-        promise.reject(err);
+        workerDeferred.reject(err);
         release();
         return;
       }
@@ -199,10 +220,10 @@ export function makeNewWorker(
             doNextTimer = setTimeout(() => doNext(), pollInterval);
           }
         } else {
-          promise.resolve();
+          workerDeferred.resolve();
         }
       } else {
-        promise.resolve();
+        workerDeferred.resolve();
         release();
       }
       return;
@@ -222,8 +243,12 @@ export function makeNewWorker(
       try {
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
-        assert(task, `Unsupported task '${job.task_identifier}'`);
-        const helpers = makeJobHelpers(options, job, { withPgClient, logger });
+        assert.ok(task, `Unsupported task '${job.task_identifier}'`);
+        const helpers = makeJobHelpers(compiledSharedOptions, job, {
+          withPgClient,
+          logger,
+          abortSignal,
+        });
         await task(job.payload, helpers);
       } catch (error) {
         err = error;
@@ -260,20 +285,21 @@ export function makeNewWorker(
           "Non error or error without message thrown.";
 
         logger.error(
-          `Failed task ${job.id} (${
-            job.task_identifier
-          }) with error ${message} (${duration.toFixed(2)}ms)${
+          `Failed task ${job.id} (${job.task_identifier}, ${duration.toFixed(
+            2,
+          )}ms, attempt ${job.attempts} of ${
+            job.max_attempts
+          }) with error '${message}'${
             stack ? `:\n  ${String(stack).replace(/\n/g, "\n  ").trim()}` : ""
           }`,
           { failure: true, job, error: err, duration },
         );
-        // TODO: retry logic, in case of server connection interruption
-        await withPgClient((client) =>
-          client.query({
-            text: `SELECT FROM ${escapedWorkerSchema}.fail_job($1, $2, $3);`,
-            values: [workerId, job.id, message],
-            name: noPreparedStatements ? undefined : `fail_job/${workerSchema}`,
-          }),
+        await failJob(
+          compiledSharedOptions,
+          withPgClient,
+          workerId,
+          job,
+          message,
         );
       } else {
         try {
@@ -287,20 +313,16 @@ export function makeNewWorker(
           logger.info(
             `Completed task ${job.id} (${
               job.task_identifier
-            }) with success (${duration.toFixed(2)}ms)`,
+            }, ${duration.toFixed(2)}ms${
+              job.attempts > 1
+                ? `, attempt ${job.attempts} of ${job.max_attempts}`
+                : ""
+            }) with success`,
             { job, duration, success: true },
           );
         }
-        // TODO: retry logic, in case of server connection interruption
-        await withPgClient((client) =>
-          client.query({
-            text: `SELECT FROM ${escapedWorkerSchema}.complete_job($1, $2);`,
-            values: [workerId, job.id],
-            name: noPreparedStatements
-              ? undefined
-              : `complete_job/${workerSchema}`,
-          }),
-        );
+
+        await completeJob(compiledSharedOptions, withPgClient, workerId, job);
       }
       events.emit("job:complete", { worker, job, error: err });
     } catch (fatalError) {
@@ -321,7 +343,7 @@ export function makeNewWorker(
         `Failed to release job '${job.id}' ${when}; committing seppuku\n${fatalError.message}`,
         { fatalError, job },
       );
-      promise.reject(fatalError);
+      workerDeferred.reject(fatalError);
       release();
       return;
     } finally {
@@ -332,15 +354,17 @@ export function makeNewWorker(
     if (active) {
       doNext();
     } else {
-      promise.resolve();
+      workerDeferred.resolve();
     }
   };
 
   // Start!
-  doNext();
+  if (autostart) {
+    doNext(true);
+  }
 
   // For tests
-  promise["worker"] = worker;
+  promise.worker = worker;
 
   return worker;
 }

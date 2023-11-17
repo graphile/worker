@@ -1,9 +1,8 @@
-import * as chokidar from "chokidar";
 import { promises as fsp } from "fs";
 
 import { parseCrontab } from "./crontab";
 import { ParsedCronItem, SharedOptions, WatchedCronItems } from "./interfaces";
-import { processSharedOptions } from "./lib";
+import { CompiledSharedOptions, processSharedOptions } from "./lib";
 import { Logger } from "./logger";
 
 async function loadCrontabIntoCronItems(
@@ -40,31 +39,21 @@ async function loadCrontabIntoCronItems(
   }
 }
 
-export default async function getCronItems(
+export async function getCronItems(
   options: SharedOptions,
   crontabPath: string,
-  watch = false,
 ): Promise<WatchedCronItems> {
-  const { logger } = processSharedOptions(options);
+  const compiledSharedOptions = processSharedOptions(options);
+  return getCronItemsInternal(compiledSharedOptions, crontabPath);
+}
 
-  let watcher: chokidar.FSWatcher | null = null;
+export async function getCronItemsInternal(
+  compiledSharedOptions: CompiledSharedOptions,
+  crontabPath: string,
+): Promise<WatchedCronItems> {
+  const { logger } = compiledSharedOptions;
+
   const items: Array<ParsedCronItem> = [];
-
-  if (watch) {
-    const watchLogger = logger.scope({ label: "watch" });
-    watcher = chokidar
-      .watch(crontabPath, { ignoreInitial: true })
-      .on("all", () => {
-        loadCrontabIntoCronItems(watchLogger, items, crontabPath).catch(
-          (error) => {
-            watchLogger.error(`Error in ${crontabPath}: ${error.message}`, {
-              crontabPath,
-              error,
-            });
-          },
-        );
-      });
-  }
 
   // Try and require it
   await loadCrontabIntoCronItems(logger, items, crontabPath);
@@ -77,9 +66,6 @@ export default async function getCronItems(
         return;
       }
       released = true;
-      if (watcher) {
-        watcher.close();
-      }
     },
   };
 }

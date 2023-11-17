@@ -23,7 +23,7 @@ process.env.NO_LOG_SUCCESS = "1";
 
 // if connection string not provided, assume postgres is available locally
 process.env.PERF_DATABASE_URL = `${
-  process.env.TEST_CONNECTION_STRING || "graphile_worker_perftest"
+  process.env.TEST_CONNECTION_STRING || "postgres:///graphile_worker_perftest"
 }`;
 
 const env = {
@@ -37,6 +37,9 @@ const execOptions = {
 };
 
 async function main() {
+  console.log("Building");
+  execSync("yarn prepack", execOptions);
+
   console.log("Dropping and recreating the test database");
   execSync("node ./recreateDb.js", execOptions);
 
@@ -53,7 +56,10 @@ async function main() {
 
   console.log(`Scheduling ${JOB_COUNT} jobs`);
   await time(() => {
-    execSync(`node ./init.js ${JOB_COUNT}`, execOptions);
+    execSync(`node ./init.js ${JOB_COUNT}`, {
+      ...execOptions,
+      stdio: "inherit",
+    });
   });
 
   console.log();

@@ -1,2 +1,8 @@
-node_modules
-dist
+/node_modules
+/dist
+/src/generated
+/rewired
+/website/build
+/website/.docusaurus
+/_LOCAL
+/graphile-pro-worker

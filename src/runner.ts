@@ -1,41 +1,43 @@
-import * as assert from "assert";
-
 import { getParsedCronItemsFromOptions, runCron } from "./cron";
-import getTasks from "./getTasks";
-import { ParsedCronItem, Runner, RunnerOptions, TaskList } from "./interfaces";
-import { getUtilsAndReleasersFromOptions, Releasers } from "./lib";
-import { runTaskList, runTaskListOnce } from "./main";
-import { migrate } from "./migrate";
+import { getTasksInternal } from "./getTasks";
+import {
+  ParsedCronItem,
+  PromiseOrDirect,
+  Runner,
+  RunnerOptions,
+  TaskList,
+} from "./interfaces";
+import {
+  CompiledOptions,
+  getUtilsAndReleasersFromOptions,
+  Releasers,
+} from "./lib";
+import { _runTaskList, runTaskListInternal } from "./main";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
-  const { withPgClient, release } = await getUtilsAndReleasersFromOptions(
-    options,
-  );
-  try {
-    await withPgClient((client) => migrate(options, client));
-  } finally {
-    await release();
-  }
+  const [, release] = await getUtilsAndReleasersFromOptions(options);
+  await release();
 };
 
+/** @internal */
 async function assertTaskList(
-  options: RunnerOptions,
+  compiledOptions: CompiledOptions,
   releasers: Releasers,
 ): Promise<TaskList> {
-  assert(
-    !options.taskDirectory || !options.taskList,
-    "Exactly one of either `taskDirectory` or `taskList` should be set",
-  );
-  if (options.taskList) {
-    return options.taskList;
-  } else if (options.taskDirectory) {
-    const watchedTasks = await getTasks(options, options.taskDirectory, false);
+  const {
+    resolvedPreset: {
+      worker: { taskDirectory },
+    },
+    _rawOptions: { taskList },
+  } = compiledOptions;
+  if (taskList) {
+    return taskList;
+  } else if (taskDirectory) {
+    const watchedTasks = await getTasksInternal(compiledOptions, taskDirectory);
     releasers.push(() => watchedTasks.release());
     return watchedTasks.tasks;
   } else {
-    throw new Error(
-      "You must specify either `options.taskList` or `options.taskDirectory`",
-    );
+    throw new Error("You must specify either `taskList` or `taskDirectory`");
   }
 }
 
@@ -43,72 +45,180 @@ export const runOnce = async (
   options: RunnerOptions,
   overrideTaskList?: TaskList,
 ): Promise<void> => {
-  const { concurrency = 1 } = options;
+  const [compiledOptions, release] = await getUtilsAndReleasersFromOptions(
+    options,
+  );
+  return runOnceInternal(compiledOptions, overrideTaskList, release);
+};
+
+export const runOnceInternal = async (
+  compiledOptions: CompiledOptions,
+  overrideTaskList: TaskList | undefined,
+  release: () => PromiseOrDirect<void>,
+): Promise<void> => {
   const {
     withPgClient,
-    release,
     releasers,
-  } = await getUtilsAndReleasersFromOptions(options);
+    resolvedPreset: {
+      worker: { concurrentJobs: concurrency },
+    },
+    _rawOptions: { noHandleSignals },
+  } = compiledOptions;
   try {
     const taskList =
-      overrideTaskList || (await assertTaskList(options, releasers));
+      overrideTaskList || (await assertTaskList(compiledOptions, releasers));
+    const workerPool = _runTaskList(compiledOptions, taskList, withPgClient, {
+      concurrency,
+      noHandleSignals,
+      continuous: false,
+    });
 
-    const promises: Promise<void>[] = [];
-    for (let i = 0; i < concurrency; i++) {
-      promises.push(
-        withPgClient((client) => runTaskListOnce(options, taskList, client)),
-      );
-    }
-    await Promise.all(promises);
+    return await workerPool.promise;
   } finally {
     await release();
   }
 };
 
 export const run = async (
-  options: RunnerOptions,
+  rawOptions: RunnerOptions,
   overrideTaskList?: TaskList,
   overrideParsedCronItems?: Array<ParsedCronItem>,
 ): Promise<Runner> => {
-  const {
-    pgPool,
+  const [compiledOptions, release] = await getUtilsAndReleasersFromOptions(
+    rawOptions,
+  );
+  return runInternal(
+    compiledOptions,
+    overrideTaskList,
+    overrideParsedCronItems,
     release,
-    releasers,
-    addJob,
-    events,
-  } = await getUtilsAndReleasersFromOptions(options);
+  );
+};
+
+export const runInternal = async (
+  compiledOptions: CompiledOptions,
+  overrideTaskList: TaskList | undefined,
+  overrideParsedCronItems: Array<ParsedCronItem> | undefined,
+  release: () => PromiseOrDirect<void>,
+): Promise<Runner> => {
+  const { releasers } = compiledOptions;
 
   try {
     const taskList =
-      overrideTaskList || (await assertTaskList(options, releasers));
+      overrideTaskList || (await assertTaskList(compiledOptions, releasers));
 
     const parsedCronItems =
       overrideParsedCronItems ||
-      (await getParsedCronItemsFromOptions(options, releasers));
+      (await getParsedCronItemsFromOptions(compiledOptions, releasers));
 
-    const cron = runCron(options, parsedCronItems, { pgPool, events });
-    releasers.push(() => cron.release());
-
-    const workerPool = runTaskList(options, taskList, pgPool);
-    releasers.push(() => workerPool.release());
-
-    let running = true;
-    return {
-      async stop() {
-        if (running) {
-          running = false;
-          events.emit("stop", {});
-          await release();
-        } else {
-          throw new Error("Runner is already stopped");
-        }
-      },
-      addJob,
-      promise: workerPool.promise,
-      events,
-    };
+    // The result of 'buildRunner' must be returned immediately, so that the
+    // user can await its promise property immediately. If this is broken then
+    // unhandled promise rejections could occur in some circumstances, causing
+    // a process crash in Node v16+.
+    return buildRunner({
+      compiledOptions,
+      taskList,
+      parsedCronItems,
+      release,
+    });
   } catch (e) {
-    await release();
+    try {
+      await release();
+    } catch (e2) {
+      compiledOptions.logger.error(
+        `Error occurred whilst attempting to release options after error occurred`,
+        { error: e, secondError: e2 },
+      );
+    }
     throw e;
   }
 };
+
+/**
+ * This _synchronous_ function exists to ensure that the promises are built and
+ * returned synchronously, such that an unhandled promise rejection error does
+ * not have time to occur.
+ *
+ * @internal
+ */
+function buildRunner(input: {
+  compiledOptions: CompiledOptions;
+  taskList: TaskList;
+  parsedCronItems: ParsedCronItem[];
+  release: () => PromiseOrDirect<void>;
+}): Runner {
+  const { compiledOptions, taskList, parsedCronItems, release } = input;
+  const { events, pgPool, releasers, addJob, logger } = compiledOptions;
+
+  const cron = runCron(compiledOptions, parsedCronItems, { pgPool, events });
+  releasers.push(() => cron.release());
+
+  const workerPool = runTaskListInternal(compiledOptions, taskList, pgPool);
+  releasers.push(() => {
+    if (!workerPool._shuttingDown) {
+      return workerPool.gracefulShutdown("Runner is shutting down");
+    }
+  });
+
+  let running = true;
+  const stop = async () => {
+    compiledOptions.logger.debug("Runner stopping");
+    if (running) {
+      running = false;
+      events.emit("stop", {});
+      try {
+        const promises: Array<PromiseOrDirect<void>> = [];
+        if (cron._active) {
+          promises.push(cron.release());
+        }
+        if (workerPool._active) {
+          promises.push(workerPool.gracefulShutdown());
+        }
+        await Promise.all(promises).then(release);
+      } catch (error) {
+        logger.error(
+          `Error occurred whilst attempting to release runner options: ${error.message}`,
+          { error },
+        );
+      }
+    } else {
+      throw new Error("Runner is already stopped");
+    }
+  };
+
+  workerPool.promise.finally(() => {
+    if (running) {
+      stop();
+    }
+  });
+  cron.promise.finally(() => {
+    if (running) {
+      stop();
+    }
+  });
+
+  const promise = Promise.all([cron.promise, workerPool.promise]).then(
+    () => {
+      /* noop */
+    },
+    async (error) => {
+      if (running) {
+        logger.error(`Stopping worker due to an error: ${error}`, { error });
+        await stop();
+      } else {
+        logger.error(
+          `Error occurred, but worker is already stopping: ${error}`,
+          { error },
+        );
+      }
+      return Promise.reject(error);
+    },
+  );
+
+  return {
+    stop,
+    addJob,
+    promise,
+    events,
+  };
+}
