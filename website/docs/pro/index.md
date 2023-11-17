@@ -14,15 +14,16 @@ essential, but they are things your team is likely to appreciate:
   unlocking jobs automatically when a worker seems to have unexpectedly stopped
 - _More features planned_
 
-_Paying for Worker Pro helps to fund the ongoing maintenance of Graphile Worker
-and other Graphile projects, and is **free for sponsors** on the $100/mo tier or
-above._
+_Worker Pro costs USD $100/mo and helps to fund the ongoing maintenance of
+Graphile Worker and other Graphile projects. It is also available **free to
+sponsors** on the $100/mo tier or above._
 
 :::tip Launch offer
 
-Worker Pro currently has a limited feature set; for a limited time get access by
-sponsoring at **just $25+/mo** and, as a thank you for being an early adopter,
-keep this preferential rate for at least 18 months after the launch offer ends.
+Worker Pro is in early access with a limited feature set; during this period get
+access by sponsoring at **just $25+/mo** and, as a thank you for being an early
+adopter, keep this preferential rate for at least 18 months after the launch
+offer ends.
 
 :::
 
