@@ -23,9 +23,14 @@ export async function getJob(
     resolvedPreset: {
       worker: { preparedStatements, useNodeTime },
     },
+    logger,
   } = compiledSharedOptions;
 
   const supportedTaskNames = Object.keys(tasks);
+  if (supportedTaskNames.length === 0) {
+    logger.error("No tasks found; nothing to do!");
+    return undefined;
+  }
 
   const {
     rows: [jobRow],
