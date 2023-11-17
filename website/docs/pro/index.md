@@ -14,8 +14,8 @@ essential, but they are things your team is likely to appreciate:
   unlocking jobs automatically when a worker seems to have unexpectedly stopped
 - _More features planned_
 
-_Worker Pro costs USD $100/mo and helps to fund the ongoing maintenance of
-Graphile Worker and other Graphile projects. It is also available **free to
+_Worker Pro is priced at USD $100/mo and helps to fund the ongoing maintenance
+of Graphile Worker and other Graphile projects. It is also available **free to
 sponsors** on the $100/mo tier or above._
 
 :::tip Launch offer
@@ -37,7 +37,7 @@ about Worker Pro.
 
 ### Source available
 
-Worker Pro is not open source, but it is &ldquo;source available&rdquo; the
+Worker Pro is not open source, but it is &ldquo;source available&rdquo;; the
 source code is licensed in a way that forbids publishing and redistribution but
 is otherwise very flexible, allowing you to make your own modifications for
 internal usage should you need to do so:
@@ -144,7 +144,7 @@ Ready to enhance the entire open source ecosystem together?
 ### Is Worker Pro needed for production usage?
 
 No, absolutely not! Graphile Worker existed without these features for 5 years
-so they are not &ldquo;essential&rdquo; they're &ldquo;nice to have&rdquo;
+so they are not &ldquo;essential&rdquo;; they're &ldquo;nice to have&rdquo;
 features, especially for larger teams or systems with more complex deployments.
 
 ### Can I implement these features myself instead?
