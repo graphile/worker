@@ -1,17 +1,21 @@
-import * as assert from "assert";
-
 import { getParsedCronItemsFromOptions, runCron } from "./cron";
-import getTasks from "./getTasks";
-import { ParsedCronItem, Runner, RunnerOptions, TaskList } from "./interfaces";
+import { getTasksInternal } from "./getTasks";
+import {
+  ParsedCronItem,
+  PromiseOrDirect,
+  Runner,
+  RunnerOptions,
+  TaskList,
+} from "./interfaces";
 import {
   CompiledOptions,
   getUtilsAndReleasersFromOptions,
   Releasers,
 } from "./lib";
-import { _runTaskList, runTaskList } from "./main";
+import { _runTaskList, runTaskListInternal } from "./main";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
-  const { release } = await getUtilsAndReleasersFromOptions(options);
+  const [, release] = await getUtilsAndReleasersFromOptions(options);
   await release();
 };
 
@@ -20,24 +24,20 @@ async function assertTaskList(
   compiledOptions: CompiledOptions,
   releasers: Releasers,
 ): Promise<TaskList> {
-  const { options } = compiledOptions;
-  assert.ok(
-    !options.taskDirectory || !options.taskList,
-    "Exactly one of either `taskDirectory` or `taskList` should be set",
-  );
-  if (options.taskList) {
-    return options.taskList;
-  } else if (options.taskDirectory) {
-    const watchedTasks = await getTasks(
-      compiledOptions.options,
-      options.taskDirectory,
-    );
+  const {
+    resolvedPreset: {
+      worker: { taskDirectory },
+    },
+    _rawOptions: { taskList },
+  } = compiledOptions;
+  if (taskList) {
+    return taskList;
+  } else if (taskDirectory) {
+    const watchedTasks = await getTasksInternal(compiledOptions, taskDirectory);
     releasers.push(() => watchedTasks.release());
     return watchedTasks.tasks;
   } else {
-    throw new Error(
-      "You must specify either `options.taskList` or `options.taskDirectory`",
-    );
+    throw new Error("You must specify either `taskList` or `taskDirectory`");
   }
 }
 
@@ -45,14 +45,31 @@ export const runOnce = async (
   options: RunnerOptions,
   overrideTaskList?: TaskList,
 ): Promise<void> => {
-  const compiledOptions = await getUtilsAndReleasersFromOptions(options);
-  const { withPgClient, release, releasers } = compiledOptions;
+  const [compiledOptions, release] = await getUtilsAndReleasersFromOptions(
+    options,
+  );
+  return runOnceInternal(compiledOptions, overrideTaskList, release);
+};
+
+export const runOnceInternal = async (
+  compiledOptions: CompiledOptions,
+  overrideTaskList: TaskList | undefined,
+  release: () => PromiseOrDirect<void>,
+): Promise<void> => {
+  const {
+    withPgClient,
+    releasers,
+    resolvedPreset: {
+      worker: { concurrentJobs: concurrency },
+    },
+    _rawOptions: { noHandleSignals },
+  } = compiledOptions;
   try {
     const taskList =
       overrideTaskList || (await assertTaskList(compiledOptions, releasers));
     const workerPool = _runTaskList(compiledOptions, taskList, withPgClient, {
-      concurrency: options.concurrency ?? 1,
-      noHandleSignals: options.noHandleSignals,
+      concurrency,
+      noHandleSignals,
       continuous: false,
     });
 
@@ -67,8 +84,24 @@ export const run = async (
   overrideTaskList?: TaskList,
   overrideParsedCronItems?: Array<ParsedCronItem>,
 ): Promise<Runner> => {
-  const compiledOptions = await getUtilsAndReleasersFromOptions(rawOptions);
-  const { release, releasers } = compiledOptions;
+  const [compiledOptions, release] = await getUtilsAndReleasersFromOptions(
+    rawOptions,
+  );
+  return runInternal(
+    compiledOptions,
+    overrideTaskList,
+    overrideParsedCronItems,
+    release,
+  );
+};
+
+export const runInternal = async (
+  compiledOptions: CompiledOptions,
+  overrideTaskList: TaskList | undefined,
+  overrideParsedCronItems: Array<ParsedCronItem> | undefined,
+  release: () => PromiseOrDirect<void>,
+): Promise<Runner> => {
+  const { releasers } = compiledOptions;
 
   try {
     const taskList =
@@ -86,6 +119,7 @@ export const run = async (
       compiledOptions,
       taskList,
       parsedCronItems,
+      release,
     });
   } catch (e) {
     try {
@@ -111,15 +145,15 @@ function buildRunner(input: {
   compiledOptions: CompiledOptions;
   taskList: TaskList;
   parsedCronItems: ParsedCronItem[];
+  release: () => PromiseOrDirect<void>;
 }): Runner {
-  const { compiledOptions, taskList, parsedCronItems } = input;
-  const { events, pgPool, releasers, release, addJob, options, logger } =
-    compiledOptions;
+  const { compiledOptions, taskList, parsedCronItems, release } = input;
+  const { events, pgPool, releasers, addJob, logger } = compiledOptions;
 
   const cron = runCron(compiledOptions, parsedCronItems, { pgPool, events });
   releasers.push(() => cron.release());
 
-  const workerPool = runTaskList(options, taskList, pgPool);
+  const workerPool = runTaskListInternal(compiledOptions, taskList, pgPool);
   releasers.push(() => {
     if (!workerPool._shuttingDown) {
       return workerPool.gracefulShutdown("Runner is shutting down");
@@ -128,11 +162,19 @@ function buildRunner(input: {
 
   let running = true;
   const stop = async () => {
+    compiledOptions.logger.debug("Runner stopping");
     if (running) {
       running = false;
       events.emit("stop", {});
       try {
-        await release();
+        const promises: Array<PromiseOrDirect<void>> = [];
+        if (cron._active) {
+          promises.push(cron.release());
+        }
+        if (workerPool._active) {
+          promises.push(workerPool.gracefulShutdown());
+        }
+        await Promise.all(promises).then(release);
       } catch (error) {
         logger.error(
           `Error occurred whilst attempting to release runner options: ${error.message}`,

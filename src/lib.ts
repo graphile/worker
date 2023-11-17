@@ -3,21 +3,25 @@ import { EventEmitter } from "events";
 import { applyHooks, AsyncHooks, resolvePresets } from "graphile-config";
 import { Client, Pool, PoolClient } from "pg";
 
-import { WorkerPluginContext, WorkerPreset } from ".";
-import { defaults } from "./config";
-import { MINUTE } from "./cronConstants";
+import { makeWorkerPresetWorkerOptions } from "./config";
 import { migrations } from "./generated/sql";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
 import {
   AddJobFunction,
+  PromiseOrDirect,
   RunnerOptions,
+  RunOnceOptions,
   SharedOptions,
   WithPgClient,
   WorkerEvents,
+  WorkerOptions,
+  WorkerPluginContext,
+  WorkerSharedOptions,
+  WorkerUtilsOptions,
 } from "./interfaces";
-import { defaultLogger, Logger, LogScope } from "./logger";
+import { Logger, LogScope } from "./logger";
 import { migrate } from "./migrate";
-import { EMPTY_PRESET } from "./preset";
+import { WorkerPreset } from "./preset";
 import { version } from "./version";
 
 const MAX_MIGRATION_NUMBER = Object.keys(migrations).reduce(
@@ -34,6 +38,11 @@ export const BREAKING_MIGRATIONS = Object.entries(migrations)
   })
   .map(([migrationFile]) => parseInt(migrationFile.slice(0, 6), 10));
 
+export type ResolvedWorkerPreset = GraphileConfig.ResolvedPreset & {
+  worker: GraphileConfig.WorkerOptions &
+    ReturnType<typeof makeWorkerPresetWorkerOptions>;
+};
+
 // NOTE: when you add things here, you may also want to add them to WorkerPluginContext
 export interface CompiledSharedOptions<
   T extends SharedOptions = SharedOptions,
@@ -45,42 +54,174 @@ export interface CompiledSharedOptions<
   logger: Logger;
   workerSchema: string;
   escapedWorkerSchema: string;
-  useNodeTime: boolean;
-  minResetLockedInterval: number;
-  maxResetLockedInterval: number;
-  options: T;
+  /**
+   * DO NOT USE THIS! As we move over to presets this will be removed.
+   *
+   * @internal
+   */
+  _rawOptions: T;
+  resolvedPreset: ResolvedWorkerPreset;
   hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
-  resolvedPreset?: GraphileConfig.ResolvedPreset;
-  gracefulShutdownAbortTimeout: number;
 }
 
 interface ProcessSharedOptionsSettings {
   scope?: LogScope;
 }
+type SomeOptions = SharedOptions &
+  Partial<WorkerSharedOptions> &
+  Partial<WorkerOptions> &
+  Partial<RunOnceOptions> &
+  Partial<WorkerUtilsOptions> &
+  Partial<RunnerOptions>;
+
+/**
+ * Important: ensure you still handle `forbiddenFlags`, `pgPool`, `workerId`,
+ * `autostart`, `workerPool`, `abortSignal`, `noHandleSignals`, `taskList`,
+ * `crontab`, `parsedCronItems`!
+ */
+function legacyOptionsToPreset(options: SomeOptions): GraphileConfig.Preset {
+  if ("_rawOptions" in options) {
+    console.trace(
+      "GraphileWorkerInternalError: CompiledSharedOptions used where SharedOptions was expected.",
+    );
+    throw new Error(
+      "GraphileWorkerInternalError: CompiledSharedOptions used where SharedOptions was expected.",
+    );
+  }
+  assert.ok(
+    !options.taskList || !options.taskDirectory,
+    "Exactly one of either `taskDirectory` or `taskList` should be set",
+  );
+  const preset = {
+    extends: [] as GraphileConfig.Preset[],
+    worker: {} as Partial<GraphileConfig.WorkerOptions>,
+  } satisfies GraphileConfig.Preset;
+  for (const key of Object.keys(options) as (keyof SomeOptions)[]) {
+    if (options[key] == null) {
+      continue;
+    }
+    switch (key) {
+      case "forbiddenFlags":
+      case "pgPool":
+      case "workerId":
+      case "autostart":
+      case "workerPool":
+      case "abortSignal":
+      case "noHandleSignals":
+      case "taskList":
+      case "crontab":
+      case "parsedCronItems": {
+        // ignore
+        break;
+      }
+      case "preset": {
+        preset.extends.push(options[key]!);
+        break;
+      }
+      case "logger": {
+        preset.worker.logger = options[key]!;
+        break;
+      }
+      case "schema": {
+        preset.worker.schema = options[key]!;
+        break;
+      }
+      case "connectionString": {
+        preset.worker.connectionString = options[key]!;
+        break;
+      }
+      case "events": {
+        preset.worker.events = options[key]!;
+        break;
+      }
+      case "maxPoolSize": {
+        preset.worker.maxPoolSize = options[key]!;
+        break;
+      }
+      case "useNodeTime": {
+        preset.worker.useNodeTime = options[key]!;
+        break;
+      }
+      case "noPreparedStatements": {
+        preset.worker.preparedStatements = !options[key]!;
+        break;
+      }
+      case "minResetLockedInterval": {
+        preset.worker.minResetLockedInterval = options[key]!;
+        break;
+      }
+      case "maxResetLockedInterval": {
+        preset.worker.maxResetLockedInterval = options[key]!;
+        break;
+      }
+      case "gracefulShutdownAbortTimeout": {
+        preset.worker.gracefulShutdownAbortTimeout = options[key]!;
+        break;
+      }
+      case "pollInterval": {
+        preset.worker.pollInterval = options[key]!;
+        break;
+      }
+      case "concurrency": {
+        preset.worker.concurrentJobs = options[key]!;
+        break;
+      }
+      case "taskDirectory": {
+        preset.worker.taskDirectory = options[key]!;
+        break;
+      }
+      case "crontabFile": {
+        preset.worker.crontabFile = options[key]!;
+        break;
+      }
+      default: {
+        const never: never = key;
+        console.warn(
+          `Do not know how to convert config option '${never}' into its preset equivalent; ignoring.`,
+        );
+      }
+    }
+  }
+  return preset;
+}
 
 const _sharedOptionsCache = new WeakMap<SharedOptions, CompiledSharedOptions>();
-export function processSharedOptions<T extends SharedOptions>(
+export function processSharedOptions<
+  T extends
+    | SharedOptions
+    | WorkerSharedOptions
+    | WorkerOptions
+    | RunOnceOptions
+    | WorkerUtilsOptions,
+>(
   options: T,
   { scope }: ProcessSharedOptionsSettings = {},
 ): CompiledSharedOptions<T> {
+  if ("_rawOptions" in options) {
+    throw new Error(
+      `Fed processed options to processSharedOptions; this is invalid.`,
+    );
+  }
   let compiled = _sharedOptionsCache.get(options) as
     | CompiledSharedOptions<T>
     | undefined;
   if (!compiled) {
-    const {
-      logger = defaultLogger,
-      schema: workerSchema = defaults.schema,
-      events = new EventEmitter(),
-      useNodeTime = false,
-      minResetLockedInterval = 8 * MINUTE,
-      maxResetLockedInterval = 10 * MINUTE,
-      preset,
-      gracefulShutdownAbortTimeout = 5000,
-    } = options;
     const resolvedPreset = resolvePresets([
       WorkerPreset,
-      preset ?? EMPTY_PRESET,
-    ]);
+      // Explicit options override the preset
+      legacyOptionsToPreset(options),
+    ]) as ResolvedWorkerPreset;
+
+    const {
+      worker: {
+        minResetLockedInterval,
+        maxResetLockedInterval,
+        schema: workerSchema,
+        logger,
+        events = new EventEmitter(),
+      },
+    } = resolvedPreset;
+
     const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
     if (
       !Number.isFinite(minResetLockedInterval) ||
@@ -101,13 +242,9 @@ export function processSharedOptions<T extends SharedOptions>(
       logger,
       workerSchema,
       escapedWorkerSchema,
-      useNodeTime,
-      minResetLockedInterval,
-      maxResetLockedInterval,
-      options,
+      _rawOptions: options,
       hooks,
       resolvedPreset,
-      gracefulShutdownAbortTimeout,
     };
     applyHooks(
       resolvedPreset.plugins,
@@ -144,22 +281,22 @@ export async function assertPool(
   compiledSharedOptions: CompiledSharedOptions,
   releasers: Releasers,
 ): Promise<Pool> {
-  const { logger, options } = compiledSharedOptions;
   const {
-    preset,
-    maxPoolSize = preset?.worker?.maxPoolSize ?? defaults.maxPoolSize,
-  } = options;
+    logger,
+    resolvedPreset: {
+      worker: { maxPoolSize, connectionString },
+    },
+    _rawOptions,
+  } = compiledSharedOptions;
   assert.ok(
-    !options.pgPool || !options.connectionString,
+    // NOTE: we explicitly want `_rawOptions.connectionString` here - we don't
+    // mind if `connectionString` is set as part of the preset.
+    !_rawOptions.pgPool || !_rawOptions.connectionString,
     "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
   );
   let pgPool: Pool;
-  const connectionString =
-    options.connectionString ||
-    options.preset?.worker?.connectionString ||
-    process.env.DATABASE_URL;
-  if (options.pgPool) {
-    pgPool = options.pgPool;
+  if (_rawOptions.pgPool) {
+    pgPool = _rawOptions.pgPool;
   } else if (connectionString) {
     pgPool = new Pool({
       connectionString,
@@ -222,13 +359,19 @@ export async function assertPool(
   return pgPool;
 }
 
-export type Release = () => Promise<void>;
+export type Release = () => PromiseOrDirect<void>;
 
 export async function withReleasers<T>(
   callback: (releasers: Releasers, release: Release) => Promise<T>,
 ): Promise<T> {
   const releasers: Releasers = [];
+  let released = false;
   const release: Release = async () => {
+    if (released) {
+      throw new Error(`Internal error: compiledOptions was released twice.`);
+    } else {
+      released = true;
+    }
     let firstError: Error | null = null;
     // Call releasers in reverse order - LIFO queue.
     for (let i = releasers.length - 1; i >= 0; i--) {
@@ -258,7 +401,6 @@ interface ProcessOptionsExtensions {
   pgPool: Pool;
   withPgClient: WithPgClient;
   addJob: AddJobFunction;
-  release: Release;
   releasers: Releasers;
 }
 
@@ -266,22 +408,31 @@ export interface CompiledOptions
   extends CompiledSharedOptions<RunnerOptions>,
     ProcessOptionsExtensions {}
 
+type CompiledOptionsAndRelease = [
+  compiledOptions: CompiledOptions,
+  release: (error?: Error) => PromiseOrDirect<void>,
+];
+
 export const getUtilsAndReleasersFromOptions = async (
   options: RunnerOptions,
   settings: ProcessSharedOptionsSettings = {},
-): Promise<CompiledOptions> => {
+): Promise<CompiledOptionsAndRelease> => {
+  if ("_rawOptions" in options) {
+    throw new Error(
+      `Fed processed options to getUtilsAndReleasersFromOptions; this is invalid.`,
+    );
+  }
   const compiledSharedOptions = processSharedOptions(options, settings);
   const {
     logger,
-    options: {
-      preset,
-      concurrency = preset?.worker?.concurrentJobs ?? defaults.concurrentJobs,
+    resolvedPreset: {
+      worker: { concurrentJobs: concurrency },
     },
   } = compiledSharedOptions;
   return withReleasers(async function getUtilsFromOptions(
     releasers,
     release,
-  ): Promise<CompiledOptions> {
+  ): Promise<CompiledOptionsAndRelease> {
     const pgPool: Pool = await assertPool(compiledSharedOptions, releasers);
     // @ts-ignore
     const max = pgPool?.options?.max || 10;
@@ -301,49 +452,18 @@ export const getUtilsAndReleasersFromOptions = async (
 
     const addJob = makeAddJob(compiledSharedOptions, withPgClient);
 
-    return {
-      ...compiledSharedOptions,
-      pgPool,
-      withPgClient,
-      addJob,
+    return [
+      {
+        ...compiledSharedOptions,
+        pgPool,
+        withPgClient,
+        addJob,
+        releasers,
+      },
       release,
-      releasers,
-    };
+    ];
   });
 };
-
-export function digestPreset(preset: GraphileConfig.Preset) {
-  const resolvedPreset = resolvePresets([preset]);
-  const {
-    connectionString = defaults.connectionString,
-    schema = defaults.schema,
-    preparedStatements = defaults.preparedStatements,
-    crontabFile = defaults.crontabFile,
-    tasksFolder = defaults.tasksFolder,
-    concurrentJobs = defaults.concurrentJobs,
-    maxPoolSize = defaults.maxPoolSize,
-    pollInterval = defaults.pollInterval,
-    gracefulShutdownAbortTimeout = defaults.gracefulShutdownAbortTimeout,
-  } = resolvedPreset.worker ?? {};
-
-  const runnerOptions: RunnerOptions = {
-    schema,
-    concurrency: concurrentJobs,
-    maxPoolSize,
-    pollInterval,
-    connectionString,
-    noPreparedStatements: !preparedStatements,
-    preset: resolvedPreset,
-    gracefulShutdownAbortTimeout,
-  };
-
-  return {
-    resolvedPreset,
-    runnerOptions,
-    crontabFile,
-    tasksFolder,
-  };
-}
 
 export function tryParseJson<T = object>(
   json: string | null | undefined,

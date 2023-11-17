@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import type { EventEmitter } from "events";
 import type { Stats } from "fs";
+import { AsyncHooks } from "graphile-config";
 import type {
   Notification,
   Pool,
@@ -9,7 +10,11 @@ import type {
   QueryResultRow,
 } from "pg";
 
-import type { CompiledSharedOptions, Release } from "./lib";
+import type {
+  CompiledSharedOptions,
+  Release,
+  ResolvedWorkerPreset,
+} from "./lib";
 import type { Logger } from "./logger";
 import type { Signal } from "./signals";
 
@@ -385,7 +390,7 @@ export interface Worker {
   workerPool: WorkerPool;
   nudge: () => boolean;
   workerId: string;
-  release: () => void | Promise<void>;
+  release: (force?: boolean) => void | Promise<void>;
   promise: Promise<void>;
   getActiveJob: () => Job | null;
   /** @internal */
@@ -447,6 +452,8 @@ export interface Runner {
 export interface Cron {
   release(): Promise<void>;
   promise: Promise<void>;
+  /** @internal */
+  _active: boolean;
 }
 
 export interface TaskSpec {
@@ -656,7 +663,7 @@ export interface WorkerPoolOptions extends WorkerSharedOptions {
  */
 export interface RunnerOptions extends WorkerPoolOptions {
   /**
-   * Task names and handler, e.g. from `getTasks`
+   * Task names and handler, e.g. from `getTasks`. Overrides `taskDirectory`
    */
   taskList?: TaskList;
 
@@ -666,7 +673,8 @@ export interface RunnerOptions extends WorkerPoolOptions {
   taskDirectory?: string;
 
   /**
-   * A crontab string to use instead of reading a crontab file
+   * A crontab string to use instead of reading a crontab file. Overrides
+   * `crontabFile`
    */
   crontab?: string;
 
@@ -679,7 +687,7 @@ export interface RunnerOptions extends WorkerPoolOptions {
    * Programmatically generated cron items. **BE VERY CAREFUL** if you use this
    * manually, there are requirements on this type that TypeScript cannot
    * express, and if you don't adhere to them then you'll get unexpected
-   * behaviours.
+   * behaviours. Overrides `crontabFile`
    */
   parsedCronItems?: Array<ParsedCronItem>;
 }
@@ -1083,3 +1091,17 @@ export interface FileDetails {
 }
 
 export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+
+export interface WorkerPluginContext {
+  version: string;
+  maxMigrationNumber: number;
+  breakingMigrationNumbers: number[];
+  events: WorkerEvents;
+  logger: Logger;
+  workerSchema: string;
+  escapedWorkerSchema: string;
+  /** @internal */
+  _rawOptions: SharedOptions;
+  hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
+  resolvedPreset: ResolvedWorkerPreset;
+}

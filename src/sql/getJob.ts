@@ -1,4 +1,3 @@
-import { defaults } from "../config";
 import { DbJob, Job, TaskList, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 import { getTaskDetails } from "../taskIdentifiers";
@@ -17,19 +16,17 @@ export async function getJob(
   withPgClient: WithPgClient,
   tasks: TaskList,
   workerId: string,
-  useNodeTime: boolean,
   flagsToSkip: string[] | null,
 ): Promise<Job | undefined> {
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: {
-      preset,
-      noPreparedStatements = (preset?.worker?.preparedStatements === false
-        ? true
-        : undefined) ?? defaults.preparedStatements === false,
+    resolvedPreset: {
+      worker: { preparedStatements, useNodeTime },
     },
+    logger,
   } = compiledSharedOptions;
+
   const taskDetailsPromise = getTaskDetails(
     compiledSharedOptions,
     withPgClient,
@@ -38,6 +35,11 @@ export async function getJob(
   const taskDetails = isPromise(taskDetailsPromise)
     ? await taskDetailsPromise
     : taskDetailsPromise;
+
+  if (taskDetails.taskIds.length === 0) {
+    logger.error("No tasks found; nothing to do!");
+    return undefined;
+  }
 
   let i = 2;
   const hasFlags = flagsToSkip && flagsToSkip.length > 0;
@@ -175,7 +177,7 @@ with j as (
     ...(hasFlags ? [flagsToSkip!] : []),
     ...(useNodeTime ? [new Date().toISOString()] : []),
   ];
-  const name = noPreparedStatements
+  const name = !preparedStatements
     ? undefined
     : `get_job${hasFlags ? "F" : ""}${useNodeTime ? "N" : ""}/${workerSchema}`;
 

@@ -1,4 +1,3 @@
-import { defaults } from "../config";
 import { DbJob, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
@@ -11,11 +10,8 @@ export async function completeJob(
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: {
-      preset,
-      noPreparedStatements = (preset?.worker?.preparedStatements === false
-        ? true
-        : undefined) ?? defaults.preparedStatements === false,
+    resolvedPreset: {
+      worker: { preparedStatements },
     },
   } = compiledSharedOptions;
 
@@ -34,7 +30,7 @@ set locked_by = null, locked_at = null
 from j
 where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
         values: [job.id, workerId],
-        name: noPreparedStatements
+        name: !preparedStatements
           ? undefined
           : `complete_job_q/${workerSchema}`,
       }),
@@ -46,7 +42,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
 delete from ${escapedWorkerSchema}._private_jobs as jobs
 where id = $1::bigint`,
         values: [job.id],
-        name: noPreparedStatements ? undefined : `complete_job/${workerSchema}`,
+        name: !preparedStatements ? undefined : `complete_job/${workerSchema}`,
       }),
     );
   }

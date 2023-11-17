@@ -3,7 +3,7 @@ import { Pool } from "pg";
 
 import { parseCrontab } from "./crontab";
 import defer from "./deferred";
-import getCronItems from "./getCronItems";
+import { getCronItemsInternal } from "./getCronItems";
 import {
   $$isParsed,
   Cron,
@@ -16,7 +16,7 @@ import {
   TimestampDigest,
   WorkerEvents,
 } from "./interfaces";
-import { CompiledOptions, processSharedOptions, Releasers } from "./lib";
+import { CompiledOptions, CompiledSharedOptions, Releasers } from "./lib";
 
 interface CronRequirements {
   pgPool: Pool;
@@ -290,26 +290,31 @@ const ONE_MINUTE = 60 * 1000;
  * @param requirements - the helpers that this task needs
  */
 export const runCron = (
-  options: RunnerOptions,
+  compiledSharedOptions: CompiledSharedOptions<RunnerOptions>,
   parsedCronItems: ParsedCronItem[],
   requirements: CronRequirements,
 ): Cron => {
   const { pgPool } = requirements;
-  const { logger, escapedWorkerSchema, events, useNodeTime } =
-    processSharedOptions(options);
+  const {
+    logger,
+    escapedWorkerSchema,
+    events,
+    resolvedPreset: {
+      worker: { useNodeTime },
+    },
+  } = compiledSharedOptions;
 
   const promise = defer();
-  let released = false;
   let timeout: NodeJS.Timeout | null = null;
 
   let stopCalled = false;
   function stop(e?: Error) {
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
     if (!stopCalled) {
       stopCalled = true;
-      if (timeout) {
-        clearTimeout(timeout);
-        timeout = null;
-      }
       if (e) {
         promise.reject(e);
       } else {
@@ -323,7 +328,7 @@ export const runCron = (
   }
 
   async function cronMain() {
-    if (released) {
+    if (!cron._active) {
       return stop();
     }
 
@@ -342,7 +347,7 @@ export const runCron = (
 
     events.emit("cron:started", { cron: this, start });
 
-    if (released) {
+    if (!cron._active) {
       return stop();
     }
 
@@ -353,7 +358,7 @@ export const runCron = (
     const nextTimestamp = unsafeRoundToMinute(new Date(+start), true);
 
     const scheduleNextLoop = () => {
-      if (released) {
+      if (!cron._active) {
         return stop();
       }
       // + 1 millisecond to try and ensure this happens in the next minute
@@ -366,7 +371,7 @@ export const runCron = (
 
     async function loop() {
       try {
-        if (released) {
+        if (!cron._active) {
           return stop();
         }
 
@@ -456,7 +461,7 @@ export const runCron = (
             jobsAndIdentifiers,
           });
 
-          if (released) {
+          if (!cron._active) {
             return stop();
           }
         }
@@ -477,12 +482,11 @@ export const runCron = (
     scheduleNextLoop();
   }
 
-  cronMain().catch(stop);
-
-  return {
+  const cron: Cron = {
+    _active: true,
     release() {
-      if (!released) {
-        released = true;
+      if (cron._active) {
+        cron._active = false;
         if (timeout) {
           // Next loop is queued; lets cancel it early
           stop();
@@ -492,6 +496,10 @@ export const runCron = (
     },
     promise,
   };
+
+  cronMain().catch(stop);
+
+  return cron;
 };
 
 /** @internal */
@@ -500,12 +508,10 @@ export async function getParsedCronItemsFromOptions(
   releasers: Releasers,
 ): Promise<Array<ParsedCronItem>> {
   const {
-    options: {
-      preset,
-      crontabFile = preset?.worker?.crontabFile,
-      parsedCronItems,
-      crontab,
+    resolvedPreset: {
+      worker: { crontabFile },
     },
+    _rawOptions: { parsedCronItems, crontab },
   } = compiledOptions;
 
   if (!crontabFile && !parsedCronItems && !crontab) {
@@ -514,29 +520,12 @@ export async function getParsedCronItemsFromOptions(
 
   if (crontab) {
     assert.ok(
-      !crontabFile,
-      "`crontab` and `crontabFile` must not be set at the same time.",
-    );
-    assert.ok(
       !parsedCronItems,
       "`crontab` and `parsedCronItems` must not be set at the same time.",
     );
 
     return parseCrontab(crontab);
-  } else if (crontabFile) {
-    assert.ok(
-      !parsedCronItems,
-      "`crontabFile` and `parsedCronItems` must not be set at the same time.",
-    );
-
-    const watchedCronItems = await getCronItems(
-      compiledOptions.options,
-      crontabFile,
-    );
-    releasers.push(() => watchedCronItems.release());
-    return watchedCronItems.items;
-  } else {
-    assert.ok(parsedCronItems != null, "Expected `parsedCronItems` to be set.");
+  } else if (parsedCronItems) {
     // Basic check to ensure that users remembered to call
     // `parseCronItems`/`parseCrontab`; not intended to be a full check, just a
     // quick one to catch the obvious errors. Keep in mind that
@@ -557,6 +546,13 @@ export async function getParsedCronItemsFromOptions(
     }
 
     return parsedCronItems;
+  } else {
+    const watchedCronItems = await getCronItemsInternal(
+      compiledOptions,
+      crontabFile,
+    );
+    releasers.push(() => watchedCronItems.release());
+    return watchedCronItems.items;
   }
 }
 

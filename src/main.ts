@@ -3,7 +3,6 @@ import { EventEmitter } from "events";
 import { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
-import { defaults } from "./config";
 import deferred from "./deferred";
 import {
   makeWithPgClientFromClient,
@@ -216,8 +215,21 @@ export function runTaskList(
   pgPool: Pool,
 ): WorkerPool {
   const compiledSharedOptions = processSharedOptions(rawOptions);
-  const { events, logger, minResetLockedInterval, maxResetLockedInterval } =
-    compiledSharedOptions;
+  return runTaskListInternal(compiledSharedOptions, tasks, pgPool);
+}
+
+export function runTaskListInternal(
+  compiledSharedOptions: CompiledSharedOptions<WorkerPoolOptions>,
+  tasks: TaskList,
+  pgPool: Pool,
+): WorkerPool {
+  const {
+    events,
+    logger,
+    resolvedPreset: {
+      worker: { minResetLockedInterval, maxResetLockedInterval },
+    },
+  } = compiledSharedOptions;
   const withPgClient = makeWithPgClientFromPool(pgPool);
   const workerPool = _runTaskList(compiledSharedOptions, tasks, withPgClient, {
     continuous: true,
@@ -436,7 +448,7 @@ export function runTaskList(
       client.removeListener("error", onErrorReleaseClientAndTryAgain);
       events.emit("pool:listen:release", { workerPool, client });
       return client
-        .query('UNLISTEN "jobs:insert"')
+        .query('UNLISTEN "jobs:insert"; UNLISTEN "worker:migrate";')
         .catch((error) => {
           /* ignore errors */
           logger.error(`Error occurred attempting to UNLISTEN: ${error}`, {
@@ -456,13 +468,10 @@ export function runTaskList(
     client.on("notification", handleNotification);
 
     // Subscribe to jobs:insert message
-    client.query('LISTEN "jobs:insert"').then(() => {
+    client.query('LISTEN "jobs:insert"; LISTEN "worker:migrate";').then(() => {
       // Successful listen; reset attempts
       attempts = 0;
     }, onErrorReleaseClientAndTryAgain);
-    client
-      .query('LISTEN "worker:migrate"')
-      .then(null, onErrorReleaseClientAndTryAgain);
 
     const supportedTaskNames = Object.keys(tasks);
 
@@ -497,11 +506,11 @@ export function _runTaskList(
   },
 ): WorkerPool {
   const {
-    preset,
-    noHandleSignals = false,
-    concurrency: baseConcurrency = preset?.worker?.concurrentJobs ??
-      defaults.concurrentJobs,
-  } = compiledSharedOptions.options;
+    resolvedPreset: {
+      worker: { concurrentJobs: baseConcurrency, gracefulShutdownAbortTimeout },
+    },
+    _rawOptions: { noHandleSignals = false },
+  } = compiledSharedOptions;
   const {
     concurrency = baseConcurrency,
     continuous,
@@ -514,8 +523,8 @@ export function _runTaskList(
 
   if (ENABLE_DANGEROUS_LOGS) {
     logger.debug(
-      `Worker pool options are ${inspect(compiledSharedOptions.options)}`,
-      { options: compiledSharedOptions.options },
+      `Worker pool options are ${inspect(compiledSharedOptions._rawOptions)}`,
+      { options: compiledSharedOptions._rawOptions },
     );
   }
 
@@ -590,7 +599,7 @@ export function _runTaskList(
 
       const abortTimer = setTimeout(() => {
         abortController.abort();
-      }, compiledSharedOptions.gracefulShutdownAbortTimeout);
+      }, gracefulShutdownAbortTimeout);
       abortTimer.unref();
 
       events.emit("pool:gracefulShutdown", {
@@ -703,8 +712,9 @@ export function _runTaskList(
           .filter((job): job is Job => !!job);
 
         // Remove all the workers - we're shutting them down manually
-        const workerPromises = workers.map((worker) => worker.release());
+        const workerPromises = workers.map((worker) => worker.release(true));
         // Ignore the results, we're shutting down anyway
+        // TODO: add a timeout
         const [deactivateResult, ..._ignoreWorkerReleaseResults] =
           await Promise.allSettled([deactivatePromise, ...workerPromises]);
         if (deactivateResult.status === "rejected") {
@@ -792,8 +802,8 @@ export function _runTaskList(
 
   // Spawn our workers; they can share clients from the pool.
   const workerId =
-    "workerId" in compiledSharedOptions.options
-      ? compiledSharedOptions.options.workerId
+    "workerId" in compiledSharedOptions._rawOptions
+      ? compiledSharedOptions._rawOptions.workerId
       : undefined;
   if (workerId != null && concurrency > 1) {
     throw new Error(

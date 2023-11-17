@@ -1,4 +1,3 @@
-import { defaults } from "../config";
 import { DbJob, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
@@ -13,11 +12,8 @@ export async function failJob(
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: {
-      preset,
-      noPreparedStatements = (preset?.worker?.preparedStatements === false
-        ? true
-        : undefined) ?? defaults.preparedStatements === false,
+    resolvedPreset: {
+      worker: { preparedStatements },
     },
   } = compiledSharedOptions;
 
@@ -49,7 +45,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $3::text;`,
             ? JSON.stringify(replacementPayload)
             : null,
         ],
-        name: noPreparedStatements ? undefined : `fail_job_q/${workerSchema}`,
+        name: !preparedStatements ? undefined : `fail_job_q/${workerSchema}`,
       }),
     );
   } else {
@@ -72,7 +68,7 @@ where id = $1::bigint and locked_by = $3::text;`,
             ? JSON.stringify(replacementPayload)
             : null,
         ],
-        name: noPreparedStatements ? undefined : `fail_job/${workerSchema}`,
+        name: !preparedStatements ? undefined : `fail_job/${workerSchema}`,
       }),
     );
   }
@@ -88,7 +84,9 @@ export async function failJobs(
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: { noPreparedStatements },
+    resolvedPreset: {
+      worker: { preparedStatements },
+    },
   } = compiledSharedOptions;
 
   // TODO: retry logic, in case of server connection interruption
@@ -112,7 +110,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = any($3::text[])
 )
 select * from j;`,
       values: [jobs.map((job) => job.id), message, workerIds],
-      name: noPreparedStatements ? undefined : `fail_jobs/${workerSchema}`,
+      name: !preparedStatements ? undefined : `fail_jobs/${workerSchema}`,
     }),
   );
   return failedJobs;
