@@ -1,4 +1,7 @@
 {
+  "ts-node": {
+    "experimentalResolver": true
+  },
   "compilerOptions": {
     "rootDir": "src",
     "declarationDir": "./dist",
@@ -6,20 +9,19 @@
     "declaration": true,
     "allowJs": false,
     "target": "es2020",
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "node16",
+    "moduleResolution": "node16",
     "sourceMap": true,
     "pretty": true,
     "importHelpers": true,
     "experimentalDecorators": true,
     "noImplicitAny": true,
-    "suppressImplicitAnyIndexErrors": true,
     "strictNullChecks": true,
     "noFallthroughCasesInSwitch": true,
-    "noUnusedParameters": true,
-    "noUnusedLocals": true,
+    "noUnusedParameters": false,
+    "noUnusedLocals": false,
     "preserveWatchOutput": true,
-    "lib": ["es2020"]
+    "lib": ["es2020", "dom"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
