@@ -218,7 +218,7 @@ export function processSharedOptions<
         maxResetLockedInterval,
         schema: workerSchema,
         logger,
-      events = new EventEmitter(),
+        events = new EventEmitter(),
       },
     } = resolvedPreset;
 
@@ -455,9 +455,9 @@ export const getUtilsAndReleasersFromOptions = async (
     return [
       {
         ...compiledSharedOptions,
-      pgPool,
-      withPgClient,
-      addJob,
+        pgPool,
+        withPgClient,
+        addJob,
         releasers,
       },
       release,

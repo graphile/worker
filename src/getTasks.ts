@@ -113,11 +113,11 @@ export async function getTasksInternal(
       collectedTaskPaths,
       taskPath,
       [],
-                  );
+    );
 
     const taskIdentifiers = Object.keys(collectedTaskPaths).sort((a, z) =>
       a.localeCompare(z, "en-US"),
-      );
+    );
 
     for (const taskIdentifier of taskIdentifiers) {
       const fileDetailsList = collectedTaskPaths[taskIdentifier];
@@ -137,7 +137,7 @@ export async function getTasksInternal(
           `Failed to load task '${taskIdentifier}' - no supported handlers found for path${
             fileDetailsList.length > 1 ? "s" : ""
           }: '${fileDetailsList.map((d) => d.fullPath).join("', '")}'`,
-          );
+        );
       }
     }
   }

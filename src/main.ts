@@ -94,7 +94,7 @@ function registerSignalHandlers(
     _registeredSignalHandlersCount--;
     if (_registeredSignalHandlersCount === 0) {
       _releaseSignalHandlers();
-  }
+    }
   };
 }
 
@@ -216,7 +216,7 @@ export function runTaskList(
 ): WorkerPool {
   const compiledSharedOptions = processSharedOptions(rawOptions);
   return runTaskListInternal(compiledSharedOptions, tasks, pgPool);
-  }
+}
 
 export function runTaskListInternal(
   compiledSharedOptions: CompiledSharedOptions<WorkerPoolOptions>,
@@ -240,7 +240,7 @@ export function runTaskListInternal(
       if (resetLockedTimeout) {
         clearTimeout(resetLockedTimeout);
         resetLockedTimeout = null;
-  }
+      }
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
         reconnectTimeout = null;
@@ -875,7 +875,7 @@ export const runTaskListOnce = (
       compiledSharedOptions.logger.error(
         `Error occurred resetting locked at; continuing regardless: ${error}`,
         { error },
-    );
+      );
       pool._start!();
     },
   );

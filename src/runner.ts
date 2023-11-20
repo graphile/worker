@@ -16,7 +16,7 @@ import { _runTaskList, runTaskListInternal } from "./main";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
   const [, release] = await getUtilsAndReleasersFromOptions(options);
-    await release();
+  await release();
 };
 
 /** @internal */
@@ -123,7 +123,7 @@ export const runInternal = async (
     });
   } catch (e) {
     try {
-    await release();
+      await release();
     } catch (e2) {
       compiledOptions.logger.error(
         `Error occurred whilst attempting to release options after error occurred`,

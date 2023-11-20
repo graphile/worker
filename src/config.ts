@@ -13,18 +13,18 @@ const cosmiconfig = cosmiconfigResult?.config;
 export const makeWorkerPresetWorkerOptions = () =>
   ({
     connectionString: process.env.DATABASE_URL,
-  schema:
-    process.env.GRAPHILE_WORKER_SCHEMA ||
-    enforceStringOrUndefined("schema", cosmiconfig?.schema) ||
-    "graphile_worker",
-  pollInterval:
+    schema:
+      process.env.GRAPHILE_WORKER_SCHEMA ||
+      enforceStringOrUndefined("schema", cosmiconfig?.schema) ||
+      "graphile_worker",
+    pollInterval:
       enforceNumberOrUndefined("pollInterval", cosmiconfig?.pollInterval) ||
       2000,
-  concurrentJobs:
-    enforceNumberOrUndefined("concurrentJobs", cosmiconfig?.concurrentJobs) ||
-    1,
-  maxPoolSize:
-    enforceNumberOrUndefined("maxPoolSize", cosmiconfig?.maxPoolSize) || 10,
+    concurrentJobs:
+      enforceNumberOrUndefined("concurrentJobs", cosmiconfig?.concurrentJobs) ||
+      1,
+    maxPoolSize:
+      enforceNumberOrUndefined("maxPoolSize", cosmiconfig?.maxPoolSize) || 10,
     preparedStatements: true as boolean,
     crontabFile: `${process.cwd()}/crontab`,
     taskDirectory: `${process.cwd()}/tasks`,

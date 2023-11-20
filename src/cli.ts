@@ -105,7 +105,7 @@ function argvToPreset(inArgv: Awaited<typeof argv>): GraphileConfig.Preset {
       crontabFile: inArgv["crontab"],
       concurrentJobs: integerOrUndefined(inArgv.jobs),
     }),
-};
+  };
 }
 
 async function main() {
@@ -132,20 +132,20 @@ async function main() {
       !compiledOptions.resolvedPreset.worker.connectionString &&
       !process.env.PGDATABASE
     ) {
-    throw new Error(
-      "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
-    );
-  }
+      throw new Error(
+        "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
+      );
+    }
 
-  if (SCHEMA_ONLY) {
-    console.log("Schema updated");
-    return;
-  }
+    if (SCHEMA_ONLY) {
+      console.log("Schema updated");
+      return;
+    }
 
     const watchedTasks = await getTasksInternal(
       compiledOptions,
       compiledOptions.resolvedPreset.worker.taskDirectory,
-  );
+    );
     compiledOptions.releasers.push(() => watchedTasks.release());
     const watchedCronItems = await getCronItemsInternal(
       compiledOptions,
@@ -153,22 +153,22 @@ async function main() {
     );
     compiledOptions.releasers.push(() => watchedCronItems.release());
 
-  if (ONCE) {
+    if (ONCE) {
       await runOnceInternal(compiledOptions, watchedTasks.tasks, () => {
         /* noop */
       });
-  } else {
+    } else {
       const { promise } = await runInternal(
         compiledOptions,
-      watchedTasks.tasks,
-      watchedCronItems.items,
+        watchedTasks.tasks,
+        watchedCronItems.items,
         () => {
           /*noop*/
         },
-    );
-    // Continue forever(ish)
-    await promise;
-  }
+      );
+      // Continue forever(ish)
+      await promise;
+    }
   } finally {
     const timer = setTimeout(() => {
       console.error(

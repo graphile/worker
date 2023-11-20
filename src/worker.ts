@@ -85,15 +85,15 @@ export function makeNewWorker(
 
   const release = (force = false) => {
     if (active) {
-    active = false;
-    events.emit("worker:release", { worker });
+      active = false;
+      events.emit("worker:release", { worker });
 
-    if (cancelDoNext()) {
+      if (cancelDoNext()) {
         workerDeferred.resolve();
       } else if (force) {
         // TODO: do `abortController.abort()` instead
         workerDeferred.resolve();
-    }
+      }
     } else if (force) {
       workerDeferred.resolve();
     }
@@ -193,13 +193,13 @@ export function makeNewWorker(
         logger.debug(
           `Failed to acquire job: ${err.message} (${contiguousErrors} contiguous fails)`,
         );
-          if (active) {
-            // Error occurred fetching a job; try again...
-            doNextTimer = setTimeout(() => doNext(), pollInterval);
-          } else {
+        if (active) {
+          // Error occurred fetching a job; try again...
+          doNextTimer = setTimeout(() => doNext(), pollInterval);
+        } else {
           workerDeferred.reject(err);
-          }
-          return;
+        }
+        return;
       } else {
         workerDeferred.reject(err);
         release();

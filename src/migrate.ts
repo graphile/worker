@@ -107,25 +107,25 @@ export async function migrate(
   let latestBreakingMigration: number | null = null;
   const event = { client, postgresVersion: 0, scratchpad: Object.create(null) };
   for (let attempts = 0; attempts < 2; attempts++) {
-  try {
-    const {
-      rows: [row],
+    try {
+      const {
+        rows: [row],
       } = await event.client.query(
-      `select current_setting('server_version_num') as server_version_num,
+        `select current_setting('server_version_num') as server_version_num,
         (select id from ${escapedWorkerSchema}.migrations order by id desc limit 1) as id,
         (select id from ${escapedWorkerSchema}.migrations where breaking is true order by id desc limit 1) as biggest_breaking_id;`,
-    );
+      );
 
-    latestMigration = row.id;
+      latestMigration = row.id;
       latestBreakingMigration = row.biggest_breaking_id;
       event.postgresVersion = checkPostgresVersion(row.server_version_num);
-  } catch (e) {
+    } catch (e) {
       if (attempts === 0 && (e.code === "42P01" || e.code === "42703")) {
         await installSchema(compiledSharedOptions, event);
-    } else {
-      throw e;
+      } else {
+        throw e;
+      }
     }
-  }
   }
 
   await hooks.process("premigrate", event);
