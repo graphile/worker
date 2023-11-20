@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import { randomBytes } from "crypto";
 
-import { defaults } from "./config";
 import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
@@ -10,33 +9,59 @@ import {
   TaskList,
   WithPgClient,
   Worker,
-  WorkerOptions,
+  WorkerPool,
+  WorkerSharedOptions,
 } from "./interfaces";
-import { processSharedOptions } from "./lib";
+import { CompiledSharedOptions } from "./lib";
 import { completeJob } from "./sql/completeJob";
 import { failJob } from "./sql/failJob";
 import { getJob } from "./sql/getJob";
 
 export function makeNewWorker(
-  options: WorkerOptions,
-  tasks: TaskList,
-  withPgClient: WithPgClient,
-  continuous = true,
+  compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
+  params: {
+    tasks: TaskList;
+    withPgClient: WithPgClient;
+    continuous: boolean;
+    abortSignal: AbortSignal;
+    workerPool: WorkerPool;
+    autostart?: boolean;
+    workerId?: string;
+  },
 ): Worker {
   const {
+    tasks,
+    withPgClient,
+    continuous,
+    abortSignal,
+    workerPool,
+    autostart = true,
     workerId = `worker-${randomBytes(9).toString("hex")}`,
-    pollInterval = defaults.pollInterval,
-    forbiddenFlags,
-  } = options;
-  const compiledSharedOptions = processSharedOptions(options, {
+  } = params;
+  const {
+    events,
+    resolvedPreset: {
+      worker: { pollInterval },
+    },
+    hooks,
+    _rawOptions: { forbiddenFlags },
+  } = compiledSharedOptions;
+  const logger = compiledSharedOptions.logger.scope({
     scope: {
       label: "worker",
       workerId,
     },
   });
-  const { logger, maxContiguousErrors, events, useNodeTime } =
-    compiledSharedOptions;
-  const promise = deferred();
+
+  const workerDeferred = deferred();
+
+  const promise: Promise<void> & {
+    /** @internal */
+    worker?: Worker;
+  } = workerDeferred.finally(() => {
+    return hooks.process("stopWorker", { worker, withPgClient });
+  });
+
   promise.then(
     () => {
       events.emit("worker:stop", { worker });
@@ -47,7 +72,7 @@ export function makeNewWorker(
   );
   let activeJob: Job | null = null;
 
-  let doNextTimer: NodeJS.Timer | null = null;
+  let doNextTimer: NodeJS.Timeout | null = null;
   const cancelDoNext = () => {
     if (doNextTimer !== null) {
       clearTimeout(doNextTimer);
@@ -58,21 +83,25 @@ export function makeNewWorker(
   };
   let active = true;
 
-  const release = () => {
-    if (!active) {
-      return promise;
-    }
+  const release = (force = false) => {
+    if (active) {
     active = false;
     events.emit("worker:release", { worker });
-    if (cancelDoNext()) {
-      promise.resolve();
-    }
 
-    return promise;
+    if (cancelDoNext()) {
+        workerDeferred.resolve();
+      } else if (force) {
+        // TODO: do `abortController.abort()` instead
+        workerDeferred.resolve();
+    }
+    } else if (force) {
+      workerDeferred.resolve();
+    }
+    return Promise.resolve(promise);
   };
 
   const nudge = () => {
-    assert(active, "nudge called after worker terminated");
+    assert.ok(active, "nudge called after worker terminated");
     if (doNextTimer) {
       // Must be idle; call early
       doNext();
@@ -85,11 +114,18 @@ export function makeNewWorker(
   };
 
   const worker: Worker = {
+    workerPool,
     nudge,
     workerId,
     release,
     promise,
     getActiveJob: () => activeJob,
+    _start: autostart
+      ? null
+      : () => {
+          doNext(true);
+          worker._start = null;
+        },
   };
 
   events.emit("worker:create", { worker, tasks });
@@ -99,11 +135,11 @@ export function makeNewWorker(
   let contiguousErrors = 0;
   let again = false;
 
-  const doNext = async (): Promise<void> => {
+  const doNext = async (first = false): Promise<void> => {
     again = false;
     cancelDoNext();
-    assert(active, "doNext called when active was false");
-    assert(!activeJob, "There should be no active job");
+    assert.ok(active, "doNext called when active was false");
+    assert.ok(!activeJob, "There should be no active job");
 
     // Find us a job
     try {
@@ -121,13 +157,23 @@ export function makeNewWorker(
         }
       }
 
+      if (first) {
+        const event = {
+          worker,
+          flagsToSkip,
+          tasks,
+          withPgClient,
+        };
+        await hooks.process("startWorker", event);
+        flagsToSkip = event.flagsToSkip;
+      }
+
       events.emit("worker:getJob:start", { worker });
       const jobRow = await getJob(
         compiledSharedOptions,
         withPgClient,
         tasks,
         workerId,
-        useNodeTime,
         flagsToSkip,
       );
 
@@ -145,27 +191,17 @@ export function makeNewWorker(
       if (continuous) {
         contiguousErrors++;
         logger.debug(
-          `Failed to acquire job: ${err.message} (${contiguousErrors}/${maxContiguousErrors})`,
+          `Failed to acquire job: ${err.message} (${contiguousErrors} contiguous fails)`,
         );
-        if (contiguousErrors >= maxContiguousErrors) {
-          promise.reject(
-            new Error(
-              `Failed ${contiguousErrors} times in a row to acquire job; latest error: ${err.message}`,
-            ),
-          );
-          release();
-          return;
-        } else {
           if (active) {
             // Error occurred fetching a job; try again...
             doNextTimer = setTimeout(() => doNext(), pollInterval);
           } else {
-            promise.reject(err);
+          workerDeferred.reject(err);
           }
           return;
-        }
       } else {
-        promise.reject(err);
+        workerDeferred.reject(err);
         release();
         return;
       }
@@ -185,10 +221,10 @@ export function makeNewWorker(
             doNextTimer = setTimeout(() => doNext(), pollInterval);
           }
         } else {
-          promise.resolve();
+          workerDeferred.resolve();
         }
       } else {
-        promise.resolve();
+        workerDeferred.resolve();
         release();
       }
       return;
@@ -205,12 +241,16 @@ export function makeNewWorker(
        * **MUST** release the job once we've attempted it (success or error).
        */
       const startTimestamp = process.hrtime();
-      let result: void | PromiseOrDirect<unknown>[];
+      let result: void | PromiseOrDirect<unknown>[] = undefined;
       try {
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
-        assert(task, `Unsupported task '${job.task_identifier}'`);
-        const helpers = makeJobHelpers(options, job, { withPgClient, logger });
+        assert.ok(task, `Unsupported task '${job.task_identifier}'`);
+        const helpers = makeJobHelpers(compiledSharedOptions, job, {
+          withPgClient,
+          logger,
+          abortSignal,
+        });
         result = await task(job.payload, helpers);
       } catch (error) {
         err = error;
@@ -219,8 +259,8 @@ export function makeNewWorker(
       const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
 
       // `batchJobFailedPayloads` and `batchJobErrors` should always have the same length
-      const batchJobFailedPayloads: any[] = [];
-      const batchJobErrors: any[] = [];
+      const batchJobFailedPayloads: unknown[] = [];
+      const batchJobErrors: unknown[] = [];
 
       if (!err && Array.isArray(job.payload) && Array.isArray(result)) {
         if (job.payload.length !== result.length) {
@@ -244,7 +284,7 @@ export function makeNewWorker(
             // Create a "partial" error for the batch
             err = new Error(
               `Batch failures:\n${batchJobErrors
-                .map((e) => e.message ?? String(e))
+                .map((e) => (e as Error).message ?? String(e))
                 .join("\n")}`,
             );
           }
@@ -293,9 +333,11 @@ export function makeNewWorker(
           "Non error or error without message thrown.";
 
         logger.error(
-          `Failed task ${job.id} (${
-            job.task_identifier
-          }) with error ${message} (${duration.toFixed(2)}ms)${
+          `Failed task ${job.id} (${job.task_identifier}, ${duration.toFixed(
+            2,
+          )}ms, attempt ${job.attempts} of ${
+            job.max_attempts
+          }) with error '${message}'${
             stack ? `:\n  ${String(stack).replace(/\n/g, "\n  ").trim()}` : ""
           }`,
           { failure: true, job, error: err, duration },
@@ -323,7 +365,11 @@ export function makeNewWorker(
           logger.info(
             `Completed task ${job.id} (${
               job.task_identifier
-            }) with success (${duration.toFixed(2)}ms)`,
+            }, ${duration.toFixed(2)}ms${
+              job.attempts > 1
+                ? `, attempt ${job.attempts} of ${job.max_attempts}`
+                : ""
+            }) with success`,
             { job, duration, success: true },
           );
         }
@@ -349,7 +395,7 @@ export function makeNewWorker(
         `Failed to release job '${job.id}' ${when}; committing seppuku\n${fatalError.message}`,
         { fatalError, job },
       );
-      promise.reject(fatalError);
+      workerDeferred.reject(fatalError);
       release();
       return;
     } finally {
@@ -360,15 +406,17 @@ export function makeNewWorker(
     if (active) {
       doNext();
     } else {
-      promise.resolve();
+      workerDeferred.resolve();
     }
   };
 
   // Start!
-  doNext();
+  if (autostart) {
+    doNext(true);
+  }
 
   // For tests
-  promise["worker"] = worker;
+  promise.worker = worker;
 
   return worker;
 }

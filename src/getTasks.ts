@@ -1,35 +1,39 @@
-import * as chokidar from "chokidar";
-import { basename } from "path";
+import { Stats } from "fs";
+import { lstat, readdir, realpath } from "fs/promises";
+import { join as pathJoin } from "path";
 
-import { readdir, tryStat } from "./fs";
+import { tryStat } from "./fs";
 import {
   isValidTask,
   SharedOptions,
   TaskList,
   WatchedTaskList,
 } from "./interfaces";
-import { processSharedOptions } from "./lib";
+import { FileDetails } from "./interfaces.js";
+import { CompiledSharedOptions, processSharedOptions } from "./lib";
 import { Logger } from "./logger";
-import { fauxRequire } from "./module";
+
+const DIRECTORY_REGEXP = /^[A-Za-z0-9_-]+$/;
+const FILE_REGEXP = /^([A-Za-z0-9_-]+)((?:\.[A-Za-z0-9_-]+)*)$/;
 
 function validTasks(
   logger: Logger,
-  obj: { [taskName: string]: unknown },
+  obj: { [taskIdentifier: string]: unknown },
 ): TaskList {
   const tasks: TaskList = {};
-  Object.keys(obj).forEach((taskName) => {
-    const task = obj[taskName];
+  Object.keys(obj).forEach((taskIdentifier) => {
+    const task = obj[taskIdentifier];
     if (isValidTask(task)) {
-      tasks[taskName] = task;
+      tasks[taskIdentifier] = task;
     } else {
       logger.warn(
-        `Not a valid task '${taskName}' - expected function, received ${
+        `Not a valid task '${taskIdentifier}' - expected function, received ${
           task ? typeof task : String(task)
         }.`,
         {
           invalidTask: true,
           task,
-          taskName,
+          taskIdentifier,
         },
       );
     }
@@ -39,19 +43,20 @@ function validTasks(
 
 async function loadFileIntoTasks(
   logger: Logger,
-  tasks: { [taskName: string]: unknown },
+  tasks: { [taskIdentifier: string]: unknown },
   filename: string,
   name: string | null = null,
-  watch: boolean = false,
 ) {
-  const replacementModule = watch ? fauxRequire(filename) : require(filename);
-
-  if (!replacementModule) {
-    throw new Error(`Module '${filename}' doesn't have an export`);
-  }
+  const rawMod = await import(filename);
+  const mod =
+    Object.keys(rawMod).length === 1 &&
+    typeof rawMod.default === "object" &&
+    rawMod.default !== null
+      ? rawMod.default
+      : rawMod;
 
   if (name) {
-    const task = replacementModule.default || replacementModule;
+    const task = mod.default || mod;
     if (isValidTask(task)) {
       tasks[name] = task;
     } else {
@@ -62,132 +67,177 @@ async function loadFileIntoTasks(
       );
     }
   } else {
-    Object.keys(tasks).forEach((taskName) => {
-      delete tasks[taskName];
+    Object.keys(tasks).forEach((taskIdentifier) => {
+      delete tasks[taskIdentifier];
     });
-    if (
-      !replacementModule.default ||
-      typeof replacementModule.default === "function"
-    ) {
-      Object.assign(tasks, validTasks(logger, replacementModule));
+    if (!mod.default || typeof mod.default === "function") {
+      Object.assign(tasks, validTasks(logger, mod));
     } else {
-      Object.assign(tasks, validTasks(logger, replacementModule.default));
+      Object.assign(tasks, validTasks(logger, mod.default));
     }
   }
 }
 
-export default async function getTasks(
+export async function getTasks(
   options: SharedOptions,
   taskPath: string,
-  watch = false,
 ): Promise<WatchedTaskList> {
-  const { logger } = processSharedOptions(options);
+  const compiledSharedOptions = processSharedOptions(options);
+  const result = await getTasksInternal(compiledSharedOptions, taskPath);
+  // This assign is used in `__tests__/getTasks.test.ts`
+  return Object.assign(result, { compiledSharedOptions });
+}
+
+export async function getTasksInternal(
+  compiledSharedOptions: CompiledSharedOptions,
+  taskPath: string,
+): Promise<WatchedTaskList> {
+  const { logger } = compiledSharedOptions;
   const pathStat = await tryStat(taskPath);
   if (!pathStat) {
     throw new Error(
-      `Could not find tasks to execute - '${taskPath}' does not exist`,
+      `Could not find tasks to execute - taskDirectory '${taskPath}' does not exist`,
     );
   }
 
-  const watchers: Array<chokidar.FSWatcher> = [];
-  let taskNames: Array<string> = [];
-  const tasks: TaskList = {};
+  const tasks: TaskList = Object.create(null);
 
-  const debugSupported = (debugLogger = logger) => {
-    const oldTaskNames = taskNames;
-    taskNames = Object.keys(tasks).sort();
-    if (oldTaskNames.join(",") !== taskNames.join(",")) {
-      debugLogger.debug(`Supported task names: '${taskNames.join("', '")}'`, {
-        taskNames,
-      });
-    }
-  };
-
-  const watchLogger = logger.scope({ label: "watch" });
   if (pathStat.isFile()) {
-    if (watch) {
-      watchers.push(
-        chokidar.watch(taskPath, { ignoreInitial: true }).on("all", () => {
-          loadFileIntoTasks(watchLogger, tasks, taskPath, null, watch)
-            .then(() => debugSupported(watchLogger))
-            .catch((error) => {
-              watchLogger.error(`Error in ${taskPath}: ${error.message}`, {
-                taskPath,
-                error,
-              });
-            });
-        }),
-      );
-    }
     // Try and require it
-    await loadFileIntoTasks(logger, tasks, taskPath, null, watch);
+    await loadFileIntoTasks(logger, tasks, taskPath, null);
   } else if (pathStat.isDirectory()) {
-    if (watch) {
-      watchers.push(
-        chokidar
-          .watch(`${taskPath}/*.js`, {
-            ignoreInitial: true,
-          })
-          .on("all", (event, eventFilePath) => {
-            const taskName = basename(eventFilePath, ".js");
-            if (event === "unlink") {
-              delete tasks[taskName];
-              debugSupported(watchLogger);
-            } else {
-              loadFileIntoTasks(
-                watchLogger,
-                tasks,
-                eventFilePath,
-                taskName,
-                watch,
-              )
-                .then(() => debugSupported(watchLogger))
-                .catch((error) => {
-                  watchLogger.error(
-                    `Error in ${eventFilePath}: ${error.message}`,
-                    { eventFilePath, error },
+    const collectedTaskPaths: Record<string, FileDetails[]> =
+      Object.create(null);
+    await getTasksFromDirectory(
+      compiledSharedOptions,
+      collectedTaskPaths,
+      taskPath,
+      [],
                   );
-                });
-            }
-          }),
-      );
-    }
 
-    // Try and require its contents
-    const files = await readdir(taskPath);
-    for (const file of files) {
-      if (file.endsWith(".js")) {
-        const taskName = file.slice(0, -3);
-        try {
-          await loadFileIntoTasks(
-            logger,
-            tasks,
-            `${taskPath}/${file}`,
-            taskName,
-            watch,
+    const taskIdentifiers = Object.keys(collectedTaskPaths).sort((a, z) =>
+      a.localeCompare(z, "en-US"),
+      );
+
+    for (const taskIdentifier of taskIdentifiers) {
+      const fileDetailsList = collectedTaskPaths[taskIdentifier];
+      const event: Parameters<
+        GraphileConfig.WorkerHooks["loadTaskFromFiles"]
+      >[0] = {
+        handler: undefined,
+        taskIdentifier,
+        fileDetailsList,
+      };
+      await compiledSharedOptions.hooks.process("loadTaskFromFiles", event);
+      const handler = event.handler;
+      if (handler) {
+        tasks[taskIdentifier] = handler;
+      } else {
+        logger.warn(
+          `Failed to load task '${taskIdentifier}' - no supported handlers found for path${
+            fileDetailsList.length > 1 ? "s" : ""
+          }: '${fileDetailsList.map((d) => d.fullPath).join("', '")}'`,
           );
-        } catch (error) {
-          const message = `Error processing '${taskPath}/${file}': ${error.message}`;
-          if (watch) {
-            watchLogger.error(message, { error });
-          } else {
-            throw new Error(message);
-          }
-        }
       }
     }
   }
 
-  taskNames = Object.keys(tasks).sort();
   let released = false;
   return {
     tasks,
+    compiledSharedOptions,
     release: () => {
       if (released) {
         return;
       }
       released = true;
-      watchers.forEach((watcher) => watcher.close());
     },
   };
+}
+
+async function getTasksFromDirectory(
+  compiledSharedOptions: CompiledSharedOptions,
+  collectedTaskPaths: Record<string, FileDetails[]>,
+  taskPath: string,
+  subpath: string[],
+): Promise<void> {
+  const { logger } = compiledSharedOptions;
+  const folderPath = pathJoin(taskPath, ...subpath);
+  // Try and require its contents
+  const entries = await readdir(folderPath);
+  await Promise.all(
+    entries.map(async (entry) => {
+      const fullPath = pathJoin(taskPath, ...subpath, entry);
+      const stats = await lstat(fullPath);
+      if (stats.isDirectory()) {
+        if (DIRECTORY_REGEXP.test(entry)) {
+          await getTasksFromDirectory(
+            compiledSharedOptions,
+            collectedTaskPaths,
+            taskPath,
+            [...subpath, entry],
+          );
+        } else {
+          logger.info(
+            `Ignoring directory '${fullPath}' - '${entry}' does not match allowed regexp.`,
+          );
+        }
+      } else if (stats.isSymbolicLink()) {
+        // Must be a symbolic link to a file, otherwise ignore
+        const symlinkTarget = await realpath(fullPath);
+        const targetStats = await lstat(symlinkTarget);
+        if (targetStats.isFile() && !targetStats.isSymbolicLink()) {
+          maybeAddFile(
+            compiledSharedOptions,
+            collectedTaskPaths,
+            subpath,
+            entry,
+            symlinkTarget,
+            targetStats,
+          );
+        }
+      } else if (stats.isFile()) {
+        maybeAddFile(
+          compiledSharedOptions,
+          collectedTaskPaths,
+          subpath,
+          entry,
+          fullPath,
+          stats,
+        );
+      }
+    }),
+  );
+}
+
+function maybeAddFile(
+  compiledSharedOptions: CompiledSharedOptions,
+  collectedTaskPaths: Record<string, FileDetails[]>,
+  subpath: string[],
+  entry: string,
+  fullPath: string,
+  stats: Stats,
+) {
+  const { logger } = compiledSharedOptions;
+  const matches = FILE_REGEXP.exec(entry);
+
+  if (matches) {
+    const [, baseName, extension] = matches;
+    const entry: FileDetails = {
+      fullPath,
+      stats,
+      baseName,
+      extension,
+    };
+    const taskIdentifier = [...subpath, baseName].join("/");
+    if (!collectedTaskPaths[taskIdentifier]) {
+      collectedTaskPaths[taskIdentifier] = [entry];
+    } else {
+      collectedTaskPaths[taskIdentifier].push(entry);
+    }
+  } else {
+    logger.info(
+      `Ignoring file '${fullPath}' - '${entry}' does not match allowed regexp.`,
+    );
+  }
 }
