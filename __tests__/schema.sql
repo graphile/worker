@@ -345,7 +345,8 @@ CREATE TABLE graphile_worker.known_crontabs (
 );
 CREATE TABLE graphile_worker.migrations (
     id integer NOT NULL,
-    ts timestamp with time zone DEFAULT now() NOT NULL
+    ts timestamp with time zone DEFAULT now() NOT NULL,
+    breaking boolean DEFAULT false NOT NULL
 );
 CREATE TABLE graphile_worker.tasks (
     id integer NOT NULL,
