@@ -1,7 +1,10 @@
 ---
 title: "Crashed worker recovery"
 sidebar_position: 20
+draft: true
 ---
+
+**THIS FUNCTIONALITY IS NOT YET IMPLEMENTED**
 
 If a regular Graphile Worker process exits unexpectedly (for example someone
 pulls the power lead from the server, or the Node.js process crashes or is

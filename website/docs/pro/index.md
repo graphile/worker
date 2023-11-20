@@ -10,9 +10,12 @@ essential, but they are things your team is likely to appreciate:
 
 - [Live migration](./migration.md) &mdash; remove the need to scale to zero to
   safely upgrade Worker versions
+- _More features planned_
+
+<!--
 - [Crashed worker recovery](./recovery.md) &mdash; track running workers and
   unlock jobs automatically when a worker seems to have unexpectedly stopped
-- _More features planned_
+-->
 
 _~~Worker Pro is priced at USD $100/mo and helps to fund the ongoing maintenance
 of Graphile Worker and other Graphile projects. It is also available
