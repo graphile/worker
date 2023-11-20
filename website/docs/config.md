@@ -78,13 +78,18 @@ Here are the options under the `worker` key as defined by
   concurrentJobs?: number;
   connectionString?: string;
   crontabFile?: string;
+  events?: WorkerEvents;
   fileExtensions?: string[];
   gracefulShutdownAbortTimeout?: number;
+  logger?: Logger<{}>;
   maxPoolSize?: number;
+  maxResetLockedInterval?: number;
+  minResetLockedInterval?: number;
   pollInterval?: number;
   preparedStatements?: boolean;
   schema?: string;
-  tasksFolder?: string;
+  taskDirectory?: string;
+  useNodeTime?: boolean;
 }
 ```
 
@@ -106,6 +111,10 @@ Type: `string | undefined`
 
 Override path to crontab file.
 
+### worker.events
+
+Type: `WorkerEvents | undefined`
+
 ### worker.fileExtensions
 
 Type: `string[] | undefined`
@@ -121,11 +130,36 @@ Type: `number | undefined`
 How long in milliseconds after a gracefulShutdown is triggered should we wait to
 trigger the AbortController, which should cancel supported asynchronous actions?
 
+### worker.logger
+
+Type: `Logger<{}> | undefined`
+
+A Logger instance.
+
 ### worker.maxPoolSize
 
 Type: `number | undefined`
 
 Maximum number of concurrent connections to Postgres
+
+### worker.maxResetLockedInterval
+
+Type: `number | undefined`
+
+**Experimental**
+
+The upper bound of how long we'll wait between scans for jobs that have been
+locked too long. See `minResetLockedInterval`.
+
+### worker.minResetLockedInterval
+
+Type: `number | undefined`
+
+**Experimental**
+
+How often should we scan for jobs that have been locked too long and release
+them? This is the minimum interval, we'll choose a time between this and
+`maxResetLockedInterval`.
 
 ### worker.pollInterval
 
@@ -141,10 +175,18 @@ Type: `string | undefined`
 
 The database schema in which Graphile Worker is (to be) located.
 
-### worker.tasksFolder
+### worker.taskDirectory
 
 Type: `string | undefined`
 
 Override path to find tasks
+
+### worker.useNodeTime
+
+Type: `boolean | undefined`
+
+Set `true` to use the time as recorded by Node.js rather than PostgreSQL. It's
+strongly recommended that you ensure the Node.js and PostgreSQL times are
+synchronized, making this setting moot.
 
 <!--END:OPTIONS-->
