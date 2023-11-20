@@ -15,8 +15,8 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [14.x, 16.x, 18.x]
-        postgres-version: [12, 13, 14]
+        node-version: [20.x]
+        postgres-version: [12, 13, 14, 15]
 
     services:
       postgres:
@@ -39,17 +39,21 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
-      - run: yarn jest -i --ci
+      - run: yarn node --experimental-vm-modules node_modules/.bin/jest -i --ci
 
   lint:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        node-version: [20.x]
+
     steps:
-      - uses: actions/checkout@v1
-      - name: Use Node.js 14.x
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
         with:
-          node-version: 14.x
+          node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
       - run: yarn lint
 
@@ -58,9 +62,14 @@ jobs:
     env:
       GRAPHILE_WORKER_SCHEMA: custom_schema
 
+    strategy:
+      matrix:
+        node-version: [20.x]
+        postgres-version: [12]
+
     services:
       postgres:
-        image: postgres:12
+        image: postgres:${{ matrix.postgres-version }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -73,21 +82,26 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: 16.x
+          node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
       # - run: yarn lint # No need to lint altschema
-      - run: yarn jest -i --ci
+      - run: yarn node --experimental-vm-modules node_modules/.bin/jest -i --ci
 
   database_updated:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        node-version: [20.x]
+        postgres-version: [12]
+
     services:
       postgres:
-        image: postgres:12
+        image: postgres:${{ matrix.postgres-version }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -100,18 +114,22 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: 16.x
+          node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
       - name: Install pg_dump
         run: |
-          sudo bash -c "echo deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main >> /etc/apt/sources.list.d/pgdg.list"
+          sudo bash -c "echo deb http://apt.postgresql.org/pub/repos/apt/ jammy-pgdg main >> /etc/apt/sources.list.d/pgdg.list"
           wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
           sudo apt-get update
           sudo apt-get -yqq install postgresql-client-11
+      - name: "Build code"
+        run: |
+          yarn prepack
+          ln -s .. node_modules/graphile-worker || true
       - name: "Check schema hasn't changed"
         run: |
           yarn db:dump

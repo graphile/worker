@@ -42,6 +42,8 @@ test("parses crontab file correctly", () => {
 0 4 * * 2 every_tuesday_at_4_am {isTuesday: true}
 */10,7,56-59 1 1 1 1 one ?id=stuff&fill=4w3d2h1m&max=3&queue=my_queue&priority=3 {myExtraPayload:{stuff:"here with # hash char"}}
     *     *      *       *       *      lots_of_spaces     
+* * * * * with_key ?jobKey=my_key
+* * * * * with_key_and_mode ?jobKey=my_key&jobKeyMode=preserve_run_at
 `;
   const parsed = parseCrontab(exampleCrontab);
 
@@ -139,6 +141,38 @@ test("parses crontab file correctly", () => {
   expect(parsed[6].options).toEqual({ backfillPeriod: 0 });
   expect(parsed[6].payload).toEqual(null);
 
+  expect(parsed[7].task).toEqual("with_key");
+  expect(parsed[7].identifier).toEqual("with_key");
+  const parsedCronMatch7 = (parsed[7].match as any)
+    .parsedCronMatch as ParsedCronMatch;
+  expect(parsedCronMatch7.minutes).toEqual(ALL_MINUTES);
+  expect(parsedCronMatch7.hours).toEqual(ALL_HOURS);
+  expect(parsedCronMatch7.dates).toEqual(ALL_DATES);
+  expect(parsedCronMatch7.months).toEqual(ALL_MONTHS);
+  expect(parsedCronMatch7.dows).toEqual(ALL_DOWS);
+  expect(parsed[7].options).toEqual({
+    backfillPeriod: 0,
+    jobKey: "my_key",
+    jobKeyMode: "replace",
+  });
+  expect(parsed[7].payload).toEqual(null);
+
+  expect(parsed[8].task).toEqual("with_key_and_mode");
+  expect(parsed[8].identifier).toEqual("with_key_and_mode");
+  const parsedCronMatch8 = (parsed[8].match as any)
+    .parsedCronMatch as ParsedCronMatch;
+  expect(parsedCronMatch8.minutes).toEqual(ALL_MINUTES);
+  expect(parsedCronMatch8.hours).toEqual(ALL_HOURS);
+  expect(parsedCronMatch8.dates).toEqual(ALL_DATES);
+  expect(parsedCronMatch8.months).toEqual(ALL_MONTHS);
+  expect(parsedCronMatch8.dows).toEqual(ALL_DOWS);
+  expect(parsed[8].options).toEqual({
+    backfillPeriod: 0,
+    jobKey: "my_key",
+    jobKeyMode: "preserve_run_at",
+  });
+  expect(parsed[8].payload).toEqual(null);
+
   expect(parsed).toMatchSnapshot();
 });
 
@@ -189,7 +223,7 @@ describe("gives error on syntax error", () => {
 * * * * * invalid_options ?unknown=3
 `),
     ).toThrowErrorMatchingInlineSnapshot(
-      `"Options on line 1 of crontab contains unsupported key 'unknown'; supported keys are: 'id', 'fill', 'max', 'queue', 'priority'."`,
+      `"Options on line 1 of crontab contains unsupported key 'unknown'; supported keys are: 'id', 'fill', 'max', 'queue', 'jobKey', 'jobKeyMode', 'priority'."`,
     );
   });
 

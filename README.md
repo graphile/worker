@@ -1,3 +1,5 @@
+<img width="120" height="120" title="Graphile Worker logo" src="https://cdn.rawgit.com/graphile/worker/2c8091e0bcce5d39e46a1b3833daf20b59097d1e/website/static/img/logo.optimized.svg" />
+
 # graphile-worker
 
 [![Patreon sponsor button](https://img.shields.io/badge/sponsor-via%20Patreon-orange.svg)](https://patreon.com/benjie)

@@ -43,7 +43,7 @@ where task_id = (select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks where id
 `,
     );
 
-    const job2: Task = jest.fn(({ id }: { id: string }) => {
+    const job2: Task<"job2"> = jest.fn(({ id }) => {
       id;
     });
     const tasks: TaskList = {

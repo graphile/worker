@@ -1,6 +1,8 @@
 import { Pool } from "pg";
 
+import { makeWorkerPresetWorkerOptions } from "../src/config";
 import { RunnerOptions } from "../src/interfaces";
+import { WorkerPreset } from "../src/preset";
 import { runOnce } from "../src/runner";
 import {
   PGDATABASE,
@@ -28,14 +30,20 @@ async function withEnv<T>(
     return memo;
   }, {} as { [key: string]: string | undefined });
   setEnvvars(envOverrides);
+  const prev = WorkerPreset.worker;
+  WorkerPreset.worker = makeWorkerPresetWorkerOptions();
   try {
     return await callback();
   } finally {
     setEnvvars(old);
+    WorkerPreset.worker = prev;
   }
 }
 
-async function runOnceErrorAssertion(options: RunnerOptions, message: string) {
+async function runOnceErrorAssertion(
+  options: RunnerOptions,
+  message: RegExp | string,
+) {
   expect.assertions(1);
   try {
     await runOnce(options);
@@ -44,13 +52,13 @@ async function runOnceErrorAssertion(options: RunnerOptions, message: string) {
   }
 }
 
-test("at least a list of tasks or a task directory must be provided", async () => {
+test("either a list of tasks or a existent task directory must be provided", async () => {
   const options: RunnerOptions = {
     connectionString: TEST_CONNECTION_STRING,
   };
   await runOnceErrorAssertion(
     options,
-    "You must specify either `options.taskList` or `options.taskDirectory",
+    /^Could not find tasks to execute - taskDirectory '[^']+\/tasks' does not exist$/,
   );
 });
 

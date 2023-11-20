@@ -2,6 +2,7 @@ import {
   makeWorkerUtils,
   runTaskListOnce,
   Task,
+  TaskList,
   WorkerSharedOptions,
 } from "../src/index";
 import {
@@ -24,7 +25,7 @@ test("supports the flags API", () =>
     const utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
-    await utils.addJob("job1", { a: 1 }, { flags: ["a", "b"] });
+    await utils.addJob("job3", { a: 1 }, { flags: ["a", "b"] });
     await utils.release();
 
     // Assert that it has an entry in jobs / job_queues
@@ -34,7 +35,7 @@ test("supports the flags API", () =>
     expect(jobs[0].flags).toEqual({ a: true, b: true });
 
     const task: Task = jest.fn();
-    const taskList = { task };
+    const taskList: TaskList = { task };
     await runTaskListOnce(options, taskList, pgClient);
   }));
 
@@ -58,7 +59,7 @@ test.each([
     const shouldSkip = jest.fn();
 
     const job: Task = async (_payload, helpers) => {
-      const flags = helpers.job.flags || [];
+      const flags = helpers.job.flags || {};
 
       if (flags[badFlag]) {
         shouldSkip();
@@ -120,7 +121,7 @@ test.each([
     const ranWithDFlag = jest.fn();
 
     const job: Task = async (_payload, helpers) => {
-      const flags = helpers.job.flags || [];
+      const flags = helpers.job.flags || {};
 
       if (flags[badFlag]) {
         ranWithDFlag();

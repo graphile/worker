@@ -1,3 +1,4 @@
+--! breaking-change
 -- Create the tables
 create table :GRAPHILE_WORKER_SCHEMA.job_queues (
   queue_name text not null primary key,

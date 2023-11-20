@@ -2,6 +2,8 @@ module.exports = {
   parser: "@typescript-eslint/parser",
   extends: [
     "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended",
     "plugin:import/errors",
     "plugin:import/typescript",
     "prettier",
@@ -20,6 +22,7 @@ module.exports = {
     NodeJS: false, // For TypeScript
   },
   rules: {
+    "no-unused-vars": 0,
     "@typescript-eslint/no-unused-vars": [
       "error",
       {
@@ -65,5 +68,26 @@ module.exports = {
 
     "import/no-deprecated": "warn",
     "import/no-duplicates": "error",
+    // Doesn't support 'exports'?
+    "import/no-unresolved": "off",
+    "@typescript-eslint/ban-ts-comment": "off",
+    "@typescript-eslint/no-namespace": "off",
   },
+  overrides: [
+    {
+      files: ["__tests__/**/*", "test.js"],
+      rules: {
+        "@typescript-eslint/no-explicit-any": 0,
+        "@typescript-eslint/explicit-function-return-type": 0,
+        "@typescript-eslint/no-var-requires": 0,
+        "@typescript-eslint/ban-ts-comment": 0,
+      },
+    },
+    {
+      files: ["perfTest/**/*", "examples/**/*"],
+      rules: {
+        "@typescript-eslint/no-var-requires": 0,
+      },
+    },
+  ],
 };

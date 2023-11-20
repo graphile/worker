@@ -1,14 +1,16 @@
 #!/usr/bin/env node
+import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
-import { defaults } from "./config";
-import getCronItems from "./getCronItems";
-import getTasks from "./getTasks";
-import { run, runOnce } from "./index";
-import { RunnerOptions } from "./interfaces";
-import { runMigrations } from "./runner";
+import { getCronItemsInternal } from "./getCronItems";
+import { getTasksInternal } from "./getTasks";
+import { getUtilsAndReleasersFromOptions } from "./lib";
+import { EMPTY_PRESET, WorkerPreset } from "./preset";
+import { runInternal, runOnceInternal } from "./runner";
 
-const argv_ = yargs
+const defaults = WorkerPreset.worker!;
+
+const argv = yargs
   .parserConfiguration({
     "boolean-negation": false,
   })
@@ -70,81 +72,114 @@ const argv_ = yargs
     default: false,
   })
   .boolean("no-prepared-statements")
+  .option("config", {
+    alias: "C",
+    description: "The path to the config file",
+    normalize: true,
+  })
+  .string("config")
   .strict(true).argv;
 
-function isPromise(val: any): val is Promise<any> {
-  return typeof val === "object" && val && typeof val.then === "function";
-}
-
-// Hack TypeScript to stop whinging about argv potentially being a promise
-if (isPromise(argv_)) {
-  throw new Error("yargs returned a promise");
-}
-const argv = argv_ as Awaited<typeof argv_>;
-
-const isInteger = (n: number): boolean => {
-  return isFinite(n) && Math.round(n) === n;
+const integerOrUndefined = (n: number | undefined): number | undefined => {
+  return typeof n === "number" && isFinite(n) && Math.round(n) === n
+    ? n
+    : undefined;
 };
 
+function stripUndefined<T extends object>(
+  t: T,
+): { [Key in keyof T as T[Key] extends undefined ? never : Key]: T[Key] } {
+  return Object.fromEntries(
+    Object.entries(t).filter(([_, value]) => value !== undefined),
+  ) as T;
+}
+
+function argvToPreset(inArgv: Awaited<typeof argv>): GraphileConfig.Preset {
+  return {
+    worker: stripUndefined({
+      connectionString: inArgv["connection"],
+      maxPoolSize: integerOrUndefined(inArgv["max-pool-size"]),
+      pollInterval: integerOrUndefined(inArgv["poll-interval"]),
+      preparedStatements: !inArgv["no-prepared-statements"],
+      schema: inArgv.schema,
+      crontabFile: inArgv["crontab"],
+      concurrentJobs: integerOrUndefined(inArgv.jobs),
+    }),
+  };
+}
+
 async function main() {
-  const DATABASE_URL = argv.connection || process.env.DATABASE_URL || undefined;
-  const SCHEMA = argv.schema || undefined;
+  const userPreset = await loadConfig(argv.config);
   const ONCE = argv.once;
   const SCHEMA_ONLY = argv["schema-only"];
   const WATCH = argv.watch;
 
-  if (SCHEMA_ONLY && WATCH) {
-    throw new Error("Cannot specify both --watch and --schema-only");
+  if (WATCH) {
+    throw new Error("Watch mode is no longer supported");
   }
+
   if (SCHEMA_ONLY && ONCE) {
     throw new Error("Cannot specify both --once and --schema-only");
   }
-  if (WATCH && ONCE) {
-    throw new Error("Cannot specify both --watch and --once");
-  }
 
-  if (!DATABASE_URL && !process.env.PGDATABASE) {
-    throw new Error(
-      "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
+  const [compiledOptions, release] = await getUtilsAndReleasersFromOptions({
+    preset: {
+      extends: [userPreset ?? EMPTY_PRESET, argvToPreset(argv)],
+    },
+  });
+  try {
+    if (
+      !compiledOptions.resolvedPreset.worker.connectionString &&
+      !process.env.PGDATABASE
+    ) {
+      throw new Error(
+        "Please use `--connection` flag, set `DATABASE_URL` or `PGDATABASE` envvars to indicate the PostgreSQL connection to use.",
+      );
+    }
+
+    if (SCHEMA_ONLY) {
+      console.log("Schema updated");
+      return;
+    }
+
+    const watchedTasks = await getTasksInternal(
+      compiledOptions,
+      compiledOptions.resolvedPreset.worker.taskDirectory,
     );
-  }
-
-  const options: RunnerOptions = {
-    schema: SCHEMA || defaults.schema,
-    concurrency: isInteger(argv.jobs) ? argv.jobs : defaults.concurrentJobs,
-    maxPoolSize: isInteger(argv["max-pool-size"])
-      ? argv["max-pool-size"]
-      : defaults.maxPoolSize,
-    pollInterval: isInteger(argv["poll-interval"])
-      ? argv["poll-interval"]
-      : defaults.pollInterval,
-    connectionString: DATABASE_URL,
-    noPreparedStatements: !!argv["no-prepared-statements"],
-  };
-
-  if (SCHEMA_ONLY) {
-    await runMigrations(options);
-    console.log("Schema updated");
-    return;
-  }
-
-  const watchedTasks = await getTasks(options, `${process.cwd()}/tasks`, WATCH);
-  const watchedCronItems = await getCronItems(
-    options,
-    argv.crontab || `${process.cwd()}/crontab`,
-    WATCH,
-  );
-
-  if (ONCE) {
-    await runOnce(options, watchedTasks.tasks);
-  } else {
-    const { promise } = await run(
-      options,
-      watchedTasks.tasks,
-      watchedCronItems.items,
+    compiledOptions.releasers.push(() => watchedTasks.release());
+    const watchedCronItems = await getCronItemsInternal(
+      compiledOptions,
+      compiledOptions.resolvedPreset.worker.crontabFile,
     );
-    // Continue forever(ish)
-    await promise;
+    compiledOptions.releasers.push(() => watchedCronItems.release());
+
+    if (ONCE) {
+      await runOnceInternal(compiledOptions, watchedTasks.tasks, () => {
+        /* noop */
+      });
+    } else {
+      const { promise } = await runInternal(
+        compiledOptions,
+        watchedTasks.tasks,
+        watchedCronItems.items,
+        () => {
+          /*noop*/
+        },
+      );
+      // Continue forever(ish)
+      await promise;
+    }
+  } finally {
+    const timer = setTimeout(() => {
+      console.error(
+        `Worker failed to exit naturally after 1 second; terminating manually. This may indicate a bug in Graphile Worker, or it might be that you triggered a forceful shutdown and some of your executing tasks have yet to exit.`,
+      );
+      process.exit(1);
+    }, 1000);
+    timer.unref();
+    compiledOptions.logger.debug("CLI shutting down...");
+    await release();
+    compiledOptions.logger.debug("CLI shutdown complete.");
   }
 }
 

@@ -6,8 +6,8 @@ export function isPromise<T>(t: T | Promise<T>): t is Promise<T> {
   return (
     typeof t === "object" &&
     t !== null &&
-    typeof (t as any).then === "function" &&
-    typeof (t as any).catch === "function"
+    typeof (t as Promise<unknown>).then === "function" &&
+    typeof (t as Promise<unknown>).catch === "function"
   );
 }
 
@@ -16,14 +16,17 @@ export async function getJob(
   withPgClient: WithPgClient,
   tasks: TaskList,
   workerId: string,
-  useNodeTime: boolean,
   flagsToSkip: string[] | null,
 ): Promise<Job | undefined> {
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: { noPreparedStatements },
+    resolvedPreset: {
+      worker: { preparedStatements, useNodeTime },
+    },
+    logger,
   } = compiledSharedOptions;
+
   const taskDetailsPromise = getTaskDetails(
     compiledSharedOptions,
     withPgClient,
@@ -32,6 +35,11 @@ export async function getJob(
   const taskDetails = isPromise(taskDetailsPromise)
     ? await taskDetailsPromise
     : taskDetailsPromise;
+
+  if (taskDetails.taskIds.length === 0) {
+    logger.error("No tasks found; nothing to do!");
+    return undefined;
+  }
 
   let i = 2;
   const hasFlags = flagsToSkip && flagsToSkip.length > 0;
@@ -169,7 +177,7 @@ with j as (
     ...(hasFlags ? [flagsToSkip!] : []),
     ...(useNodeTime ? [new Date().toISOString()] : []),
   ];
-  const name = noPreparedStatements
+  const name = !preparedStatements
     ? undefined
     : `get_job${hasFlags ? "F" : ""}${useNodeTime ? "N" : ""}/${workerSchema}`;
 

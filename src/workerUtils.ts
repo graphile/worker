@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import { DbJob, TaskSpec, WorkerUtils, WorkerUtilsOptions } from "./interfaces";
 import { getUtilsAndReleasersFromOptions } from "./lib";
 import { migrate } from "./migrate";
@@ -8,19 +9,22 @@ import { migrate } from "./migrate";
 export async function makeWorkerUtils(
   options: WorkerUtilsOptions,
 ): Promise<WorkerUtils> {
-  const { logger, escapedWorkerSchema, release, withPgClient, addJob } =
+  const [compiledSharedOptions, release] =
     await getUtilsAndReleasersFromOptions(options, {
       scope: {
         label: "WorkerUtils",
       },
     });
+  const { logger, escapedWorkerSchema, withPgClient, addJob } =
+    compiledSharedOptions;
 
   return {
     withPgClient,
     logger,
     release,
     addJob,
-    migrate: () => withPgClient((pgClient) => migrate(options, pgClient)),
+    migrate: () =>
+      withPgClient((pgClient) => migrate(compiledSharedOptions, pgClient)),
 
     async completeJobs(ids) {
       const { rows } = await withPgClient((client) =>
@@ -71,15 +75,19 @@ export async function makeWorkerUtils(
  * this more than once in your process you should instead create a WorkerUtils
  * instance for efficiency and performance sake.
  */
-export async function quickAddJob(
+export async function quickAddJob<
+  TIdentifier extends keyof GraphileWorker.Tasks | (string & {}) = string,
+>(
   options: WorkerUtilsOptions,
-  identifier: string,
-  payload: unknown = {},
+  identifier: TIdentifier,
+  payload: TIdentifier extends keyof GraphileWorker.Tasks
+    ? GraphileWorker.Tasks[TIdentifier]
+    : unknown,
   spec: TaskSpec = {},
 ) {
   const utils = await makeWorkerUtils(options);
   try {
-    return await utils.addJob(identifier, payload, spec);
+    return await utils.addJob<TIdentifier>(identifier, payload, spec);
   } finally {
     await utils.release();
   }

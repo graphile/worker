@@ -38,7 +38,7 @@ export function getTaskDetails(
   const str = JSON.stringify(supportedTaskNames);
   if (str !== cache.lastStr) {
     const { escapedWorkerSchema } = compiledSharedOptions;
-    assert(supportedTaskNames.length, "No runnable tasks!");
+    assert.ok(supportedTaskNames.length, "No runnable tasks!");
     cache.lastStr = str;
     cache.lastDigest = (async () => {
       const { rows } = await withPgClient(async (client) => {

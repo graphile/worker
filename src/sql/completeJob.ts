@@ -10,7 +10,9 @@ export async function completeJob(
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: { noPreparedStatements },
+    resolvedPreset: {
+      worker: { preparedStatements },
+    },
   } = compiledSharedOptions;
 
   // TODO: retry logic, in case of server connection interruption
@@ -28,7 +30,7 @@ set locked_by = null, locked_at = null
 from j
 where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
         values: [job.id, workerId],
-        name: noPreparedStatements
+        name: !preparedStatements
           ? undefined
           : `complete_job_q/${workerSchema}`,
       }),
@@ -40,7 +42,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
 delete from ${escapedWorkerSchema}.jobs
 where id = $1::bigint`,
         values: [job.id],
-        name: noPreparedStatements ? undefined : `complete_job/${workerSchema}`,
+        name: !preparedStatements ? undefined : `complete_job/${workerSchema}`,
       }),
     );
   }

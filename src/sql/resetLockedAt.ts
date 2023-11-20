@@ -8,8 +8,9 @@ export async function resetLockedAt(
   const {
     escapedWorkerSchema,
     workerSchema,
-    options: { noPreparedStatements },
-    useNodeTime,
+    resolvedPreset: {
+      worker: { preparedStatements, useNodeTime },
+    },
   } = compiledSharedOptions;
 
   const now = useNodeTime ? "$1::timestamptz" : "now()";
@@ -19,14 +20,14 @@ export async function resetLockedAt(
       text: `\
 with j as (
 update ${escapedWorkerSchema}.jobs
-set locked_at = null, locked_by = null, run_at = greatest(run_at, now())
+set locked_at = null, locked_by = null, run_at = greatest(run_at, ${now})
 where locked_at < ${now} - interval '4 hours'
 )
 update ${escapedWorkerSchema}.job_queues
 set locked_at = null, locked_by = null
 where locked_at < ${now} - interval '4 hours'`,
       values: useNodeTime ? [new Date().toISOString()] : [],
-      name: noPreparedStatements
+      name: !preparedStatements
         ? undefined
         : `clear_stale_locks${useNodeTime ? "N" : ""}/${workerSchema}`,
     }),

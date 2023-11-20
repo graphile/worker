@@ -7,6 +7,8 @@ Array [
     "match": [Function],
     "options": Object {
       "backfillPeriod": 0,
+      "jobKey": undefined,
+      "jobKeyMode": undefined,
       "maxAttempts": undefined,
       "priority": undefined,
       "queueName": undefined,
@@ -20,6 +22,8 @@ Array [
     "match": [Function],
     "options": Object {
       "backfillPeriod": 0,
+      "jobKey": undefined,
+      "jobKeyMode": undefined,
       "maxAttempts": undefined,
       "priority": undefined,
       "queueName": undefined,
@@ -33,6 +37,8 @@ Array [
     "match": [Function],
     "options": Object {
       "backfillPeriod": 0,
+      "jobKey": undefined,
+      "jobKeyMode": undefined,
       "maxAttempts": undefined,
       "priority": undefined,
       "queueName": undefined,
@@ -46,6 +52,8 @@ Array [
     "match": [Function],
     "options": Object {
       "backfillPeriod": 0,
+      "jobKey": undefined,
+      "jobKeyMode": undefined,
       "maxAttempts": undefined,
       "priority": undefined,
       "queueName": undefined,
@@ -59,6 +67,8 @@ Array [
     "match": [Function],
     "options": Object {
       "backfillPeriod": 0,
+      "jobKey": undefined,
+      "jobKeyMode": undefined,
       "maxAttempts": undefined,
       "priority": undefined,
       "queueName": undefined,
@@ -74,6 +84,8 @@ Array [
     "match": [Function],
     "options": Object {
       "backfillPeriod": 2685660000,
+      "jobKey": undefined,
+      "jobKeyMode": undefined,
       "maxAttempts": 3,
       "priority": 3,
       "queueName": "my_queue",
@@ -91,12 +103,44 @@ Array [
     "match": [Function],
     "options": Object {
       "backfillPeriod": 0,
+      "jobKey": undefined,
+      "jobKeyMode": undefined,
       "maxAttempts": undefined,
       "priority": undefined,
       "queueName": undefined,
     },
     "payload": null,
     "task": "lots_of_spaces",
+    Symbol(isParsed): true,
+  },
+  Object {
+    "identifier": "with_key",
+    "match": [Function],
+    "options": Object {
+      "backfillPeriod": 0,
+      "jobKey": "my_key",
+      "jobKeyMode": "replace",
+      "maxAttempts": undefined,
+      "priority": undefined,
+      "queueName": undefined,
+    },
+    "payload": null,
+    "task": "with_key",
+    Symbol(isParsed): true,
+  },
+  Object {
+    "identifier": "with_key_and_mode",
+    "match": [Function],
+    "options": Object {
+      "backfillPeriod": 0,
+      "jobKey": "my_key",
+      "jobKeyMode": "preserve_run_at",
+      "maxAttempts": undefined,
+      "priority": undefined,
+      "queueName": undefined,
+    },
+    "payload": null,
+    "task": "with_key_and_mode",
     Symbol(isParsed): true,
   },
 ]
