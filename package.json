@@ -1,19 +1,23 @@
 {
   "name": "graphile-worker",
   "version": "0.15.1",
+  "type": "commonjs",
   "description": "Job queue for PostgreSQL",
   "main": "dist/index.js",
   "scripts": {
-    "build:sql": "node scripts/buildSqlModule.js",
+    "build:sql": "node scripts/buildSqlModule.mjs",
+    "website:update": "node scripts/options.mjs",
     "prepack": "rm -Rf dist && npm run build:sql && tsc && chmod +x dist/cli.js",
     "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && npm run build:sql && tsc --watch",
     "lint": "yarn prettier:check && eslint --ext .js,.jsx,.ts,.tsx,.graphql .",
-    "lint:fix": "eslint --ext .js,.jsx,.ts,.tsx,.graphql . --fix; prettier --ignore-path .eslintignore --write '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
-    "prettier:check": "prettier --ignore-path .eslintignore --check '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
-    "test": "yarn prepack && depcheck && createdb graphile_worker_test || true && psql -X -v GRAPHILE_WORKER_SCHEMA=\"${GRAPHILE_WORKER_SCHEMA:-graphile_worker}\" -v ON_ERROR_STOP=1 -f __tests__/reset-db.sql graphile_worker_test && jest -i",
+    "lint:fix": "eslint --ext .js,.jsx,.ts,.tsx,.graphql . --fix; prettier --cache --ignore-path .eslintignore --write '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
+    "prettier:check": "prettier --cache --ignore-path .eslintignore --check '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
+    "test": "yarn prepack && depcheck && createdb graphile_worker_test || true && psql -X -v GRAPHILE_WORKER_SCHEMA=\"${GRAPHILE_WORKER_SCHEMA:-graphile_worker}\" -v ON_ERROR_STOP=1 -f __tests__/reset-db.sql graphile_worker_test && node --experimental-vm-modules node_modules/.bin/jest -i",
     "db:dump": "./scripts/dump_db",
     "perfTest": "cd perfTest && node ./run.js",
-    "preversion": "grep '^### Pending' RELEASE_NOTES.md && echo \"⚠️ Cannot publish with 'Pending' in RELEASE_NOTES ⚠️\" && exit 1 || true"
+    "preversion": "grep '^### Pending' RELEASE_NOTES.md && echo \"⚠️ Cannot publish with 'Pending' in RELEASE_NOTES ⚠️\" && exit 1 || true",
+    "postversion": "node scripts/postversion.mjs",
+    "website": "cd website && yarn run"
   },
   "bin": {
     "graphile-worker": "./dist/cli.js"
@@ -42,35 +46,48 @@
   "homepage": "https://github.com/graphile/worker#readme",
   "dependencies": {
     "@graphile/logger": "^0.2.0",
-    "@types/debug": "^4.1.2",
-    "@types/pg": ">=6 <9",
-    "chokidar": "^3.4.0",
-    "cosmiconfig": "^7.0.0",
-    "json5": "^2.1.3",
-    "pg": ">=6.5 <9",
-    "tslib": "^2.1.0",
-    "yargs": "^17.5.1"
+    "@types/debug": "^4.1.10",
+    "@types/pg": "^8.10.5",
+    "cosmiconfig": "^8.3.6",
+    "graphile-config": "^0.0.1-beta.4",
+    "json5": "^2.2.3",
+    "pg": "^8.11.3",
+    "tslib": "^2.6.2",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "@types/jest": "^26.0.20",
+    "@docusaurus/core": "2.4.3",
+    "@docusaurus/module-type-aliases": "2.4.3",
+    "@docusaurus/preset-classic": "2.4.3",
+    "@docusaurus/remark-plugin-npm2yarn": "^2.4.3",
+    "@mdx-js/react": "^1.6.22",
+    "@types/jest": "^26.0.0",
     "@types/json5": "^2.2.0",
-    "@types/node": "^18.0.0",
-    "@typescript-eslint/eslint-plugin": "^5.29.0",
-    "@typescript-eslint/parser": "^5.29.0",
-    "depcheck": "^1.3.1",
-    "eslint": "^8.18.0",
-    "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-import": "^2.22.1",
-    "eslint-plugin-jest": "^26.5.3",
-    "eslint-plugin-simple-import-sort": "^7.0.0",
-    "eslint_d": "^12.2.0",
-    "jest": "^26.6.3",
+    "@types/node": "^20.8.7",
+    "@typescript-eslint/eslint-plugin": "^6.8.0",
+    "@typescript-eslint/parser": "^6.8.0",
+    "clsx": "^2.0.0",
+    "depcheck": "^1.4.7",
+    "eslint": "^8.51.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-import": "^2.28.1",
+    "eslint-plugin-jest": "^26.0.0",
+    "eslint-plugin-simple-import-sort": "^10.0.0",
+    "eslint_d": "^13.0.0",
+    "graphile": "^5.0.0-beta.16",
+    "jest": "^26.0.0",
     "jest-time-helpers": "0.1.0",
-    "pg-connection-string": "^2.4.0",
-    "prettier": "^2.2.1",
-    "ts-jest": "^26.4.4",
-    "ts-node": "^10.8.1",
-    "typescript": "^4.1.3"
+    "juice": "5.2.0",
+    "pg-connection-string": "^2.6.2",
+    "prettier": "^2.0.0",
+    "prism-react-renderer": "^2.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "svgo": "^1.3.0",
+    "ts-jest": "^26.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2",
+    "zx": "^7.2.3"
   },
   "files": [
     "dist",
@@ -78,5 +95,17 @@
   ],
   "engines": {
     "node": ">=14.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }

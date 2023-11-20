@@ -1,3 +1,4 @@
+--! breaking-change
 -- Go back to exposing 'int' on public interfaces, use smallint internally.
 
 drop function :GRAPHILE_WORKER_SCHEMA.add_job;

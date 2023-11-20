@@ -1,5 +1,8 @@
-const path = require("path");
-const fs = require("fs");
+import * as path from "node:path";
+import * as fs from "node:fs";
+import * as url from "node:url";
+
+const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 
 const sqlDir = path.join(__dirname, "../sql");
 const sqlFiles = fs

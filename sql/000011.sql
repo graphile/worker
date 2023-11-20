@@ -1,3 +1,4 @@
+--! breaking-change
 lock table :GRAPHILE_WORKER_SCHEMA.jobs;
 lock table :GRAPHILE_WORKER_SCHEMA.job_queues;
 

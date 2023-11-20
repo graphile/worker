@@ -1,11 +1,5 @@
 import defer, { Deferred } from "../src/deferred";
-import {
-  DbJob,
-  Task,
-  TaskList,
-  Worker,
-  WorkerSharedOptions,
-} from "../src/interfaces";
+import { DbJob, Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
 import { runTaskListOnce } from "../src/main";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
@@ -28,7 +22,7 @@ test("runs jobs", () =>
     // Schedule a job
     const start = new Date();
     await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 1}', queue_name := 'myqueue')`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": 1}', queue_name := 'myqueue')`,
     );
 
     // Assert that it has an entry in jobs / job_queues
@@ -46,7 +40,7 @@ test("runs jobs", () =>
     expect(q.locked_by).toBeFalsy();
 
     // Run the task
-    const job1: Task = jest.fn((o) => {
+    const job3: Task = jest.fn((o) => {
       expect(o).toMatchInlineSnapshot(`
         Object {
           "a": 1,
@@ -55,13 +49,13 @@ test("runs jobs", () =>
     });
     const job2: Task = jest.fn();
     const tasks: TaskList = {
-      job1,
+      job3,
       job2,
     };
     await runTaskListOnce(options, tasks, pgClient);
 
     // Job should have been called once only
-    expect(job1).toHaveBeenCalledTimes(1);
+    expect(job3).toHaveBeenCalledTimes(1);
     expect(job2).not.toHaveBeenCalled();
     expect(await jobCount(pgClient)).toEqual(0);
   }));
@@ -73,14 +67,14 @@ test("schedules errors for retry", () =>
     // Schedule a job
     const start = new Date();
     await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 1}', queue_name := 'myqueue')`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": 1}', queue_name := 'myqueue')`,
     );
 
     {
       const jobs = await getJobs(pgClient);
       expect(jobs).toHaveLength(1);
       const job = jobs[0];
-      expect(job.task_identifier).toEqual("job1");
+      expect(job.task_identifier).toEqual("job3");
       expect(job.payload).toEqual({ a: 1 });
       expect(+job.run_at).toBeGreaterThanOrEqual(+start);
       expect(+job.run_at).toBeLessThanOrEqual(+new Date());
@@ -95,21 +89,21 @@ test("schedules errors for retry", () =>
     }
 
     // Run the job (it will fail)
-    const job1: Task = jest.fn(() => {
+    const job3: Task = jest.fn(() => {
       throw new Error("TEST_ERROR");
     });
     const tasks: TaskList = {
-      job1,
+      job3,
     };
     await runTaskListOnce(options, tasks, pgClient);
-    expect(job1).toHaveBeenCalledTimes(1);
+    expect(job3).toHaveBeenCalledTimes(1);
 
     // Check that it failed as expected
     {
       const jobs = await getJobs(pgClient);
       expect(jobs).toHaveLength(1);
       const job = jobs[0];
-      expect(job.task_identifier).toEqual("job1");
+      expect(job.task_identifier).toEqual("job3");
       expect(job.attempts).toEqual(1);
       expect(job.max_attempts).toEqual(25);
       expect(job.last_error).toEqual("TEST_ERROR");
@@ -133,27 +127,33 @@ test("retries job", () =>
 
     // Add the job
     await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 1}', queue_name := 'myqueue')`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": 1}', queue_name := 'myqueue')`,
     );
     let counter = 0;
-    const job1: Task = jest.fn(() => {
+    const job3: Task = jest.fn(() => {
       throw new Error(`TEST_ERROR ${++counter}`);
     });
     const tasks: TaskList = {
-      job1,
+      job3,
     };
 
     // Run the job (it will error)
     await runTaskListOnce(options, tasks, pgClient);
-    expect(job1).toHaveBeenCalledTimes(1);
+    expect(job3).toHaveBeenCalledTimes(1);
 
     // Should do nothing the second time, because it's queued for the future (assuming we run this fast enough afterwards!)
     await runTaskListOnce(options, tasks, pgClient);
-    expect(job1).toHaveBeenCalledTimes(1);
+    expect(job3).toHaveBeenCalledTimes(1);
 
     // Tell the job to be runnable
     await pgClient.query(
-      `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set run_at = now() where task_id = (select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks where identifier = 'job1')`,
+      `\
+update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs
+set run_at = now()
+where task_id = (
+  select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks
+  where identifier = 'job3'
+)`,
     );
 
     // Run the job
@@ -161,14 +161,14 @@ test("retries job", () =>
     await runTaskListOnce(options, tasks, pgClient);
 
     // It should have ran again
-    expect(job1).toHaveBeenCalledTimes(2);
+    expect(job3).toHaveBeenCalledTimes(2);
 
     // And it should have been rejected again
     {
       const jobs = await getJobs(pgClient);
       expect(jobs).toHaveLength(1);
       const job = jobs[0];
-      expect(job.task_identifier).toEqual("job1");
+      expect(job.task_identifier).toEqual("job3");
       expect(job.attempts).toEqual(2);
       expect(job.max_attempts).toEqual(25);
       expect(job.last_error).toEqual("TEST_ERROR 2");
@@ -209,7 +209,13 @@ test("supports future-scheduled jobs", () =>
 
     // Tell the job to be runnable
     await pgClient.query(
-      `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set run_at = now() where task_id = (select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks where identifier = 'future')`,
+      `\
+update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs
+set run_at = now()
+where task_id = (
+  select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.tasks
+  where identifier = 'future'
+)`,
     );
 
     // Run the job
@@ -231,11 +237,11 @@ test("allows update of pending jobs", () =>
   withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
-    const job1: Task = jest.fn((o) => {
+    const job3: Task = jest.fn((o) => {
       expect(o).toMatchObject({ a: "right" });
     });
     const tasks: TaskList = {
-      job1,
+      job3,
     };
 
     // Schedule a future job - note incorrect payload
@@ -243,7 +249,7 @@ test("allows update of pending jobs", () =>
     runAt.setSeconds(runAt.getSeconds() + 60);
 
     await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": "wrong"}', run_at := '${runAt.toISOString()}', job_key := 'abc')`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": "wrong"}', run_at := '${runAt.toISOString()}', job_key := 'abc')`,
     );
 
     // Assert that it has an entry in jobs / job_queues
@@ -254,12 +260,12 @@ test("allows update of pending jobs", () =>
 
     // Run all jobs (none are ready)
     await runTaskListOnce(options, tasks, pgClient);
-    expect(job1).not.toHaveBeenCalled();
+    expect(job3).not.toHaveBeenCalled();
 
     // update the job to run immediately with correct payload
     const now = new Date();
     await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": "right"}', run_at := '${now.toISOString()}', job_key := 'abc')`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": "right"}', run_at := '${now.toISOString()}', job_key := 'abc')`,
     );
 
     // Assert that it has updated the existing entry and not created a new one
@@ -271,7 +277,7 @@ test("allows update of pending jobs", () =>
 
     // Run the task
     await runTaskListOnce(options, tasks, pgClient);
-    expect(tasks.job1).toHaveBeenCalledTimes(1);
+    expect(tasks.job3).toHaveBeenCalledTimes(1);
   }));
 
 test("schedules a new job if existing is completed", () =>
@@ -279,34 +285,34 @@ test("schedules a new job if existing is completed", () =>
     await reset(pgClient, options);
 
     const tasks: TaskList = {
-      job1: jest.fn(async () => {}),
+      job3: jest.fn(async () => {}),
     };
 
     // Schedule a job to run immediately
     await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": "first"}', job_key := 'abc')`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": "first"}', job_key := 'abc')`,
     );
 
     // run the job
     await runTaskListOnce(options, tasks, pgClient);
-    expect(tasks.job1).toHaveBeenCalledTimes(1);
+    expect(tasks.job3).toHaveBeenCalledTimes(1);
 
     // attempt to update the job - it should schedule a new one instead
     await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": "second"}',  job_key := 'abc')`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": "second"}',  job_key := 'abc')`,
     );
 
     // run again
     await runTaskListOnce(options, tasks, pgClient);
-    expect(tasks.job1).toHaveBeenCalledTimes(2);
+    expect(tasks.job3).toHaveBeenCalledTimes(2);
 
     // check jobs ran in the right order
-    expect(tasks.job1).toHaveBeenNthCalledWith(
+    expect(tasks.job3).toHaveBeenNthCalledWith(
       1,
       { a: "first" },
       expect.any(Object),
     );
-    expect(tasks.job1).toHaveBeenNthCalledWith(
+    expect(tasks.job3).toHaveBeenNthCalledWith(
       2,
       { a: "second" },
       expect.any(Object),
@@ -320,7 +326,7 @@ test("schedules a new job if existing is being processed", () =>
     const defers: Deferred[] = [];
     try {
       const tasks: TaskList = {
-        job1: jest.fn(async () => {
+        job3: jest.fn(async () => {
           const deferred = defer();
           defers.push(deferred);
           return deferred;
@@ -329,7 +335,7 @@ test("schedules a new job if existing is being processed", () =>
 
       // Schedule a job to run immediately
       await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": "first"}', job_key := 'abc')`,
+        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": "first"}', job_key := 'abc')`,
       );
 
       // run the job
@@ -337,11 +343,11 @@ test("schedules a new job if existing is being processed", () =>
 
       // wait for it to be picked up for processing
       await sleepUntil(() => defers.length > 0);
-      expect(tasks.job1).toHaveBeenCalledTimes(1);
+      expect(tasks.job3).toHaveBeenCalledTimes(1);
 
       // attempt to update the job - it should schedule a new one instead
       await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": "second"}',  job_key := 'abc')`,
+        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": "second"}',  job_key := 'abc')`,
       );
 
       // check there are now two jobs scheduled
@@ -354,15 +360,15 @@ test("schedules a new job if existing is being processed", () =>
       defers[1].resolve(); // complete second job
       await promise; // wait for all jobs to finish
 
-      expect(tasks.job1).toHaveBeenCalledTimes(2);
+      expect(tasks.job3).toHaveBeenCalledTimes(2);
 
       // check jobs ran in the right order
-      expect(tasks.job1).toHaveBeenNthCalledWith(
+      expect(tasks.job3).toHaveBeenNthCalledWith(
         1,
         { a: "first" },
         expect.any(Object),
       );
-      expect(tasks.job1).toHaveBeenNthCalledWith(
+      expect(tasks.job3).toHaveBeenNthCalledWith(
         2,
         { a: "second" },
         expect.any(Object),
@@ -377,7 +383,7 @@ test("schedules a new job if the existing is pending retry", () =>
     await reset(pgClient, options);
 
     const tasks: TaskList = {
-      job1: jest.fn(async (o: { succeed: boolean }) => {
+      job5: jest.fn(async (o: { succeed: boolean }) => {
         if (!o.succeed) {
           throw new Error("TEST_ERROR");
         }
@@ -388,12 +394,12 @@ test("schedules a new job if the existing is pending retry", () =>
     const {
       rows: [initialJob],
     } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"succeed": false}', job_key := 'abc')`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job5', '{"succeed": false}', job_key := 'abc')`,
     );
 
     // run the job
     await runTaskListOnce(options, tasks, pgClient);
-    expect(tasks.job1).toHaveBeenCalledTimes(1);
+    expect(tasks.job5).toHaveBeenCalledTimes(1);
 
     // Check that it failed as expected and retry has been scheduled
     const jobs = await getJobs(pgClient);
@@ -405,11 +411,11 @@ test("schedules a new job if the existing is pending retry", () =>
 
     // run again - nothing should happen
     await runTaskListOnce(options, tasks, pgClient);
-    expect(tasks.job1).toHaveBeenCalledTimes(1);
+    expect(tasks.job5).toHaveBeenCalledTimes(1);
 
     // update the job to succeed
     await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"succeed": true}',  job_key := 'abc')`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job5', '{"succeed": true}',  job_key := 'abc')`,
     );
 
     // Assert that it has updated the existing entry and not created a new one
@@ -421,15 +427,15 @@ test("schedules a new job if the existing is pending retry", () =>
 
     // run again - now it should happen immediately due to the update
     await runTaskListOnce(options, tasks, pgClient);
-    expect(tasks.job1).toHaveBeenCalledTimes(2);
+    expect(tasks.job5).toHaveBeenCalledTimes(2);
 
     // check jobs ran in the right order
-    expect(tasks.job1).toHaveBeenNthCalledWith(
+    expect(tasks.job5).toHaveBeenNthCalledWith(
       1,
       { succeed: false },
       expect.any(Object),
     );
-    expect(tasks.job1).toHaveBeenNthCalledWith(
+    expect(tasks.job5).toHaveBeenNthCalledWith(
       2,
       { succeed: true },
       expect.any(Object),
@@ -448,7 +454,7 @@ test("job details are reset if not specified in update", () =>
     } = await pgClient.query<DbJob>(
       `
 select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job(
-  'job1',
+  'job3',
   '{"a": 1}',
   queue_name := 'queue1',
   run_at := '${runAt.toISOString()}',
@@ -471,7 +477,7 @@ select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job(
       },
       queue_name: "queue1",
       run_at: runAt,
-      task_identifier: "job1",
+      task_identifier: "job3",
     });
 
     // Assert that it has an entry in jobs
@@ -483,7 +489,7 @@ select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job(
     await pgClient.query(
       `\
 select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job(
-  'job1',
+  'job3',
   job_key := 'abc'
 )`,
     );
@@ -499,7 +505,7 @@ select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job(
       last_error: null,
       max_attempts: 25,
       payload: {},
-      task_identifier: "job1",
+      task_identifier: "job3",
       queue_name: null,
     });
 
@@ -541,7 +547,7 @@ test("pending jobs can be removed", () =>
 
     // Schedule a job
     await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": "1"}', job_key := 'abc')`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": "1"}', job_key := 'abc')`,
     );
 
     // Assert that it has an entry in jobs / job_queues
@@ -563,7 +569,7 @@ test("jobs in progress cannot be removed", () =>
 
     try {
       const tasks: TaskList = {
-        job1: jest.fn(async () => {
+        job3: jest.fn(async () => {
           deferred = defer();
           return deferred;
         }),
@@ -571,7 +577,7 @@ test("jobs in progress cannot be removed", () =>
 
       // Schedule a job
       await pgClient.query(
-        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 123}', job_key := 'abc')`,
+        `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": 123}', job_key := 'abc')`,
       );
 
       // check it was inserted
@@ -580,7 +586,7 @@ test("jobs in progress cannot be removed", () =>
       const promise = runTaskListOnce(options, tasks, pgClient);
       // wait for it to be picked up for processing
       await sleepUntil(() => !!deferred);
-      expect(tasks.job1).toHaveBeenCalledTimes(1);
+      expect(tasks.job3).toHaveBeenCalledTimes(1);
 
       // attempt to remove the job
       await pgClient.query(
@@ -594,8 +600,8 @@ test("jobs in progress cannot be removed", () =>
       deferred!.resolve();
       await promise;
 
-      expect(tasks.job1).toHaveBeenCalledTimes(1);
-      expect(tasks.job1).toHaveBeenCalledWith({ a: 123 }, expect.any(Object));
+      expect(tasks.job3).toHaveBeenCalledTimes(1);
+      expect(tasks.job3).toHaveBeenCalledWith({ a: 123 }, expect.any(Object));
     } finally {
       if (deferred) {
         (deferred as Deferred).resolve();
@@ -610,33 +616,33 @@ test("runs jobs asynchronously", () =>
     // Schedule a job
     const start = new Date();
     await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 1}', queue_name := 'myqueue')`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": 1}', queue_name := 'myqueue')`,
     );
 
     // Run the task
     let jobPromise: Deferred | null = null;
     try {
-      const job1: Task = jest.fn(() => {
+      const job3: Task = jest.fn(() => {
         jobPromise = defer();
         return jobPromise;
       });
       const tasks: TaskList = {
-        job1,
+        job3,
       };
-      const runPromise = runTaskListOnce(options, tasks, pgClient);
+      const workerPool = runTaskListOnce(options, tasks, pgClient);
       let executed = false;
-      runPromise.then(() => {
+      workerPool.then(() => {
         executed = true;
       });
 
       await sleepUntil(() => !!jobPromise);
 
-      const worker: Worker = runPromise["worker"];
+      const worker = workerPool.worker!;
       expect(worker).toBeTruthy();
 
       // Job should have been called once only
       expect(jobPromise).toBeTruthy();
-      expect(job1).toHaveBeenCalledTimes(1);
+      expect(job3).toHaveBeenCalledTimes(1);
 
       expect(executed).toBeFalsy();
 
@@ -644,7 +650,7 @@ test("runs jobs asynchronously", () =>
         const jobs = await getJobs(pgClient);
         expect(jobs).toHaveLength(1);
         const job = jobs[0];
-        expect(job.task_identifier).toEqual("job1");
+        expect(job.task_identifier).toEqual("job3");
         expect(job.payload).toEqual({ a: 1 });
         expect(+job.run_at).toBeGreaterThanOrEqual(+start);
         expect(+job.run_at).toBeLessThanOrEqual(+new Date());
@@ -661,11 +667,11 @@ test("runs jobs asynchronously", () =>
       }
 
       jobPromise!.resolve();
-      await runPromise;
+      await workerPool;
       expect(executed).toBeTruthy();
 
       // Job should have been called once only
-      expect(job1).toHaveBeenCalledTimes(1);
+      expect(job3).toHaveBeenCalledTimes(1);
       expect(await jobCount(pgClient)).toEqual(0);
     } finally {
       if (jobPromise) {
@@ -681,19 +687,19 @@ test("runs jobs in parallel", () =>
     // Schedule 5 jobs
     const start = new Date();
     await pgClient.query(
-      `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 1}', queue_name := 'queue_' || s::text) from generate_series(1, 5) s`,
+      `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": 1}', queue_name := 'queue_' || s::text) from generate_series(1, 5) s`,
     );
 
     // Run the task
     const jobPromises: Array<Deferred> = [];
     try {
-      const job1: Task = jest.fn(() => {
+      const job3: Task = jest.fn(() => {
         const jobPromise = defer();
         jobPromises.push(jobPromise);
         return jobPromise;
       });
       const tasks: TaskList = {
-        job1,
+        job3,
       };
       const runPromises = [
         runTaskListOnce(options, tasks, pgClient),
@@ -711,7 +717,7 @@ test("runs jobs in parallel", () =>
 
       // Job should have been called once for each task
       expect(jobPromises).toHaveLength(5);
-      expect(job1).toHaveBeenCalledTimes(5);
+      expect(job3).toHaveBeenCalledTimes(5);
 
       expect(executed).toBeFalsy();
 
@@ -719,7 +725,7 @@ test("runs jobs in parallel", () =>
         const jobs = await getJobs(pgClient);
         expect(jobs).toHaveLength(5);
         jobs.forEach((job) => {
-          expect(job.task_identifier).toEqual("job1");
+          expect(job.task_identifier).toEqual("job3");
           expect(job.payload).toEqual({ a: 1 });
           expect(+job.run_at).toBeGreaterThanOrEqual(+start);
           expect(+job.run_at).toBeLessThanOrEqual(+new Date());
@@ -747,7 +753,7 @@ test("runs jobs in parallel", () =>
       expect(executed).toBeTruthy();
 
       // Job should not have been called any more times
-      expect(job1).toHaveBeenCalledTimes(5);
+      expect(job3).toHaveBeenCalledTimes(5);
       expect(await jobCount(pgClient)).toEqual(0);
     } finally {
       jobPromises.forEach((jobPromise) => jobPromise!.resolve());
@@ -760,30 +766,30 @@ test("single worker runs jobs in series, purges all before exit", () =>
 
     // Schedule 5 jobs
     await pgClient.query(
-      `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 1}') from generate_series(1, 5)`,
+      `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": 1}') from generate_series(1, 5)`,
     );
 
     // Run the task
     const jobPromises: Array<Deferred> = [];
     try {
-      const job1: Task = jest.fn(() => {
+      const job3: Task = jest.fn(() => {
         const jobPromise = defer();
         jobPromises.push(jobPromise);
         return jobPromise;
       });
       const tasks: TaskList = {
-        job1,
+        job3,
       };
-      const runPromise = runTaskListOnce(options, tasks, pgClient);
+      const workerPool = runTaskListOnce(options, tasks, pgClient);
       let executed = false;
-      runPromise.then(() => {
+      workerPool.then(() => {
         executed = true;
       });
 
       for (let i = 0; i < 5; i++) {
         await sleepUntil(() => jobPromises.length >= i + 1);
         expect(jobPromises).toHaveLength(i + 1);
-        expect(job1).toHaveBeenCalledTimes(i + 1);
+        expect(job3).toHaveBeenCalledTimes(i + 1);
 
         // Shouldn't be finished yet
         expect(executed).toBeFalsy();
@@ -793,13 +799,13 @@ test("single worker runs jobs in series, purges all before exit", () =>
       }
 
       expect(jobPromises).toHaveLength(5);
-      expect(job1).toHaveBeenCalledTimes(5);
+      expect(job3).toHaveBeenCalledTimes(5);
 
-      await runPromise;
+      await workerPool;
       expect(executed).toBeTruthy();
 
       // Job should not have been called any more times
-      expect(job1).toHaveBeenCalledTimes(5);
+      expect(job3).toHaveBeenCalledTimes(5);
       expect(await jobCount(pgClient)).toEqual(0);
     } finally {
       jobPromises.forEach((p) => p.resolve());
@@ -812,19 +818,19 @@ test("jobs added to the same queue will be ran serially (even if multiple worker
 
     // Schedule 5 jobs
     await pgClient.query(
-      `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', '{"a": 1}', 'serial') from generate_series(1, 5)`,
+      `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": 1}', 'serial') from generate_series(1, 5)`,
     );
 
     // Run the task
     const jobPromises: Array<Deferred> = [];
     try {
-      const job1: Task = jest.fn(() => {
+      const job3: Task = jest.fn(() => {
         const jobPromise = defer();
         jobPromises.push(jobPromise);
         return jobPromise;
       });
       const tasks: TaskList = {
-        job1,
+        job3,
       };
       const runPromises = [
         runTaskListOnce(options, tasks, pgClient),
@@ -842,7 +848,7 @@ test("jobs added to the same queue will be ran serially (even if multiple worker
 
         await sleepUntil(() => jobPromises.length >= i + 1);
         expect(jobPromises).toHaveLength(i + 1);
-        expect(job1).toHaveBeenCalledTimes(i + 1);
+        expect(job3).toHaveBeenCalledTimes(i + 1);
 
         // Shouldn't be finished yet
         expect(executed).toBeFalsy();
@@ -852,13 +858,13 @@ test("jobs added to the same queue will be ran serially (even if multiple worker
       }
 
       expect(jobPromises).toHaveLength(5);
-      expect(job1).toHaveBeenCalledTimes(5);
+      expect(job3).toHaveBeenCalledTimes(5);
 
       await Promise.all(runPromises);
       expect(executed).toBeTruthy();
 
       // Job should not have been called any more times
-      expect(job1).toHaveBeenCalledTimes(5);
+      expect(job3).toHaveBeenCalledTimes(5);
       expect(await jobCount(pgClient)).toEqual(0);
     } finally {
       jobPromises.forEach((p) => p.resolve());

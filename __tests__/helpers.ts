@@ -12,7 +12,18 @@ import {
   WorkerPoolOptions,
   WorkerUtils,
 } from "../src/interfaces";
+import { processSharedOptions } from "../src/lib";
+import { _allWorkerPools } from "../src/main";
 import { migrate } from "../src/migrate";
+
+declare global {
+  namespace GraphileWorker {
+    interface Tasks {
+      job1: { id: string };
+      job2: { id: string };
+    }
+  }
+}
 
 export {
   DAY,
@@ -32,7 +43,7 @@ jest.setTimeout(15000);
 // process.env.GRAPHILE_LOGGER_DEBUG = "1";
 
 export const TEST_CONNECTION_STRING =
-  process.env.TEST_CONNECTION_STRING || "graphile_worker_test";
+  process.env.TEST_CONNECTION_STRING || "postgres:///graphile_worker_test";
 
 const parsed = parse(TEST_CONNECTION_STRING);
 
@@ -56,6 +67,12 @@ export async function withPgPool<T>(
     pool.end();
   }
 }
+
+afterEach(() => {
+  if (_allWorkerPools.length !== 0) {
+    throw new Error(`Current test failed to release all workers`);
+  }
+});
 
 export async function withPgClient<T>(
   cb: (client: pg.PoolClient) => Promise<T>,
@@ -85,7 +102,7 @@ export async function withTransaction<T>(
 }
 
 function isPoolClient(o: pg.Pool | pg.PoolClient): o is pg.PoolClient {
-  return typeof o["release"] === "function";
+  return "release" in o && typeof o.release === "function";
 }
 
 export async function reset(
@@ -95,12 +112,13 @@ export async function reset(
   await pgPoolOrClient.query(
     `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
   );
+  const compiledSharedOptions = processSharedOptions(options);
   if (isPoolClient(pgPoolOrClient)) {
-    await migrate(options, pgPoolOrClient);
+    await migrate(compiledSharedOptions, pgPoolOrClient);
   } else {
     const client = await pgPoolOrClient.connect();
     try {
-      await migrate(options, client);
+      await migrate(compiledSharedOptions, client);
     } finally {
       client.release();
     }
@@ -161,7 +179,14 @@ export async function getJobQueues(pgClient: pg.Pool | pg.PoolClient) {
     locked_at: Date;
     locked_by: string;
   }>(
-    `select job_queues.*, count(jobs.*)::int as job_count from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs on (jobs.job_queue_id = job_queues.id) group by job_queues.id order by job_queues.queue_name asc`,
+    `\
+select job_queues.*, count(jobs.*)::int as job_count
+from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_queues
+left join ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs on (
+  jobs.job_queue_id = job_queues.id
+)
+group by job_queues.id
+order by job_queues.queue_name asc`,
   );
   return rows;
 }
@@ -186,6 +211,7 @@ export function makeMockJob(taskIdentifier: string): Job {
     revision: 0,
     key: null,
     flags: null,
+    is_available: true,
   };
 }
 
@@ -194,23 +220,25 @@ export async function makeSelectionOfJobs(
   pgClient: pg.PoolClient,
 ) {
   const future = new Date(Date.now() + 60 * 60 * 1000);
-  let failedJob: DbJob = await utils.addJob("job1", { a: 1, runAt: future });
-  const regularJob1 = await utils.addJob("job1", { a: 2, runAt: future });
-  let lockedJob: DbJob = await utils.addJob("job1", { a: 3, runAt: future });
-  const regularJob2 = await utils.addJob("job1", { a: 4, runAt: future });
-  const untouchedJob = await utils.addJob("job1", { a: 5, runAt: future });
-  ({
-    rows: [lockedJob],
+  const failedJob: DbJob = await utils.addJob("job3", { a: 1, runAt: future });
+  const regularJob1 = await utils.addJob("job3", { a: 2, runAt: future });
+  const lockedJob: DbJob = await utils.addJob("job3", { a: 3, runAt: future });
+  const regularJob2 = await utils.addJob("job3", { a: 4, runAt: future });
+  const untouchedJob = await utils.addJob("job3", { a: 5, runAt: future });
+  const {
+    rows: [lockedJobUpdate],
   } = await pgClient.query<DbJob>(
     `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set locked_by = 'test', locked_at = now() where id = $1 returning *`,
     [lockedJob.id],
-  ));
-  ({
-    rows: [failedJob],
+  );
+  Object.assign(lockedJob, lockedJobUpdate);
+  const {
+    rows: [failedJobUpdate],
   } = await pgClient.query<DbJob>(
     `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.jobs set attempts = max_attempts, last_error = 'Failed forever' where id = $1 returning *`,
     [failedJob.id],
-  ));
+  );
+  Object.assign(failedJob, failedJobUpdate);
 
   return {
     failedJob,
