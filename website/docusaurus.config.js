@@ -122,6 +122,11 @@ const config = {
         },
         items: [
           {
+            href: "/releases",
+            label: "Releases",
+            position: "right",
+          },
+          {
             href: "https://graphile.org/sponsor/",
             label: "Sponsor",
             position: "right",

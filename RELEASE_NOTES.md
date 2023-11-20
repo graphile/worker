@@ -8,7 +8,9 @@ towards the 1.0 release. Please read these notes carefully.
 **IMPORTANT**: this release is incompatible with previous releases - do not run
 earlier workers against this releases database schema or Bad Things will happen.
 You should shut down all workers before migrating to this version, or use
-[Worker Pro](https://worker.graphile.org/docs/pro).
+[Worker Pro](https://worker.graphile.org/docs/pro). (If you're upgrading from
+v0.13.0, upgrade to v0.13.1-bridge.0 first and add the Worker Pro plugin to
+that; deploy it across your fleet, and then proceed to upgrade to v0.16.0).
 
 **DROPS SUPPORT FOR NODE <18**. As of 24th October 2023, Node 20 is the active
 LTS and Node 18 is maintainence LTS; previous versions are no longer supported.
@@ -175,8 +177,8 @@ or smaller than about `-100` anyway.)
 
 ### v0.13.1-bridge.0
 
-**TL;DR: upgrade to this and add Worker Pro before migrating to v0.14.0 or
-v0.16.0.**
+**TL;DR: if you want to use [Worker Pro](https://worker.graphile.org/docs/pro)
+to ease migration to v0.16.0, upgrade to this version for Worker Pro support.**
 
 This release is a "bridge" release to make migration to v0.14.0 and v0.16.0
 easier. Since v0.14.0 and v0.16.0 include breaking database changes, no active
@@ -186,14 +188,15 @@ weird and undesirable behaviors.
 
 Normally we'd recommend that you "scale to zero" before performing these kinds
 of migrations, to ensure that no older workers will be running against the DB at
-the same time; however this release adds support for the (proprietary) Worker
-Pro plugin which (when used consistently across your entire worker fleet)
-enables your workers to coordinate, triggering legacy workers to cleanly shut
-down (and waiting for them to do so) before migrating the database. The Worker
-Pro plugin also details the intent to upgrade, meaning if new legacy workers
-start up in the interrim, they will also not start looking for jobs since they
-know they will be out of date soon. As soon as all running tasks have finished
-processing (or a configurable timeout has elapsed) the migration will go ahead.
+the same time; however this release adds support for the (proprietary)
+[Worker Pro plugin](https://worker.graphile.org/docs/pro) which (when used
+consistently across your entire worker fleet) enables your workers to
+coordinate, triggering legacy workers to cleanly shut down (and waiting for them
+to do so) before migrating the database. The Worker Pro plugin also details the
+intent to upgrade, meaning if new legacy workers start up in the interrim, they
+will also not start looking for jobs since they know they will be out of date
+soon. As soon as all running tasks have finished processing (or a configurable
+timeout has elapsed) the migration will go ahead.
 
 The Worker Pro plugin mentioned above is enabled by the addition of support for
 `graphile-config`, the standardized plugin and preset system for the entire
