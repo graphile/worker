@@ -8,32 +8,37 @@ for Graphile Worker that adds advanced and quality-of-life features. Graphile
 Worker existed for 5 years without these features, so they are definitely not
 essential, but they are things your team is likely to appreciate:
 
-- [Live migration](./migration.md) &mdash; removing the need to scale to zero to
+- [Live migration](./migration.md) &mdash; remove the need to scale to zero to
   safely upgrade Worker versions
-- [Crashed worker recovery](./recovery.md) &mdash; tracking running workers and
-  unlocking jobs automatically when a worker seems to have unexpectedly stopped
+- [Crashed worker recovery](./recovery.md) &mdash; track running workers and
+  unlock jobs automatically when a worker seems to have unexpectedly stopped
 - _More features planned_
 
-_Worker Pro is priced at USD $100/mo and helps to fund the ongoing maintenance
-of Graphile Worker and other Graphile projects. It is also available **free to
-sponsors** on the $100/mo tier or above._
+_~~Worker Pro is priced at USD $100/mo and helps to fund the ongoing maintenance
+of Graphile Worker and other Graphile projects. It is also available
+**[free to sponsors](https://github.com/sponsors/benjie)** on the $100/mo tier
+or above.~~_
 
 :::tip Launch offer
 
 Worker Pro is in early access with a limited feature set; during this period get
-access by sponsoring at **just $25+/mo** and, as a thank you for being an early
-adopter, keep this preferential rate for at least 18 months after the launch
-offer ends.
+access by [sponsoring](https://github.com/sponsors/benjie) at **just $25+/mo**
+and, as a thank you for being an early adopter, keep this preferential rate for
+at least 18 months after the launch offer ends.
 
 :::
 
 ## Getting access
 
-Worker Pro is currently in sponsors-only early access; any sponsor on $100+/mo
-may request access from @jemgillam or @benjie via the Discord, or email. Access
-to Worker Pro grants access to the GitHub Packages module and the source code
-repository on GitHub, including the ability to file issues and open discussions
-about Worker Pro.
+Worker Pro is currently in sponsors-only early access; any
+[sponsor](https://github.com/sponsors/benjie) on ~~$100/mo~~ $25+/mo may request
+access from @jemgillam or @benjie via the Discord, or email `team` at the domain
+`graphile.com`. Access to Worker Pro grants access to the GitHub Packages module
+and
+[the source code repository on GitHub](https://github.com/graphile-pro/worker),
+including the ability to
+[file issues](https://github.com/graphile-pro/worker/issues/new) and open
+discussions about Worker Pro.
 
 ### Source available
 
@@ -116,6 +121,9 @@ documentation, in particular:
   and
 - [Installing a package](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry#installing-a-package).
 
+If you still need help, ask in #help-and-support on the
+[Graphile Discord](https://discord.gg/graphile).
+
 :::
 
 ## Usage
@@ -144,14 +152,14 @@ const preset: GraphileConfig.Preset = {
 GitHub Sponsors then Worker Pro is included as one of the many perks to
 sponsorship.**
 
-Paying $100/mo for Worker Pro via Graphile Store (not available at time of
-writing) gives you access to Worker Pro but that is all, you are not a sponsor
+Paying $100/mo for Worker Pro via Graphile Store _(not available at time of
+writing)_ gives you access to Worker Pro but that is all, you are not a sponsor
 and you are not entitled to other
 [sponsor perks](https://github.com/sponsors/benjie/). We strongly encourage you
 to sponsor Graphile instead, there&apos;s only upsides!
 
-Some companies claim they &ldquo;cannot&rdquo; use sponsorship platforms; if
-your company is one of these then either you need to make do without the
+Why? Some companies claim they &ldquo;cannot&rdquo; use sponsorship platforms;
+if your company is one of these then either you need to make do without the
 additional sponsor perks, or you need to help your organization to see the value
 of supporting the software that their business relies upon. Once you&apos;ve
 successfully gained approval for sponsorship, you may discover other valuable

@@ -3,11 +3,11 @@ title: "Crashed worker recovery"
 sidebar_position: 20
 ---
 
-If a Graphile Worker process exits unexpectedly (for example someone pulls the
-power lead from the server, or the Node.js process crashes or is killed) it does
-not have a chance to unlock its active jobs, and they remain locked for up to 4
-hours. For some jobs, not being attempted again for 4 hours could be far too
-long.
+If a regular Graphile Worker process exits unexpectedly (for example someone
+pulls the power lead from the server, or the Node.js process crashes or is
+killed) it does not have a chance to unlock its active jobs, and they remain
+locked for up to 4 hours. For some jobs, not being attempted again for 4 hours
+could be far too long.
 
 Worker Pro tracks running workers via a &ldquo;heartbeat&rdquo;, and when a
 worker has not checked in for a configurable amount of time we can assume that

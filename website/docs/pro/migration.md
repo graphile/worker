@@ -4,17 +4,18 @@ sidebar_position: 10
 ---
 
 Normally we recommend you shut down all of your Graphile Worker instances before
-upgrading to a new version of Worker, since schema and API changes may cause
-older workers to break, leading to long waits and/or duplicate execution due to
-failure to mark jobs complete.
+upgrading to certain new versions of Worker, since schema and API changes may
+cause older workers to break, leading to long waits and/or duplicate execution
+due to failure to mark jobs complete. To know which versions of Worker are
+impacted, please see the [Release Notes](/releases).
 
-Worker Pro performs checks on startup and tracks running workers so that each
-Worker can know if they&apos;re out of date (in which case they should
-gracefully shut down) or if they need to wait for previous worker versions to
-exit fully before they can run migrations. Worker Pro understands which
-migrations are safe versus breaking, and can help you to roll out new versions
-of Worker on a server-by-server basis without having to scale your workers to
-zero before applying an update.
+Worker Pro performs checks on startup and
+[tracks running workers](./recovery.md) so that each Worker can know if
+they&apos;re out of date (in which case they should gracefully shut down) or if
+they need to wait for previous worker versions to exit fully before they can run
+migrations. Worker Pro understands which migrations are safe versus breaking,
+and can help you to roll out new versions of Worker on a server-by-server basis
+without having to scale your workers to zero before applying an update.
 
 ## Configuration
 
