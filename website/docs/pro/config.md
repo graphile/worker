@@ -18,8 +18,6 @@ Type: `number | undefined`
 How often, in milliseconds, a worker should check in as active. Defaults to 1
 minute.
 
-<!--
-
 ### worker.sweepInterval
 
 Type: `number | undefined`
@@ -36,8 +34,6 @@ worker is considered inactive and eligible to be force-released. Defaults to 4
 hours, but we recommend you set it to a shorter time &mdash; how long you think
 a legitimate networking interruption might last where tasks may still
 successfully complete.
-
--->
 
 ### worker.maxMigrationWaitTime
 
@@ -65,6 +61,12 @@ const preset: GraphileConfig.Preset = {
     // Check in as active once per minute
     heartbeatInterval: 60 * 1000,
 
+    // Check for and force-release inactive workers every 3 minutes
+    sweepInterval: 3 * 60 * 1000,
+
+    // Workers are deemed "inactive" 10 minutes after their last heartbeat
+    sweepThreshold: 10 * 60 * 1000,
+
     // If old workers haven't exited within 30 minutes, go ahead and perform
     // the migration anyway:
     maxMigrationWaitTime: 30 * 60 * 1000,
@@ -73,13 +75,3 @@ const preset: GraphileConfig.Preset = {
 
 export default preset;
 ```
-
-<!--
-```
-    // Check for and force-release inactive workers every 3 minutes
-    sweepInterval: 3 * 60 * 1000,
-
-    // Workers are deemed "inactive" 10 minutes after their last heartbeat
-    sweepThreshold: 10 * 60 * 1000,
-```
--->

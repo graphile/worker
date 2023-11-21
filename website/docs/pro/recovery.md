@@ -4,8 +4,6 @@ sidebar_position: 20
 draft: true
 ---
 
-**THIS FUNCTIONALITY IS NOT YET IMPLEMENTED**
-
 If a regular Graphile Worker process exits unexpectedly (for example someone
 pulls the power lead from the server, or the Node.js process crashes or is
 killed) it does not have a chance to unlock its active jobs, and they remain
@@ -15,7 +13,9 @@ could be far too long.
 Worker Pro tracks running workers via a &ldquo;heartbeat&rdquo;, and when a
 worker has not checked in for a configurable amount of time we can assume that
 this worker is no longer active (crashed, was terminated, server shut down, etc)
-and release its jobs back to the pool to be executed.
+and release its jobs back to the pool to be executed (honouring
+[exponential backoff](../exponential-backoff.md) to help avoid crashes from
+poorly written task executors causing worker progress to stall).
 
 :::note
 
