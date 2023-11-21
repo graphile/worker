@@ -1,5 +1,26 @@
 # Release notes
 
+## Worker Pro: easing migration
+
+From time to time Graphile Worker needs to make changes to the database, and
+these changes might cause pre-existing workers to fail in "interesting" ways.
+These breaking changes are noted in the release notes below, and typically you
+need to "scale to zero" to perform these updates - turn off all your existing
+workers and only then run only new workers.
+
+Worker Pro is a proprietary plugin which, among other things, helps to alleviate
+this issue. It tracks the running workers and when a new breaking migration is
+required it has all old workers exit cleanly (once they've finished what they're
+working on) and no further old workers will be able to start up. Once all old
+workers have exited, the migration can go ahead as it normally would. This
+avoids the need to "scale to zero" as workers will communicate with each other
+to make sure the system as a whole remains consistent.
+
+Read more:
+[Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
+
+## Version history
+
 ### v0.16.0
 
 **THIS RELEASE INTRODUCES SIGNIFICANT CHANGES**, in preparation for moving
