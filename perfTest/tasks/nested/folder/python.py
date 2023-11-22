@@ -2,12 +2,12 @@
 
 import json, os, sys
 
-input_string = sys.stdin.read()
-input_object = json.loads(input_string)
-
 if os.environ["GRAPHILE_WORKER_PAYLOAD_FORMAT"] <> "json":
     print("Graphile Worker binary payload format {} unsupported".format(os.environ["GRAPHILE_WORKER_PAYLOAD_FORMAT"]))
     exit(99)
+
+input_string = sys.stdin.read()
+input_object = json.loads(input_string)
 
 current_attempts = int(os.environ["GRAPHILE_WORKER_JOB_ATTEMPTS"])
 expected_attempts = int(input_object["payload"]["attempts"])
