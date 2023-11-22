@@ -192,7 +192,9 @@ test("throws helpful error message in migration 11", async () => {
     ) as (keyof typeof migrations)[];
     for (const migrationFile of migrationFiles) {
       const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
-      if (migrationNumber > 10) break;
+      if (migrationNumber > 10) {
+        break;
+      }
       await runMigration(
         compiledSharedOptions,
         event,

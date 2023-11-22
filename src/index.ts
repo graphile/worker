@@ -188,6 +188,13 @@ declare global {
       postmigrate(event: GraphileWorker.MigrateEvent): PromiseOrDirect<void>;
 
       /**
+       * Called if an error occurs during migration.
+       */
+      migrationError(
+        event: GraphileWorker.MigrateEvent & { error: Error },
+      ): PromiseOrDirect<void>;
+
+      /**
        * Used to build a given `taskIdentifier`'s handler given a list of files,
        * if possible.
        */
