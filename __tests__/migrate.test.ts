@@ -1,7 +1,7 @@
 import { WorkerSharedOptions } from "../src";
 import { migrations } from "../src/generated/sql";
 import { processSharedOptions } from "../src/lib";
-import { migrate } from "../src/migrate";
+import { installSchema, migrate, runMigration } from "../src/migrate";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobs,
@@ -156,6 +156,64 @@ test("aborts if database is more up to date than current worker", async () => {
       migrate(compiledSharedOptions, pgClient),
     ).rejects.toThrowErrorMatchingInlineSnapshot(
       `"Database is using Graphile Worker schema revision 999999 which includes breaking migration 999999, but the currently running worker only supports up to revision 18. It would be unsafe to continue; please ensure all versions of Graphile Worker are compatible."`,
+    );
+  });
+});
+
+test("throws helpful error message in migration 11", async () => {
+  await withPgClient(async (pgClient) => {
+    await pgClient.query(
+      `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
+    );
+  });
+  // We need to use a fresh connection after dropping the schema because the SQL
+  // functions' plans get cached using the stale OIDs.
+  await withPgClient(async (pgClient) => {
+    // Assert DB is empty
+    const {
+      rows: [graphileWorkerNamespaceBeforeMigration],
+    } = await pgClient.query(
+      `select * from pg_catalog.pg_namespace where nspname = $1`,
+      [GRAPHILE_WORKER_SCHEMA],
+    );
+    expect(graphileWorkerNamespaceBeforeMigration).toBeFalsy();
+
+    const compiledSharedOptions = processSharedOptions(options);
+
+    // Manually run the first 10 migrations
+    const event = {
+      client: pgClient,
+      postgresVersion: 120000, // TODO: use the actual postgres version
+      scratchpad: Object.create(null),
+    };
+    await installSchema(compiledSharedOptions, event);
+    const migrationFiles = Object.keys(
+      migrations,
+    ) as (keyof typeof migrations)[];
+    for (const migrationFile of migrationFiles) {
+      const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
+      if (migrationNumber > 10) break;
+      await runMigration(
+        compiledSharedOptions,
+        event,
+        migrationFile,
+        migrationNumber,
+      );
+    }
+
+    // Lock a job
+    await pgClient.query(
+      `select ${compiledSharedOptions.escapedWorkerSchema}.add_job('lock_me', '{}');`,
+    );
+    await pgClient.query(
+      `update ${compiledSharedOptions.escapedWorkerSchema}.jobs set locked_at = now(), locked_by = 'test_runner';`,
+    );
+
+    // Perform migration
+    const promise = migrate(compiledSharedOptions, pgClient);
+
+    await expect(promise).rejects.toThrowErrorMatchingInlineSnapshot(
+      `"There are locked jobs present; migration 11 cannot complete. Please ensure all workers are shut down cleanly and all locked jobs and queues are unlocked before attempting this migration. To achieve this with minimal downtime, please consider using Worker Pro: https://worker.graphile.org/docs/pro/migration"`,
     );
   });
 });

@@ -24,7 +24,8 @@ async function fetchAndCheckPostgresVersion(client: PoolClient) {
   return checkPostgresVersion(row.server_version_num);
 }
 
-async function installSchema(
+/** @internal */
+export async function installSchema(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
   event: GraphileWorker.MigrateEvent,
 ) {
@@ -49,7 +50,8 @@ async function installSchema(
   await hooks.process("postbootstrap", event);
 }
 
-async function runMigration(
+/** @internal */
+export async function runMigration(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
   event: GraphileWorker.MigrateEvent,
   migrationFile: keyof typeof migrations,
@@ -92,6 +94,11 @@ async function runMigration(
         `Some other worker has performed migration ${migrationFile}; continuing.`,
       );
       return;
+    }
+    if (e.code === "22012" && migrationNumber === 11) {
+      throw new Error(
+        `There are locked jobs present; migration 11 cannot complete. Please ensure all workers are shut down cleanly and all locked jobs and queues are unlocked before attempting this migration. To achieve this with minimal downtime, please consider using Worker Pro: https://worker.graphile.org/docs/pro/migration`,
+      );
     }
     throw e;
   }
