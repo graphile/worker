@@ -24,7 +24,8 @@ async function fetchAndCheckPostgresVersion(client: PoolClient) {
   return checkPostgresVersion(row.server_version_num);
 }
 
-async function installSchema(
+/** @internal */
+export async function installSchema(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
   event: GraphileWorker.MigrateEvent,
 ) {
@@ -49,13 +50,14 @@ async function installSchema(
   await hooks.process("postbootstrap", event);
 }
 
-async function runMigration(
+/** @internal */
+export async function runMigration(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
   event: GraphileWorker.MigrateEvent,
   migrationFile: keyof typeof migrations,
   migrationNumber: number,
 ) {
-  const { escapedWorkerSchema, logger } = compiledSharedOptions;
+  const { escapedWorkerSchema, logger, hooks } = compiledSharedOptions;
   const rawText = migrations[migrationFile];
   const text = rawText.replace(
     /:GRAPHILE_WORKER_SCHEMA\b/g,
@@ -84,16 +86,22 @@ async function runMigration(
       JSON.stringify({ migrationNumber, breaking }),
     ]);
     await event.client.query("commit");
-  } catch (e) {
+  } catch (error) {
     await event.client.query("rollback");
-    if (!migrationInsertComplete && e.code === "23505") {
+    await hooks.process("migrationError", { ...event, error });
+    if (!migrationInsertComplete && error.code === "23505") {
       // Someone else did this migration! Success!
       logger.debug(
         `Some other worker has performed migration ${migrationFile}; continuing.`,
       );
       return;
     }
-    throw e;
+    if (error.code === "22012" && migrationNumber === 11) {
+      throw new Error(
+        `There are locked jobs present; migration 11 cannot complete. Please ensure all workers are shut down cleanly and all locked jobs and queues are unlocked before attempting this migration. To achieve this with minimal downtime, please consider using Worker Pro: https://worker.graphile.org/docs/pro/migration`,
+      );
+    }
+    throw error;
   }
 }
 
