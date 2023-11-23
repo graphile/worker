@@ -39,14 +39,7 @@ const task: Task = async (payload) => {
 ```
 
 If this is too manual, you might prefer to use a library such as `runtypes` or
-one of the many others of a similar kind. If you're not concerned with the type
-safety of the payload, you can work around it with a couple casts:
-
-```ts
-const task: Task = (inPayload) => {
-  const payload = inPayload as any as MyPayload;
-};
-```
+one of the many others of a similar kind.
 
 ### Example of using type guards
 
@@ -93,9 +86,9 @@ export const send_email: Task = async function (payload) {
 };
 ```
 
-If now we introduce a new functionality to set the from address, the changes we
-make have to take into account that older jobs may not have the from address
-set, like so:
+If now we introduce a new functionality to set the `from` address, we have to
+take into account that older jobs will not have the `from` address set. We
+should adjust our code like so:
 
 ```diff
 import type { Task, WorkerUtils } from "graphile-worker";
