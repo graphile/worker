@@ -74,8 +74,8 @@ export const send_email: Task = async function (payload) {
   const { to, subject, body } = payload;
   await ses.sendEmail({
     Destination: {
-      ToAddress: [to],
-      FromAddress: ["no-reply@example.com"],
+      ToAddresses: [to],
+      FromAddresses: ["no-reply@example.com"],
     },
     Message: {
       Subject: {
@@ -123,9 +123,9 @@ export const send_email: Task = async function (payload) {
 + const { to, subject, body, from } = payload;
   await ses.sendEmail({
     Destination: {
-      ToAddress: [to],
--     FromAddress: ["no-reply@example.com"],
-+     FromAddress: [from ?? "no-reply@example.com"],
+      ToAddresses: [to],
+-     FromAddresses: ["no-reply@example.com"],
++     FromAddresses: [from ?? "no-reply@example.com"],
     },
     Message: {
       Subject: {
@@ -222,8 +222,8 @@ export const send_email: Task<"send_email"> = async function (payload) {
   const { to, subject, body } = payload;
   await ses.sendEmail({
     Destination: {
-      ToAddress: [to],
-      FromAddress: ["no-reply@example.com"],
+      ToAddresses: [to],
+      FromAddresses: ["no-reply@example.com"],
     },
     Message: {
       Subject: {
@@ -267,9 +267,9 @@ export const send_email: Task<"send_email"> = async function (payload) {
 + const { to, subject, body, from } = payload;
   await ses.sendEmail({
     Destination: {
-      ToAddress: [to],
--      FromAddress: ["no-reply@example.com"],
-+      FromAddress: [from ?? "no-reply@example.com"],
+      ToAddresses: [to],
+-      FromAddresses: ["no-reply@example.com"],
++      FromAddresses: [from ?? "no-reply@example.com"],
     },
     Message: {
       Subject: {
