@@ -49,6 +49,8 @@ export type AddJobFunction = (
 
   /**
    * The payload (typically a JSON object) that will be passed to the task executor.
+   * By default, for safety, payloads are typed as unknown since they may have been
+   * populated by out of date code, or even from other sources.
    */
   payload: unknown,
 
