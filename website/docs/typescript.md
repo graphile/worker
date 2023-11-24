@@ -234,8 +234,8 @@ export const send_email: Task<"send_email"> = async function (payload) {
 };
 ```
 
-If now we introduce the new functionality to set the from address, the changes
-we make have to take into account that older jobs may not have the from address
+If now we introduce the new functionality to set the `from` address, the changes
+we make have to take into account that older jobs may not have the `from` address
 set, like so:
 
 ```diff
