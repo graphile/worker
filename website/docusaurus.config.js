@@ -66,6 +66,27 @@ const config = {
     ],
   ],
 
+  plugins: [
+    [
+      "@docusaurus/plugin-content-blog",
+      {
+        /**
+         * Required for any multi-instance plugin
+         */
+        id: "news",
+        /**
+         * URL route for the blog section of your site.
+         * *DO NOT* include a trailing slash.
+         */
+        routeBasePath: "news",
+        /**
+         * Path to data on filesystem relative to site dir.
+         */
+        path: "./news",
+      },
+    ],
+  ],
+
   stylesheets: [
     {
       href: "https://fonts.googleapis.com/css2?family=Sarabun",
@@ -121,6 +142,11 @@ const config = {
           src: "img/logo.optimized.svg",
         },
         items: [
+          {
+            to: "news",
+            label: "News",
+            position: "right",
+          },
           {
             href: "/releases",
             label: "Releases",
