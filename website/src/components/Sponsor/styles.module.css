@@ -1,0 +1,10 @@
+.sponsor {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  justify-items: center;
+  align-items: center;
+  font-weight: normal;
+  margin: 0.5em;
+  flex: 0 0 14em;
+}

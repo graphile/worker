@@ -1,0 +1,5 @@
+.sponsorContainer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: space-around;
+}

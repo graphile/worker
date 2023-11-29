@@ -36,3 +36,19 @@
   --ifm-color-primary-lightest: #efffed;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+figure {
+  margin-left: 0;
+  margin-right: 0;
+  text-align: center;
+}
+
+figure p {
+  margin: 0;
+}
+
+figure figcaption {
+  font-size: 0.9em;
+  font-style: italic;
+  text-align: center;
+}

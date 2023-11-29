@@ -153,7 +153,7 @@ const config = {
             position: "right",
           },
           {
-            href: "https://graphile.org/sponsor/",
+            href: "/sponsors",
             label: "Sponsor",
             position: "right",
           },
