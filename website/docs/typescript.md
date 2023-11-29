@@ -10,38 +10,17 @@ ensure the `payload` conforms to what you expect. It can be convenient to
 declare the payload types up front to avoid this `unknown`, but doing so might
 be unsafe &mdash; please be sure to read the caveats below.
 
-## Using type guards
+## Using type assertion functions
 
 To ensure your system is as safe as possible (and guard against old jobs, or
 jobs specified outside of TypeScript's type checking) we recommend that you use
-type guards to assert that your payload is of the expected type.
-
-```ts
-interface MyPayload {
-  username: string;
-}
-
-function assertMyPayload(payload: any): asserts payload is MyPayload {
-  if (
-    typeof payload === "object" &&
-    payload &&
-    typeof payload.username === "string"
-  ) {
-    return;
-  }
-  throw new Error("Invalid payload, expected a MyPayload");
-}
-
-const task: Task = async (payload) => {
-  assertMyPayload(payload);
-  console.log(payload.username);
-};
-```
+[type assertion functions](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html#assertion-functions)
+to assert that your payload is of the expected type.
 
 If this is too manual, you might prefer to use a library such as `runtypes` or
 one of the many others of a similar kind.
 
-### Example of using type guards
+### Example of using an assertion function
 
 The following is an example implementation of sending emails using Amazon SES.
 
@@ -138,9 +117,9 @@ export const send_email: Task = async function (payload) {
 
 ## Assuming type via `GraphileWorker.Tasks`
 
-As an alternative to the recommended use of type guards, you can register types
-for Graphile Worker tasks using the following syntax in a shared TypeScript file
-in your project:
+As an alternative to the recommended use of assertion functions, you can
+register types for Graphile Worker tasks using the following syntax in a shared
+TypeScript file in your project:
 
 ```ts
 declare global {
@@ -186,7 +165,7 @@ using the old format. This can lead to you assuming that something is a number
 when actually it&apos;s `null`, resulting in more bugs in your code, so care
 must be taken.
 
-We recommend you use type guards instead.
+We recommend you use assertion functions instead.
 
 :::
 
@@ -235,8 +214,8 @@ export const send_email: Task<"send_email"> = async function (payload) {
 ```
 
 If now we introduce the new functionality to set the `from` address, the changes
-we make have to take into account that older jobs may not have the `from` address
-set, like so:
+we make have to take into account that older jobs may not have the `from`
+address set, like so:
 
 ```diff
 import type { Task, WorkerUtils } from "graphile-worker";
@@ -279,3 +258,10 @@ export const send_email: Task<"send_email"> = async function (payload) {
   });
 };
 ```
+
+:::tip
+
+All of the declarations would normally be put in a shared interface file, or
+similar. The example above defines one with the task for ease of reading.
+
+:::
