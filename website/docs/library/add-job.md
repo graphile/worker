@@ -35,7 +35,7 @@ The `addJob` arguments are as follows:
 Example:
 
 ```js
-await addJob("task_2", { foo: "bar" });
+await addJob("send_email", { to: "someone@example.com" });
 ```
 
 Definitions:
@@ -49,8 +49,10 @@ export type AddJobFunction = (
 
   /**
    * The payload (typically a JSON object) that will be passed to the task executor.
+   * By default, for safety, payloads are typed as unknown since they may have been
+   * populated by out of date code, or even from other sources.
    */
-  payload: any,
+  payload: unknown,
 
   /**
    * Additional details about how the job should be handled.
