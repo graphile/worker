@@ -52,3 +52,7 @@ img.avatar {
   border-radius: inherit;
   border: inherit;
 }
+
+.backers .name:hover {
+  color: var(--ifm-color-primary-darker);
+}
