@@ -39,7 +39,7 @@ declare
 begin
   if (job_key is null or job_key_mode is null or job_key_mode in ('replace', 'preserve_run_at')) then
     select * into v_job
-    from graphile_worker.add_jobs(
+    from "graphile_worker".add_jobs(
       ARRAY[(
         add_job.identifier,
         add_job.payload,
