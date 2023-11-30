@@ -5,6 +5,7 @@ hide_table_of_contents: true
 
 import Sponsor from "@site/src/components/Sponsor";
 import Sponsors from "@site/src/components/Sponsors";
+import SponsorButtons from "@site/src/components/SponsorButtons";
 import Link from "@docusaurus/Link";
 
 ## Sponsor Graphile’s Open Source Software
@@ -40,7 +41,7 @@ to fund ongoing development on Graphile Worker through sponsorship. THANK YOU!
     business
   />
   <Sponsor
-    name="Steelhead Technologies"
+    name="Steelhead"
     avatar="/images/sponsors/steelhead.svg"
     href="https://gosteelhead.com/"
     business
@@ -69,19 +70,4 @@ permissive MIT license, including PostGraphile, Graphile Worker, Graphile
 Migrate and Graphile Starter. Sponsorship increases the rate of fixes,
 documentation improvements, and feature development on these and other projects.
 
-<div className="sponsor-buttons">
-
-<Link
-  className="button button--primary button--sponsor button--lg margin-left--none margin-right--md"
-  to="https://github.com/users/benjie/sponsorship"
->
-  GitHub Sponsors
-</Link>
-<Link
-  className="button button--border button--outline button--lg margin-left--none"
-  to="https:/graphile.org"
->
-  Find out more on Graphile.org
-</Link>
-
-</div>
+<SponsorButtons></SponsorButtons>
