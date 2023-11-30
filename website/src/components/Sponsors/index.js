@@ -1,6 +1,7 @@
 import styles from "@site/src/components/Sponsors/styles.module.css";
 import clsx from "clsx";
 import React from "react";
+
 import { SponsorContext } from "../../contexts/sponsor";
 
 export default function Sponsors({ children, level }) {
