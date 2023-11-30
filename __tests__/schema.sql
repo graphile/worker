@@ -39,16 +39,16 @@ declare
 begin
   if (job_key is null or job_key_mode is null or job_key_mode in ('replace', 'preserve_run_at')) then
     select * into v_job
-    from "graphile_worker".add_jobs(
+    from graphile_worker.add_jobs(
       ARRAY[(
-        identifier,
-        payload,
-        queue_name,
-        run_at,
-        max_attempts::smallint,
-        job_key,
-        priority::smallint,
-        flags
+        add_job.identifier,
+        add_job.payload,
+        add_job.queue_name,
+        add_job.run_at,
+        add_job.max_attempts::smallint,
+        add_job.job_key,
+        add_job.priority::smallint,
+        add_job.flags
       )::"graphile_worker".job_spec],
       (job_key_mode = 'preserve_run_at')
     )
