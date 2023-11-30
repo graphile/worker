@@ -47,8 +47,34 @@ figure p {
   margin: 0;
 }
 
-figure figcaption {
+figcaption {
   font-size: 0.9em;
   font-style: italic;
   text-align: center;
+}
+
+.sponsor-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.button--border {
+  border-radius: 7px;
+  border: 1px solid var(--ifm-color-primary);
+  color: var(--ifm-color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.025rem;
+}
+
+.button--border:hover {
+  border-radius: 7px;
+  border: 1px solid var(--ifm-color-primary-dark);
+  color: var(--ifm-color-primary-dark);
+}
+
+.button--sponsor {
+  text-transform: uppercase;
+  letter-spacing: 0.025rem;
 }

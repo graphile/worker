@@ -5,6 +5,50 @@
   justify-items: center;
   align-items: center;
   font-weight: normal;
-  margin: 0.5em;
-  flex: 0 0 14em;
+  margin: 2rem;
+  padding: 2rem;
+  flex: 0 0 18rem;
+  font-size: 1.5rem;
+}
+.featured .name {
+  font-size: 2rem;
+}
+
+[data-theme="dark"] .featured {
+  background: white;
+  border-radius: 12px;
+}
+
+.backers {
+  flex: none;
+}
+
+[data-theme="dark"] .backers .name {
+  color: var(--ifm-color-primary);
+}
+
+img.avatar {
+  border-radius: 10rem;
+  width: 10rem;
+  height: 10rem;
+}
+
+.name {
+  color: var(--ifm-color-primary-darker);
+}
+
+[data-theme="dark"] .name {
+  color: var(--ifm-color-primary-darkest);
+}
+
+.business {
+}
+
+.contributor {
+}
+
+.plain {
+  background-color: inherit;
+  border-radius: inherit;
+  border: inherit;
 }

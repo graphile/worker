@@ -2,4 +2,9 @@
   display: flex;
   flex-wrap: wrap;
   align-items: space-around;
+  justify-content: center;
+}
+
+.backers {
+  display: block;
 }
