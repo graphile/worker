@@ -24,7 +24,7 @@ Read more:
 ### v0.16.0
 
 _There's a digest of these release notes available on the new
-[Worker Website](https://worker.graphile.org/news/2023-11-27-016-release)._
+[Worker Website](https://worker.graphile.org/news/2023-12-01-016-release)._
 
 **THIS RELEASE INTRODUCES SIGNIFICANT CHANGES**, in preparation for moving
 towards the 1.0 release. Please read these notes carefully.
