@@ -153,12 +153,12 @@ const config = {
             position: "right",
           },
           {
-            href: "/releases",
+            to: "releases",
             label: "Releases",
             position: "right",
           },
           {
-            href: "/sponsors",
+            to: "sponsors",
             label: "Sponsor",
             position: "right",
           },
