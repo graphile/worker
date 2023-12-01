@@ -143,6 +143,11 @@ const config = {
         },
         items: [
           {
+            to: "docs",
+            label: "Documentation",
+            position: "left",
+          },
+          {
             to: "news",
             label: "News",
             position: "right",
