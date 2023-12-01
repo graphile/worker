@@ -23,6 +23,9 @@ Read more:
 
 ### v0.16.0
 
+_There's a digest of these release notes available on the new
+[Worker Website](https://worker.graphile.org/news/2023-11-27-016-release)._
+
 **THIS RELEASE INTRODUCES SIGNIFICANT CHANGES**, in preparation for moving
 towards the 1.0 release. Please read these notes carefully.
 
@@ -32,6 +35,8 @@ You should shut down all workers before migrating to this version, or use
 [Worker Pro](https://worker.graphile.org/docs/pro). (If you're upgrading from
 v0.13.0, upgrade to v0.13.1-bridge.0 first and add the Worker Pro plugin to
 that; deploy it across your fleet, and then proceed to upgrade to v0.16.0).
+
+### General Migration Warnings
 
 **DROPS SUPPORT FOR NODE <18**. As of 24th October 2023, Node 20 is the active
 LTS and Node 18 is maintainence LTS; previous versions are no longer supported.
@@ -61,28 +66,71 @@ cast.
 **TYPESCRIPT**: payload is now marked as required in `addJob` (just set to `{}`
 if your task doesn't need a payload).
 
-**RUN OTHER LANGUAGES**: tasks can now be defined in other languages, see
+### Graphile Config and the new plugin system
+
+Worker is now optionally configurable with `graphile-config` - configuration can
+now be read from a `graphile.config.ts` (or `.js`, `.cjs`, etc) file. This
+enables a whole suite of new options and features, including being able to share
+your preset files across multiple projects! The initial hooks are there and
+ready to be used by everyone to make Worker even more adaptable and powerful
+than ever before.
+
+### Native ESM support
+
+The plugin system enabled us to move the code for loading a task to its own
+plugin, and add support for loading both CommonJS files and ESM files. This also
+allows you to replace the task loading code entirely with your own
+implementation!
+
+### Compile-to-JS language support
+
+Tasks can now be defined in other languages, see
 [Loading executable files](https://worker.graphile.org/docs/tasks#loading-executable-files)
-in the documentation. (EXPERIMENTAL!)
+in the documentation. (EXPERIMENTAL!) Any "compile-to-JS" language can be
+`import()`ed - just be sure to make relevant "loaders" available e.g. for native
+TypeScript support you might use
+`NODE_OPTIONS="--loader ts-node/esm" npx graphile-worker`.
 
-Adds the ability to type task payloads and `addJob()` calls (**please** read the
-caveats in the documentation before doing so).
+### Tasks in even more languages
 
-Adds the ability to unlock all jobs from a list of crashed/terminated worker
-IDs: `force_unlock_workers`.
+We've added another built-in plugin which allows us to offer supoprt writing
+task executors in other languages entirely: python, bash, _fortran_... Place an
+executable file in the `tasks/` folder and ensure it's named with the task
+identifier.
 
-Adds support for `graphile-config` - configuration can now be read from a
-`graphile.config.ts` (or `.js`, `.cjs`, etc) file.
+### abortSignal
+
+Adds `abortSignal` to job helpers so that tasks my cancel their asynchronous
+work on `gracefulShutdown`. (EXPERIMENTAL!) This means no more waiting for the
+task to complete during a graceful shutdown, so long as your task executor
+remembers to listen for the `abortSignal` your job can exit quickly.
+
+### Opt-in TypeScript typing of tasks
+
+You can now opt-in to _assuming_ the job type using the new
+`GraphileWorker.Tasks` global interface. We don't generally recommend this
+approach! But it has been requested many times by the community so now it is
+available via a public-facing declaration–mergeable interface. This allows the
+ability to type task payloads and `addJob()` & `quickAddJob` calls (**please**
+read
+[the caveats in the documentation](https://worker.graphile.org/docs/typescript)
+before doing so).
+
+### Public jobs view
+
+For those users who look into the jobs table, even though we advise against it,
+we've created a public view that presents a stable interface into the queued
+jobs. We strongly advise against polling this, it will impact the performance of
+your worker, but it is now more suitable for usage in automated scripts since
+the interface is stable.
+
+### More...
 
 Adds support for loading tasks from nested folders
 (`tasks/users/email/verify.js` will identify task `users/email/verify`).
 
-Adds support for loading `.cjs` and `.mjs` files.
-
-Adds pluggable task loaders. (EXPERIMENTAL!)
-
-Adds `abortSignal` to job helpers so that tasks my cancel their asynchronous
-work on `gracefulShutdown`. (EXPERIMENTAL!)
+Adds the ability to unlock all jobs from a list of crashed/terminated worker
+IDs: `force_unlock_workers`.
 
 Crontab: now supports `jobKey` and `jobKeyMode` opts (thanks @spiffytech!)
 
