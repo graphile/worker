@@ -4,8 +4,8 @@
   justify-content: space-between;
   align-items: center;
   font-weight: normal;
-  margin: 2rem;
-  padding: 2rem;
+  margin: 0.5rem;
+  padding: 1rem;
   flex: 0 0 18rem;
   font-size: 1.5rem;
 }
@@ -14,7 +14,8 @@
   padding-top: 1rem;
 }
 
-[data-theme="dark"] .featured {
+.featured {
+  border: 3px solid var(--ifm-color-primary-dark);
   background: white;
   border-radius: 12px;
 }
