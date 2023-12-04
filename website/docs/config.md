@@ -103,7 +103,7 @@ Number of jobs to run concurrently.
 
 Type: `string | undefined`
 
-Database connection string.
+Database [connection string](./connection-string.md).
 
 ### worker.crontabFile
 

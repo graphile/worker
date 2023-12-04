@@ -34,6 +34,9 @@ module.exports = async (payload, helpers) => {
 
 (Make sure you&apos;re in the folder that contains the `tasks/` folder.)
 
+Run Graphile Worker passing in your database
+[connection string](../connection-string.md):
+
 ```bash
 npx graphile-worker -c "postgres:///my_db"
 # or, if you have a remote database, something like:

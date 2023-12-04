@@ -52,8 +52,9 @@ The following options for these methods are available.
 - `logger`: To change how log messages are output you may provide a custom
   logger; see [`Logger`](./logger.md).
 - the database is identified through one of these options:
-  - `connectionString`: A PostgreSQL connection string to the database
-    containing the job queue, or
+  - `connectionString`: A PostgreSQL
+    [connection string](../connection-string.md) to the database containing the
+    job queue, or
   - `pgPool`: A `pg.Pool` instance to use.
 - the tasks to execute are identified through one of these options:
   - `taskDirectory`: A path string to a directory containing the task handlers.
@@ -76,7 +77,7 @@ Exactly one of either `taskDirectory` or `taskList` must be provided (except for
 One of these must be provided (in order of priority):
 
 - `pgPool` pg.Pool instance
-- `connectionString` setting
+- [`connectionString`](../connection-string.md) setting
 - `DATABASE_URL` envvar
 - [PostgreSQL environmental variables](https://www.postgresql.org/docs/current/libpq-envars.html),
   including at least `PGDATABASE` (NOTE: not all envvars are supported)

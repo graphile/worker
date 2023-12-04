@@ -73,8 +73,9 @@ singleton throughout your code.
 
 - exactly one of these keys must be present to determine how to connect to the
   database:
-  - `connectionString`: A PostgreSQL connection string to the database
-    containing the job queue, or
+  - `connectionString`: A PostgreSQL
+    [connection string](../connection-string.md) to the database containing the
+    job queue, or
   - `pgPool`: A `pg.Pool` instance to use
 - `schema` can be used to change the default `graphile_worker` schema to
   something else (equivalent to `--schema` on the CLI)
