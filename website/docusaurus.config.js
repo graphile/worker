@@ -66,6 +66,27 @@ const config = {
     ],
   ],
 
+  plugins: [
+    [
+      "@docusaurus/plugin-content-blog",
+      {
+        /**
+         * Required for any multi-instance plugin
+         */
+        id: "news",
+        /**
+         * URL route for the blog section of your site.
+         * *DO NOT* include a trailing slash.
+         */
+        routeBasePath: "news",
+        /**
+         * Path to data on filesystem relative to site dir.
+         */
+        path: "./news",
+      },
+    ],
+  ],
+
   stylesheets: [
     {
       href: "https://fonts.googleapis.com/css2?family=Sarabun",
@@ -122,12 +143,22 @@ const config = {
         },
         items: [
           {
-            href: "/releases",
+            to: "docs",
+            label: "Documentation",
+            position: "left",
+          },
+          {
+            to: "news",
+            label: "News",
+            position: "right",
+          },
+          {
+            to: "releases",
             label: "Releases",
             position: "right",
           },
           {
-            href: "https://graphile.org/sponsor/",
+            to: "sponsors",
             label: "Sponsor",
             position: "right",
           },

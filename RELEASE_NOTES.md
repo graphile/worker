@@ -19,9 +19,11 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
-## Version history
+## v0.16.0
 
-### v0.16.0
+_There's a breakdown of these release notes available on the new
+[Worker Website](https://worker.graphile.org/news/2023-12-01-016-release), where
+we go into more detail about the headline features._
 
 **THIS RELEASE INTRODUCES SIGNIFICANT CHANGES**, in preparation for moving
 towards the 1.0 release. Please read these notes carefully.
@@ -31,84 +33,115 @@ earlier workers against this releases database schema or Bad Things will happen.
 You should shut down all workers before migrating to this version, or use
 [Worker Pro](https://worker.graphile.org/docs/pro). (If you're upgrading from
 v0.13.0, upgrade to v0.13.1-bridge.0 first and add the Worker Pro plugin to
-that; deploy it across your fleet, and then proceed to upgrade to v0.16.0).
+that; deploy it across your fleet, and then proceed to upgrade to v0.16.0.)
 
-**DROPS SUPPORT FOR NODE <18**. As of 24th October 2023, Node 20 is the active
-LTS and Node 18 is maintainence LTS; previous versions are no longer supported.
+### General Migration Warnings
 
-**RENAMES** all of the tables `graphile_worker.*` to
-`graphile_worker._private_*` to make it clear that you should not rely on their
-schema being stable. We might change them in a patch release. This has always
-been the case, but the naming makes this clearer.
+- 🚨 Drops support for node <18
+  - As of 24th October 2023, Node 20 is the active LTS and Node 18 is
+    maintainence LTS; previous versions are no longer supported
+- 🚨 Renames all of the tables `graphile_worker.*` to
+  `graphile_worker._private_*`
+  - We might change these tables in a patch release
+  - This has always been the case, these are not a public interface
+  - New naming makes it clear that you should not use them and should not rely
+    on their schema being stable
+- 🚨 Removes `maxContiguousErrors`
+  - It wasn't fit for purpose, so best to remove it for now
+  - See #307 for more details
+- 🚨 Removes `--watch` and watch mode in general
+  - Now signal handling is improved and with people wanting to use ESM to define
+    modules, it's finally time to remove the experimental watch mode
+  - Use `node --watch` or `nodemon` or similar instead
+  - `crontab` file is also not watched, so be sure to watch that too!
+  - Fixes a lot of weirdness that can happen when you attempt to hot-reload
+    tasks
+- 🚨 Breaking TypeScript changes
+  - Lots of `any` changed to `unknown`
+    - In particular, errors in the event emitter payloads are now `unknown`
+      rather than `any`, so you might need to cast
+  - Payload is now marked as required in `addJob()`
+    - Set to `{}` if your task doesn't need a payload
 
-**ADDS** `graphile_worker.jobs` view as a public interface to view details of
-jobs. NOTE: this interface DELIBERATELY excludes the `payload` field. NOTE: do
-not poll this, it will impact performance.
+### New features
 
-**REMOVES `maxContiguousErrors`**. See #307; it wasn't fit for purpose, so best
-to remove it for now.
+- Graphile Config and new plugin system
+  - Worker is now optionally
+    [configurable](https://worker.graphile.org/docs/config) with
+    `graphile-config` - configuration can now be read from a
+    `graphile.config.ts` (or `.js`, `.cjs`, etc) file
+  - This enables a whole suite of new options and features, including being able
+    to share your preset files across multiple projects!
+  - New plugin hooks added - get in touch if you need more!
+  - E.g. allows you to replace the task loading code entirely with your own
+    implementation!
+- Support for loading tasks from nested folders
+  - (`tasks/users/email/verify.js` will identify task `users/email/verify`)
+- Native ESM support
+  - Enabled by the plugin system
+  - Support for loading both CommonJS and ESM files (including `.cjs`, `.mjs`
+    and `.js` extensions)
+- Compile-to-JS language support
+  - Any "compile-to-JS" language can be `import()`ed
+  - Ensure the relevant "loaders" are available
+  - e.g. for native TypeScript support you might use
+    `NODE_OPTIONS="--loader ts-node/esm" npx graphile-worker`
+  - List the extensions you support in the
+    [configuration file](https://worker.graphile.org/docs/config#workerfileextensions)
+- Tasks in non-JS languages (EXPERIMENTAL!)
+  - Enabled by the plugin system
+  - Any language your shell can execute: python, bash, rust, ...
+  - Place an executable file in the `tasks/` folder and ensure it's named with
+    the task identifier (extensions ignored)
+  - See
+    [Loading executable files](https://worker.graphile.org/docs/tasks#loading-executable-files)
+    in the documentation
+- `abortSignal`: job cancellation (EXPERIMENTAL!)
+  - Tasks can honour the `abortSignal` passed in via helpers to cancel
+    asynchronous work on `gracefulShutdown`
+  - Can reduce waiting for the task to complete during a graceful shutdown; task
+    executor can listen for the `abortSignal` and decided whether to exit or
+    continue
+- TypeScript typing of tasks
+  - New `GraphileWorker.Tasks` global interface
+  - Not recommended, but often requested!
+  - Types calls to `addJob()` and `quickAddJob()`, and types task executors
+  - Read
+    [the caveats in the documentation](https://worker.graphile.org/docs/typescript)
+- Adds `graphile_worker.jobs` view
+  - A public interface to view details of jobs
+  - Stable across patch and minor versions
+  - DELIBERATELY excludes the `payload` field
+  - Do not poll this, it will impact performance
+  - Do not do expensive filtering/ordering against this, it will impact
+    performance
+- New public `force_unlock_workers` database function
+  - Unlocks all jobs from a list of crashed/terminated worker IDs
+- Crontab: now supports `jobKey` and `jobKeyMode` opts (thanks @spiffytech!)
+- Schema
+  - Checks that current schema in database isn't more up to date than the
+    current worker
+    - Won't be useful until future schema changes
+  - Trigger a graceful shutdown if a new Graphile Worker process migrates the
+    database schema
+- Events: add more detail to `cron:backfill` event
+- Tasks: now use `await import(...)` rather than `require(...)`, so ESM can be
+  imported
+- Logging: changed format of task completion/failure logs to include
+  attempts/max attempts and to reduce duplicate parenthesis
+- Optimization: Replaces job announcement trigger with calls directly in
+  `add_job` / `add_jobs` to reduce queuing overhead
 
-**REMOVES `--watch`** and watch mode in general. Now signal handling is improved
-(see below) and with people wanting to use ESM to define modules, it's finally
-time to remove the experimental watch mode. Use `node --watch` or `nodemon` or
-similar instead. Note: `crontab` file is also not watched, so be sure to watch
-that too!
+### Fixes
 
-**TYPESCRIPT**: lots of `any` changed to `unknown`. In particular, errors in the
-event emitter payloads are now `unknown` rather than `any`, so you might need to
-cast.
+- Fixes graceful shutdown (both manually via `.gracefulShutdown()` or
+  `.forcefulShutdown()` and via signal handling)
+- Signals: now releases signal handlers when shut down via the API
+- Fixes bug where queuing 100 jobs in a single statement would only nudge a
+  single inactive worker
+  - Now as many workers as necessary and available will be nudged
 
-**TYPESCRIPT**: payload is now marked as required in `addJob` (just set to `{}`
-if your task doesn't need a payload).
-
-**RUN OTHER LANGUAGES**: tasks can now be defined in other languages, see
-[Loading executable files](https://worker.graphile.org/docs/tasks#loading-executable-files)
-in the documentation. (EXPERIMENTAL!)
-
-Adds the ability to type task payloads and `addJob()` calls (**please** read the
-caveats in the documentation before doing so).
-
-Adds the ability to unlock all jobs from a list of crashed/terminated worker
-IDs: `force_unlock_workers`.
-
-Adds support for `graphile-config` - configuration can now be read from a
-`graphile.config.ts` (or `.js`, `.cjs`, etc) file.
-
-Adds support for loading tasks from nested folders
-(`tasks/users/email/verify.js` will identify task `users/email/verify`).
-
-Adds support for loading `.cjs` and `.mjs` files.
-
-Adds pluggable task loaders. (EXPERIMENTAL!)
-
-Adds `abortSignal` to job helpers so that tasks my cancel their asynchronous
-work on `gracefulShutdown`. (EXPERIMENTAL!)
-
-Crontab: now supports `jobKey` and `jobKeyMode` opts (thanks @spiffytech!)
-
-Signals: now releases signal handlers when shut down via the API.
-
-Schema: checks that current schema in database isn't more up to date than the
-current worker. (This won't be useful until future schema changes.)
-
-Schema: trigger a graceful shutdown if a new Graphile Worker process migrates
-the database schema.
-
-Events: add more detail to `cron:backfill` event.
-
-Tasks: now use `await import(...)` rather than `require(...)`, so ESM can be
-imported.
-
-Logging: changed format of task completion/failure logs to include attempts/max
-attempts and to reduce duplicate parenthesis.
-
-Replaces job announcement trigger with calls directly in `add_job` / `add_jobs`
-to reduce queuing overhead.
-
-Fixes bug where queuing 100 jobs in a single statement would only nudge a single
-inactive worker. Now as many workers as necessary and available will be nudged.
-
-### v0.15.2-bridge.0
+## v0.15.2-bridge.0
 
 **TL;DR: if you want to use [Worker Pro](https://worker.graphile.org/docs/pro)
 to ease migration to v0.16.0, upgrade to this version if you're on v0.14.0 or
@@ -191,7 +224,7 @@ unlikely affect you at runtime.)
     jobs via `AbortSignal`; upgrade to v0.16.0+ if you want to actually use this
 - A huge number of internal changes
 
-### v0.15.1
+## v0.15.1
 
 Fixes issues with graceful worker shutdowns:
 
@@ -209,14 +242,14 @@ Fixes issues with graceful worker shutdowns:
   - Further termination signals are handled by Node (i.e. will likely instantly
     exit the process)
 
-### v0.15.0
+## v0.15.0
 
 Migration files are no longer read from filesystem (via `fs` module); instead
 they are stored as strings in JS to enable Graphile Worker to be bundled. The
 files still exist and will continue to be distributed, so this should not be a
 breaking change. Thanks to @timelf123 for this feature!
 
-### v0.14.0
+## v0.14.0
 
 **THIS RELEASE INTRODUCES SIGNIFICANT CHANGES**, in preparation for moving
 towards the 1.0 release. Please read these notes carefully.
@@ -241,7 +274,7 @@ so please make sure that your values fit into these ranges before starting the
 migration process. (Really these values should never be larger than about `100`
 or smaller than about `-100` anyway.)
 
-#### Breaking changes
+### Breaking changes
 
 - BREAKING: Bump minimum Node version to 14 since 12.x is now end-of-life
 - BREAKING: Bump minimum PG version to 12 for `generated always as (expression)`
@@ -252,7 +285,7 @@ or smaller than about `-100` anyway.)
 - BREAKING: database error codes have been removed because we've moved to
   `CHECK` constraints
 
-#### Changes to internals
+### Changes to internals
 
 - WARNING: the 'jobs' table no longer has `queue_name` and `task_identifier`
   columns; these have been replaced with `job_queue_id` and `task_id` which are
@@ -264,7 +297,7 @@ or smaller than about `-100` anyway.)
   if you are inserting directly into the jobs table (don't do that, it's not a
   supported interface!) make sure you update your code to be compatible
 
-#### Features
+### Features
 
 - New "batch jobs" feature for merging payloads with a `job_key` (see README)
 - Significantly improved 'large jobs table' performance (e.g. when a large queue
@@ -279,7 +312,7 @@ or smaller than about `-100` anyway.)
   giving interim jobs a chance to be executed (and lessening the impact of queue
   stalling through hanging tasks).
 
-### v0.13.1-bridge.0
+## v0.13.1-bridge.0
 
 **TL;DR: if you want to use [Worker Pro](https://worker.graphile.org/docs/pro)
 to ease migration to v0.16.0, upgrade to this version for Worker Pro support.**
@@ -361,7 +394,7 @@ unlikely affect you at runtime.)
     jobs via `AbortSignal`; upgrade to v0.16.0+ if you want to actually use this
 - A huge number of internal changes
 
-### v0.13.0
+## v0.13.0
 
 - Remove dependency on `pgcrypto` database extension (thanks @noinkling)
   - If you have a pre-existing installation and wish to uninstall `pgcrypto` you
@@ -371,16 +404,16 @@ unlikely affect you at runtime.)
   relevant to people inserting into the table directly, which is not
   recommended - use the `add_job` helper)
 
-### v0.12.2
+## v0.12.2
 
 - Fix issue when a connect error occurs whilst releasing worker (thanks
   @countcain)
 
-### v0.12.1
+## v0.12.1
 
 - Jobs with no queue are now released during graceful shutdown (thanks @olexiyb)
 
-### v0.12.0
+## v0.12.0
 
 - Run shutdown actions in reverse order (rather than parallel) - more stable
   release
@@ -391,36 +424,36 @@ unlikely affect you at runtime.)
 - Refactoring of some cron internals
 - Add `noPreparedStatements` to the docs
 
-### v0.11.4
+## v0.11.4
 
 - Fixes bug in crontab day-of-week check
 - Exposes `parseCronItem` helper
 
-### v0.11.3
+## v0.11.3
 
 - Restores `Logger` export accidentally removed in v0.11.0
 
-### v0.11.2
+## v0.11.2
 
 - Added support for wider range of `@types/pg` dependency
 
-### v0.11.1
+## v0.11.1
 
 - Handles unexpected errors whilst PostgreSQL client is idle
 
-### v0.11.0
+## v0.11.0
 
 - Export `getCronItems` so library-mode users can watch the crontab file
 - Replace `Logger` with new
   [`@graphile/logger`](https://github.com/graphile/logger) module
 
-### v0.10.0
+## v0.10.0
 
 - No longer exit on SIGPIPE (Node will swallow this error code)
 - Fix issue with error handling on PostgreSQL restart or `pg_terminate_backend`
 - Fix a potential unhandled promise rejection
 
-### v0.9.0
+## v0.9.0
 
 - New (experimental) "cron" functionality for regularly scheduled jobs
 - Replace jobs ordering index for improved performance (thanks @ben-pr-p)
@@ -436,11 +469,11 @@ unlikely affect you at runtime.)
   their key)
 - Dependency updates
 
-### v0.8.1
+## v0.8.1
 
 - Fix issue with cyclic requires in watch mode
 
-### v0.8.0
+## v0.8.0
 
 - Track revision count for jobs (thanks @lukeramsden)
 - ["Forbidden flags"](https://github.com/graphile/worker#forbidden-flags)
@@ -450,7 +483,7 @@ unlikely affect you at runtime.)
 - Add support for `PG*`
   [PostgreSQL envvars](https://www.postgresql.org/docs/current/libpq-envars.html)
 
-### v0.7.2
+## v0.7.2
 
 - Add `--no-prepared-statements` flag to allow disabling of prepared statements
   for pgBouncer compatibility.
@@ -460,11 +493,11 @@ unlikely affect you at runtime.)
 (v0.7.0 and v0.7.1 had issues with the experimental watch mode enhancements, so
 were never upgraded to `@latest`.)
 
-### v0.6.1
+## v0.6.1
 
 - Official Docker image (thanks @madflow)
 
-### v0.6.0
+## v0.6.0
 
 - Use target es2018 for TypeScript (Node v10 supports everything we need)
   (thanks @keepitsimple)
@@ -474,12 +507,12 @@ were never upgraded to `@latest`.)
 - Fix mistake in README
 - General maintenance
 
-### v0.5.0
+## v0.5.0
 
 New "Administrative functions", ability to rename `graphile_worker` schema, and
 significant overhaul of the codebase in preparation for going to v1.0.
 
-#### v0.5.0 improvements:
+### v0.5.0 improvements:
 
 - Added "Administrative functions" to complete, reschedule or fail jobs in bulk
   (good for UIs)
@@ -491,7 +524,7 @@ significant overhaul of the codebase in preparation for going to v1.0.
 - Decrease already negligible chance of worker ID collision (use
   `crypto.randomBytes()` rather than `Math.random()`)
 
-#### v0.5.0 breaking changes:
+### v0.5.0 breaking changes:
 
 **CLI users**: no breaking changes.
 
@@ -526,7 +559,7 @@ relevant if you're using the `WorkerUtils` class. We've also tweaked what
 options are available on each of these, but this is unlikely to affect you
 negatively.
 
-### v0.4.0
+## v0.4.0
 
 Performance improvements and ability to efficiently queue jobs from JS.
 
@@ -564,7 +597,7 @@ Other:
 - Overhauled the `perfTest` script
 - Upgraded dependencies
 
-### v0.3.0-rc.0
+## v0.3.0-rc.0
 
 v0.3.0-rc.0 was never released as v0.3.0 because we jumped to v0.4.0 too soon.
 
@@ -577,7 +610,7 @@ Fixes:
 
 - Fixes `runner.stop()` (@MarkCBall, #66)
 
-### v0.2.0
+## v0.2.0
 
 BREAKING CHANGES:
 
@@ -599,7 +632,7 @@ Fixes:
 - We never needed `uuid-ossp` so we've removed the requirement (you may want to
   remove the extension from your DB manually)
 
-### v0.1.0
+## v0.1.0
 
 - Add database 'error' handler to avoid crashes (@madflow #26)
 - `DATABASE_URL` can now be used in place of `connectionString` (@madflow,
@@ -607,7 +640,7 @@ Fixes:
 - Improve documentation (@madflow, @archlemon, @benjie #11 #18 #31 #33)
 - Improve testing (@madflow #19 #30)
 
-### v0.1.0-alpha.0
+## v0.1.0-alpha.0
 
 Now usable as a library as well as a CLI.
 
@@ -622,38 +655,38 @@ Changes:
 - Implemented linting
 - Exported more methods
 
-### v0.0.1-alpha.7
+## v0.0.1-alpha.7
 
 - Add missing `tslib` dependency
 
-### v0.0.1-alpha.6
+## v0.0.1-alpha.6
 
 - make poll interval configurable
 - overhaul TypeScript types/interfaces
 - more docs
 
-### v0.0.1-alpha.5
+## v0.0.1-alpha.5
 
 - Fix casting (REQUIRES DB RESET)
 
-### v0.0.1-alpha.4
+## v0.0.1-alpha.4
 
 - add `addJob` helper
 
-### v0.0.1-alpha.3
+## v0.0.1-alpha.3
 
 - Travis CI
 - Add `index.js`
 
-### v0.0.1-alpha.2
+## v0.0.1-alpha.2
 
 - Docs
 
-### v0.0.1-alpha.1
+## v0.0.1-alpha.1
 
 - More efficient job trigger
 - Reduce latency
 
-### v0.0.1-alpha.0
+## v0.0.1-alpha.0
 
 Initial release.
