@@ -52,3 +52,10 @@ figcaption {
   font-style: italic;
   text-align: center;
 }
+
+.prettyDivide {
+  text-align: center;
+}
+.prettyDivide path {
+  fill: var(--ifm-color-primary);
+}
