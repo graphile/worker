@@ -1,7 +1,6 @@
 ---
 title: "Crashed worker recovery"
 sidebar_position: 20
-draft: true
 ---
 
 If a regular Graphile Worker process exits unexpectedly (for example someone
