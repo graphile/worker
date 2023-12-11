@@ -18,7 +18,7 @@ export default function SponsorButtons() {
           "button button--outline button--lg",
           styles.borderbutton,
         )}
-        to="https:/graphile.org"
+        to="https://graphile.org"
       ></Link>
     </div>
   );
