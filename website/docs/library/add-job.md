@@ -22,7 +22,8 @@ The `addJob` arguments are as follows:
 - `options`: an optional object specifying:
   - `queueName`: the queue to run this task under
   - `runAt`: a `Date` to schedule this task to run in the future
-  - `maxAttempts`: how many retries should this task get? (Default: 25)
+  - `maxAttempts`: the maximum number of attempts we'll give the job
+    (Default: 25)
   - `jobKey`: unique identifier for the job, used to replace, update or remove
     it later if needed (see
     [Replacing and updating jobs](../job-key.md#replacingupdating-jobs) and
