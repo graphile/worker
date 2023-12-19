@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-types */
-import { DbJob, TaskSpec, WorkerUtils, WorkerUtilsOptions } from "./interfaces";
+import { CleanupTask, DbJob, TaskSpec, WorkerUtils, WorkerUtilsOptions } from "./interfaces";
 import { getUtilsAndReleasersFromOptions } from "./lib";
 import { migrate } from "./migrate";
 
@@ -76,7 +76,42 @@ export async function makeWorkerUtils(
         ),
       );
     },
-  };
+
+    async cleanup(options: { tasks?: CleanupTask[] } = { tasks: ["GC_TASK_IDENTIFIERS", "GC_JOB_QUEUES"] }): Promise<void> {
+      await withPgClient(async (client) => {
+        if (options.tasks?.includes("DELETE_PERMAFAILED_JOBS")) {
+          await client.query(
+            `delete from ${escapedWorkerSchema}._private_jobs jobs
+             where attempts = max_attempts
+             and locked_at is null;`
+          );
+        }
+        const queries = [];
+        if (options.tasks?.includes("GC_TASK_IDENTIFIERS")) {
+          queries.push(client.query(
+            `delete from ${escapedWorkerSchema}._private_tasks tasks
+              where not exists (
+                select 1
+                from ${escapedWorkerSchema}._private_jobs jobs
+                where jobs.task_id = tasks.id
+              );`
+          ));
+        }
+        if (options.tasks?.includes("GC_JOB_QUEUES")) {
+          queries.push(client.query(
+            `delete from ${escapedWorkerSchema}._private_job_queues job_queues
+             where locked_at is null and not exists (
+               select 1
+               from ${escapedWorkerSchema}._private_jobs jobs
+               where jobs.job_queue_id = job_queues.id
+             );`
+          ));
+        }
+        await Promise.all(queries);
+      }
+      );
+    }
+  }
 }
 
 /**

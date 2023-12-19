@@ -106,6 +106,11 @@ export interface JobHelpers extends Helpers {
   abortSignal?: AbortSignal;
 }
 
+export type CleanupTask =
+  | "GC_TASK_IDENTIFIERS"
+  | "GC_JOB_QUEUES"
+  | "DELETE_PERMAFAILED_JOBS";
+
 /**
  * Utilities for working with Graphile Worker. Primarily useful for migrating
  * the jobs database and queueing jobs.
@@ -170,6 +175,19 @@ export interface WorkerUtils extends Helpers {
    * were terminated, are permanently unreachable, etc).
    */
   forceUnlockWorkers: (workerIds: string[]) => Promise<void>;
+
+  /** 
+   * **Experimental**
+   * 
+   * Database cleanup function
+   * - GC_TASK_IDENTIFIERS: delete task identifiers that are no longer referenced by any jobs
+   * - GC_JOB_QUEUES: delete job queues that are no longer referenced by any jobs
+   * - DELETE_PERMAFAILED_JOBS: delete permanently failed jobs if they are not locked
+   * 
+   * Default: ["GC_TASK_IDENTIFIERS", "GC_JOB_QUEUES"]
+   */
+  cleanup(options: { tasks?: CleanupTask[], }): Promise<void>;
+
 }
 
 export type PromiseOrDirect<T> = Promise<T> | T;
@@ -194,12 +212,12 @@ export function isValidTask<T extends string = keyof GraphileWorker.Tasks>(
 
 export type TaskList = {
   [Key in
-    | keyof GraphileWorker.Tasks
-    | (string & {})]?: Key extends keyof GraphileWorker.Tasks
-    ? Task<Key>
-    : // The `any` here is required otherwise declaring something as a `TaskList` can cause issues.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      Task<any>;
+  | keyof GraphileWorker.Tasks
+  | (string & {})]?: Key extends keyof GraphileWorker.Tasks
+  ? Task<Key>
+  : // The `any` here is required otherwise declaring something as a `TaskList` can cause issues.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Task<any>;
 };
 
 export interface WatchedTaskList {
@@ -716,7 +734,7 @@ export interface JobAndCronIdentifierWithDetails extends JobAndCronIdentifier {
   last_execution: Date | null;
 }
 
-export interface WorkerUtilsOptions extends SharedOptions {}
+export interface WorkerUtilsOptions extends SharedOptions { }
 
 type BaseEventMap = Record<string, unknown>;
 type EventMapKey<TEventMap extends BaseEventMap> = string & keyof TEventMap;
