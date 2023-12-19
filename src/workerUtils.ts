@@ -136,3 +136,17 @@ export async function quickAddJob<
     await utils.release();
   }
 }
+
+/**
+ * **Experimental**
+ * 
+ * Database cleanup function
+ */
+export async function cleanup(options: WorkerUtilsOptions, tasks: CleanupTask[]) {
+  const utils = await makeWorkerUtils(options);
+  try {
+    return await utils.cleanup({ tasks });
+  } finally {
+    await utils.release();
+  }
+}
