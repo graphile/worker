@@ -123,3 +123,13 @@ their IDs/keys). Do **NOT** pass any alive worker ids to this method or Bad
 Things may happen.
 
 :::
+
+## Database cleanup
+You can cleanup the tables of the database using the cleanup function. 3 options are available:
+- DELETE_PERMAFAILED_JOBS: delete permanently failed jobs (assuming they are not locked)
+- GC_TASK_IDENTIFIERS: delete tasks identifiers without jobs
+- GC_JOB_QUEUES: delete job queues without jobs
+
+```ts title="JS API"
+await workerUtils.cleanup(["DELETE_PERMAFAILED_JOBS","GC_TASK_IDENTIFIERS","GC_JOB_QUEUES"]);
+```
