@@ -176,18 +176,17 @@ export interface WorkerUtils extends Helpers {
    */
   forceUnlockWorkers: (workerIds: string[]) => Promise<void>;
 
-  /** 
+  /**
    * **Experimental**
-   * 
+   *
    * Database cleanup function
    * - GC_TASK_IDENTIFIERS: delete task identifiers that are no longer referenced by any jobs
    * - GC_JOB_QUEUES: delete job queues that are no longer referenced by any jobs
    * - DELETE_PERMAFAILED_JOBS: delete permanently failed jobs if they are not locked
-   * 
+   *
    * Default: ["GC_TASK_IDENTIFIERS", "GC_JOB_QUEUES"]
    */
-  cleanup(options: { tasks?: CleanupTask[], }): Promise<void>;
-
+  cleanup(options: { tasks?: CleanupTask[] }): Promise<void>;
 }
 
 export type PromiseOrDirect<T> = Promise<T> | T;

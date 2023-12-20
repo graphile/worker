@@ -4,7 +4,7 @@ import {
   makeSelectionOfJobs,
   reset,
   TEST_CONNECTION_STRING,
-  withPgClient
+  withPgClient,
 } from "./helpers";
 
 /** For sorting arrays of numbers or numeric strings */
@@ -18,9 +18,16 @@ test("cleanup the database", () =>
   withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
-    const utils = await makeWorkerUtils({ connectionString: TEST_CONNECTION_STRING });
+    const utils = await makeWorkerUtils({
+      connectionString: TEST_CONNECTION_STRING,
+    });
 
-    const { failedJob, regularJob1, lockedJob, regularJob2 } = await makeSelectionOfJobs(utils, pgClient);
+    const {
+      failedJob,
+      regularJob1,
+      lockedJob,
+      regularJob2,
+    } = await makeSelectionOfJobs(utils, pgClient);
     const jobs = [failedJob, regularJob1, lockedJob, regularJob2];
     const jobIds = jobs.map((j) => j.id).sort(numerically);
 
@@ -38,9 +45,11 @@ test("cleanup the database", () =>
 
     await utils.cleanup({ tasks: ["DELETE_PERMAFAILED_JOBS"] });
     const { rows: jobsFromView } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs`);
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs`,
+    );
     failedJobIds.forEach((id) =>
-      expect(jobsFromView.find((j) => j.id === id)).toBeUndefined());
+      expect(jobsFromView.find((j) => j.id === id)).toBeUndefined(),
+    );
 
     const jobs2: Job[] = [];
     const WORKER_ID_1 = "worker1";
@@ -60,7 +69,8 @@ test("cleanup the database", () =>
         { a: ++a },
         { queueName: queueName ?? undefined },
       );
-      await pgClient.query(`
+      await pgClient.query(
+        `
         update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs
         set locked_at = $1, locked_by = $2
         where id = $3`,
@@ -70,26 +80,46 @@ test("cleanup the database", () =>
     }
 
     // Test GC_JOB_QUEUES
-    const { rows: queuesBefore } = await pgClient.query(
-      `select queue_name from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues`) as { rows: { queue_name: string }[] };
-    expect(queuesBefore.map((q) => q.queue_name).sort()).toEqual(['test', 'test2', 'test3']);
+    const { rows: queuesBefore } = (await pgClient.query(
+      `select queue_name from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues`,
+    )) as { rows: { queue_name: string }[] };
+    expect(queuesBefore.map((q) => q.queue_name).sort()).toEqual([
+      "test",
+      "test2",
+      "test3",
+    ]);
 
-    await utils.forceUnlockWorkers(['worker3']);
+    await utils.forceUnlockWorkers(["worker3"]);
     await utils.completeJobs([jobs2[jobs2.length - 1].id]);
     await utils.cleanup({ tasks: ["GC_JOB_QUEUES"] });
-    const { rows: queuesAfter } = await pgClient.query(
-      `select queue_name from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues`) as { rows: { queue_name: string }[] };
-    expect(queuesAfter.map((q) => q.queue_name).sort()).toEqual(['test', 'test2']);
+    const { rows: queuesAfter } = (await pgClient.query(
+      `select queue_name from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues`,
+    )) as { rows: { queue_name: string }[] };
+    expect(queuesAfter.map((q) => q.queue_name).sort()).toEqual([
+      "test",
+      "test2",
+    ]);
 
     // Test GC_TASK_IDENTIFIERS
-    const { rows: tasksBefore } = await pgClient.query(
-      `select identifier from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks`) as { rows: { identifier: string }[] };
-    expect(tasksBefore.map((q) => q.identifier).sort()).toEqual(['job3', 'test_job1', 'test_job2', 'test_job3']);
+    const { rows: tasksBefore } = (await pgClient.query(
+      `select identifier from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks`,
+    )) as { rows: { identifier: string }[] };
+    expect(tasksBefore.map((q) => q.identifier).sort()).toEqual([
+      "job3",
+      "test_job1",
+      "test_job2",
+      "test_job3",
+    ]);
 
     await utils.cleanup({ tasks: ["GC_TASK_IDENTIFIERS"] });
-    const { rows: tasksAfter } = await pgClient.query(
-      `select identifier from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks`) as { rows: { identifier: string }[] };
-    expect(tasksAfter.map((q) => q.identifier).sort()).toEqual(['job3', 'test_job1', 'test_job2']);
+    const { rows: tasksAfter } = (await pgClient.query(
+      `select identifier from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks`,
+    )) as { rows: { identifier: string }[] };
+    expect(tasksAfter.map((q) => q.identifier).sort()).toEqual([
+      "job3",
+      "test_job1",
+      "test_job2",
+    ]);
 
     await utils.release();
   }));
