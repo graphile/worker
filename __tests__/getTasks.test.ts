@@ -21,6 +21,7 @@ describe("commonjs", () => {
 Array [
   "wouldyoulike",
   "wouldyoulike_default",
+  "wouldyoulike_ts",
 ]
 `);
       const helpers = makeJobHelpers(
@@ -37,6 +38,9 @@ Array [
       expect(
         await tasks.wouldyoulike_default!(helpers.job.payload, helpers),
       ).toEqual("some more sausages");
+      expect(
+        await tasks.wouldyoulike_ts!(helpers.job.payload, helpers),
+      ).toEqual("some TS sausages");
       await release();
     }));
 
