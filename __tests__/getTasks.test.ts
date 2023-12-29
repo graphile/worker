@@ -72,6 +72,36 @@ Array [
       await release();
     }));
 
+  test("get tasks from file (vanilla-ts)", () =>
+    withPgClient(async (client) => {
+      const { tasks, release, compiledSharedOptions } = (await getTasks(
+        options,
+        `${__dirname}/fixtures/tasksFile-ts.js`,
+      )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      expect(tasks).toBeTruthy();
+      expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
+Array [
+  "task1",
+  "task2",
+]
+`);
+
+      const helpers = makeJobHelpers(
+        compiledSharedOptions,
+        makeMockJob("task1"),
+        {
+          withPgClient: makeWithPgClientFromClient(client),
+          abortSignal: undefined,
+        },
+      );
+      expect(await tasks.task1!(helpers.job.payload, helpers)).toEqual("hi");
+      expect(await tasks.task2!(helpers.job.payload, helpers)).toEqual(
+        "hello from TS",
+      );
+
+      await release();
+    }));
+
   test("get tasks from file (default)", () =>
     withPgClient(async (client) => {
       const { tasks, release, compiledSharedOptions } = (await getTasks(
@@ -92,6 +122,34 @@ Array [
       });
       expect(await tasks.t1!(helpers.job.payload, helpers)).toEqual(
         "come with me",
+      );
+      expect(await tasks.t2!(helpers.job.payload, helpers)).toEqual(
+        "if you want to live",
+      );
+
+      await release();
+    }));
+
+  test("get tasks from file (default-ts)", () =>
+    withPgClient(async (client) => {
+      const { tasks, release, compiledSharedOptions } = (await getTasks(
+        options,
+        `${__dirname}/fixtures/tasksFile_default-ts.js`,
+      )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      expect(tasks).toBeTruthy();
+      expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
+Array [
+  "t1",
+  "t2",
+]
+`);
+
+      const helpers = makeJobHelpers(compiledSharedOptions, makeMockJob("t1"), {
+        withPgClient: makeWithPgClientFromClient(client),
+        abortSignal: undefined,
+      });
+      expect(await tasks.t1!(helpers.job.payload, helpers)).toEqual(
+        "come with me, TS",
       );
       expect(await tasks.t2!(helpers.job.payload, helpers)).toEqual(
         "if you want to live",

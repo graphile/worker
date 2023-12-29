@@ -48,14 +48,25 @@ async function loadFileIntoTasks(
   name: string | null = null,
 ) {
   const rawMod = await import(filename);
+
+  // Normally, import() of a commonJS module with `module.exports` write
+  // would result in `{ default: module.exports }`.
+  // TypeScript in CommonJS mode when imported with Node ESM can lead to
+  // two levels of `__esModule: true`; so we try and grab the inner one
+  // if we can.
   const mod =
-    Object.keys(rawMod).length === 1 &&
-    typeof rawMod.default === "object" &&
-    rawMod.default !== null
+    rawMod.default?.default?.__esModule === true
+      ? rawMod.default.default
+      : rawMod.default?.__esModule === true
+      ? rawMod.default
+      : Object.keys(rawMod).length === 1 &&
+        typeof rawMod.default === "object" &&
+        rawMod.default !== null
       ? rawMod.default
       : rawMod;
 
   if (name) {
+    // Always take the default export if there is one
     const task = mod.default || mod;
     if (isValidTask(task)) {
       tasks[name] = task;
