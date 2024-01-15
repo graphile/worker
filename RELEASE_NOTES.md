@@ -19,6 +19,11 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
+## Pending
+
+- Add `cleanup` function to remove unused queues, stale task identifiers, and
+  permanently failed jobs.
+
 ## v0.16.0
 
 _There's a breakdown of these release notes available on the new
