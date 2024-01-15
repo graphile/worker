@@ -179,12 +179,13 @@ export interface WorkerUtils extends Helpers {
   /**
    * **Experimental**
    *
-   * Database cleanup function
+   * Database cleanup function. Supported tasks:
+   *
    * - GC_TASK_IDENTIFIERS: delete task identifiers that are no longer referenced by any jobs
    * - GC_JOB_QUEUES: delete job queues that are no longer referenced by any jobs
    * - DELETE_PERMAFAILED_JOBS: delete permanently failed jobs if they are not locked
    *
-   * Default: ["GC_TASK_IDENTIFIERS", "GC_JOB_QUEUES"]
+   * Default: ["GC_JOB_QUEUES"]
    */
   cleanup(options: { tasks?: CleanupTask[] }): Promise<void>;
 }
