@@ -23,14 +23,15 @@ test("cleanup with DELETE_PERMAFAILED_JOBS", () =>
       connectionString: TEST_CONNECTION_STRING,
     });
 
-    const { failedJob, regularJob1, regularJob2, _all } =
-      await makeSelectionOfJobs(utils, pgClient);
+    const jobs = await makeSelectionOfJobs(utils, pgClient);
+    const { failedJob, regularJob1, regularJob2 } = jobs;
     const permafailJobIds = [failedJob.id, regularJob1.id, regularJob2.id].sort(
       numerically,
     );
-    const remainingJobIds = _all
+    const remainingJobIds = Object.values(jobs)
       .filter((r) => !permafailJobIds.includes(r.id))
-      .map((r) => r.id);
+      .map((r) => r.id)
+      .sort(numerically);
 
     const failedJobs = await utils.permanentlyFailJobs(
       permafailJobIds,
@@ -44,7 +45,8 @@ test("cleanup with DELETE_PERMAFAILED_JOBS", () =>
     );
     const jobIds = rows
       .map((r) => r.id)
-      .filter((id) => !permafailJobIds.includes(id));
+      .filter((id) => !permafailJobIds.includes(id))
+      .sort(numerically);
     expect(jobIds).toEqual(remainingJobIds);
   }));
 
@@ -82,6 +84,7 @@ with j as (
   update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs
   set locked_at = $1, locked_by = $2
   where id = $3
+  returning *
 ), q as (
   update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues as job_queues
     set
