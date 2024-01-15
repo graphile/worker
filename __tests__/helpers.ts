@@ -241,6 +241,7 @@ export async function makeSelectionOfJobs(
   Object.assign(failedJob, failedJobUpdate);
 
   return {
+    _all: [failedJob, regularJob1, lockedJob, regularJob2, untouchedJob],
     failedJob,
     regularJob1,
     lockedJob,

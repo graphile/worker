@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-types */
+import { cleanup } from "./cleanup";
 import {
   CleanupTask,
   DbJob,
@@ -15,14 +16,15 @@ import { migrate } from "./migrate";
 export async function makeWorkerUtils(
   options: WorkerUtilsOptions,
 ): Promise<WorkerUtils> {
-  const [compiledSharedOptions, release] =
-    await getUtilsAndReleasersFromOptions(options, {
+  const [compiledOptions, release] = await getUtilsAndReleasersFromOptions(
+    options,
+    {
       scope: {
         label: "WorkerUtils",
       },
-    });
-  const { logger, escapedWorkerSchema, withPgClient, addJob } =
-    compiledSharedOptions;
+    },
+  );
+  const { logger, escapedWorkerSchema, withPgClient, addJob } = compiledOptions;
 
   return {
     withPgClient,
@@ -30,7 +32,7 @@ export async function makeWorkerUtils(
     release,
     addJob,
     migrate: () =>
-      withPgClient((pgClient) => migrate(compiledSharedOptions, pgClient)),
+      withPgClient((pgClient) => migrate(compiledOptions, pgClient)),
 
     async completeJobs(ids) {
       const { rows } = await withPgClient((client) =>
@@ -85,44 +87,10 @@ export async function makeWorkerUtils(
 
     async cleanup(
       options: { tasks?: CleanupTask[] } = {
-        tasks: ["GC_TASK_IDENTIFIERS", "GC_JOB_QUEUES"],
+        tasks: ["GC_JOB_QUEUES"],
       },
     ): Promise<void> {
-      await withPgClient(async (client) => {
-        if (options.tasks?.includes("DELETE_PERMAFAILED_JOBS")) {
-          await client.query(
-            `delete from ${escapedWorkerSchema}._private_jobs jobs
-             where attempts = max_attempts
-             and locked_at is null;`,
-          );
-        }
-        const queries = [];
-        if (options.tasks?.includes("GC_TASK_IDENTIFIERS")) {
-          queries.push(
-            client.query(
-              `delete from ${escapedWorkerSchema}._private_tasks tasks
-              where not exists (
-                select 1
-                from ${escapedWorkerSchema}._private_jobs jobs
-                where jobs.task_id = tasks.id
-              );`,
-            ),
-          );
-        }
-        if (options.tasks?.includes("GC_JOB_QUEUES")) {
-          queries.push(
-            client.query(
-              `delete from ${escapedWorkerSchema}._private_job_queues job_queues
-             where locked_at is null and not exists (
-               select 1
-               from ${escapedWorkerSchema}._private_jobs jobs
-               where jobs.job_queue_id = job_queues.id
-             );`,
-            ),
-          );
-        }
-        await Promise.all(queries);
-      });
+      return cleanup(compiledOptions, options.tasks);
     },
   };
 }
@@ -145,23 +113,6 @@ export async function quickAddJob<
   const utils = await makeWorkerUtils(options);
   try {
     return await utils.addJob<TIdentifier>(identifier, payload, spec);
-  } finally {
-    await utils.release();
-  }
-}
-
-/**
- * **Experimental**
- *
- * Database cleanup function
- */
-export async function cleanup(
-  options: WorkerUtilsOptions,
-  tasks: CleanupTask[],
-) {
-  const utils = await makeWorkerUtils(options);
-  try {
-    return await utils.cleanup({ tasks });
   } finally {
     await utils.release();
   }

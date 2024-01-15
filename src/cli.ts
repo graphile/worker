@@ -2,13 +2,12 @@
 import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
-import { CleanupTask } from ".";
 import { getCronItemsInternal } from "./getCronItems";
 import { getTasksInternal } from "./getTasks";
 import { getUtilsAndReleasersFromOptions } from "./lib";
 import { EMPTY_PRESET, WorkerPreset } from "./preset";
 import { runInternal, runOnceInternal } from "./runner";
-import { cleanup } from "./workerUtils";
+import { cleanup, assertCleanupTasks } from "./cleanup";
 
 const defaults = WorkerPreset.worker!;
 
@@ -74,8 +73,8 @@ const argv = yargs
   })
   .string("config")
   .option("cleanup", {
-    description: "Database cleanup function; options: GC_TASK_IDENTIFIERS, GC_JOB_QUEUES, DELETE_PERMAFAILED_JOBS",
-    default: ["GC_TASK_IDENTIFIERS", "GC_JOB_QUEUES"],
+    description:
+      "Clean the database, then exit. Accepts a comma-separated list of cleanup tasks: GC_TASK_IDENTIFIERS, GC_JOB_QUEUES, DELETE_PERMAFAILED_JOBS",
   })
   .string("cleanup")
   .strict(true).argv;
@@ -112,7 +111,7 @@ async function main() {
   const userPreset = await loadConfig(argv.config);
   const ONCE = argv.once;
   const SCHEMA_ONLY = argv["schema-only"];
-  const CLEANUP = argv.cleanup;
+  const CLEANUP = argv.cleanup as string | string[] | undefined;
 
   if (SCHEMA_ONLY && ONCE) {
     throw new Error("Cannot specify both --once and --schema-only");
@@ -138,8 +137,11 @@ async function main() {
       return;
     }
 
-    if (CLEANUP) {
-      await cleanup(compiledOptions.resolvedPreset.worker, argv.cleanup as CleanupTask[]);
+    if (CLEANUP != null) {
+      const cleanups = Array.isArray(CLEANUP) ? CLEANUP : [CLEANUP];
+      const tasks = cleanups.flatMap((t) => t.split(",")).map((t) => t.trim());
+      assertCleanupTasks(tasks);
+      await cleanup(compiledOptions, tasks);
       return;
     }
 

@@ -211,12 +211,12 @@ export function isValidTask<T extends string = keyof GraphileWorker.Tasks>(
 
 export type TaskList = {
   [Key in
-  | keyof GraphileWorker.Tasks
-  | (string & {})]?: Key extends keyof GraphileWorker.Tasks
-  ? Task<Key>
-  : // The `any` here is required otherwise declaring something as a `TaskList` can cause issues.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Task<any>;
+    | keyof GraphileWorker.Tasks
+    | (string & {})]?: Key extends keyof GraphileWorker.Tasks
+    ? Task<Key>
+    : // The `any` here is required otherwise declaring something as a `TaskList` can cause issues.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Task<any>;
 };
 
 export interface WatchedTaskList {
@@ -733,7 +733,7 @@ export interface JobAndCronIdentifierWithDetails extends JobAndCronIdentifier {
   last_execution: Date | null;
 }
 
-export interface WorkerUtilsOptions extends SharedOptions { }
+export interface WorkerUtilsOptions extends SharedOptions {}
 
 type BaseEventMap = Record<string, unknown>;
 type EventMapKey<TEventMap extends BaseEventMap> = string & keyof TEventMap;

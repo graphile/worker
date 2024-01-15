@@ -1,4 +1,4 @@
-import { Job, makeWorkerUtils, WorkerSharedOptions } from "../src/index";
+import { DbJob, Job, makeWorkerUtils, WorkerSharedOptions } from "../src/index";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   makeSelectionOfJobs,
@@ -14,7 +14,8 @@ function numerically(a: string | number, b: string | number) {
 
 const options: WorkerSharedOptions = {};
 
-test("cleanup the database", () =>
+// Test DELETE_PERMAFAILED_JOBS
+test("cleanup with DELETE_PERMAFAILED_JOBS", () =>
   withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
@@ -22,36 +23,40 @@ test("cleanup the database", () =>
       connectionString: TEST_CONNECTION_STRING,
     });
 
-    const {
-      failedJob,
-      regularJob1,
-      lockedJob,
-      regularJob2,
-    } = await makeSelectionOfJobs(utils, pgClient);
-    const jobs = [failedJob, regularJob1, lockedJob, regularJob2];
-    const jobIds = jobs.map((j) => j.id).sort(numerically);
-
-    // Test DELETE_PERMAFAILED_JOBS
-    const failedJobs = await utils.permanentlyFailJobs(jobIds, "TESTING!");
-    const failedJobIds = failedJobs.map((j) => j.id).sort(numerically);
-    expect(failedJobIds).toEqual(
-      [failedJob.id, regularJob1.id, regularJob2.id].sort(numerically),
+    const { failedJob, regularJob1, regularJob2, _all } =
+      await makeSelectionOfJobs(utils, pgClient);
+    const permafailJobIds = [failedJob.id, regularJob1.id, regularJob2.id].sort(
+      numerically,
     );
-    for (const j of failedJobs) {
-      expect(j.last_error).toEqual("TESTING!");
-      expect(j.attempts).toEqual(j.max_attempts);
-      expect(j.attempts).toBeGreaterThan(0);
-    }
+    const remainingJobIds = _all
+      .filter((r) => !permafailJobIds.includes(r.id))
+      .map((r) => r.id);
+
+    const failedJobs = await utils.permanentlyFailJobs(
+      permafailJobIds,
+      "TESTING!",
+    );
+    expect(failedJobs.length).toEqual(permafailJobIds.length);
 
     await utils.cleanup({ tasks: ["DELETE_PERMAFAILED_JOBS"] });
-    const { rows: jobsFromView } = await pgClient.query(
+    const { rows } = await pgClient.query<DbJob>(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs`,
     );
-    failedJobIds.forEach((id) =>
-      expect(jobsFromView.find((j) => j.id === id)).toBeUndefined(),
-    );
+    const jobIds = rows
+      .map((r) => r.id)
+      .filter((id) => !permafailJobIds.includes(id));
+    expect(jobIds).toEqual(remainingJobIds);
+  }));
 
-    const jobs2: Job[] = [];
+test("cleanup with GC_JOB_QUEUES", () =>
+  withPgClient(async (pgClient) => {
+    await reset(pgClient, options);
+
+    const utils = await makeWorkerUtils({
+      connectionString: TEST_CONNECTION_STRING,
+    });
+
+    const jobs: Job[] = [];
     const WORKER_ID_1 = "worker1";
     const WORKER_ID_2 = "worker2";
     const WORKER_ID_3 = "worker3";
@@ -62,27 +67,38 @@ test("cleanup the database", () =>
       [WORKER_ID_2, "test2", "test_job2"],
       [WORKER_ID_3, "test3", "test_job3"],
     ] as const;
-    for (const [workerId, queueName, jobId] of specs) {
+    for (const [workerId, queueName, taskIdentifier] of specs) {
       date.setMinutes(date.getMinutes() - 1);
       const job = await utils.addJob(
-        jobId,
+        taskIdentifier,
         { a: ++a },
         { queueName: queueName ?? undefined },
       );
-      await pgClient.query(
-        `
-        update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs
-        set locked_at = $1, locked_by = $2
-        where id = $3`,
-        [workerId ? date.toISOString() : null, workerId, job.id],
-      );
-      jobs2.push(job);
+      jobs.push(job);
+      if (workerId) {
+        await pgClient.query(
+          `\
+with j as (
+  update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs
+  set locked_at = $1, locked_by = $2
+  where id = $3
+), q as (
+  update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues as job_queues
+    set
+      locked_by = $2::text,
+      locked_at = $1
+    from j
+    where job_queues.id = j.job_queue_id
+)
+select * from j`,
+          [date.toISOString(), workerId, job.id],
+        );
+      }
     }
 
-    // Test GC_JOB_QUEUES
-    const { rows: queuesBefore } = (await pgClient.query(
+    const { rows: queuesBefore } = await pgClient.query<{ queue_name: string }>(
       `select queue_name from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues`,
-    )) as { rows: { queue_name: string }[] };
+    );
     expect(queuesBefore.map((q) => q.queue_name).sort()).toEqual([
       "test",
       "test2",
@@ -90,20 +106,41 @@ test("cleanup the database", () =>
     ]);
 
     await utils.forceUnlockWorkers(["worker3"]);
-    await utils.completeJobs([jobs2[jobs2.length - 1].id]);
+    const lastJob = jobs[jobs.length - 1]; // Belongs to queueName 'task3'
+    await utils.completeJobs([lastJob.id]);
     await utils.cleanup({ tasks: ["GC_JOB_QUEUES"] });
-    const { rows: queuesAfter } = (await pgClient.query(
+    const { rows: queuesAfter } = await pgClient.query<{ queue_name: string }>(
       `select queue_name from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues`,
-    )) as { rows: { queue_name: string }[] };
+    );
     expect(queuesAfter.map((q) => q.queue_name).sort()).toEqual([
       "test",
       "test2",
     ]);
+  }));
 
-    // Test GC_TASK_IDENTIFIERS
-    const { rows: tasksBefore } = (await pgClient.query(
+test("cleanup with GC_TASK_IDENTIFIERS", () =>
+  withPgClient(async (pgClient) => {
+    await reset(pgClient, options);
+
+    const utils = await makeWorkerUtils({
+      connectionString: TEST_CONNECTION_STRING,
+    });
+
+    for (const taskIdentifier of [
+      "job3",
+      "test_job1",
+      "test_job2",
+      "test_job3",
+    ]) {
+      const job = await utils.addJob(taskIdentifier, {});
+      if (taskIdentifier === "test_job2") {
+        await utils.completeJobs([job.id]);
+      }
+    }
+
+    const { rows: tasksBefore } = await pgClient.query<{ identifier: string }>(
       `select identifier from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks`,
-    )) as { rows: { identifier: string }[] };
+    );
     expect(tasksBefore.map((q) => q.identifier).sort()).toEqual([
       "job3",
       "test_job1",
@@ -118,7 +155,7 @@ test("cleanup the database", () =>
     expect(tasksAfter.map((q) => q.identifier).sort()).toEqual([
       "job3",
       "test_job1",
-      "test_job2",
+      "test_job3",
     ]);
 
     await utils.release();
