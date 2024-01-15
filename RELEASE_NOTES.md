@@ -19,6 +19,11 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
+## Pending
+
+- Add `cleanup` function to remove unused queues, stale task identifiers, and
+  permanently failed jobs.
+
 ## v0.16.1
 
 - Fixes issue importing task files that were written in TypeScript ESM format

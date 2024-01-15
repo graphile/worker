@@ -1,5 +1,12 @@
 /* eslint-disable @typescript-eslint/ban-types */
-import { DbJob, TaskSpec, WorkerUtils, WorkerUtilsOptions } from "./interfaces";
+import { cleanup } from "./cleanup";
+import {
+  CleanupTask,
+  DbJob,
+  TaskSpec,
+  WorkerUtils,
+  WorkerUtilsOptions,
+} from "./interfaces";
 import { getUtilsAndReleasersFromOptions } from "./lib";
 import { migrate } from "./migrate";
 
@@ -9,14 +16,15 @@ import { migrate } from "./migrate";
 export async function makeWorkerUtils(
   options: WorkerUtilsOptions,
 ): Promise<WorkerUtils> {
-  const [compiledSharedOptions, release] =
-    await getUtilsAndReleasersFromOptions(options, {
+  const [compiledOptions, release] = await getUtilsAndReleasersFromOptions(
+    options,
+    {
       scope: {
         label: "WorkerUtils",
       },
-    });
-  const { logger, escapedWorkerSchema, withPgClient, addJob } =
-    compiledSharedOptions;
+    },
+  );
+  const { logger, escapedWorkerSchema, withPgClient, addJob } = compiledOptions;
 
   return {
     withPgClient,
@@ -24,7 +32,7 @@ export async function makeWorkerUtils(
     release,
     addJob,
     migrate: () =>
-      withPgClient((pgClient) => migrate(compiledSharedOptions, pgClient)),
+      withPgClient((pgClient) => migrate(compiledOptions, pgClient)),
 
     async completeJobs(ids) {
       const { rows } = await withPgClient((client) =>
@@ -75,6 +83,14 @@ export async function makeWorkerUtils(
           [workerIds],
         ),
       );
+    },
+
+    async cleanup(
+      options: { tasks?: CleanupTask[] } = {
+        tasks: ["GC_JOB_QUEUES"],
+      },
+    ): Promise<void> {
+      return cleanup(compiledOptions, options.tasks);
     },
   };
 }

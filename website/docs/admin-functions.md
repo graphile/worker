@@ -123,3 +123,68 @@ their IDs/keys). Do **NOT** pass any alive worker ids to this method or Bad
 Things may happen.
 
 :::
+
+## Database cleanup
+
+Over time it's likely that graphile_worker's tables will grow with stale values
+for old job queue names, task identifiers, or permanently failed jobs. You can
+clean up this stale information with the cleanup function, indicating which
+cleanup operations you would like to undertake.
+
+:::tip
+
+If you find yourself calling this quite often or on a schedule, it's likely that
+you are doing something wrong (e.g. allowing jobs to permafail, using random
+values for job queue names, etc).
+
+:::
+
+### GC_JOB_QUEUES
+
+Delete job queues that don't contain any jobs. Safe.
+
+### GC_TASK_IDENTIFIERS
+
+Deletes task identifiers that don't contain any jobs. Unsafe to execute whilst
+any Worker is running.
+
+:::warning
+
+It is currently unsafe to run this whilst any Graphile Worker instance is
+running since any task identifiers for which there are no jobs queued will be
+deleted; when another job with that identifier is queued a _new_ unique
+identifier will be generated and that won't match the internal identifiers that
+the running workers have cached.
+
+:::
+
+### DELETE_PERMAFAILED_JOBS
+
+Deletes any unlocked jobs that will never be reattempted due to `attempts`
+reaching `max_attempts`. Will delete this data, but is otherwise safe.
+
+:::tip
+
+You should write your tasks such that no job will ever permafail; for example
+after 20 attempts you might have the job do some cleanup and then exit
+successfuly.
+
+:::
+
+### Example
+
+In the CLI:
+
+```bash title="CLI"
+graphile-worker --cleanup DELETE_PERMAFAILED_JOBS,GC_TASK_IDENTIFIERS,GC_JOB_QUEUES
+```
+
+Or in the library using [WorkerUtils](/docs/library/queue#workerutils):
+
+```ts title="JS API"
+await workerUtils.cleanup([
+  "DELETE_PERMAFAILED_JOBS",
+  "GC_TASK_IDENTIFIERS",
+  "GC_JOB_QUEUES",
+]);
+```

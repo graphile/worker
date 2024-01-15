@@ -1,4 +1,8 @@
-import { makeWorkerUtils, WorkerSharedOptions } from "../src/index";
+import {
+  makeWorkerUtils,
+  WorkerSharedOptions,
+  WorkerUtils,
+} from "../src/index";
 import {
   getJobs,
   makeSelectionOfJobs,
@@ -14,11 +18,17 @@ function numerically(a: string | number, b: string | number) {
 
 const options: WorkerSharedOptions = {};
 
+let utils: WorkerUtils | null = null;
+afterEach(async () => {
+  await utils?.release();
+  utils = null;
+});
+
 test("completes the jobs, leaves others unaffected", () =>
   withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
-    const utils = await makeWorkerUtils({
+    utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
 
@@ -40,4 +50,5 @@ test("completes the jobs, leaves others unaffected", () =>
     expect(remaining[1]).toMatchObject(untouchedJob);
 
     await utils.release();
+    utils = null;
   }));

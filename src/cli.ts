@@ -2,6 +2,7 @@
 import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
+import { assertCleanupTasks, cleanup } from "./cleanup";
 import { getCronItemsInternal } from "./getCronItems";
 import { getTasksInternal } from "./getTasks";
 import { getUtilsAndReleasersFromOptions } from "./lib";
@@ -71,6 +72,11 @@ const argv = yargs
     normalize: true,
   })
   .string("config")
+  .option("cleanup", {
+    description:
+      "Clean the database, then exit. Accepts a comma-separated list of cleanup tasks: GC_TASK_IDENTIFIERS, GC_JOB_QUEUES, DELETE_PERMAFAILED_JOBS",
+  })
+  .string("cleanup")
   .strict(true).argv;
 
 const integerOrUndefined = (n: number | undefined): number | undefined => {
@@ -105,6 +111,7 @@ async function main() {
   const userPreset = await loadConfig(argv.config);
   const ONCE = argv.once;
   const SCHEMA_ONLY = argv["schema-only"];
+  const CLEANUP = argv.cleanup as string | string[] | undefined;
 
   if (SCHEMA_ONLY && ONCE) {
     throw new Error("Cannot specify both --once and --schema-only");
@@ -127,6 +134,14 @@ async function main() {
 
     if (SCHEMA_ONLY) {
       console.log("Schema updated");
+      return;
+    }
+
+    if (CLEANUP != null) {
+      const cleanups = Array.isArray(CLEANUP) ? CLEANUP : [CLEANUP];
+      const tasks = cleanups.flatMap((t) => t.split(",")).map((t) => t.trim());
+      assertCleanupTasks(tasks);
+      await cleanup(compiledOptions, tasks);
       return;
     }
 

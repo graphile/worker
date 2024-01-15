@@ -1,4 +1,9 @@
-import { Job, makeWorkerUtils, WorkerSharedOptions } from "../src/index";
+import {
+  Job,
+  makeWorkerUtils,
+  WorkerSharedOptions,
+  WorkerUtils,
+} from "../src/index";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobs,
@@ -9,11 +14,17 @@ import {
 
 const options: WorkerSharedOptions = {};
 
+let utils: WorkerUtils | null = null;
+afterEach(async () => {
+  await utils?.release();
+  utils = null;
+});
+
 test("unlocks jobs for the given workers, leaves others unaffected", () =>
   withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
-    const utils = await makeWorkerUtils({
+    utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
 
@@ -89,6 +100,4 @@ where jobs.job_queue_id = job_queues.id;`,
         locked_by: WORKER_ID_1,
       }),
     ]);
-
-    await utils.release();
   }));
