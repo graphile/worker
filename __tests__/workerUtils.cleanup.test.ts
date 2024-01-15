@@ -1,4 +1,10 @@
-import { DbJob, Job, makeWorkerUtils, WorkerSharedOptions } from "../src/index";
+import {
+  DbJob,
+  Job,
+  makeWorkerUtils,
+  WorkerSharedOptions,
+  WorkerUtils,
+} from "../src/index";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   makeSelectionOfJobs,
@@ -14,12 +20,18 @@ function numerically(a: string | number, b: string | number) {
 
 const options: WorkerSharedOptions = {};
 
+let utils: WorkerUtils | null = null;
+afterEach(async () => {
+  await utils?.release();
+  utils = null;
+});
+
 // Test DELETE_PERMAFAILED_JOBS
 test("cleanup with DELETE_PERMAFAILED_JOBS", () =>
   withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
-    const utils = await makeWorkerUtils({
+    utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
 
@@ -54,7 +66,7 @@ test("cleanup with GC_JOB_QUEUES", () =>
   withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
-    const utils = await makeWorkerUtils({
+    utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
 
@@ -125,7 +137,7 @@ test("cleanup with GC_TASK_IDENTIFIERS", () =>
   withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
-    const utils = await makeWorkerUtils({
+    utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
 
@@ -160,6 +172,4 @@ test("cleanup with GC_TASK_IDENTIFIERS", () =>
       "test_job1",
       "test_job3",
     ]);
-
-    await utils.release();
   }));

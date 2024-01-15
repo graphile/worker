@@ -4,6 +4,7 @@ import {
   runTaskListOnce,
   Task,
   WorkerSharedOptions,
+  WorkerUtils,
 } from "../src/index";
 import {
   getJobs,
@@ -19,16 +20,23 @@ const REFERENCE_TIMESTAMP = 1609459200000; /* 1st January 2021, 00:00:00 UTC */
 
 const options: WorkerSharedOptions = {};
 
+let utils: WorkerUtils | null = null;
+afterEach(async () => {
+  await utils?.release();
+  utils = null;
+});
+
 test("runs a job added through the worker utils", () =>
   withPgClient(async (pgClient) => {
     await reset(pgClient, options);
 
     // Schedule a job
-    const utils = await makeWorkerUtils({
+    utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
     await utils.addJob("job3", { a: 1 });
     await utils.release();
+    utils = null;
 
     // Assert that it has an entry in jobs / job_queues
     const jobs = await getJobs(pgClient);
@@ -44,7 +52,7 @@ test("supports the jobKey API", () =>
     await reset(pgClient, options);
 
     // Schedule a job
-    const utils = await makeWorkerUtils({
+    utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
     await utils.addJob("job3", { a: 1 }, { jobKey: "UNIQUE" });
@@ -52,6 +60,7 @@ test("supports the jobKey API", () =>
     await utils.addJob("job3", { a: 3 }, { jobKey: "UNIQUE" });
     await utils.addJob("job3", { a: 4 }, { jobKey: "UNIQUE" });
     await utils.release();
+    utils = null;
 
     // Assert that it has an entry in jobs / job_queues
     const jobs = await getJobs(pgClient);
@@ -69,7 +78,7 @@ test("supports the jobKey API with jobKeyMode", () =>
     await reset(pgClient, options);
 
     // Schedule a job
-    const utils = await makeWorkerUtils({
+    utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
     });
     const runAt1 = new Date("2200-01-01T00:00:00Z");
@@ -119,6 +128,7 @@ test("supports the jobKey API with jobKeyMode", () =>
     expect(job.run_at.toISOString()).toBe(runAt4.toISOString());
 
     await utils.release();
+    utils = null;
 
     // Assert that it has an entry in jobs / job_queues
     const jobs = await getJobs(pgClient);
@@ -156,7 +166,7 @@ test("adding job respects useNodeTime", () =>
     await reset(pgClient, options);
 
     // Schedule a job
-    const utils = await makeWorkerUtils({
+    utils = await makeWorkerUtils({
       connectionString: TEST_CONNECTION_STRING,
       useNodeTime: true,
     });
@@ -164,6 +174,7 @@ test("adding job respects useNodeTime", () =>
     await setTime(timeOfAddJob);
     await utils.addJob("job3", { a: 1 });
     await utils.release();
+    utils = null;
 
     // Assert that it has an entry in jobs / job_queues
     const jobs = await getJobs(pgClient);
