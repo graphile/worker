@@ -2,12 +2,12 @@
 import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
+import { assertCleanupTasks, cleanup } from "./cleanup";
 import { getCronItemsInternal } from "./getCronItems";
 import { getTasksInternal } from "./getTasks";
 import { getUtilsAndReleasersFromOptions } from "./lib";
 import { EMPTY_PRESET, WorkerPreset } from "./preset";
 import { runInternal, runOnceInternal } from "./runner";
-import { cleanup, assertCleanupTasks } from "./cleanup";
 
 const defaults = WorkerPreset.worker!;
 
