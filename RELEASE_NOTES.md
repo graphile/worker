@@ -24,6 +24,11 @@ Read more:
 - Add `cleanup` function to remove unused queues, stale task identifiers, and
   permanently failed jobs.
 
+## v0.16.1
+
+- Fixes issue importing task files that were written in TypeScript ESM format
+  but exported as CommonJS.
+
 ## v0.16.0
 
 _There's a breakdown of these release notes available on the new
