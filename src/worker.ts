@@ -47,10 +47,8 @@ export function makeNewWorker(
     _rawOptions: { forbiddenFlags },
   } = compiledSharedOptions;
   const logger = compiledSharedOptions.logger.scope({
-    scope: {
-      label: "worker",
-      workerId,
-    },
+    label: "worker",
+    workerId,
   });
 
   const workerDeferred = deferred();
