@@ -10,15 +10,12 @@ Graphile ecosystem. Find out
 - Dovetail
 - Netflix
 - Stellate
-- Accenture
-- We Love Micro
+- Steelhead
 - Trigger.dev
-- Seam
 
 ## Leaders
 
 - Qwick
-- Politics Rewired
 - Joe Dennis
 - Robert Claypool
 - nigelrmtaylor
@@ -31,13 +28,15 @@ Graphile ecosystem. Find out
 - LatchBio
 - Ian Stewart
 - Cintra
-- BairesDev
 - FOLX Health
+- BairesDev
 - Two Bit Solutions
+- Dimply
 - Beacon
 - Ndustrial
-- Dimply
 - Giovanny Gutiérrez
+- Upowr
+- deliver.media
 
 ## Supporters
 
@@ -53,27 +52,21 @@ Graphile ecosystem. Find out
 - Matt Bretl
 - Mansoor Razzaq
 - Alvin Ali Khaled
+- Keith Layne
 - nullachtvierzehn
 - Paul Melnikow
-- Keith Layne
-- Jimmy Liu
 - Benjamin Berman
 - Zymego
-- Nate Smith
 - IFCHOR GROUP
-- CartoLab
-- Nicolas Penot
+- Nate Smith
 - JYC
-- Charlie Hadden
 - The Outbound Collective
+- Charlie Hadden
 - Kiron Open Higher Education
 - urtho
 - Vizcom
 - Andrew Joseph
-- Old Grammar
-- Spear AI
-- SIED 70
 - garpulon
+- SIED 70
 - Peter C. Romano
-- TitanFighter
-- dinodeSimon
+- mateo
