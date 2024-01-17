@@ -21,8 +21,11 @@ Read more:
 
 ## Pending
 
+- Fix loading tasks on Windows (use URLs rather than file paths) - thanks
+  @hiepxanh
 - Add `cleanup` function to remove unused queues, stale task identifiers, and
-  permanently failed jobs.
+  permanently failed jobs - thanks @christophemacabiau
+- Fix logger scope for workers - thanks @jcapcik
 
 ## v0.16.1
 
