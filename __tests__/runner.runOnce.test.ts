@@ -11,6 +11,9 @@ import {
   withPgPool,
 } from "./helpers";
 
+delete process.env.DATABASE_URL;
+delete process.env.PGDATABASE;
+
 function setEnvvars(env: { [key: string]: string | undefined }) {
   Object.entries(env).forEach(([key, val]) => {
     if (val === undefined) {
