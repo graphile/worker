@@ -28,6 +28,9 @@ Read more:
 - Fix logger scope for workers - thanks @jcapcik
 - Add `helpers.getQueueName()` to retrieve the queue name of the currently
   running job
+- Automatically retry certain internal operations on serialization failure or
+  deadlock detection (useful if you have changed your
+  `default_transaction_isolation` to `serializable` or similar)
 
 ## v0.16.1
 
