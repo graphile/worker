@@ -91,6 +91,12 @@ export interface JobHelpers extends Helpers {
   job: Job;
 
   /**
+   * Get the queue name of the give queue ID (or the currently executing job if
+   * no queue id is specified).
+   */
+  getQueueName(queueId?: number | null): PromiseOrDirect<string | null>;
+
+  /**
    * A shorthand for running an SQL query within the job.
    */
   query<R extends QueryResultRow>(
@@ -517,6 +523,22 @@ export interface TaskSpec {
    * cannot run at runtime. (Default: null)
    */
   flags?: string[];
+}
+
+/** Equivalent of graphile_worker.job_spec DB type */
+export interface DbJobSpec<
+  TIdentifier extends keyof GraphileWorker.Tasks | (string & {}) = string,
+> {
+  identifier: TIdentifier;
+  payload: TIdentifier extends keyof GraphileWorker.Tasks
+    ? GraphileWorker.Tasks[TIdentifier]
+    : unknown;
+  queue_name?: string | null;
+  run_at?: string | null;
+  max_attempts?: number | null;
+  job_key?: string | null;
+  priority?: number | null;
+  flags?: string[] | null;
 }
 
 export type ForbiddenFlagsFn = () => null | string[] | Promise<null | string[]>;

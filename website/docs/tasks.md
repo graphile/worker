@@ -34,6 +34,8 @@ Each task function is passed two arguments:
     tracing/debugging
   - `job` &mdash; the whole job (including `uuid`, `attempts`, etc) &mdash; you
     shouldn't need this
+  - `getQueueName()` &mdash; get the name of the queue the job is in (may or may
+    not return a promise - recommend you always `await` it)
   - `abortSignal` &mdash; could be an `AbortSignal` or `undefined`; if set, use
     this to abort your task early on graceful shutdown (can be passed to a
     number of asynchronous Node.js methods)

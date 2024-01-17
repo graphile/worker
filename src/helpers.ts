@@ -1,8 +1,16 @@
 import { Pool, PoolClient } from "pg";
 
-import { AddJobFunction, Job, JobHelpers, WithPgClient } from "./interfaces";
+import defer, { Deferred } from "./deferred";
+import {
+  AddJobFunction,
+  Job,
+  JobHelpers,
+  PromiseOrDirect,
+  WithPgClient,
+} from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
 import { Logger } from "./logger";
+import { getQueueNames } from "./sql/getQueueNames";
 
 export function makeAddJob(
   compiledSharedOptions: CompiledSharedOptions,
@@ -56,6 +64,108 @@ export function makeAddJob(
   };
 }
 
+const $$cache = Symbol("queueNameById");
+const $$nextBatch = Symbol("pendingQueueIds");
+function getQueueName(
+  compiledSharedOptions: CompiledSharedOptions & {
+    [$$cache]?: Record<number, string | Deferred<string> | undefined>;
+    [$$nextBatch]?: number[];
+  },
+  withPgClient: WithPgClient,
+  queueId: number | null | undefined,
+): PromiseOrDirect<string> | null {
+  if (queueId == null) {
+    return null;
+  }
+
+  let rawCache = compiledSharedOptions[$$cache];
+  if (!rawCache) {
+    rawCache = compiledSharedOptions[$$cache] = Object.create(null) as Record<
+      number,
+      string | Deferred<string> | undefined
+    >;
+  }
+
+  // Appease TypeScript; this is not null
+  const cache = rawCache;
+
+  const existing = cache[queueId];
+  if (existing !== undefined) {
+    return existing;
+  }
+
+  let nextBatch = compiledSharedOptions[$$nextBatch];
+
+  // Not currently requested; queue us (and don't queue us again)
+  const promise = defer<string>();
+  cache[queueId] = promise;
+
+  if (nextBatch) {
+    // Already scheduled; add us to the next batch
+    nextBatch.push(queueId);
+  } else {
+    // Need to create the batch
+    nextBatch = compiledSharedOptions[$$nextBatch] = [];
+    nextBatch.push(queueId);
+
+    // Appease TypeScript; this is not null
+    const queueIds = nextBatch;
+
+    // Schedule the batch to run
+    setTimeout(() => {
+      // Allow another batch to start processing
+      compiledSharedOptions[$$nextBatch] = undefined;
+
+      // Get this batches names
+      getQueueNames(compiledSharedOptions, withPgClient, queueIds)
+        .then(
+          (names) => {
+            //assert.equal(queueIds.length, names.length);
+            for (let i = 0, l = queueIds.length; i < l; i++) {
+              const queueId = queueIds[i];
+              const name = names[i];
+              const cached = cache[queueId];
+              if (typeof cached === "object") {
+                // It's a deferred; need to resolve/reject
+                if (name != null) {
+                  cached.resolve(name);
+                  cache[queueId] = name;
+                } else {
+                  cached.reject(
+                    new Error(`Queue with id '${queueId}' not found`),
+                  );
+                  // Try again
+                  cache[queueId] = undefined;
+                }
+              } else {
+                // It's already cached... but we got it again?!
+                if (name != null) {
+                  cache[queueId] = name;
+                } else {
+                  // Try again
+                  cache[queueId] = undefined;
+                }
+              }
+            }
+          },
+          (e) => {
+            // An error occurred; reject all the deferreds but allow them to run again
+            for (const queueId of queueIds) {
+              (cache[queueId] as Deferred<string>).reject(e);
+              // Retry next time
+              cache[queueId] = undefined;
+            }
+          },
+        )
+        .catch((e) => {
+          // This should never happen
+          console.error(`Graphile Worker Internal Error`, e);
+        });
+    }, compiledSharedOptions.resolvedPreset.worker.getQueueNameBatchDelay ?? 50);
+  }
+  return promise;
+}
+
 export function makeJobHelpers(
   compiledSharedOptions: CompiledSharedOptions,
   job: Job,
@@ -78,6 +188,9 @@ export function makeJobHelpers(
   const helpers: JobHelpers = {
     abortSignal,
     job,
+    getQueueName(queueId = job.job_queue_id) {
+      return getQueueName(compiledSharedOptions, withPgClient, queueId);
+    },
     logger,
     withPgClient,
     query: (queryText, values) =>

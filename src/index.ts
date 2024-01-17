@@ -140,6 +140,15 @@ declare global {
       maxResetLockedInterval?: number;
 
       /**
+       * **Experimental**
+       *
+       * When getting a queue name in a job, we batch calls for efficiency. By
+       * default we do this over a 50ms window; increase this for greater efficiency,
+       * reduce this to reduce the latency for getting an individual queue name.
+       */
+      getQueueNameBatchDelay?: number;
+
+      /**
        * A Logger instance.
        */
       logger?: Logger;
