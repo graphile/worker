@@ -26,6 +26,8 @@ Read more:
 - Add `cleanup` function to remove unused queues, stale task identifiers, and
   permanently failed jobs - thanks @christophemacabiau
 - Fix logger scope for workers - thanks @jcapcik
+- Add `helpers.getQueueName()` to retrieve the queue name of the currently
+  running job
 
 ## v0.16.1
 
