@@ -1,6 +1,6 @@
 import * as assert from "assert";
 
-import { EnhancedWithPgClient, TaskList, WithPgClient } from "./interfaces";
+import { EnhancedWithPgClient, TaskList } from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
 
 export interface SupportedTaskIdentifierByTaskId {

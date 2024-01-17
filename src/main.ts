@@ -13,7 +13,6 @@ import {
   Job,
   RunOnceOptions,
   TaskList,
-  WithPgClient,
   WorkerEventMap,
   WorkerEvents,
   WorkerPool,

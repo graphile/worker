@@ -8,7 +8,6 @@ import {
   Job,
   PromiseOrDirect,
   TaskList,
-  WithPgClient,
   Worker,
   WorkerPool,
   WorkerSharedOptions,
