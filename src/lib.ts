@@ -8,6 +8,7 @@ import { migrations } from "./generated/sql";
 import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
 import {
   AddJobFunction,
+  EnhancedWithPgClient,
   PromiseOrDirect,
   RunnerOptions,
   RunOnceOptions,
@@ -399,7 +400,7 @@ export async function withReleasers<T>(
 
 interface ProcessOptionsExtensions {
   pgPool: Pool;
-  withPgClient: WithPgClient;
+  withPgClient: EnhancedWithPgClient;
   addJob: AddJobFunction;
   releasers: Releasers;
 }
@@ -443,7 +444,9 @@ export const getUtilsAndReleasersFromOptions = async (
       );
     }
 
-    const withPgClient = makeWithPgClientFromPool(pgPool);
+    const withPgClient = makeEnhancedWithPgClient(
+      makeWithPgClientFromPool(pgPool),
+    );
 
     // Migrate
     await withPgClient(function migrateWithPgClient(client) {
@@ -477,3 +480,46 @@ export function tryParseJson<T = object>(
     return null;
   }
 }
+
+/** @see {@link https://www.postgresql.org/docs/current/mvcc-serialization-failure-handling.html} */
+const RETRYABLE_ERROR_CODES = [
+  "40001",
+  "serialization_failure",
+  "40P01",
+  "deadlock_detected",
+];
+const MAX_RETRIES = 100;
+
+export function makeEnhancedWithPgClient(
+  withPgClient: WithPgClient | EnhancedWithPgClient,
+): EnhancedWithPgClient {
+  if (
+    "withRetries" in withPgClient &&
+    typeof withPgClient.withRetries === "function"
+  ) {
+    return withPgClient;
+  }
+  const enhancedWithPgClient = withPgClient as EnhancedWithPgClient;
+  enhancedWithPgClient.withRetries = async (...args) => {
+    let lastError!: Error;
+    for (let attempts = 0; attempts < MAX_RETRIES; attempts++) {
+      try {
+        return await withPgClient(...args);
+      } catch (e) {
+        if (RETRYABLE_ERROR_CODES.includes(e.code)) {
+          lastError = e;
+          // Try again in 50ms, or a little longer on future issues
+          await sleep(50 * Math.sqrt(attempts + 1));
+        } else {
+          throw e;
+        }
+      }
+    }
+    console.error(`Retried ${MAX_RETRIES} times, and still failed:`, lastError);
+    throw lastError;
+  };
+  return enhancedWithPgClient;
+}
+
+export const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));

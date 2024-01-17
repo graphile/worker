@@ -1,9 +1,9 @@
-import { WithPgClient } from "../interfaces";
+import { EnhancedWithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
 export async function resetLockedAt(
   compiledSharedOptions: CompiledSharedOptions,
-  withPgClient: WithPgClient,
+  withPgClient: EnhancedWithPgClient,
 ): Promise<void> {
   const {
     escapedWorkerSchema,
@@ -15,7 +15,7 @@ export async function resetLockedAt(
 
   const now = useNodeTime ? "$1::timestamptz" : "now()";
 
-  await withPgClient((client) =>
+  await withPgClient.withRetries((client) =>
     client.query({
       text: `\
 with j as (

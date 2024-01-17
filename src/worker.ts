@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
+  EnhancedWithPgClient,
   Job,
   PromiseOrDirect,
   TaskList,
@@ -21,7 +22,7 @@ export function makeNewWorker(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
   params: {
     tasks: TaskList;
-    withPgClient: WithPgClient;
+    withPgClient: EnhancedWithPgClient;
     continuous: boolean;
     abortSignal: AbortSignal;
     workerPool: WorkerPool;

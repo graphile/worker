@@ -32,9 +32,16 @@ import type { Signal } from "./signals";
  * - runner: the thing responsible for building a task list and running a worker pool for said list
  */
 
-export type WithPgClient = <T = void>(
-  callback: (pgClient: PoolClient) => Promise<T>,
-) => Promise<T>;
+export interface WithPgClient {
+  <T = void>(callback: (pgClient: PoolClient) => Promise<T>): Promise<T>;
+}
+
+export interface EnhancedWithPgClient extends WithPgClient {
+  /** **Experimental**; see https://github.com/graphile/worker/issues/387 */
+  withRetries: <T = void>(
+    callback: (pgClient: PoolClient) => Promise<T>,
+  ) => Promise<T>;
+}
 
 /**
  * The `addJob` interface is implemented in many places in the library, all

@@ -1,4 +1,4 @@
-import { DbJob, Job, TaskList, WithPgClient } from "../interfaces";
+import { DbJob, EnhancedWithPgClient, Job, TaskList } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 import { getTaskDetails } from "../taskIdentifiers";
 
@@ -13,7 +13,7 @@ export function isPromise<T>(t: T | Promise<T>): t is Promise<T> {
 
 export async function getJob(
   compiledSharedOptions: CompiledSharedOptions,
-  withPgClient: WithPgClient,
+  withPgClient: EnhancedWithPgClient,
   tasks: TaskList,
   workerId: string,
   flagsToSkip: string[] | null,
@@ -183,7 +183,7 @@ with j as (
 
   const {
     rows: [jobRow],
-  } = await withPgClient((client) =>
+  } = await withPgClient.withRetries((client) =>
     client.query<DbJob>({
       text,
       values,
