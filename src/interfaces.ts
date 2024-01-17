@@ -525,6 +525,18 @@ export interface TaskSpec {
   flags?: string[];
 }
 
+/** Equivalent of graphile_worker.job_spec DB type */
+export interface DbJobSpec {
+  identifier: string;
+  payload?: Record<string, any>;
+  queue_name?: string | null;
+  run_at?: string | null;
+  max_attempts?: number | null;
+  job_key?: string | null;
+  priority?: number | null;
+  flags?: string[] | null;
+}
+
 export type ForbiddenFlagsFn = () => null | string[] | Promise<null | string[]>;
 
 /**

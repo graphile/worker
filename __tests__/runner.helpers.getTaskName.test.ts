@@ -1,8 +1,13 @@
 import { Pool, PoolClient } from "pg";
 
-import { Job, Runner, RunnerOptions } from "../src/interfaces";
+import { Job, Runner, RunnerOptions, DbJobSpec } from "../src/interfaces";
 import { run } from "../src/runner";
-import { TEST_CONNECTION_STRING, sleepUntil } from "./helpers";
+import {
+  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  TEST_CONNECTION_STRING,
+  sleepUntil,
+  withPgClient,
+} from "./helpers";
 
 let pgPool!: Pool;
 let runner: Runner | null = null;
@@ -57,20 +62,23 @@ test("getTaskName works as expected", async () => {
 
   // First set of tests
   {
-    const promises: Promise<Job>[] = [];
+    const jobSpecs: DbJobSpec[] = [];
     for (let i = 1; i <= JOB_COUNT; i++) {
-      promises.push(
-        runner.addJob(
-          "job1",
-          { id: `j${i}` },
-          {
-            queueName: `q${i % 7}`,
-            runAt: new Date(Date.now() - (JOB_COUNT - i) * 60 * 1000),
-          },
-        ),
-      );
+      jobSpecs.push({
+        identifier: "job1",
+        payload: { id: `j${i}` },
+        queue_name: `q${i % 7}`,
+        run_at: new Date(
+          Date.now() - (JOB_COUNT - i) * 60 * 1000,
+        ).toISOString(),
+      });
     }
-    await Promise.all(promises);
+    await withPgClient((client) =>
+      client.query(
+        `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_jobs((select array_agg(r) from json_populate_recordset(null::${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_spec, $1::json) r))`,
+        [JSON.stringify(jobSpecs)],
+      ),
+    );
   }
   await sleepUntil(() => Object.keys(results).length === JOB_COUNT);
   expect(results).toEqual({
@@ -90,20 +98,23 @@ test("getTaskName works as expected", async () => {
   // Do it again; shouldn't need a DB lookup
   results = Object.create(null);
   {
-    const promises: Promise<Job>[] = [];
+    const jobSpecs: DbJobSpec[] = [];
     for (let i = 1; i <= JOB_COUNT; i++) {
-      promises.push(
-        runner.addJob(
-          "job1",
-          { id: `j${i}` },
-          {
-            queueName: `q${i % 7}`,
-            runAt: new Date(Date.now() - (JOB_COUNT - i) * 60 * 1000),
-          },
-        ),
-      );
+      jobSpecs.push({
+        identifier: "job1",
+        payload: { id: `j${i}` },
+        queue_name: `q${i % 7}`,
+        run_at: new Date(
+          Date.now() - (JOB_COUNT - i) * 60 * 1000,
+        ).toISOString(),
+      });
     }
-    await Promise.all(promises);
+    await withPgClient((client) =>
+      client.query(
+        `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_jobs((select array_agg(r) from json_populate_recordset(null::${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_spec, $1::json) r))`,
+        [JSON.stringify(jobSpecs)],
+      ),
+    );
   }
   await sleepUntil(() => Object.keys(results).length === JOB_COUNT);
   expect(results).toEqual({
@@ -123,20 +134,23 @@ test("getTaskName works as expected", async () => {
   // Mixture of old and new queues
   results = Object.create(null);
   {
-    const promises: Promise<Job>[] = [];
+    const jobSpecs: DbJobSpec[] = [];
     for (let i = 1; i <= JOB_COUNT; i++) {
-      promises.push(
-        runner.addJob(
-          "job1",
-          { id: `j${i}` },
-          {
-            queueName: `q${(i % 7) + 5}`,
-            runAt: new Date(Date.now() - (JOB_COUNT - i) * 60 * 1000),
-          },
-        ),
-      );
+      jobSpecs.push({
+        identifier: "job1",
+        payload: { id: `j${i}` },
+        queue_name: `q${(i % 7) + 5}`,
+        run_at: new Date(
+          Date.now() - (JOB_COUNT - i) * 60 * 1000,
+        ).toISOString(),
+      });
     }
-    await Promise.all(promises);
+    await withPgClient((client) =>
+      client.query(
+        `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_jobs((select array_agg(r) from json_populate_recordset(null::${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_spec, $1::json) r))`,
+        [JSON.stringify(jobSpecs)],
+      ),
+    );
   }
   await sleepUntil(() => Object.keys(results).length === JOB_COUNT);
   expect(results).toEqual({
