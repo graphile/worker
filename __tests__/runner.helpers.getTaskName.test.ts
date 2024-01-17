@@ -1,11 +1,11 @@
 import { Pool, PoolClient } from "pg";
 
-import { Job, Runner, RunnerOptions, DbJobSpec } from "../src/interfaces";
+import { DbJobSpec, Job, Runner, RunnerOptions } from "../src/interfaces";
 import { run } from "../src/runner";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
-  TEST_CONNECTION_STRING,
   sleepUntil,
+  TEST_CONNECTION_STRING,
   withPgClient,
 } from "./helpers";
 

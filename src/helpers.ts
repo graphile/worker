@@ -1,15 +1,15 @@
 import { Pool, PoolClient } from "pg";
 
+import defer, { Deferred } from "./deferred";
 import {
   AddJobFunction,
   Job,
   JobHelpers,
-  WithPgClient,
   PromiseOrDirect,
+  WithPgClient,
 } from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
 import { Logger } from "./logger";
-import defer, { Deferred } from "./deferred";
 import { getQueueNames } from "./sql/getQueueNames";
 
 export function makeAddJob(
@@ -74,7 +74,9 @@ function getQueueName(
   withPgClient: WithPgClient,
   queueId: number | null | undefined,
 ): PromiseOrDirect<string> | null {
-  if (queueId == null) return null;
+  if (queueId == null) {
+    return null;
+  }
 
   let rawCache = compiledSharedOptions[$$cache];
   if (!rawCache) {
