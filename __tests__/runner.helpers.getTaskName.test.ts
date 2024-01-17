@@ -1,6 +1,6 @@
 import { Pool, PoolClient } from "pg";
 
-import { DbJobSpec, Job, Runner, RunnerOptions } from "../src/interfaces";
+import { DbJobSpec, Runner, RunnerOptions } from "../src/interfaces";
 import { run } from "../src/runner";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,

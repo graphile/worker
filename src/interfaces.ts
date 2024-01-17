@@ -526,9 +526,13 @@ export interface TaskSpec {
 }
 
 /** Equivalent of graphile_worker.job_spec DB type */
-export interface DbJobSpec {
-  identifier: string;
-  payload?: Record<string, any>;
+export interface DbJobSpec<
+  TIdentifier extends keyof GraphileWorker.Tasks | (string & {}) = string,
+> {
+  identifier: TIdentifier;
+  payload: TIdentifier extends keyof GraphileWorker.Tasks
+    ? GraphileWorker.Tasks[TIdentifier]
+    : unknown;
   queue_name?: string | null;
   run_at?: string | null;
   max_attempts?: number | null;
