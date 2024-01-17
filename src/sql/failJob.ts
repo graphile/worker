@@ -1,9 +1,9 @@
-import { DbJob, WithPgClient } from "../interfaces";
+import { DbJob, EnhancedWithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
 export async function failJob(
   compiledSharedOptions: CompiledSharedOptions,
-  withPgClient: WithPgClient,
+  withPgClient: EnhancedWithPgClient,
   workerId: string,
   job: DbJob,
   message: string,
@@ -19,7 +19,7 @@ export async function failJob(
 
   // TODO: retry logic, in case of server connection interruption
   if (job.job_queue_id != null) {
-    await withPgClient((client) =>
+    await withPgClient.withRetries((client) =>
       client.query({
         text: `\
 with j as (
@@ -49,7 +49,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $3::text;`,
       }),
     );
   } else {
-    await withPgClient((client) =>
+    await withPgClient.withRetries((client) =>
       client.query({
         text: `\
 update ${escapedWorkerSchema}._private_jobs as jobs
@@ -76,7 +76,7 @@ where id = $1::bigint and locked_by = $3::text;`,
 
 export async function failJobs(
   compiledSharedOptions: CompiledSharedOptions,
-  withPgClient: WithPgClient,
+  withPgClient: EnhancedWithPgClient,
   workerIds: string[],
   jobs: DbJob[],
   message: string,
@@ -90,7 +90,7 @@ export async function failJobs(
   } = compiledSharedOptions;
 
   // TODO: retry logic, in case of server connection interruption
-  const { rows: failedJobs } = await withPgClient((client) =>
+  const { rows: failedJobs } = await withPgClient.withRetries((client) =>
     client.query<DbJob>({
       text: `\
 with j as (

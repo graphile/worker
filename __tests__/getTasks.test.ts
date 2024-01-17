@@ -5,6 +5,7 @@ import {
 } from "../src";
 import { getTasks } from "../src/getTasks";
 import { makeJobHelpers, makeWithPgClientFromClient } from "../src/helpers";
+import { makeEnhancedWithPgClient } from "../src/lib";
 import { makeMockJob, withPgClient } from "./helpers";
 
 const options: WorkerSharedOptions = {};
@@ -28,7 +29,9 @@ Array [
         compiledSharedOptions,
         makeMockJob("would you like"),
         {
-          withPgClient: makeWithPgClientFromClient(client),
+          withPgClient: makeEnhancedWithPgClient(
+            makeWithPgClientFromClient(client),
+          ),
           abortSignal: undefined,
         },
       );
@@ -62,7 +65,9 @@ Array [
         compiledSharedOptions,
         makeMockJob("task1"),
         {
-          withPgClient: makeWithPgClientFromClient(client),
+          withPgClient: makeEnhancedWithPgClient(
+            makeWithPgClientFromClient(client),
+          ),
           abortSignal: undefined,
         },
       );
@@ -90,7 +95,9 @@ Array [
         compiledSharedOptions,
         makeMockJob("task1"),
         {
-          withPgClient: makeWithPgClientFromClient(client),
+          withPgClient: makeEnhancedWithPgClient(
+            makeWithPgClientFromClient(client),
+          ),
           abortSignal: undefined,
         },
       );
@@ -117,7 +124,9 @@ Array [
 `);
 
       const helpers = makeJobHelpers(compiledSharedOptions, makeMockJob("t1"), {
-        withPgClient: makeWithPgClientFromClient(client),
+        withPgClient: makeEnhancedWithPgClient(
+          makeWithPgClientFromClient(client),
+        ),
         abortSignal: undefined,
       });
       expect(await tasks.t1!(helpers.job.payload, helpers)).toEqual(
@@ -145,7 +154,9 @@ Array [
 `);
 
       const helpers = makeJobHelpers(compiledSharedOptions, makeMockJob("t1"), {
-        withPgClient: makeWithPgClientFromClient(client),
+        withPgClient: makeEnhancedWithPgClient(
+          makeWithPgClientFromClient(client),
+        ),
         abortSignal: undefined,
       });
       expect(await tasks.t1!(helpers.job.payload, helpers)).toEqual(
@@ -177,7 +188,9 @@ Array [
         compiledSharedOptions,
         makeMockJob("would you like"),
         {
-          withPgClient: makeWithPgClientFromClient(client),
+          withPgClient: makeEnhancedWithPgClient(
+            makeWithPgClientFromClient(client),
+          ),
           abortSignal: undefined,
         },
       );
@@ -208,7 +221,9 @@ Array [
         compiledSharedOptions,
         makeMockJob("task1"),
         {
-          withPgClient: makeWithPgClientFromClient(client),
+          withPgClient: makeEnhancedWithPgClient(
+            makeWithPgClientFromClient(client),
+          ),
           abortSignal: undefined,
         },
       );
@@ -233,7 +248,9 @@ Array [
 `);
 
       const helpers = makeJobHelpers(compiledSharedOptions, makeMockJob("t1"), {
-        withPgClient: makeWithPgClientFromClient(client),
+        withPgClient: makeEnhancedWithPgClient(
+          makeWithPgClientFromClient(client),
+        ),
         abortSignal: undefined,
       });
       expect(await tasks.t1!(helpers.job.payload, helpers)).toEqual(

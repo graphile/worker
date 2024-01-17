@@ -9,10 +9,10 @@ import {
   makeWithPgClientFromPool,
 } from "./helpers";
 import {
+  EnhancedWithPgClient,
   Job,
   RunOnceOptions,
   TaskList,
-  WithPgClient,
   WorkerEventMap,
   WorkerEvents,
   WorkerPool,
@@ -20,6 +20,7 @@ import {
 } from "./interfaces";
 import {
   CompiledSharedOptions,
+  makeEnhancedWithPgClient,
   processSharedOptions,
   tryParseJson,
 } from "./lib";
@@ -230,7 +231,9 @@ export function runTaskListInternal(
       worker: { minResetLockedInterval, maxResetLockedInterval },
     },
   } = compiledSharedOptions;
-  const withPgClient = makeWithPgClientFromPool(pgPool);
+  const withPgClient = makeEnhancedWithPgClient(
+    makeWithPgClientFromPool(pgPool),
+  );
   const workerPool = _runTaskList(compiledSharedOptions, tasks, withPgClient, {
     continuous: true,
     onTerminate() {
@@ -494,7 +497,7 @@ export function _runTaskList(
     RunOnceOptions | WorkerPoolOptions
   >,
   tasks: TaskList,
-  withPgClient: WithPgClient,
+  withPgClient: EnhancedWithPgClient,
   options: {
     concurrency?: number | undefined;
     noHandleSignals?: boolean | undefined;
@@ -855,7 +858,9 @@ export const runTaskListOnce = (
   tasks: TaskList,
   client: PoolClient,
 ) => {
-  const withPgClient = makeWithPgClientFromClient(client);
+  const withPgClient = makeEnhancedWithPgClient(
+    makeWithPgClientFromClient(client),
+  );
   const compiledSharedOptions = processSharedOptions(options);
 
   const pool = _runTaskList(compiledSharedOptions, tasks, withPgClient, {

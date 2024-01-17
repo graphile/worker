@@ -1,9 +1,9 @@
-import { WithPgClient } from "../interfaces";
+import { EnhancedWithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
 export async function getQueueNames(
   compiledSharedOptions: CompiledSharedOptions,
-  withPgClient: WithPgClient,
+  withPgClient: EnhancedWithPgClient,
   queueIds: number[],
 ): Promise<ReadonlyArray<string | null>> {
   const {
@@ -22,7 +22,7 @@ where id = any($1::int[]);`;
     ? undefined
     : `get_queue_names/${workerSchema}`;
 
-  const { rows } = await withPgClient((client) =>
+  const { rows } = await withPgClient.withRetries((client) =>
     client.query<{ id: number; queue_name: string }>({
       text,
       values,

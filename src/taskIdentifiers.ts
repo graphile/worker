@@ -1,6 +1,6 @@
 import * as assert from "assert";
 
-import { TaskList, WithPgClient } from "./interfaces";
+import { EnhancedWithPgClient, TaskList } from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
 
 export interface SupportedTaskIdentifierByTaskId {
@@ -20,7 +20,7 @@ const cacheByOptions = new Map<CompiledSharedOptions, Cache>();
 
 export function getTaskDetails(
   compiledSharedOptions: CompiledSharedOptions,
-  withPgClient: WithPgClient,
+  withPgClient: EnhancedWithPgClient,
   tasks: TaskList,
 ): TaskDetails | Promise<TaskDetails> {
   let cache = cacheByOptions.get(compiledSharedOptions);
@@ -41,7 +41,7 @@ export function getTaskDetails(
     assert.ok(supportedTaskNames.length, "No runnable tasks!");
     cache.lastStr = str;
     cache.lastDigest = (async () => {
-      const { rows } = await withPgClient(async (client) => {
+      const { rows } = await withPgClient.withRetries(async (client) => {
         await client.query({
           text: `insert into ${escapedWorkerSchema}._private_tasks as tasks (identifier) select unnest($1::text[]) on conflict do nothing`,
           values: [supportedTaskNames],
@@ -75,7 +75,7 @@ export function getTaskDetails(
 
 export function getSupportedTaskIdentifierByTaskId(
   compiledSharedOptions: CompiledSharedOptions,
-  withPgClient: WithPgClient,
+  withPgClient: EnhancedWithPgClient,
   tasks: TaskList,
 ): SupportedTaskIdentifierByTaskId | Promise<SupportedTaskIdentifierByTaskId> {
   const p = getTaskDetails(compiledSharedOptions, withPgClient, tasks);
@@ -88,7 +88,7 @@ export function getSupportedTaskIdentifierByTaskId(
 
 export function getSupportedTaskIds(
   compiledSharedOptions: CompiledSharedOptions,
-  withPgClient: WithPgClient,
+  withPgClient: EnhancedWithPgClient,
   tasks: TaskList,
 ): number[] | Promise<number[]> {
   const p = getTaskDetails(compiledSharedOptions, withPgClient, tasks);

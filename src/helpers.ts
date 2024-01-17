@@ -3,6 +3,7 @@ import { Pool, PoolClient } from "pg";
 import defer, { Deferred } from "./deferred";
 import {
   AddJobFunction,
+  EnhancedWithPgClient,
   Job,
   JobHelpers,
   PromiseOrDirect,
@@ -71,7 +72,7 @@ function getQueueName(
     [$$cache]?: Record<number, string | Deferred<string> | undefined>;
     [$$nextBatch]?: number[];
   },
-  withPgClient: WithPgClient,
+  withPgClient: EnhancedWithPgClient,
   queueId: number | null | undefined,
 ): PromiseOrDirect<string> | null {
   if (queueId == null) {
@@ -174,7 +175,7 @@ export function makeJobHelpers(
     abortSignal,
     logger: overrideLogger,
   }: {
-    withPgClient: WithPgClient;
+    withPgClient: EnhancedWithPgClient;
     abortSignal: AbortSignal | undefined;
     logger?: Logger;
   },
