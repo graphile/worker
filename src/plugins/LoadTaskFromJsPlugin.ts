@@ -1,4 +1,5 @@
 import { GraphileConfig } from "graphile-config";
+import { pathToFileURL } from "url";
 
 import { FileDetails, isValidTask } from "../index.js";
 import { version } from "../version.js";
@@ -40,7 +41,7 @@ export const LoadTaskFromJsPlugin: GraphileConfig.Plugin = {
         }
 
         try {
-          const rawMod = await import(jsFile.fullPath);
+          const rawMod = await import(pathToFileURL(jsFile.fullPath).href);
 
           // Normally, import() of a commonJS module with `module.exports` write
           // would result in `{ default: module.exports }`.
