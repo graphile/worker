@@ -91,6 +91,12 @@ export interface JobHelpers extends Helpers {
   job: Job;
 
   /**
+   * Get the queue name of the give queue ID (or the currently executing job if
+   * no queue id is specified).
+   */
+  getQueueName(queueId?: number | null): PromiseOrDirect<string | null>;
+
+  /**
    * A shorthand for running an SQL query within the job.
    */
   query<R extends QueryResultRow>(
