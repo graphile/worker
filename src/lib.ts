@@ -483,10 +483,8 @@ export function tryParseJson<T = object>(
 
 /** @see {@link https://www.postgresql.org/docs/current/mvcc-serialization-failure-handling.html} */
 const RETRYABLE_ERROR_CODES = [
-  "40001",
-  "serialization_failure",
-  "40P01",
-  "deadlock_detected",
+  "40001", // serialization_failure
+  "40P01", // deadlock_detected
 ];
 const MAX_RETRIES = 100;
 
