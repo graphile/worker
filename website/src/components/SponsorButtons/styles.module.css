@@ -19,6 +19,11 @@
   color: var(--ifm-color-primary-dark);
 }
 
+[data-theme="dark"] .borderbutton:hover {
+  border: 1px solid var(--ifm-color-primary-light);
+  color: var(--ifm-color-primary-light);
+}
+
 .sponsorbutton {
   composes: buttonHero from "@site/src/css/common.module.css";
   text-transform: uppercase;
@@ -44,9 +49,8 @@
 }
 
 [data-theme="dark"] .sponsorbutton:hover {
-  color: var(--ifm-color-primary-darker);
-  border: 1px solid var(--ifm-color-primary-darker);
-  background-color: var(--ifm-color-primary-darkest);
+  border: 1px solid var(--ifm-color-primary-light);
+  background-color: var(--ifm-color-primary-light);
 }
 
 @media screen and (max-width: 995px) {
