@@ -8,25 +8,28 @@ import clsx from "clsx";
 import styles from "@site/src/css/common.module.css";
 import pricingStyles from "./pricing.module.css";
 
-## Get PostGraphile Pro
+## Get Worker Pro
 
-PostGraphile V4 Core is free and open-source, and is sufficient for many peoples
-needs. PostGraphile Pro is a commercial plugin for PostGraphile V4 Core, with
-additional features which can help your team to save development costs before
-deploying to production.
+Graphile Worker is free and open-source, and is sufficient for many peoples
+needs. Worker Pro is a propriety preset for Graphile Worker, which adds advanced
+and "quality-of-life" features which can help your team to save development
+costs and removes the need to scale to zero while upgrading Worker versions.
 
-PostGraphile Pro is available as a perk for
+Worker Pro is available as a perk for
 [Graphile sponsors](https://graphile.org/sponsor/). Businesses which use
-PostGraphile should explore sponsorship as the first option to obtain Pro, as
-sponsorship also helps to fund development and maintenance of the Graphile
-suite, as well as enabling us to advance the software they rely on.
+Graphile Worker should explore sponsorship as the first option to obtain Worker
+Pro, as sponsorship also helps to fund development and maintenance of the entire
+Graphile suite, as well as enabling us to advance the software they rely on. At
+the time of writing, there are no other ways to obtain Worker Pro.
 
-<p className={pricingStyles.showFull}>
-  For businesses which are not capable of engaging in the sponsorship model,
-  there is an option to purchase the license by itself. However, this does not
-  come with any other benefit such as priority support or discounted consultancy
-  rates.
-</p>
+:::tip Launch Offer
+
+Worker Pro is in early access with a limited feature set; during this period get
+access by sponsoring at **just $25+ /mo** and, as a thank you for being an early
+adopter, keep this preferential rate for at least 18 months after the launch
+offer ends.
+
+:::
 
 ### Feature comparison
 
@@ -41,13 +44,12 @@ suite, as well as enabling us to advance the software they rely on.
 </p>
 
 <p className={pricingStyles.showFull}>
-  Below, we have listed the differences between PostGraphile V4 Core, purchasing
-  the license by itself, and sponsoring Graphile. There are several tiers of
-  sponsorship available; The &ldquo;Production Sponsor&rdquo; tier is suitable
-  for many small and medium businesses with some perks such as free access to
-  the database tool <a href="https://pgrita.com">pgRITA </a> and discounted
-  consultancy calls. The &ldquo;Private Advisor Tier&rdquo; gives access to a
-  complimentary{" "}
+  Below, we have listed the differences between Graphile Worker and sponsoring
+  Graphile. There are several tiers of sponsorship available; The
+  &ldquo;Production Sponsor&rdquo; tier is suitable for many small and medium
+  businesses with some perks such as free access to the database tool{" "}
+  <a href="https://pgrita.com">pgRITA </a> and discounted consultancy calls. The
+  &ldquo;Private Advisor Tier&rdquo; gives access to a complimentary{" "}
   <a href="https://www.graphile.org/support/">Development Support </a> contract
   and discounted consultancy packages, perfect for enterprises and those who
   need bespoke advice and support on their project.
@@ -59,13 +61,13 @@ suite, as well as enabling us to advance the software they rely on.
 <tr>
   <th rowspan="2"></th>
   <th>
-    <Icon icon="fa-brands fa-github"/> Core
+    <Icon icon="fa-brands fa-github"/> Graphile Worker
   </th>
   <th>
     <span className={styles.proTag}>
       <span className={styles.firstLetter}>p</span>
     </span>{" "}
-    License Only
+    Launch Offer
   </th>
   <th><span className={styles.sponTag}><span className={styles.firstLetter}>s</span></span>{" "}Production Sponsor</th>
   <th><span className={styles.sponTag}><span className={styles.firstLetter}>s</span></span>{" "}Private Advisor Tier</th>
@@ -416,9 +418,7 @@ suite, as well as enabling us to advance the software they rely on.
   <td>
     <Icon icon="fa-solid fa-circle-xmark" size="lg" />
   </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-xmark" size="lg" />
-  </td>
+  <td>Name Only</td>
   <td>
     <Icon icon="fa-solid fa-circle-check" size="lg" />
   </td>
@@ -449,7 +449,12 @@ suite, as well as enabling us to advance the software they rely on.
     <Icon icon="fa-solid fa-circle-xmark" size="lg" />
   </td>
   <td>
-    <Icon icon="fa-solid fa-circle-xmark" size="lg" />
+    <span className={pricingStyles.showFull}>
+      Discounted <a href="https://benjie.dev/book">video calls</a>
+    </span>
+    <span className={pricingStyles.showMobile}>
+      <Icon icon="fa-solid fa-square-phone-flip" size="lg" />
+    </span>
   </td>
   <td>
     <span className={pricingStyles.showFull}>
@@ -501,9 +506,9 @@ suite, as well as enabling us to advance the software they rely on.
 <tr>
   <th>License</th>
   <td>MIT</td>
-  <td>Commercial</td>
-  <td>Commercial</td>
-  <td>Commercial</td>
+  <td>Proprietary</td>
+  <td>Proprietary</td>
+  <td>Proprietary</td>
 </tr>
 
 <tr>
@@ -517,16 +522,15 @@ suite, as well as enabling us to advance the software they rely on.
       <span className={styles.small}>Please give back</span>
     </span>
   </td>
-  <td>
+  <td><span className={styles.small}>From</span>{" "}
     <strong>
       <span className={clsx(styles.small, pricingStyles.showFull)}>
-        <s>$100/mo</s>
-      </span>{" "}
-      $25<small>/mo USD +VAT</small>
+      $25
+      </span><small>/mo USD</small>
     </strong>
     <br />
     <span className={clsx(styles.note, pricingStyles.showFull)}>
-      <span className={styles.small}>EUR €25/mo, GBP £20/mo</span>
+      <span className={styles.small}>GitHub Sponsors</span>
     </span>
   </td>
   <td>
@@ -558,11 +562,12 @@ suite, as well as enabling us to advance the software they rely on.
   <th></th>
   <td></td>
   <td>
+    {" "}
     <a
       className={clsx("button button--outline", pricingStyles.outlineButton)}
-      href="https://store.graphile.com"
+      href="https://github.com/sponsors/benjie"
     >
-      Buy
+      GitHub Sponsors
     </a>
   </td>
   <td>
@@ -598,26 +603,24 @@ suite, as well as enabling us to advance the software they rely on.
   information on how you might go about doing this.
 </div>
 
-### PostGraphile V4 Core and PostGraphile V5 are OSS under the MIT license
+### Graphile Worker is OSS under the MIT license
 
-PostGraphile V4 Core is sufficient for many peoples needs; it's the only version
-that existed for the first 2 years of the project and many people are running it
-with great success in production. No features in PostGraphile V4 Core have been
-removed or obscured, and it continues to be maintained. PostGraphile V5 is also
-open source under the MIT License and continues to be advanced and enhanced.
-
-Development and maintenance of PostGraphile V5 is ongoing, supported by
+Graphile Worker is sufficient for many peoples needs; it's the only version that
+existed for the first 5 years of the project and many people are running it with
+great success in production. No features in Graphile Worker have been removed or
+obscured, and it continues to be developed and maintained, supported by
 contributions from the community,
 [professional services](https://graphile.org/support/) contracts and
 [GitHub Sponsors](/sponsor/).
 
-### PostGraphile Pro is a commercial plugin for those who wish to scale with PostGraphile V4
+### Worker Pro is a commercial plugin for those who wish to benefit from "quality of life" improvements
 
-The Pro plugin enhances PostGraphile V4 with additional features and is loaded
-through the standard [server plugin interface](/postgraphile/current/plugins/).
+The Worker Pro plugin enhances Graphile Worker with additional features and is
+loaded through the standard
+[server plugin interface](/postgraphile/current/plugins/).
 
-The Pro plugin contains features that are particularly useful to businesses
-wishing to scale their solution out using database read-replicas or protect the
+Worker Pro contains features that are particularly useful to businesses wishing
+to scale their solution out using database read-replicas or protect the
 generated GraphQL API from expensive queries which may be issued by untrusted
 third parties. (Typically if the intended clients to your GraphQL API are
 first-party only then you would use a GraphQL query allowlist (e.g. persisted
@@ -695,3 +698,7 @@ can
 
 Please [get in touch](mailto:team@graphile.org?subject=Enterprise%20enquiry) and
 we'll be happy to help!
+
+<small>
+  <em>Last updated: 27th February 2024</em>
+</small>
