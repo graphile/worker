@@ -54,7 +54,7 @@
 }
 
 .pricingTable :global(.fa-circle-xmark) {
-  color: rgb(255, 71, 81);
+  color: var(--ifm-color-primary);
 }
 
 .pricingTable thead tr,
@@ -175,7 +175,7 @@
         content: "Core";
       }
       td:nth-of-type(2)::before {
-        content: "Pro";
+        content: "Offer";
       }
       td:nth-of-type(3)::before {
         content: "Sponsor+";

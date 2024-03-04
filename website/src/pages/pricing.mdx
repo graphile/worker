@@ -12,8 +12,9 @@ import pricingStyles from "./pricing.module.css";
 
 Graphile Worker is free and open-source, and is sufficient for many peoples
 needs. Worker Pro is a propriety preset for Graphile Worker, which adds advanced
-and "quality-of-life" features which can help your team to save development
-costs and removes the need to scale to zero while upgrading Worker versions.
+and &ldquo;quality of life&rdquo; features which can help your team to save
+development costs and removes the need to scale to zero while upgrading Worker
+versions.
 
 Worker Pro is available as a perk for
 [Graphile sponsors](https://graphile.org/sponsor/). Businesses which use
@@ -27,7 +28,7 @@ the time of writing, there are no other ways to obtain Worker Pro.
 Worker Pro is in early access with a limited feature set; during this period get
 access by sponsoring at **just $25+ /mo** and, as a thank you for being an early
 adopter, keep this preferential rate for at least 18 months after the launch
-offer ends.
+offer ends; saving you a minimum of $1300 over the regular price of $100 /month.
 
 :::
 
@@ -76,7 +77,8 @@ offer ends.
   <th>
     <span className={styles.tooltipped}>
     OSS projects, not-for-profits
-    <span class={styles.tooltiptext}>Also, hobbyists, pre-revenue start-ups, and any other use 
+    <span class={styles.tooltiptext}>
+    Also, hobbyists, pre-revenue start-ups, and any other use 
     where the Pro features are either not needed or can be re-implemented by your team
     </span>
     </span>
@@ -90,29 +92,7 @@ offer ends.
 <tbody>
 
 <tr>
-  <th>
-    <span className={styles.tooltipped}>
-      Instant GraphQL API
-      <span class={styles.tooltiptext}>Queries and mutations</span>
-    </span>
-    &nbsp;and automatic CRUD mutations
-  </th>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-</tr>
-
-<tr>
-  <th>Excellent performance</th>
+  <th>Job queue for PostgreSQL</th>
   <td>
     <Icon icon="fa-solid fa-circle-check" size="lg" />
   </td>
@@ -130,9 +110,9 @@ offer ends.
 <tr>
   <th>
     <span className={styles.tooltipped}>
-      Authentication
-      <span class={styles.tooltiptext}>
-        via JWT or custom <code>pgSettings</code>
+      High performance
+      <span className={styles.tooltiptext}>
+        Uses <code>SKIP LOCKED</code>, resulting in faster fetches
       </span>
     </span>
   </th>
@@ -153,7 +133,11 @@ offer ends.
 <tr>
   <th>
     <span className={styles.tooltipped}>
-      Authorization<span class={styles.tooltiptext}>RLS and RBAC</span>
+      Low latency
+      <span className={styles.tooltiptext}>
+        Uses <code>LISTEN</code>/<code>NOTIFY</code>; typically under 3ms from
+        task schedule to execution
+      </span>
     </span>
   </th>
   <td>
@@ -171,7 +155,7 @@ offer ends.
 </tr>
 
 <tr>
-  <th>Relay-compatible connections</th>
+  <th>Parallel by default</th>
   <td>
     <Icon icon="fa-solid fa-circle-check" size="lg" />
   </td>
@@ -187,7 +171,7 @@ offer ends.
 </tr>
 
 <tr>
-  <th>Simple list-based relations</th>
+  <th>Standalone and embedded modes</th>
   <td>
     <Icon icon="fa-solid fa-circle-check" size="lg" />
   </td>
@@ -203,7 +187,7 @@ offer ends.
 </tr>
 
 <tr>
-  <th>Filtering &amp; Ordering</th>
+  <th>Automatic retries</th>
   <td>
     <Icon icon="fa-solid fa-circle-check" size="lg" />
   </td>
@@ -219,7 +203,7 @@ offer ends.
 </tr>
 
 <tr>
-  <th>Computed columns</th>
+  <th>Scheduling &amp; debouncing</th>
   <td>
     <Icon icon="fa-solid fa-circle-check" size="lg" />
   </td>
@@ -235,55 +219,7 @@ offer ends.
 </tr>
 
 <tr>
-  <th>Custom queries</th>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-</tr>
-
-<tr>
-  <th>Custom mutations</th>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-</tr>
-
-<tr>
-  <th>Smart Comments</th>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-</tr>
-
-<tr>
-  <th>Plugins</th>
+  <th>Task de-duplication</th>
   <td>
     <Icon icon="fa-solid fa-circle-check" size="lg" />
   </td>
@@ -300,11 +236,10 @@ offer ends.
 
 <tr>
   <th>
-    {" "}
     <span className={styles.tooltipped}>
-      Real-time GraphQL
+      Cron jobs
       <span class={styles.tooltiptext}>
-        GraphQL Subscriptions and Live Queries
+        Crontab-like scheduling for recurring tasks with optional backfill
       </span>
     </span>
   </th>
@@ -324,7 +259,30 @@ offer ends.
 
 <tr>
   <th>
-    Integrated<sup className={styles.footnote}>‡</sup> GraphQL query cost limit
+    <span className={styles.tooltipped}>
+      Easy migration
+      <span class={styles.tooltiptext}>
+        Export jobs and migrate to a dedicated job queue later
+      </span>
+    </span>
+  </th>
+  <td>
+    <Icon icon="fa-solid fa-circle-check" size="lg" />
+  </td>
+  <td>
+    <Icon icon="fa-solid fa-circle-check" size="lg" />
+  </td>
+  <td>
+    <Icon icon="fa-solid fa-circle-check" size="lg" />
+  </td>
+  <td>
+    <Icon icon="fa-solid fa-circle-check" size="lg" />
+  </td>
+</tr>
+
+<tr>
+  <th>
+    <a href="./docs/pro/recovery/">Crashed worker recovery</a>
   </th>
   <td>
     <Icon icon="fa-solid fa-circle-xmark" size="lg" />
@@ -342,7 +300,7 @@ offer ends.
 
 <tr>
   <th>
-    Integrated<sup className={styles.footnote}>‡</sup> limits on pagination
+    <a href="./docs/pro/migration/">Live migration to new Worker versions</a>
   </th>
   <td>
     <Icon icon="fa-solid fa-circle-xmark" size="lg" />
@@ -360,25 +318,8 @@ offer ends.
 
 <tr>
   <th>
-    Integrated<sup className={styles.footnote}>‡</sup> GraphQL query depth
-    limits
+    Future quality of life improvements<sup className={styles.footnote}>‡</sup>
   </th>
-  <td>
-    <Icon icon="fa-solid fa-circle-xmark" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-  <td>
-    <Icon icon="fa-solid fa-circle-check" size="lg" />
-  </td>
-</tr>
-
-<tr>
-  <th>Facility to scale via read replicas</th>
   <td>
     <Icon icon="fa-solid fa-circle-xmark" size="lg" />
   </td>
@@ -396,6 +337,24 @@ offer ends.
 <tr>
   <th>
     Free access to <a href="https://pgrita.com">pgRITA</a>
+  </th>
+  <td>
+    <Icon icon="fa-solid fa-circle-xmark" size="lg" />
+  </td>
+  <td>
+    <Icon icon="fa-solid fa-circle-xmark" size="lg" />
+  </td>
+  <td>
+    <Icon icon="fa-solid fa-circle-check" size="lg" />
+  </td>
+  <td>
+    <Icon icon="fa-solid fa-circle-check" size="lg" />
+  </td>
+</tr>
+
+<tr>
+  <th>
+    Access to <a href="https://postgraphile.org">PostGraphile Pro</a>
   </th>
   <td>
     <Icon icon="fa-solid fa-circle-xmark" size="lg" />
@@ -522,11 +481,13 @@ offer ends.
       <span className={styles.small}>Please give back</span>
     </span>
   </td>
-  <td><span className={styles.small}>From</span>{" "}
+  <td>
+  <span className={styles.small}>From{" "}</span>
     <strong>
       <span className={clsx(styles.small, pricingStyles.showFull)}>
-      $25
-      </span><small>/mo USD</small>
+      <s>$100/mo</s>
+      </span>{" "}
+      $25<small>/mo USD</small>
     </strong>
     <br />
     <span className={clsx(styles.note, pricingStyles.showFull)}>
@@ -596,11 +557,9 @@ offer ends.
   <strong>
     <sup>‡</sup>
   </strong>{" "}
-  These features integrate deeply with PostGraphile V4 and have been optimized
-  for its nuances by the maintainer. If you wish to build and maintain
-  protections yourself rather than using the Pro plugin, refer to{" "}
-  <a href="/postgraphile/current/production/">Production Considerations</a> for
-  information on how you might go about doing this.
+  Worker Pro will contain advanced features and quality of life improvements
+  only. No features of Graphile Worker have been removed or obscured; no current
+  features will ever be moved to the Pro preset.
 </div>
 
 ### Graphile Worker is OSS under the MIT license
@@ -613,91 +572,67 @@ contributions from the community,
 [professional services](https://graphile.org/support/) contracts and
 [GitHub Sponsors](/sponsor/).
 
-### Worker Pro is a commercial plugin for those who wish to benefit from "quality of life" improvements
+### Worker Pro is a propriety preset for those who wish to benefit from &ldquo;quality of life&rdquo; improvements
 
-The Worker Pro plugin enhances Graphile Worker with additional features and is
-loaded through the standard
-[server plugin interface](/postgraphile/current/plugins/).
+The Worker Pro preset enhances Graphile Worker with additional features and is
+located in a sponsors only GitHub repository.
 
-Worker Pro contains features that are particularly useful to businesses wishing
-to scale their solution out using database read-replicas or protect the
-generated GraphQL API from expensive queries which may be issued by untrusted
-third parties. (Typically if the intended clients to your GraphQL API are
-first-party only then you would use a GraphQL query allowlist (e.g. persisted
-queries) for this purpose; although the Pro features can still be helpful to
-dissuade your developers from building expensive queries!)
+Worker Pro is not open source, but is "source available". The source code
+license forbids publishing and redistribution, but is otherwise very flexible,
+allowing you to make your own modifications for internal usage should you need
+to.
 
-### Does the license cover my production cluster?
+### How do users access Worker Pro?
 
-The [Pro plugin EULA](https://store.graphile.com/eulas/postgraphile-pro/) states
-you may:
+You can request access from @JemGillam or @Benjie via the community
+[Discord](https://discord.gg/graphile) or
+[get in touch via email](mailto:team@graphile.org?subject=Enterprise%20enquiry).
+Access to Worker Pro grants access to the GitHub Packages module and the source
+code hosted on GitHub. Worker Pro can be installed using an authenticated
+`authToken`, see the [Worker Pro documentation](/dosc/pro#getting-access) for
+the full details.
 
-> use up to four Production Instances and up to 100 Development Instances of the
-> Software
+### Does Worker Pro come with direct support?
 
-This is enough to cover a small cluster of 4 PostGraphile servers. If you will
-be running a larger cluster than this, please
-[get in touch](mailto:team@graphile.org?subject=Large%20cluster) for custom
-licensing.
+Access to Worker Pro grants access to its repository, where users can file
+issues and open discussions about Worker Pro. We also run community support
+through our [Discord Server](https://discord.gg/graphile) where anyone can ask
+and answer questions about Worker and the Graphile suite of tools. Sponsors
+receive priority support from our maintainers within our Discord Server.
 
-### How many licenses do I need to cover my multiple development/testing stages?
-
-The [Pro plugin EULA](https://store.graphile.com/eulas/postgraphile-pro/) states
-you may:
-
-> use up to four Production Instances and up to 100 Development Instances of the
-> Software
-
-"Development Instance" is defined as "an Instance that is used to support
-development, testing or deployment of a Production Instance", which covers
-standard development, staging, QA and similar environments.
-
-If you have larger needs than this, please
-[get in touch](mailto:team@graphile.org?subject=Large%20cluster) for custom
-licensing.
-
-### Where are the @graphile/pro docs/changelog?
-
-You can read the
-[@graphile/pro README on npm](https://www.npmjs.com/package/@graphile/pro).
-There's also a lot more information in the
-[Production Considerations](/postgraphile/current/production) page on this
-website.
-
-### Is the fulfillment of the license key automated?
-
-Yes, license keys are issued automatically by our store software upon completion
-of the payment process. Sponsors can use their GitHub Sponsors account to log in
-to the store.
-
-### Do license keys "phone home"?
-
-No, license keys are static and contain all the necessary claims, not dissimilar
-to JWTs. Our software does not "phone home."
-
-You are not permitted to use the software once the EULA terminates (e.g. if you
-stop paying). We trust you, and want to minimize your maintenance burden, so the
-automated keys expire after one year rather than one month. You will be able to
-issue new keys via the store when your key is near to expiry. Please do not
-abuse our trust.
-
-### Does the Pro License come with direct support?
-
-No. We run community support through our
-[Discord Server](https://discord.gg/graphile) where anyone can ask and answer
-questions about PostGraphile and the Graphile suite of tools. Sponsors receive
-priority support from our maintainers within our Discord Server. Sponsors on the
-"Private Advisor" tier or above can enter a complimentary Development Support
-contract and receive support through their company Slack/GitHub organization.
-Prices start at $1,500 a month, with no minimum term. More information can be
-found at the [Development Support page](https://graphile.org/support/) or you
-can
-[get in contract](mailto:info@graphile.org?subject=Private%20Advisor%20tier%20question).
+Sponsors on the "Private Advisor" tier or above can enter a complimentary
+Development Support contract and receive support through their company
+Slack/GitHub organization. Prices start at $1,500 a month, with no minimum term.
+More information can be found at the
+[Development Support page](https://graphile.org/support/) or you can [get in
 
 ### I'm an enterprise user and need X, Y and Z
 
 Please [get in touch](mailto:team@graphile.org?subject=Enterprise%20enquiry) and
 we'll be happy to help!
+
+### What is the Worker Pro license?
+
+The license forbids publishing and redistribution but otherwise allows you to
+make your own modifcations for internal usage:
+
+```
+Copyright © 2024 Benjie Gillam
+
+Use and modification of this software and associated documentation files (the
+“Software”) is permitted, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software. The Software is not to be
+distributed, published, sold, or sub-licensed.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
 
 <small>
   <em>Last updated: 27th February 2024</em>

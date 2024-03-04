@@ -40,6 +40,26 @@
   font-size: 0.75rem;
 }
 
+.footnote {
+  color: var(--ifm-color-primary-dark);
+  font-size: 0.75rem;
+}
+
+.footnoteText {
+  color: var(--ifm-color-primary-darkest);
+  font-size: 0.8rem;
+  margin-top: 1rem;
+  margin-bottom: 2rem;
+}
+
+[data-theme="dark"] .footnote {
+  color: var(--ifm-color-primary-light);
+}
+
+[data-theme="dark"] .footnoteText {
+  color: var(--ifm-color-primary-light);
+}
+
 /* Tooltip container */
 .tooltipped {
   position: relative;
@@ -57,7 +77,7 @@
   visibility: hidden;
   width: 220px;
   background-color: var(--ifm-color-primary-lightest);
-  border: 2px solid var(--ifm-color-primary-lighter);
+  border: 2px solid var(--ifm-color-primary-light);
   color: black;
   text-align: center;
   padding: 5px 0;
@@ -69,8 +89,11 @@
 }
 
 [data-theme="dark"] .tooltiptext {
-  background-color: var(--ifm-color-primary-light);
   border: 2px solid var(--ifm-color-primary-dark);
+}
+
+[data-theme="dark"] .tooltiptext code {
+  background-color: rgba(200, 230, 255, 0.5);
 }
 
 .tooltipped:hover > .tooltiptext {
@@ -88,7 +111,7 @@
   border-width: 5px;
   border-style: solid;
   border-color: transparent transparent transparent
-    var(--ifm-color-primary-lighter);
+    var(--ifm-color-primary-light);
 }
 
 [data-theme="dark"] .tooltiptext::after {
@@ -121,7 +144,7 @@
 }
 
 .sponTag {
-  background-color: var(--ifm-color-primary) /*#5fb44a*/;
+  background-color: var(--ifm-color-primary);
 }
 
 .firstLetter {
