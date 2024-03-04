@@ -163,6 +163,11 @@ const config = {
             position: "right",
           },
           {
+            to: "pricing",
+            label: "Go Pro",
+            position: "right",
+          },
+          {
             href: "https://github.com/graphile/worker",
             label: "GitHub",
             position: "right",
