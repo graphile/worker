@@ -40,7 +40,7 @@ Read more:
 ## v0.16.0
 
 _There's a breakdown of these release notes available on the new
-[Worker Website](https://worker.graphile.org/news/2023-12-01-016-release), where
+[Worker Website](https://worker.graphile.org/news/2023-12-11-016-release), where
 we go into more detail about the headline features._
 
 **THIS RELEASE INTRODUCES SIGNIFICANT CHANGES**, in preparation for moving
