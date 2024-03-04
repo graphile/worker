@@ -19,6 +19,10 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
+## v0.16.3
+
+- Add "cannot connect now" to list of retryable error codes - thanks @psteinroe
+
 ## v0.16.2
 
 - Fix loading tasks on Windows (use URLs rather than file paths) - thanks
