@@ -85,15 +85,15 @@ const config = {
         path: "./news",
       },
     ],
-    function (context, options) {
+    function (_context, _options) {
       return {
-        name: 'postcss-tweaker',
+        name: "postcss-tweaker",
         configurePostCss(postcssOptions) {
-          postcssOptions.plugins.push(require('postcss-nested'));
+          postcssOptions.plugins.push(require("postcss-nested"));
           return postcssOptions;
-        }
-      }
-    }
+        },
+      };
+    },
   ],
 
   stylesheets: [
