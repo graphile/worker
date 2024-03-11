@@ -182,9 +182,7 @@ graphile-worker --cleanup DELETE_PERMAFAILED_JOBS,GC_TASK_IDENTIFIERS,GC_JOB_QUE
 Or in the library using [WorkerUtils](/docs/library/queue#workerutils):
 
 ```ts title="JS API"
-await workerUtils.cleanup([
-  "DELETE_PERMAFAILED_JOBS",
-  "GC_TASK_IDENTIFIERS",
-  "GC_JOB_QUEUES",
-]);
+await workerUtils.cleanup({
+  tasks: ["DELETE_PERMAFAILED_JOBS", "GC_TASK_IDENTIFIERS", "GC_JOB_QUEUES"],
+});
 ```
