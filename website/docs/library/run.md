@@ -94,7 +94,7 @@ following methods and properties:
 - `promise: Promise<void>` &mdash; a promise that resolves once the runner has
   completed.
 - `events: WorkerEvents` &mdash; a Node.js `EventEmitter` that exposes certain
-  events within the runner (see [`WorkerEvents`](/docs/library/worker-events)).
+  events within the runner (see [`WorkerEvents`](/docs/worker-events)).
 
 ### Example: `runner.addJob()`
 
@@ -108,7 +108,7 @@ await runner.addJob("testTask", {
 
 ### Example: `runner.events`
 
-See [`WorkerEvents`](/docs/library/worker-events) for more details.
+See [`WorkerEvents`](/docs/worker-events) for more details.
 
 ```js
 runner.events.on("job:success", ({ worker, job }) => {

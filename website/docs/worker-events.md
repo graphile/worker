@@ -5,8 +5,9 @@ title: "WorkerEvents"
 We support a large number of events via an EventEmitter. You can either retrieve
 the event emitter via the `events` property on the `Runner` object, or you can
 create your own event emitter and pass it to Graphile Worker via the
-`WorkerOptions.events` option (this is primarily useful for getting events from
-the other Graphile Worker entrypoints).
+`WorkerOptions.events` option (this is primarily useful for receiving events
+during Graphile Worker's startup procedure, before the `run()` promise
+resolves).
 
 ### Example: via `runner.events`
 
@@ -24,7 +25,7 @@ events.on(...);
 events.on(...);
 events.on(...);
 
-const runner = await run({events, ...});
+const runner = await run({ events, ... });
 ```
 
 ### Example: In graphile configuration
@@ -40,8 +41,7 @@ const preset = {
     events,
     ...
   }
-}
-
+};
 ```
 
 ## Definitions:
