@@ -486,6 +486,7 @@ const RETRYABLE_ERROR_CODES = [
   { code: "40001", backoffMS: 50 }, // serialization_failure
   { code: "40P01", backoffMS: 50 }, // deadlock_detected
   { code: "57P03", backoffMS: 3000 }, // cannot_connect_now
+  { code: "EHOSTUNREACH", backoffMS: 3000 }, // no connection to the server
 ];
 const MAX_RETRIES = 100;
 
