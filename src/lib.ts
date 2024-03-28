@@ -487,6 +487,7 @@ const RETRYABLE_ERROR_CODES = [
   { code: "40P01", backoffMS: 50 }, // deadlock_detected
   { code: "57P03", backoffMS: 3000 }, // cannot_connect_now
   { code: "EHOSTUNREACH", backoffMS: 3000 }, // no connection to the server
+  { code: "ETIMEDOUT", backoffMS: 3000 }, // timeout
 ];
 const MAX_RETRIES = 100;
 
