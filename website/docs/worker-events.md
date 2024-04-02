@@ -20,6 +20,7 @@ runner.events.on("job:success", ({ worker, job }) => {
 ### Example: using `EventEmitter`
 
 ```js
+/** @type {import("graphile-worker").WorkerEvents} */
 const events = new EventEmitter();
 events.on(...);
 events.on(...);
@@ -31,17 +32,21 @@ const runner = await run({ events, ... });
 ### Example: In graphile configuration
 
 ```js
+/** @type {import("graphile-worker").WorkerEvents} */
 const events = new EventEmitter();
 events.on(...);
 events.on(...);
 events.on(...);
 
+/** @type {GraphileConfig.Preset} */
 const preset = {
   worker: {
     events,
     ...
   }
 };
+
+export default preset;
 ```
 
 ## Definitions:
@@ -122,7 +127,8 @@ export type WorkerEvents = TypedEventEmitter<{
   "worker:getJob:empty": { worker: Worker };
 
   /**
-   * When a worker is created
+   * When a worker faces a fatal error, for example it was unable to inform the
+   * database that it had completed/failed a job.
    */
   "worker:fatalError": { worker: Worker; error: any; jobError: any | null };
 
