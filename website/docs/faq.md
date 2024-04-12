@@ -6,7 +6,7 @@ Got a question?
 [Submit an issue](https://github.com/graphile/worker/issues/new?assignees=&labels=%E2%9D%94+question&projects=&template=ask_a_question.md)
 and maybe it'll end up on this page!
 
-## Is LISTEN/NOTIFY used by default, and will this pose a proble for pgBouncer?
+## Is LISTEN/NOTIFY used by default, and will this pose a problem for pgBouncer?
 
 Yes, it's on by default. Yes, pgbouncer _might_ pose an issue if it's not done
 in "connection" mode. We could probably disable it and do polling only (but we
@@ -16,8 +16,8 @@ IIRC). The issue would be that the events won't necessarily be received, and too
 many connections will be in the `LISTEN` state (potentially). Or none... Really
 depends on the setup.
 
-If you'd like to sponsor improvements in Graphile Worker to accomodate pgBouncer
-better, please get in touch!
+If you'd like to sponsor improvements in Graphile Worker to accommodate
+pgBouncer better, please get in touch!
 
 ## If we have jobs that are scheduled in the future/failed will workers continuously poll to run those jobs, or will the LISTEN/NOTIFY mechanism be used for that?
 
