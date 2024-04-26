@@ -53,6 +53,7 @@ delete from ${escapedWorkerSchema}._private_job_queues job_queues
 where locked_at is null and id not in (
   select job_queue_id
   from ${escapedWorkerSchema}._private_jobs jobs
+  where job_queue_id is not null
 );`,
       );
     }
