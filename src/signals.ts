@@ -2,7 +2,7 @@ export type Signal =
   | "SIGUSR2"
   | "SIGINT"
   | "SIGTERM"
-  // | "SIGPIPE"
+  | "SIGPIPE"
   | "SIGHUP"
   | "SIGABRT";
 

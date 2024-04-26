@@ -23,6 +23,8 @@ Read more:
 
 - Fix bug in `workerUtils.cleanup()` where queues would not be cleaned up if
   there existed any job that was not in a queue
+- If errors happen writing to stdout/stderr (e.g. `SIGPIPE`), we'll trigger a
+  graceful shutdown (and swallow further errors)
 
 ## v0.16.5
 
