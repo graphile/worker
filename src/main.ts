@@ -126,8 +126,22 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
     }
   };
 
+  const stdioErrorIgnorer = () => {
+    // DO NOTHING. Not even write to `@logger` since that might be using stdio
+    // under the hood, and cause recursive errors.
+  };
+  const stdioErrorHandler = () => {
+    process.stdout.on("error", stdioErrorIgnorer);
+    process.stdout.off("error", stdioErrorHandler);
+    process.stderr.on("error", stdioErrorIgnorer);
+    process.stderr.off("error", stdioErrorHandler);
+
+    // Trigger graceful handler
+    gracefulHandler("SIGPIPE");
+  };
+
   const gracefulHandler = function (signal: Signal) {
-    if (_shuttingDownGracefully) {
+    if (_shuttingDownGracefully || _shuttingDownForcefully) {
       logger.error(
         `Ignoring '${signal}' (graceful shutdown already in progress)`,
       );
@@ -196,6 +210,8 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
   for (const signal of SIGNALS) {
     process.on(signal, gracefulHandler);
   }
+  process.stdout.on("error", stdioErrorHandler);
+  process.stderr.on("error", stdioErrorHandler);
   _releaseSignalHandlers = () => {
     if (_shuttingDownGracefully || _shuttingDownForcefully) {
       logger.warn(`Not unregistering signal handlers as we're shutting down`);
@@ -206,6 +222,8 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
     for (const signal of SIGNALS) {
       process.off(signal, gracefulHandler);
     }
+    process.stdout.off("error", stdioErrorHandler);
+    process.stderr.off("error", stdioErrorHandler);
     _registeredSignalHandlers = false;
   };
 }
