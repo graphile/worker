@@ -147,9 +147,10 @@ test("cleanup with GC_TASK_IDENTIFIERS", () =>
       "test_job1",
       "test_job2",
       "test_job3",
+      "test_job4",
     ]) {
       const job = await utils.addJob(taskIdentifier, {});
-      if (taskIdentifier === "test_job2") {
+      if (["test_job2", "test_job4"].includes(taskIdentifier)) {
         await utils.completeJobs([job.id]);
       }
     }
@@ -162,15 +163,21 @@ test("cleanup with GC_TASK_IDENTIFIERS", () =>
       "test_job1",
       "test_job2",
       "test_job3",
+      "test_job4",
     ]);
 
-    await utils.cleanup({ tasks: ["GC_TASK_IDENTIFIERS"] });
+    await utils.cleanup({
+      tasks: ["GC_TASK_IDENTIFIERS"],
+      taskIdentifiersToKeep: ["test_job4"],
+    });
     const { rows: tasksAfter } = (await pgClient.query(
       `select identifier from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks`,
     )) as { rows: { identifier: string }[] };
     expect(tasksAfter.map((q) => q.identifier).sort()).toEqual([
       "job3",
       "test_job1",
+      // test_job2 has been cleaned up
       "test_job3",
+      "test_job4", // test_job4 would have been cleaned up, but we explicitly said to keep it
     ]);
   }));
