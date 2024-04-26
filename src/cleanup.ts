@@ -1,4 +1,4 @@
-import { CleanupTask } from "./interfaces";
+import { CleanupOptions, CleanupTask } from "./interfaces";
 import { CompiledOptions } from "./lib";
 
 const ALL_CLEANUP_TASKS: CleanupTask[] = [
@@ -24,8 +24,12 @@ export function assertCleanupTasks(
 
 export async function cleanup(
   compiledOptions: CompiledOptions,
-  tasks: CleanupTask[] = ["GC_JOB_QUEUES", "GC_TASK_IDENTIFIERS"],
+  options: CleanupOptions,
 ) {
+  const {
+    tasks = ["GC_JOB_QUEUES", "GC_TASK_IDENTIFIERS"],
+    taskIdentifiersToKeep = [],
+  } = options;
   const { withPgClient, escapedWorkerSchema } = compiledOptions;
   await withPgClient(async (client) => {
     if (tasks.includes("DELETE_PERMAFAILED_JOBS")) {
@@ -43,7 +47,9 @@ delete from ${escapedWorkerSchema}._private_tasks tasks
 where tasks.id not in (
   select jobs.task_id
   from ${escapedWorkerSchema}._private_jobs jobs
-);`,
+)
+and tasks.identifier <> all ($1::text[]);`,
+        [taskIdentifiersToKeep],
       );
     }
     if (tasks.includes("GC_JOB_QUEUES")) {

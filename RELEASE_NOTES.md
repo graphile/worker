@@ -25,6 +25,11 @@ Read more:
   there existed any job that was not in a queue
 - If errors happen writing to stdout/stderr (e.g. `SIGPIPE`), we'll trigger a
   graceful shutdown (and swallow further errors)
+- `workerUtils.cleanup({ tasks: ['GC_TASK_IDENTIFIERS'] })` now allows you to
+  specify additional task identifiers to keep (`taskIdentifiersToKeep: [...]`)
+  in order to reduce impact on other workers
+- `graphile-worker --cleanup GC_TASK_IDENTIFIERS` will attempt to keep all
+  locally defined task identifiers
 
 ## v0.16.5
 

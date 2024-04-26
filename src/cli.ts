@@ -137,19 +137,25 @@ async function main() {
       return;
     }
 
-    if (CLEANUP != null) {
-      const cleanups = Array.isArray(CLEANUP) ? CLEANUP : [CLEANUP];
-      const tasks = cleanups.flatMap((t) => t.split(",")).map((t) => t.trim());
-      assertCleanupTasks(tasks);
-      await cleanup(compiledOptions, tasks);
-      return;
-    }
-
     const watchedTasks = await getTasksInternal(
       compiledOptions,
       compiledOptions.resolvedPreset.worker.taskDirectory,
     );
     compiledOptions.releasers.push(() => watchedTasks.release());
+
+    if (CLEANUP != null) {
+      const cleanups = Array.isArray(CLEANUP) ? CLEANUP : [CLEANUP];
+      const cleanupTasks = cleanups
+        .flatMap((t) => t.split(","))
+        .map((t) => t.trim());
+      assertCleanupTasks(cleanupTasks);
+      await cleanup(compiledOptions, {
+        tasks: cleanupTasks,
+        taskIdentifiersToKeep: Object.keys(watchedTasks.tasks),
+      });
+      return;
+    }
+
     const watchedCronItems = await getCronItemsInternal(
       compiledOptions,
       compiledOptions.resolvedPreset.worker.crontabFile,
