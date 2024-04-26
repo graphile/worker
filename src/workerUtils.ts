@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import { cleanup } from "./cleanup";
 import {
-  CleanupTask,
+  CleanupOptions,
   DbJob,
   TaskSpec,
   WorkerUtils,
@@ -86,11 +86,13 @@ export async function makeWorkerUtils(
     },
 
     async cleanup(
-      options: { tasks?: CleanupTask[] } = {
+      options: CleanupOptions = {
         tasks: ["GC_JOB_QUEUES"],
       },
     ): Promise<void> {
-      return cleanup(compiledOptions, options.tasks);
+      // TODO: would be great to guess the current task identifiers (e.g. by
+      // reading the `tasks` folder) and add them to `taskIdentifiersToKeep`
+      return cleanup(compiledOptions, options);
     },
   };
 }

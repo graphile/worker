@@ -124,6 +124,11 @@ export type CleanupTask =
   | "GC_JOB_QUEUES"
   | "DELETE_PERMAFAILED_JOBS";
 
+export interface CleanupOptions {
+  tasks?: readonly CleanupTask[];
+  taskIdentifiersToKeep?: readonly string[];
+}
+
 /**
  * Utilities for working with Graphile Worker. Primarily useful for migrating
  * the jobs database and queueing jobs.
@@ -200,7 +205,7 @@ export interface WorkerUtils extends Helpers {
    *
    * Default: ["GC_JOB_QUEUES"]
    */
-  cleanup(options: { tasks?: CleanupTask[] }): Promise<void>;
+  cleanup(options: CleanupOptions): Promise<void>;
 }
 
 export type PromiseOrDirect<T> = Promise<T> | T;
