@@ -80,6 +80,7 @@ test("cleanup with GC_JOB_QUEUES", () =>
       [WORKER_ID_1, "test", "test_job1"],
       [WORKER_ID_2, "test2", "test_job2"],
       [WORKER_ID_3, "test3", "test_job3"],
+      [null, null, "test_job4"],
     ] as const;
     for (const [workerId, queueName, taskIdentifier] of specs) {
       date.setMinutes(date.getMinutes() - 1);
@@ -121,8 +122,8 @@ select * from j`,
     ]);
 
     await utils.forceUnlockWorkers(["worker3"]);
-    const lastJob = jobs[jobs.length - 1]; // Belongs to queueName 'task3'
-    await utils.completeJobs([lastJob.id]);
+    const thirdJob = jobs[2]; // Belongs to queueName 'task3'
+    await utils.completeJobs([thirdJob.id]);
     await utils.cleanup({ tasks: ["GC_JOB_QUEUES"] });
     const { rows: queuesAfter } = await pgClient.query<{ queue_name: string }>(
       `select queue_name from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues`,

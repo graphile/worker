@@ -19,6 +19,11 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
+## v0.16.6
+
+- Fix bug in `workerUtils.cleanup()` where queues would not be cleaned up if
+  there existed any job that was not in a queue
+
 ## v0.16.5
 
 - Add "timeout" to list of retryable error codes - thanks @psteinroe
