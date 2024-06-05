@@ -16,8 +16,8 @@ parameter describing how to connect to the database.
 
 :::note
 
-The `addJob()` JavaScript method simply defers to the underlying [`addJob`](../sql-add-job.md) SQL 
-function.
+The `addJob()` JavaScript method simply defers to the underlying
+[`addJob`](../sql-add-job.md) SQL function.
 
 :::
 
