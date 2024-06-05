@@ -14,13 +14,20 @@ parameter describing how to connect to the database.
 
 :::
 
+:::note
+
+The `addJob()` JavaScript method simply defers to the underlying [`addJob`](../sql-add-job.md) SQL 
+function.
+
+:::
+
 The `addJob` arguments are as follows:
 
 - `identifier`: the name of the task to be executed
 - `payload`: an optional JSON-compatible object to give the task more context on
   what it is doing, or a list of these objects in &ldquo;batch job&rdquo; mode
 - `options`: an optional object specifying:
-  - `queueName`: the queue to run this task under
+  - `queueName`: if you want certain tasks to run one at a time, add them to the same named queue (defaults to null)
   - `runAt`: a `Date` to schedule this task to run in the future
   - `maxAttempts`: the maximum number of attempts we'll give the job
     (Default: 25)
