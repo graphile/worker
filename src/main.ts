@@ -852,7 +852,7 @@ export function _runTaskList(
           compiledSharedOptions,
           withPgClient,
           tasks,
-          workerPool.id, // << NOTE: This is the worker pool id, not the worker id!
+          workerPool.id,
           null,
           getJobBatchSize,
         );
@@ -875,13 +875,13 @@ export function _runTaskList(
       return undefined;
     }
   };
-  const getJob: GetJobFunction = async (workerId, flagsToSkip) => {
+  const getJob: GetJobFunction = async (_workerId, flagsToSkip) => {
     if (flagsToSkip !== null || getJobBatchSize < 1) {
       const jobs = await baseGetJob(
         compiledSharedOptions,
         withPgClient,
         tasks,
-        workerId,
+        workerPool.id,
         flagsToSkip,
         1,
       );
