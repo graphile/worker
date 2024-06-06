@@ -568,9 +568,35 @@ export function _runTaskList(
 
   const promise = deferred();
 
-  function deactivate() {
+  async function deactivate() {
     if (workerPool._active) {
       workerPool._active = false;
+      // TODO: stop the batch()es and await the promises here
+      const releaseCompleteJobPromise = releaseCompleteJob?.();
+      const releaseFailJobPromise = releaseFailJob?.();
+      const [releaseCompleteJobResult, releaseFailJobResult] =
+        await Promise.allSettled([
+          releaseCompleteJobPromise,
+          releaseFailJobPromise,
+        ]);
+      if (releaseCompleteJobResult.status === "rejected") {
+        // Log but continue regardless
+        logger.error(
+          `Releasing complete job batcher failed: ${releaseCompleteJobResult.reason}`,
+          {
+            error: releaseCompleteJobResult.reason,
+          },
+        );
+      }
+      if (releaseFailJobResult.status === "rejected") {
+        // Log but continue regardless
+        logger.error(
+          `Releasing failed job batcher failed: ${releaseFailJobResult.reason}`,
+          {
+            error: releaseFailJobResult.reason,
+          },
+        );
+      }
       return onDeactivate?.();
     }
   }
@@ -921,7 +947,7 @@ export function _runTaskList(
     }
   };
 
-  const completeJob: CompleteJobFunction =
+  const { release: releaseCompleteJob, fn: completeJob } = (
     completeJobBatchDelay >= 0
       ? batch(
           completeJobBatchDelay,
@@ -933,13 +959,34 @@ export function _runTaskList(
               workerPool.id,
               jobs,
             ),
+          (error, jobs) => {
+            events.emit("pool:fatalError", {
+              error,
+              workerPool,
+              action: "completeJob",
+            });
+            logger.error(
+              `Failed to complete jobs '${jobs
+                .map((j) => j.id)
+                .join("', '")}':\n${String(error)}`,
+              { fatalError: error, jobs },
+            );
+            workerPool.gracefulShutdown();
+          },
         )
-      : (job) =>
-          baseCompleteJob(compiledSharedOptions, withPgClient, workerPool.id, [
-            job,
-          ]);
+      : {
+          release: null,
+          fn: (job) =>
+            baseCompleteJob(
+              compiledSharedOptions,
+              withPgClient,
+              workerPool.id,
+              [job],
+            ),
+        }
+  ) as { release: (() => void) | null; fn: CompleteJobFunction };
 
-  const failJob: FailJobFunction =
+  const { release: releaseFailJob, fn: failJob } = (
     failJobBatchDelay >= 0
       ? batch(
           failJobBatchDelay,
@@ -955,11 +1002,29 @@ export function _runTaskList(
               workerPool.id,
               specs,
             ),
+          (error, specs) => {
+            events.emit("pool:fatalError", {
+              error,
+              workerPool,
+              action: "failJob",
+            });
+            logger.error(
+              `Failed to fail jobs '${specs
+                .map((spec) => spec.job.id)
+                .join("', '")}':\n${String(error)}`,
+              { fatalError: error, specs },
+            );
+            workerPool.gracefulShutdown();
+          },
         )
-      : (job, message, replacementPayload) =>
-          baseFailJob(compiledSharedOptions, withPgClient, workerPool.id, [
-            { job, message, replacementPayload },
-          ]);
+      : {
+          release: null,
+          fn: (job, message, replacementPayload) =>
+            baseFailJob(compiledSharedOptions, withPgClient, workerPool.id, [
+              { job, message, replacementPayload },
+            ]),
+        }
+  ) as { release: (() => void) | null; fn: FailJobFunction };
 
   for (let i = 0; i < concurrency; i++) {
     const worker = makeNewWorker(compiledSharedOptions, {
@@ -983,8 +1048,7 @@ export function _runTaskList(
       }
       workerPool._workers.splice(workerPool._workers.indexOf(worker), 1);
       if (!continuous && workerPool._workers.length === 0) {
-        deactivate();
-        terminate();
+        deactivate().then(terminate, terminate);
       }
     };
     worker.promise.then(
@@ -1043,26 +1107,65 @@ function batch<TArgs extends [...unknown[]], TSpec, TResult>(
   delay: number,
   makeSpec: (...args: TArgs) => TSpec,
   callback: (specs: ReadonlyArray<TSpec>) => Promise<TResult>,
-): (...args: TArgs) => Promise<TResult> {
-  let currentBatch: { specs: TSpec[]; promise: Promise<TResult> } | null = null;
-  return (...args) => {
-    const spec = makeSpec(...args);
-    if (currentBatch) {
-      currentBatch.specs.push(spec);
-    } else {
-      const specs = [spec];
-      currentBatch = {
-        specs,
-        promise: (async () => {
-          await sleep(delay);
-          currentBatch = null;
-          return callback(specs);
-        })(),
-      };
-    }
-    return currentBatch.promise;
+  errorHandler: (
+    error: unknown,
+    specs: ReadonlyArray<TSpec>,
+  ) => void | Promise<void>,
+): {
+  release(): void | Promise<void>;
+  fn: (...args: TArgs) => void;
+} {
+  let pending = 0;
+  let releasing = false;
+  let released = false;
+  const promise = deferred();
+  let currentBatch: { specs: TSpec[]; promise: Promise<void> } | null = null;
+  return {
+    async release() {
+      if (releasing) {
+        return;
+      }
+      releasing = true;
+      if (pending === 0) {
+        released = true;
+        promise.resolve();
+      }
+      await promise;
+    },
+    fn(...args) {
+      if (released) {
+        throw new Error(
+          "This batcher has been released, and so no more calls can be made.",
+        );
+      }
+      const spec = makeSpec(...args);
+      if (currentBatch) {
+        currentBatch.specs.push(spec);
+      } else {
+        const specs = [spec];
+        currentBatch = {
+          specs,
+          promise: (async () => {
+            pending++;
+            try {
+              await sleep(delay);
+              currentBatch = null;
+              await callback(specs);
+            } catch (error) {
+              errorHandler(error, specs);
+            } finally {
+              pending--;
+              if (pending === 0 && releasing) {
+                released = true;
+                promise.resolve();
+              }
+            }
+          })(),
+        };
+      }
+      return;
+    },
   };
 }
-
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));

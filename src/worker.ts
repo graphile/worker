@@ -342,7 +342,7 @@ export function makeNewWorker(
           }`,
           { failure: true, job, error: err, duration },
         );
-        await failJob(
+        failJob(
           job,
           message,
           // "Batch jobs": copy through only the unsuccessful parts of the payload
@@ -371,7 +371,7 @@ export function makeNewWorker(
           );
         }
 
-        await completeJob(job);
+        completeJob(job);
       }
       events.emit("job:complete", { worker, job, error: err });
     } catch (fatalError) {
