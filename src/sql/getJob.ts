@@ -192,7 +192,7 @@ with j as (
       name,
     }),
   );
-  return rows.reverse().map((jobRow) =>
+  return rows.map((jobRow) =>
     Object.assign(jobRow, {
       task_identifier:
         taskDetails.supportedTaskIdentifierByTaskId[jobRow.task_id],

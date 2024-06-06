@@ -169,7 +169,7 @@ declare global {
        * because a single worker may lock jobs into its queue leaving other
        * workers idle.
        *
-       * @default `1`
+       * @default `-1`
        */
       getJobBatchSize?: number;
 
