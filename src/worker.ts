@@ -169,7 +169,7 @@ export function makeNewWorker(
       }
 
       events.emit("worker:getJob:start", { worker });
-      const jobRow = await getJob(workerId, flagsToSkip);
+      const jobRow = await getJob(workerPool.id, flagsToSkip);
 
       // `doNext` cannot be executed concurrently, so we know this is safe.
       // eslint-disable-next-line require-atomic-updates
@@ -339,7 +339,7 @@ export function makeNewWorker(
         await failJob(
           compiledSharedOptions,
           withPgClient,
-          workerId,
+          workerPool.id,
           job,
           message,
           // "Batch jobs": copy through only the unsuccessful parts of the payload
@@ -368,7 +368,12 @@ export function makeNewWorker(
           );
         }
 
-        await completeJob(compiledSharedOptions, withPgClient, workerId, job);
+        await completeJob(
+          compiledSharedOptions,
+          withPgClient,
+          workerPool.id,
+          job,
+        );
       }
       events.emit("job:complete", { worker, job, error: err });
     } catch (fatalError) {

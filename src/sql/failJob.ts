@@ -4,7 +4,7 @@ import { CompiledSharedOptions } from "../lib";
 export async function failJob(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: EnhancedWithPgClient,
-  workerId: string,
+  poolId: string,
   job: DbJob,
   message: string,
   replacementPayload: undefined | unknown[],
@@ -40,7 +40,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $3::text;`,
         values: [
           job.id,
           message,
-          workerId,
+          poolId,
           replacementPayload != null
             ? JSON.stringify(replacementPayload)
             : null,
@@ -63,7 +63,7 @@ where id = $1::bigint and locked_by = $3::text;`,
         values: [
           job.id,
           message,
-          workerId,
+          poolId,
           replacementPayload != null
             ? JSON.stringify(replacementPayload)
             : null,
