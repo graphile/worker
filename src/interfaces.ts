@@ -445,6 +445,8 @@ export interface WorkerPool {
   /** @internal */
   _shuttingDown: boolean;
   /** @internal */
+  _forcefulShuttingDown: boolean;
+  /** @internal */
   _active: boolean;
   /** @internal */
   _workers: Worker[];
