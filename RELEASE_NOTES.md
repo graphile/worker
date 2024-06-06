@@ -19,6 +19,13 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
+## Pending
+
+- BREAKING: Jobs and queues are now `locked_by` their `WorkerPool`'s id rather
+  than the `workerId`. Be sure to upgrade
+  [Worker Pro](https://worker.graphile.org/docs/pro) at the same time if you're
+  using it!
+
 ## v0.16.6
 
 - Fix bug in `workerUtils.cleanup()` where queues would not be cleaned up if
