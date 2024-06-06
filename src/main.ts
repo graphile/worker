@@ -586,9 +586,13 @@ export function _runTaskList(
         unregisterSignalHandlers();
       }
     } else {
-      logger.error(
-        `Graphile Worker internal error: terminate() was called twice for worker pool. Ignoring second call; but this indicates a bug - please file an issue.`,
-      );
+      try {
+        throw new Error(
+          `Graphile Worker internal error: terminate() was called twice for worker pool. Ignoring second call; but this indicates a bug - please file an issue.`,
+        );
+      } catch (e) {
+        logger.error(String(e.stack));
+      }
     }
   }
 
@@ -601,6 +605,7 @@ export function _runTaskList(
     id: `${continuous ? "pool" : "otpool"}-${randomBytes(9).toString("hex")}`,
     _active: true,
     _shuttingDown: false,
+    _forcefulShuttingDown: false,
     _workers: [],
     _withPgClient: withPgClient,
     get worker() {
@@ -621,6 +626,12 @@ export function _runTaskList(
     async gracefulShutdown(
       message = "Worker pool is shutting down gracefully",
     ) {
+      if (workerPool._forcefulShuttingDown) {
+        logger.error(
+          `gracefulShutdown called when forcefulShutdown is already in progress`,
+        );
+        return;
+      }
       if (workerPool._shuttingDown) {
         logger.error(
           `gracefulShutdown called when gracefulShutdown is already in progress`,
@@ -720,13 +731,22 @@ export function _runTaskList(
         });
         return this.forcefulShutdown(e.message);
       }
-      terminate();
+      if (!terminated) {
+        terminate();
+      }
     },
 
     /**
      * Stop accepting jobs and "fail" all currently running jobs.
      */
     async forcefulShutdown(message: string) {
+      if (workerPool._forcefulShuttingDown) {
+        logger.error(
+          `forcefulShutdown called when forcefulShutdown is already in progress`,
+        );
+        return;
+      }
+      workerPool._forcefulShuttingDown = true;
       events.emit("pool:forcefulShutdown", {
         pool: workerPool,
         workerPool,
@@ -795,7 +815,9 @@ export function _runTaskList(
           error: e,
         });
       }
-      terminate();
+      if (!terminated) {
+        terminate();
+      }
     },
 
     promise,
