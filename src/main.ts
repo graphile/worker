@@ -1017,7 +1017,7 @@ export const runTaskListOnce = (
   return pool;
 };
 
-function batch<TArgs extends [...any[]], TSpec, TResult>(
+function batch<TArgs extends [...unknown[]], TSpec, TResult>(
   delay: number,
   makeSpec: (...args: TArgs) => TSpec,
   callback: (specs: ReadonlyArray<TSpec>) => Promise<TResult>,
