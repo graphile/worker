@@ -52,7 +52,12 @@ async function main() {
   console.log("Timing startup/shutdown time...");
   let result;
   const startupTime = await time(async () => {
-    result = await exec(`node ../dist/cli.js --once`, execOptions);
+    result = await exec(
+      `node ../dist/cli.js --once --once -j ${CONCURRENCY} -m ${
+        CONCURRENCY + 1
+      }`,
+      execOptions,
+    );
   });
   logResult(result);
   console.log();
