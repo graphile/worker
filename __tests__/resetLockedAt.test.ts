@@ -32,7 +32,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
       `\
 update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs
 set
-  locked_by = 'some_worker_id',
+  locked_by = 'some_pool_id',
   locked_at = now() - (
     case payload->>'id'
     when 'locked_recently' then interval '5 minutes'
