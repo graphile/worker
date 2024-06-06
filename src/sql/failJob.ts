@@ -1,13 +1,16 @@
 import { DbJob, EnhancedWithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
+interface Spec {
+  job: DbJob;
+  message: string;
+  replacementPayload: undefined | unknown[];
+}
 
 export async function failJob(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: EnhancedWithPgClient,
   poolId: string,
-  job: DbJob,
-  message: string,
-  replacementPayload: undefined | unknown[],
+  specs: ReadonlyArray<Spec>,
 ): Promise<void> {
   const {
     escapedWorkerSchema,
@@ -17,56 +20,74 @@ export async function failJob(
     },
   } = compiledSharedOptions;
 
+  const specsWithQueues: Spec[] = [];
+  const specsWithoutQueues: Spec[] = [];
+
+  for (const spec of specs) {
+    if (spec.job.job_queue_id != null) {
+      specsWithQueues.push(spec);
+    } else {
+      specsWithoutQueues.push(spec);
+    }
+  }
+
   // TODO: retry logic, in case of server connection interruption
-  if (job.job_queue_id != null) {
+  if (specsWithQueues.length > 0) {
     await withPgClient.withRetries((client) =>
       client.query({
         text: `\
 with j as (
 update ${escapedWorkerSchema}._private_jobs as jobs
 set
-last_error = $2::text,
+last_error = (el->>'message'),
 run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
 locked_by = null,
 locked_at = null,
-payload = coalesce($4::json, jobs.payload)
-where id = $1::bigint and locked_by = $3::text
+payload = coalesce(el->'payload', jobs.payload)
+from json_array_elements($2::json) as els(el)
+where id = (el->>'jobId')::bigint and locked_by = $1::text
 returning *
 )
 update ${escapedWorkerSchema}._private_job_queues as job_queues
 set locked_by = null, locked_at = null
 from j
-where job_queues.id = j.job_queue_id and job_queues.locked_by = $3::text;`,
+where job_queues.id = j.job_queue_id and job_queues.locked_by = $1::text;`,
         values: [
-          job.id,
-          message,
           poolId,
-          replacementPayload != null
-            ? JSON.stringify(replacementPayload)
-            : null,
+          JSON.stringify(
+            specsWithQueues.map(({ job, message, replacementPayload }) => ({
+              jobId: job.id,
+              message,
+              payload: replacementPayload,
+            })),
+          ),
         ],
         name: !preparedStatements ? undefined : `fail_job_q/${workerSchema}`,
       }),
     );
-  } else {
+  }
+  if (specsWithoutQueues.length > 0) {
     await withPgClient.withRetries((client) =>
       client.query({
         text: `\
 update ${escapedWorkerSchema}._private_jobs as jobs
 set
-last_error = $2::text,
+last_error = (el->>'message'),
 run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
 locked_by = null,
 locked_at = null,
-payload = coalesce($4::json, jobs.payload)
-where id = $1::bigint and locked_by = $3::text;`,
+payload = coalesce(el->'payload', jobs.payload)
+from json_array_elements($2::json) as els(el)
+where id = (el->>'jobId')::bigint and locked_by = $1::text;`,
         values: [
-          job.id,
-          message,
           poolId,
-          replacementPayload != null
-            ? JSON.stringify(replacementPayload)
-            : null,
+          JSON.stringify(
+            specsWithoutQueues.map(({ job, message, replacementPayload }) => ({
+              jobId: job.id,
+              message,
+              payload: replacementPayload,
+            })),
+          ),
         ],
         name: !preparedStatements ? undefined : `fail_job/${workerSchema}`,
       }),
