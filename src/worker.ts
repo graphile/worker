@@ -5,6 +5,7 @@ import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
   EnhancedWithPgClient,
+  GetJobFunction,
   Job,
   PromiseOrDirect,
   TaskList,
@@ -15,7 +16,6 @@ import {
 import { CompiledSharedOptions } from "./lib";
 import { completeJob } from "./sql/completeJob";
 import { failJob } from "./sql/failJob";
-import { getJob } from "./sql/getJob";
 
 export function makeNewWorker(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
@@ -27,6 +27,7 @@ export function makeNewWorker(
     workerPool: WorkerPool;
     autostart?: boolean;
     workerId?: string;
+    getJob: GetJobFunction;
   },
 ): Worker {
   const {
@@ -37,6 +38,7 @@ export function makeNewWorker(
     workerPool,
     autostart = true,
     workerId = `worker-${randomBytes(9).toString("hex")}`,
+    getJob,
   } = params;
   const {
     events,
@@ -167,13 +169,7 @@ export function makeNewWorker(
       }
 
       events.emit("worker:getJob:start", { worker });
-      const jobRow = await getJob(
-        compiledSharedOptions,
-        withPgClient,
-        tasks,
-        workerId,
-        flagsToSkip,
-      );
+      const jobRow = await getJob(workerId, flagsToSkip);
 
       // `doNext` cannot be executed concurrently, so we know this is safe.
       // eslint-disable-next-line require-atomic-updates

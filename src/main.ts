@@ -10,6 +10,7 @@ import {
 } from "./helpers";
 import {
   EnhancedWithPgClient,
+  GetJobFunction,
   Job,
   RunOnceOptions,
   TaskList,
@@ -27,6 +28,7 @@ import {
 import { Logger } from "./logger";
 import SIGNALS, { Signal } from "./signals";
 import { failJobs } from "./sql/failJob";
+import { getJob as baseGetJob } from "./sql/getJob";
 import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
 
@@ -831,6 +833,15 @@ export function _runTaskList(
       `You must not set workerId when concurrency > 1; each worker must have a unique identifier`,
     );
   }
+  const getJob: GetJobFunction = async (workerId, flagsToSkip) => {
+    return baseGetJob(
+      compiledSharedOptions,
+      withPgClient,
+      tasks,
+      workerId,
+      flagsToSkip,
+    );
+  };
   for (let i = 0; i < concurrency; i++) {
     const worker = makeNewWorker(compiledSharedOptions, {
       tasks,
@@ -840,6 +851,7 @@ export function _runTaskList(
       workerPool,
       autostart,
       workerId,
+      getJob,
     });
     workerPool._workers.push(worker);
     const remove = () => {
