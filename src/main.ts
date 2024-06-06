@@ -901,14 +901,17 @@ export function _runTaskList(
 
   const completeJob: CompleteJobFunction =
     completeJobBatchDelay >= 0
-      ? async (job) => {
-          return baseCompleteJob(
-            compiledSharedOptions,
-            withPgClient,
-            workerPool.id,
-            [job],
-          );
-        }
+      ? batch(
+          completeJobBatchDelay,
+          (job) => job,
+          (jobs) =>
+            baseCompleteJob(
+              compiledSharedOptions,
+              withPgClient,
+              workerPool.id,
+              jobs,
+            ),
+        )
       : (job) =>
           baseCompleteJob(compiledSharedOptions, withPgClient, workerPool.id, [
             job,
@@ -916,20 +919,21 @@ export function _runTaskList(
 
   const failJob: FailJobFunction =
     failJobBatchDelay >= 0
-      ? async (job, message, replacementPayload) => {
-          return baseFailJob(
-            compiledSharedOptions,
-            withPgClient,
-            workerPool.id,
-            [
-              {
-                job,
-                message,
-                replacementPayload,
-              },
-            ],
-          );
-        }
+      ? batch(
+          failJobBatchDelay,
+          (job, message, replacementPayload) => ({
+            job,
+            message,
+            replacementPayload,
+          }),
+          (specs) =>
+            baseFailJob(
+              compiledSharedOptions,
+              withPgClient,
+              workerPool.id,
+              specs,
+            ),
+        )
       : (job, message, replacementPayload) =>
           baseFailJob(compiledSharedOptions, withPgClient, workerPool.id, [
             { job, message, replacementPayload },
@@ -1012,3 +1016,14 @@ export const runTaskListOnce = (
 
   return pool;
 };
+
+function batch<TArgs extends [...any[]], TSpec, TResult>(
+  delay: number,
+  makeSpec: (...args: TArgs) => TSpec,
+  callback: (specs: ReadonlyArray<TSpec>) => Promise<TResult>,
+): (...args: TArgs) => Promise<TResult> {
+  return (...args) => {
+    const spec = makeSpec(...args);
+    return callback([spec]);
+  };
+}
