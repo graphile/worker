@@ -154,6 +154,49 @@ declare global {
       logger?: Logger;
 
       events?: WorkerEvents;
+
+      /**
+       * To enable processing jobs in batches, set this to an integer larger
+       * than 1. This will result in jobs being fetched by the pool rather than
+       * the worker, the pool will fetch (and lock!) `getJobBatchSize` jobs up
+       * front, and each time a worker requests a job it will be served from
+       * this list until the list is exhausted, at which point a new set of
+       * jobs will be fetched (and locked).
+       *
+       * This setting can help reduce the load on your database from looking
+       * for jobs, but is only really effective when there are often many jobs
+       * queued and ready to go, and can increase the latency of job execution
+       * because a single worker may lock jobs into its queue leaving other
+       * workers idle.
+       *
+       * @default `1`
+       */
+      getJobBatchSize?: number;
+
+      /**
+       * The time in milliseconds to wait after a `completeJob` call to see if
+       * there are any other completeJob calls that can be batched together. A
+       * setting of `-1` disables this.
+       *
+       * Enabling this feature increases the time for which jobs are locked
+       * past completion, thus increasing the risk of catastrophic failure
+       * resulting in the jobs being executed again once they expire.
+       *
+       * @default `-1`
+       */
+      completeJobBatchDelay?: number;
+
+      /**
+       * The time in milliseconds to wait after a `failJob` call to see if
+       * there are any other failJob calls that can be batched together. A
+       * setting of `-1` disables this.
+       *
+       * Enabling this feature increases the time for which jobs are locked
+       * past failure.
+       *
+       * @default `-1`
+       */
+      failJobBatchDelay?: number;
     }
     interface Preset {
       worker?: WorkerOptions;
