@@ -77,7 +77,7 @@ where id = $1::bigint and locked_by = $3::text;`,
 export async function failJobs(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: EnhancedWithPgClient,
-  workerIds: string[],
+  poolId: string,
   jobs: DbJob[],
   message: string,
 ): Promise<DbJob[]> {
@@ -100,16 +100,16 @@ last_error = $2::text,
 run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
 locked_by = null,
 locked_at = null
-where id = any($1::int[]) and locked_by = any($3::text[])
+where id = any($1::int[]) and locked_by = $3::text
 returning *
 ), queues as (
 update ${escapedWorkerSchema}._private_job_queues as job_queues
 set locked_by = null, locked_at = null
 from j
-where job_queues.id = j.job_queue_id and job_queues.locked_by = any($3::text[])
+where job_queues.id = j.job_queue_id and job_queues.locked_by = $3::text
 )
 select * from j;`,
-      values: [jobs.map((job) => job.id), message, workerIds],
+      values: [jobs.map((job) => job.id), message, poolId],
       name: !preparedStatements ? undefined : `fail_jobs/${workerSchema}`,
     }),
   );

@@ -687,7 +687,7 @@ export function _runTaskList(
           const cancelledJobs = await failJobs(
             compiledSharedOptions,
             withPgClient,
-            workerIds,
+            workerPool.id,
             jobsToRelease,
             message,
           );
@@ -761,7 +761,7 @@ export function _runTaskList(
           const cancelledJobs = await failJobs(
             compiledSharedOptions,
             withPgClient,
-            workerIds,
+            workerPool.id,
             jobsInProgress,
             message,
           );
