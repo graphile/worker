@@ -533,7 +533,7 @@ export function _runTaskList(
       worker: {
         concurrentJobs: baseConcurrency,
         gracefulShutdownAbortTimeout,
-        getJobBatchSize = 1,
+        getJobBatchSize = -1,
         completeJobBatchDelay = -1,
         failJobBatchDelay = -1,
       },
@@ -841,8 +841,42 @@ export function _runTaskList(
   }
   let jobQueue: Job[] = [];
   let nextJobs: Promise<boolean> | null = null;
+  let getJobCounter = 0;
+  let getJobBaseline = 0;
+  const batchGetJob = async (myFetchId: number): Promise<Job | undefined> => {
+    if (!nextJobs) {
+      // Queue is empty, no fetch of jobs in progress; let's fetch them.
+      getJobBaseline = getJobCounter;
+      nextJobs = (async () => {
+        const jobs = await baseGetJob(
+          compiledSharedOptions,
+          withPgClient,
+          tasks,
+          workerPool.id, // << NOTE: This is the worker pool id, not the worker id!
+          null,
+          getJobBatchSize,
+        );
+        jobQueue = jobs.reverse();
+        return jobs.length >= getJobBatchSize;
+      })().finally(() => {
+        nextJobs = null;
+      });
+    }
+    const fetchedMax = await nextJobs;
+    const job = jobQueue.pop();
+    if (job) {
+      return job;
+    } else if (fetchedMax || myFetchId > getJobBaseline) {
+      // Either we fetched as many jobs as we could and there still weren't
+      // enough, or we requested a job after the request for jobs was sent to
+      // the database. Either way, let's fetch again.
+      return batchGetJob(myFetchId);
+    } else {
+      return undefined;
+    }
+  };
   const getJob: GetJobFunction = async (workerId, flagsToSkip) => {
-    if (flagsToSkip !== null || getJobBatchSize <= 1) {
+    if (flagsToSkip !== null || getJobBatchSize < 1) {
       const jobs = await baseGetJob(
         compiledSharedOptions,
         withPgClient,
@@ -854,37 +888,10 @@ export function _runTaskList(
       return jobs[0];
     } else {
       const job = jobQueue.pop();
-      if (job) {
-        // Queue already has a job, run that
+      if (job !== undefined) {
         return job;
       } else {
-        if (!nextJobs) {
-          // Queue is empty, no fetch of jobs in progress; let's fetch them
-          nextJobs = (async () => {
-            const jobs = await baseGetJob(
-              compiledSharedOptions,
-              withPgClient,
-              tasks,
-              workerId,
-              flagsToSkip,
-              getJobBatchSize,
-            );
-            jobQueue = jobs.reverse();
-            // Return true if we fetched the full batch size
-            const fetchAgain = jobs.length >= getJobBatchSize;
-            return fetchAgain;
-          })();
-        }
-        /** If true, the full batch size was fetched, so if the queue is exhausted again it's likely that there will be more jobs */
-        const fetchAgain = await nextJobs;
-        const job = jobQueue.pop();
-        if (job) {
-          return job;
-        } else if (fetchAgain) {
-          return getJob(workerId, flagsToSkip);
-        } else {
-          return undefined;
-        }
+        return batchGetJob(++getJobCounter);
       }
     }
   };
