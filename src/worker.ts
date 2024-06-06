@@ -17,6 +17,8 @@ import {
 } from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
 
+const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
+
 export function makeNewWorker(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
   params: {
@@ -356,7 +358,7 @@ export function makeNewWorker(
             "Error occurred in event emitter for 'job:success'; this is an issue in your application code and you should fix it",
           );
         }
-        if (!process.env.NO_LOG_SUCCESS) {
+        if (!NO_LOG_SUCCESS) {
           logger.info(
             `Completed task ${job.id} (${
               job.task_identifier
