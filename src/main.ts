@@ -1022,8 +1022,25 @@ function batch<TArgs extends [...any[]], TSpec, TResult>(
   makeSpec: (...args: TArgs) => TSpec,
   callback: (specs: ReadonlyArray<TSpec>) => Promise<TResult>,
 ): (...args: TArgs) => Promise<TResult> {
+  let currentBatch: { specs: TSpec[]; promise: Promise<TResult> } | null = null;
   return (...args) => {
     const spec = makeSpec(...args);
-    return callback([spec]);
+    if (currentBatch) {
+      currentBatch.specs.push(spec);
+    } else {
+      const specs = [spec];
+      currentBatch = {
+        specs,
+        promise: (async () => {
+          await sleep(delay);
+          currentBatch = null;
+          return callback(specs);
+        })(),
+      };
+    }
+    return currentBatch.promise;
   };
 }
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
