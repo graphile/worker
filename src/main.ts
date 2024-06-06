@@ -899,25 +899,41 @@ export function _runTaskList(
     }
   };
 
-  const completeJob: CompleteJobFunction = async (job) => {
-    return baseCompleteJob(
-      compiledSharedOptions,
-      withPgClient,
-      workerPool.id,
-      job,
-    );
-  };
+  const completeJob: CompleteJobFunction =
+    completeJobBatchDelay >= 0
+      ? async (job) => {
+          return baseCompleteJob(
+            compiledSharedOptions,
+            withPgClient,
+            workerPool.id,
+            [job],
+          );
+        }
+      : (job) =>
+          baseCompleteJob(compiledSharedOptions, withPgClient, workerPool.id, [
+            job,
+          ]);
 
-  const failJob: FailJobFunction = async (job, message, replacementPayload) => {
-    return baseFailJob(
-      compiledSharedOptions,
-      withPgClient,
-      workerPool.id,
-      job,
-      message,
-      replacementPayload,
-    );
-  };
+  const failJob: FailJobFunction =
+    failJobBatchDelay >= 0
+      ? async (job, message, replacementPayload) => {
+          return baseFailJob(
+            compiledSharedOptions,
+            withPgClient,
+            workerPool.id,
+            [
+              {
+                job,
+                message,
+                replacementPayload,
+              },
+            ],
+          );
+        }
+      : (job, message, replacementPayload) =>
+          baseFailJob(compiledSharedOptions, withPgClient, workerPool.id, [
+            { job, message, replacementPayload },
+          ]);
 
   for (let i = 0; i < concurrency; i++) {
     const worker = makeNewWorker(compiledSharedOptions, {
