@@ -9,7 +9,9 @@ import {
   makeWithPgClientFromPool,
 } from "./helpers";
 import {
+  CompleteJobFunction,
   EnhancedWithPgClient,
+  FailJobFunction,
   GetJobFunction,
   Job,
   RunOnceOptions,
@@ -27,7 +29,8 @@ import {
 } from "./lib";
 import { Logger } from "./logger";
 import SIGNALS, { Signal } from "./signals";
-import { failJobs } from "./sql/failJob";
+import { completeJob as baseCompleteJob } from "./sql/completeJob";
+import { failJob as baseFailJob, failJobs } from "./sql/failJob";
 import { getJob as baseGetJob } from "./sql/getJob";
 import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
@@ -895,6 +898,27 @@ export function _runTaskList(
       }
     }
   };
+
+  const completeJob: CompleteJobFunction = async (job) => {
+    return baseCompleteJob(
+      compiledSharedOptions,
+      withPgClient,
+      workerPool.id,
+      job,
+    );
+  };
+
+  const failJob: FailJobFunction = async (job, message, replacementPayload) => {
+    return baseFailJob(
+      compiledSharedOptions,
+      withPgClient,
+      workerPool.id,
+      job,
+      message,
+      replacementPayload,
+    );
+  };
+
   for (let i = 0; i < concurrency; i++) {
     const worker = makeNewWorker(compiledSharedOptions, {
       tasks,
@@ -905,6 +929,8 @@ export function _runTaskList(
       autostart,
       workerId,
       getJob,
+      completeJob,
+      failJob,
     });
     workerPool._workers.push(worker);
     const remove = () => {

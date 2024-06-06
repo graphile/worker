@@ -1161,3 +1161,10 @@ export type GetJobFunction = (
   workerId: string,
   flagsToSkip: string[] | null,
 ) => Promise<Job | undefined>;
+
+export type CompleteJobFunction = (job: DbJob) => Promise<void>;
+export type FailJobFunction = (
+  job: DbJob,
+  message: string,
+  replacementPayload: undefined | unknown[],
+) => Promise<void>;
