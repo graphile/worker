@@ -50,9 +50,11 @@ async function main() {
   console.log();
   console.log();
   console.log("Timing startup/shutdown time...");
-  const startupTime = await time(() => {
-    execSync("node ../dist/cli.js --once", execOptions);
+  let result;
+  const startupTime = await time(async () => {
+    result = await exec(`node ../dist/cli.js --once`, execOptions);
   });
+  logResult(result);
   console.log();
 
   if (STUCK_JOB_COUNT > 0) {
@@ -83,17 +85,7 @@ async function main() {
         ),
       );
     }
-    (await Promise.all(promises)).map(({ error, stdout, stderr }) => {
-      if (error) {
-        throw error;
-      }
-      if (stdout) {
-        console.log(stdout);
-      }
-      if (stderr) {
-        console.error(stderr);
-      }
-    });
+    (await Promise.all(promises)).map(logResult);
   });
   console.log(
     `Jobs per second: ${((1000 * JOB_COUNT) / (dur - startupTime)).toFixed(2)}`,
@@ -112,3 +104,15 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
+function logResult({ error, stdout, stderr }) {
+  if (error) {
+    throw error;
+  }
+  if (stdout) {
+    console.log(stdout);
+  }
+  if (stderr) {
+    console.error(stderr);
+  }
+}
