@@ -17,7 +17,9 @@ export async function getJob(
   tasks: TaskList,
   poolId: string,
   flagsToSkip: string[] | null,
-): Promise<Job | undefined> {
+  rawBatchSize: number,
+): Promise<Job[]> {
+  const batchSize = parseInt(String(rawBatchSize), 10) || 1;
   const {
     escapedWorkerSchema,
     workerSchema,
@@ -38,7 +40,7 @@ export async function getJob(
 
   if (taskDetails.taskIds.length === 0) {
     logger.error("No tasks found; nothing to do!");
-    return undefined;
+    return [];
   }
 
   let i = 2;
@@ -157,7 +159,7 @@ with j as (
     ${queueClause}
     ${flagsClause}
     order by priority asc, run_at asc
-    limit 1
+    limit ${batchSize}
     for update
     skip locked
 )${updateQueue}
@@ -179,23 +181,21 @@ with j as (
   ];
   const name = !preparedStatements
     ? undefined
-    : `get_job${hasFlags ? "F" : ""}${useNodeTime ? "N" : ""}/${workerSchema}`;
+    : `get_job${batchSize === 1 ? "" : batchSize}${hasFlags ? "F" : ""}${
+        useNodeTime ? "N" : ""
+      }/${workerSchema}`;
 
-  const {
-    rows: [jobRow],
-  } = await withPgClient.withRetries((client) =>
+  const { rows } = await withPgClient.withRetries((client) =>
     client.query<DbJob>({
       text,
       values,
       name,
     }),
   );
-  if (jobRow) {
-    return Object.assign(jobRow, {
+  return rows.reverse().map((jobRow) =>
+    Object.assign(jobRow, {
       task_identifier:
         taskDetails.supportedTaskIdentifierByTaskId[jobRow.task_id],
-    });
-  } else {
-    return undefined;
-  }
+    }),
+  );
 }

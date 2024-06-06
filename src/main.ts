@@ -530,7 +530,13 @@ export function _runTaskList(
 ): WorkerPool {
   const {
     resolvedPreset: {
-      worker: { concurrentJobs: baseConcurrency, gracefulShutdownAbortTimeout },
+      worker: {
+        concurrentJobs: baseConcurrency,
+        gracefulShutdownAbortTimeout,
+        getJobBatchSize = 1,
+        completeJobBatchDelay = -1,
+        failJobBatchDelay = -1,
+      },
     },
     _rawOptions: { noHandleSignals = false },
   } = compiledSharedOptions;
@@ -833,14 +839,54 @@ export function _runTaskList(
       `You must not set workerId when concurrency > 1; each worker must have a unique identifier`,
     );
   }
+  let jobQueue: Job[] = [];
+  let nextJobs: Promise<boolean> | null = null;
   const getJob: GetJobFunction = async (workerId, flagsToSkip) => {
-    return baseGetJob(
-      compiledSharedOptions,
-      withPgClient,
-      tasks,
-      workerId,
-      flagsToSkip,
-    );
+    if (flagsToSkip !== null || getJobBatchSize <= 1) {
+      const jobs = await baseGetJob(
+        compiledSharedOptions,
+        withPgClient,
+        tasks,
+        workerId,
+        flagsToSkip,
+        1,
+      );
+      return jobs[0];
+    } else {
+      const job = jobQueue.pop();
+      if (job) {
+        // Queue already has a job, run that
+        return job;
+      } else {
+        if (!nextJobs) {
+          // Queue is empty, no fetch of jobs in progress; let's fetch them
+          nextJobs = (async () => {
+            const jobs = await baseGetJob(
+              compiledSharedOptions,
+              withPgClient,
+              tasks,
+              workerId,
+              flagsToSkip,
+              getJobBatchSize,
+            );
+            jobQueue = jobs.reverse();
+            // Return true if we fetched the full batch size
+            const fetchAgain = jobs.length >= getJobBatchSize;
+            return fetchAgain;
+          })();
+        }
+        /** If true, the full batch size was fetched, so if the queue is exhausted again it's likely that there will be more jobs */
+        const fetchAgain = await nextJobs;
+        const job = jobQueue.pop();
+        if (job) {
+          return job;
+        } else if (fetchAgain) {
+          return getJob(workerId, flagsToSkip);
+        } else {
+          return undefined;
+        }
+      }
+    }
   };
   for (let i = 0; i < concurrency; i++) {
     const worker = makeNewWorker(compiledSharedOptions, {
