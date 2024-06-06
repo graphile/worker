@@ -899,19 +899,21 @@ export function _runTaskList(
       // Queue is empty, no fetch of jobs in progress; let's fetch them.
       getJobBaseline = getJobCounter;
       nextJobs = (async () => {
-        const jobs = await baseGetJob(
-          compiledSharedOptions,
-          withPgClient,
-          tasks,
-          workerPool.id,
-          null,
-          getJobBatchSize,
-        );
-        jobQueue = jobs.reverse();
-        return jobs.length >= getJobBatchSize;
-      })().finally(() => {
-        nextJobs = null;
-      });
+        try {
+          const jobs = await baseGetJob(
+            compiledSharedOptions,
+            withPgClient,
+            tasks,
+            workerPool.id,
+            null,
+            getJobBatchSize,
+          );
+          jobQueue = jobs.reverse();
+          return jobs.length >= getJobBatchSize;
+        } finally {
+          nextJobs = null;
+        }
+      })();
     }
     const fetchedMax = await nextJobs;
     const job = jobQueue.pop();
