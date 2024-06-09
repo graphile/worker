@@ -87,10 +87,10 @@ function makeTaskForExecutable(taskIdentifier: string, fullPath: string): Task {
       child.once("error", (error) => {
         reject(error);
       });
-      child.on("stdout", (data) => {
+      child.stdout.on("data", (data) => {
         helpers.logger.info(data.toString("utf8"));
       });
-      child.on("stderr", (data) => {
+      child.stderr.on("data", (data) => {
         helpers.logger.error(data.toString("utf8"));
       });
       child.once("close", (code) => {
