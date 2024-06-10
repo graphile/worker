@@ -560,6 +560,12 @@ export function _runTaskList(
     );
   }
 
+  if (getJobBatchSize > 0 && getJobBatchSize < concurrency) {
+    logger.warn(
+      `Your job batch size (${getJobBatchSize}) is smaller than your concurrency setting (${concurrency}); this may result in drastically lower performance if your jobs can complete quickly. Please update to \`getJobBatchSize: ${concurrency}\` to improve performance, or \`getJobBatchSize: -1\` to disable batching.`,
+    );
+  }
+
   let unregisterSignalHandlers: (() => void) | undefined = undefined;
   if (!noHandleSignals) {
     // Clean up when certain signals occur
