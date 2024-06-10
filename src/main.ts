@@ -3,6 +3,7 @@ import { EventEmitter } from "events";
 import { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
+import { makeBatchGetJob } from "./batchGetJob";
 import deferred from "./deferred";
 import {
   makeWithPgClientFromClient,
@@ -896,64 +897,26 @@ export function _runTaskList(
       `You must not set workerId when concurrency > 1; each worker must have a unique identifier`,
     );
   }
-  let jobQueue: Job[] = [];
-  let nextJobs: Promise<boolean> | null = null;
-  let getJobCounter = 0;
-  let getJobBaseline = 0;
-  const batchGetJob = async (myFetchId: number): Promise<Job | undefined> => {
-    if (!nextJobs) {
-      // Queue is empty, no fetch of jobs in progress; let's fetch them.
-      getJobBaseline = getJobCounter;
-      nextJobs = (async () => {
-        try {
+  const getJob: GetJobFunction =
+    getJobBatchSize >= 1
+      ? makeBatchGetJob(
+          compiledSharedOptions,
+          tasks,
+          withPgClient,
+          workerPool,
+          getJobBatchSize,
+        )
+      : async (_workerId, flagsToSkip) => {
           const jobs = await baseGetJob(
             compiledSharedOptions,
             withPgClient,
             tasks,
             workerPool.id,
-            null,
-            getJobBatchSize,
+            flagsToSkip,
+            1,
           );
-          jobQueue = jobs.reverse();
-          return jobs.length >= getJobBatchSize;
-        } finally {
-          nextJobs = null;
-        }
-      })();
-    }
-    const fetchedMax = await nextJobs;
-    const job = jobQueue.pop();
-    if (job) {
-      return job;
-    } else if (fetchedMax || myFetchId > getJobBaseline) {
-      // Either we fetched as many jobs as we could and there still weren't
-      // enough, or we requested a job after the request for jobs was sent to
-      // the database. Either way, let's fetch again.
-      return batchGetJob(myFetchId);
-    } else {
-      return undefined;
-    }
-  };
-  const getJob: GetJobFunction = async (_workerId, flagsToSkip) => {
-    if (flagsToSkip !== null || getJobBatchSize < 1) {
-      const jobs = await baseGetJob(
-        compiledSharedOptions,
-        withPgClient,
-        tasks,
-        workerPool.id,
-        flagsToSkip,
-        1,
-      );
-      return jobs[0];
-    } else {
-      const job = jobQueue.pop();
-      if (job !== undefined) {
-        return job;
-      } else {
-        return batchGetJob(++getJobCounter);
-      }
-    }
-  };
+          return jobs[0];
+        };
 
   const { release: releaseCompleteJob, fn: completeJob } = (
     completeJobBatchDelay >= 0
