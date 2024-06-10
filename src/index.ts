@@ -158,7 +158,7 @@ declare global {
       /**
        * To enable processing jobs in batches, set this to an integer larger
        * than 1. This will result in jobs being fetched by the pool rather than
-       * the worker, the pool will fetch (and lock!) `getJobBatchSize` jobs up
+       * the worker, the pool will fetch (and lock!) `localQueueSize` jobs up
        * front, and each time a worker requests a job it will be served from
        * this list until the list is exhausted, at which point a new set of
        * jobs will be fetched (and locked).
@@ -171,7 +171,15 @@ declare global {
        *
        * @default `-1`
        */
-      getJobBatchSize?: number;
+      localQueueSize?: number;
+
+      /**
+       * How long should jobs sit in the local queue before they are returned
+       * to the database? Defaults to 5 minutes.
+       *
+       * @default `300000`
+       */
+      localQueueTtl?: number;
 
       /**
        * The time in milliseconds to wait after a `completeJob` call to see if

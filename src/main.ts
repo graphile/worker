@@ -537,7 +537,7 @@ export function _runTaskList(
       worker: {
         concurrentJobs: baseConcurrency,
         gracefulShutdownAbortTimeout,
-        getJobBatchSize = -1,
+        localQueueSize = -1,
         completeJobBatchDelay = -1,
         failJobBatchDelay = -1,
       },
@@ -562,9 +562,9 @@ export function _runTaskList(
     );
   }
 
-  if (getJobBatchSize > 0 && getJobBatchSize < concurrency) {
+  if (localQueueSize > 0 && localQueueSize < concurrency) {
     logger.warn(
-      `Your job batch size (${getJobBatchSize}) is smaller than your concurrency setting (${concurrency}); this may result in drastically lower performance if your jobs can complete quickly. Please update to \`getJobBatchSize: ${concurrency}\` to improve performance, or \`getJobBatchSize: -1\` to disable batching.`,
+      `Your job batch size (${localQueueSize}) is smaller than your concurrency setting (${concurrency}); this may result in drastically lower performance if your jobs can complete quickly. Please update to \`localQueueSize: ${concurrency}\` to improve performance, or \`localQueueSize: -1\` to disable batching.`,
     );
   }
 
@@ -899,13 +899,13 @@ export function _runTaskList(
     );
   }
   const localQueue =
-    getJobBatchSize >= 1
+    localQueueSize >= 1
       ? new LocalQueue(
           compiledSharedOptions,
           tasks,
           withPgClient,
           workerPool,
-          getJobBatchSize,
+          localQueueSize,
         )
       : null;
   const getJob: GetJobFunction = localQueue

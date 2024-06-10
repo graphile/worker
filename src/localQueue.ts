@@ -1,10 +1,19 @@
+import assert from "assert";
+
 import {
   CompiledSharedOptions,
   EnhancedWithPgClient,
   WorkerPoolOptions,
 } from ".";
+import { MINUTE, SECOND } from "./cronConstants";
+import defer, { Deferred } from "./deferred";
 import { GetJobFunction, Job, TaskList, WorkerPool } from "./interfaces";
 import { getJob as baseGetJob } from "./sql/getJob";
+import { returnJob } from "./sql/returnJob";
+
+const POLLING = "POLLING";
+const WAITING = "WAITING";
+const TTL_EXPIRED = "TTL_EXPIRED";
 
 /**
  * The local queue exists to reduce strain on the database; it works by
@@ -70,18 +79,208 @@ import { getJob as baseGetJob } from "./sql/getJob";
  */
 
 export class LocalQueue {
-  getJobCounter = 0;
-  jobQueue: Job[] = [];
-  nextJobs: Promise<boolean> | null = null;
-  getJobBaseline = 0;
+  readonly ttl: number;
+  readonly pollInterval: number;
+  readonly jobQueue: Job[] = [];
+  readonly workerQueue: Deferred<Job>[] = [];
+  fetchInProgress = false;
+  ttlExpiredTimer: NodeJS.Timeout | null = null;
+  fetchTimer: NodeJS.Timeout | null = null;
+  // Set true to fetch immediately after a fetch completes; typically only used
+  // when the queue is pulsed during a fetch.
+  fetchAgain = false;
+  mode: typeof POLLING | typeof WAITING | typeof TTL_EXPIRED;
 
   constructor(
-    private compiledSharedOptions: CompiledSharedOptions<WorkerPoolOptions>,
-    private tasks: TaskList,
-    private withPgClient: EnhancedWithPgClient,
-    private workerPool: WorkerPool,
-    private getJobBatchSize: number,
-  ) {}
+    private readonly compiledSharedOptions: CompiledSharedOptions<WorkerPoolOptions>,
+    private readonly tasks: TaskList,
+    private readonly withPgClient: EnhancedWithPgClient,
+    private readonly workerPool: WorkerPool,
+    private readonly getJobBatchSize: number,
+  ) {
+    this.ttl =
+      compiledSharedOptions.resolvedPreset.worker.localQueueTtl ?? 5 * MINUTE;
+    this.pollInterval =
+      compiledSharedOptions.resolvedPreset.worker.pollInterval ?? 2 * SECOND;
+    this.setModePolling();
+  }
+
+  private setModePolling() {
+    assert.ok(
+      !this.fetchTimer,
+      "Cannot enter polling mode when a fetch is scheduled",
+    );
+    assert.ok(
+      !this.fetchInProgress,
+      "Cannot enter polling mode when fetch is in progress",
+    );
+    assert.equal(
+      this.jobQueue.length,
+      0,
+      "Cannot enter polling mode when job queue isn't empty",
+    );
+
+    if (this.ttlExpiredTimer) {
+      clearTimeout(this.ttlExpiredTimer);
+      this.ttlExpiredTimer = null;
+    }
+
+    this.mode = POLLING;
+
+    this.fetch();
+  }
+
+  private setModeWaiting() {
+    // Can only enter WAITING mode from POLLING mode.
+    assert.equal(this.mode, POLLING);
+    assert.ok(
+      !this.fetchTimer,
+      "Cannot enter waiting mode when a fetch is scheduled",
+    );
+    assert.ok(
+      !this.fetchInProgress,
+      "Cannot enter waiting mode when fetch is in progress",
+    );
+    assert.notEqual(
+      this.jobQueue.length,
+      0,
+      "Cannot enter waiting mode when job queue is empty",
+    );
+
+    if (this.ttlExpiredTimer) {
+      clearTimeout(this.ttlExpiredTimer);
+    }
+
+    this.mode = WAITING;
+
+    this.ttlExpiredTimer = setTimeout(() => {
+      this.setModeTtlExpired();
+    }, this.ttl);
+  }
+
+  private setModeTtlExpired() {
+    // Can only enter TTL_EXPIRED mode from WAITING mode.
+    assert.equal(this.mode, WAITING);
+    assert.ok(
+      !this.fetchTimer,
+      "Cannot enter TTL expired mode when a fetch is scheduled",
+    );
+    assert.ok(
+      !this.fetchInProgress,
+      "Cannot enter TTL expired mode when fetch is in progress",
+    );
+    assert.notEqual(
+      this.jobQueue.length,
+      0,
+      "Cannot enter TTL expired mode when job queue is empty",
+    );
+
+    if (this.ttlExpiredTimer) {
+      clearTimeout(this.ttlExpiredTimer);
+      this.ttlExpiredTimer = null;
+    }
+
+    this.mode = TTL_EXPIRED;
+
+    // Return jobs to the pool
+    const jobsToReturn = this.jobQueue.splice(0, this.jobQueue.length);
+    returnJob(
+      this.compiledSharedOptions,
+      this.withPgClient,
+      this.workerPool.id,
+      jobsToReturn,
+    ).catch((e) => {
+      // TODO: handle this better!
+      this.compiledSharedOptions.logger.error(
+        `Failed to return jobs from local queue to database queue`,
+        { error: e },
+      );
+    });
+  }
+
+  private fetch = (): void => {
+    this._fetch().catch((e) => {
+      // This should not happen
+      this.compiledSharedOptions.logger.error(`Error occurred during fetch`, {
+        error: e,
+      });
+    });
+  };
+
+  private async _fetch() {
+    try {
+      assert.equal(this.mode, POLLING, "Can only fetch when in polling mode");
+      assert.equal(
+        this.fetchInProgress,
+        false,
+        "Cannot fetch when a fetch is already in progress",
+      );
+      if (this.fetchTimer) {
+        clearTimeout(this.fetchTimer);
+        this.fetchTimer = null;
+      }
+      this.fetchAgain = false;
+      this.fetchInProgress = true;
+
+      const jobs = await baseGetJob(
+        this.compiledSharedOptions,
+        this.withPgClient,
+        this.tasks,
+        this.workerPool.id,
+        null,
+        this.getJobBatchSize,
+      );
+      assert.equal(
+        this.jobQueue.length,
+        0,
+        "Should not fetch when job queue isn't empty",
+      );
+      const jobCount = jobs.length;
+      const workerCount = Math.min(jobCount, this.workerQueue.length);
+      const workers = this.workerQueue.splice(0, workerCount);
+      for (let i = 0; i < jobCount; i++) {
+        const job = jobs[i];
+        if (i < workerCount) {
+          workers[i].resolve(job);
+        } else {
+          this.jobQueue.push(job);
+        }
+      }
+      if (this.jobQueue.length > 0) {
+        this.setModeWaiting();
+      } else {
+        if (jobCount === this.getJobBatchSize || this.fetchAgain) {
+          // Maximal fetch; trigger immediate refetch
+          process.nextTick(this.fetch);
+        } else {
+          // Set up the timer
+          this.fetchTimer = setTimeout(this.fetch, this.pollInterval);
+        }
+      }
+    } catch (e) {
+      // Error happened; rely on poll interval.
+      this.compiledSharedOptions.logger.error(
+        `Error occurred fetching jobs; will try again on next poll interval. Error: ${e}`,
+        { error: e },
+      );
+    } finally {
+      this.fetchInProgress = false;
+    }
+  }
+
+  /** Called when a new job becomes available in the DB */
+  public pulse() {
+    // The only situation when this affects anything is if we're running in polling mode.
+    if (this.mode === POLLING) {
+      if (this.fetchInProgress) {
+        this.fetchAgain = true;
+      } else if (this.fetchTimer) {
+        clearTimeout(this.fetchTimer);
+        this.fetchTimer = null;
+        this.fetch();
+      }
+    }
+  }
 
   // If you refactor this to be a method rather than a property, make sure that you `.bind(this)` to it.
   public getJob: GetJobFunction = async (workerId, flagsToSkip) => {
@@ -98,47 +297,17 @@ export class LocalQueue {
       return jobs[0];
     }
 
-    const job = this.jobQueue.pop();
+    if (this.mode === TTL_EXPIRED) {
+      this.setModePolling();
+    }
+
+    const job = this.jobQueue.shift();
     if (job !== undefined) {
       return job;
     } else {
-      return this.batchGetJob(++this.getJobCounter);
+      const d = defer<Job>();
+      this.workerQueue.push(d);
+      return d;
     }
   };
-
-  private async batchGetJob(myFetchId: number): Promise<Job | undefined> {
-    // TODO rewrite this so that if we have batch size of 1 we'll still fetch newer jobs in parallel (not queued)
-    if (!this.nextJobs) {
-      // Queue is empty, no fetch of jobs in progress; let's fetch them.
-      this.getJobBaseline = this.getJobCounter;
-      this.nextJobs = (async () => {
-        try {
-          const jobs = await baseGetJob(
-            this.compiledSharedOptions,
-            this.withPgClient,
-            this.tasks,
-            this.workerPool.id,
-            null,
-            this.getJobBatchSize,
-          );
-          this.jobQueue = jobs.reverse();
-          return jobs.length >= this.getJobBatchSize;
-        } finally {
-          this.nextJobs = null;
-        }
-      })();
-    }
-    const fetchedMax = await this.nextJobs;
-    const job = this.jobQueue.pop();
-    if (job) {
-      return job;
-    } else if (fetchedMax || myFetchId > this.getJobBaseline) {
-      // Either we fetched as many jobs as we could and there still weren't
-      // enough, or we requested a job after the request for jobs was sent to
-      // the database. Either way, let's fetch again.
-      return this.batchGetJob(myFetchId);
-    } else {
-      return undefined;
-    }
-  }
 }
