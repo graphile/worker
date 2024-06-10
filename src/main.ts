@@ -3,7 +3,6 @@ import { EventEmitter } from "events";
 import { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
-import { makeBatchGetJob } from "./batchGetJob";
 import deferred from "./deferred";
 import {
   makeWithPgClientFromClient,
@@ -28,6 +27,7 @@ import {
   processSharedOptions,
   tryParseJson,
 } from "./lib";
+import { LocalQueue } from "./localQueue";
 import { Logger } from "./logger";
 import SIGNALS, { Signal } from "./signals";
 import { completeJob as baseCompleteJob } from "./sql/completeJob";
@@ -551,6 +551,7 @@ export function _runTaskList(
     onTerminate,
     onDeactivate,
   } = options;
+
   let autostart = rawAutostart;
   const { logger, events } = compiledSharedOptions;
 
@@ -897,26 +898,29 @@ export function _runTaskList(
       `You must not set workerId when concurrency > 1; each worker must have a unique identifier`,
     );
   }
-  const getJob: GetJobFunction =
+  const localQueue =
     getJobBatchSize >= 1
-      ? makeBatchGetJob(
+      ? new LocalQueue(
           compiledSharedOptions,
           tasks,
           withPgClient,
           workerPool,
           getJobBatchSize,
         )
-      : async (_workerId, flagsToSkip) => {
-          const jobs = await baseGetJob(
-            compiledSharedOptions,
-            withPgClient,
-            tasks,
-            workerPool.id,
-            flagsToSkip,
-            1,
-          );
-          return jobs[0];
-        };
+      : null;
+  const getJob: GetJobFunction = localQueue
+    ? localQueue.getJob // Already bound
+    : async (_workerId, flagsToSkip) => {
+        const jobs = await baseGetJob(
+          compiledSharedOptions,
+          withPgClient,
+          tasks,
+          workerPool.id,
+          flagsToSkip,
+          1,
+        );
+        return jobs[0];
+      };
 
   const { release: releaseCompleteJob, fn: completeJob } = (
     completeJobBatchDelay >= 0
