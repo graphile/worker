@@ -15,18 +15,18 @@ export async function completeJob(
     },
   } = compiledSharedOptions;
 
-  const jobsWithQueues: DbJob[] = [];
-  const jobsWithoutQueues: DbJob[] = [];
+  const jobIdsWithoutQueue: string[] = [];
+  const jobIdsWithQueue: string[] = [];
   for (const job of jobs) {
     if (job.job_queue_id != null) {
-      jobsWithQueues.push(job);
+      jobIdsWithQueue.push(job.id);
     } else {
-      jobsWithoutQueues.push(job);
+      jobIdsWithoutQueue.push(job.id);
     }
   }
 
   // TODO: retry logic, in case of server connection interruption
-  if (jobsWithQueues.length > 0) {
+  if (jobIdsWithQueue.length > 0) {
     await withPgClient.withRetries((client) =>
       client.query({
         text: `\
@@ -39,20 +39,20 @@ update ${escapedWorkerSchema}._private_job_queues as job_queues
 set locked_by = null, locked_at = null
 from j
 where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
-        values: [jobsWithQueues.map((j) => j.id), poolId],
+        values: [jobIdsWithQueue, poolId],
         name: !preparedStatements
           ? undefined
           : `complete_job_q/${workerSchema}`,
       }),
     );
   }
-  if (jobsWithoutQueues.length > 0) {
+  if (jobIdsWithoutQueue.length > 0) {
     await withPgClient.withRetries((client) =>
       client.query({
         text: `\
 delete from ${escapedWorkerSchema}._private_jobs as jobs
 where id = ANY($1::bigint[])`,
-        values: [jobsWithoutQueues.map((j) => j.id)],
+        values: [jobIdsWithoutQueue],
         name: !preparedStatements ? undefined : `complete_job/${workerSchema}`,
       }),
     );
