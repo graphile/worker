@@ -3,7 +3,7 @@ import { EventEmitter } from "events";
 import { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
-import deferred from "./deferred";
+import defer from "./deferred";
 import {
   makeWithPgClientFromClient,
   makeWithPgClientFromPool,
@@ -574,7 +574,7 @@ export function _runTaskList(
     unregisterSignalHandlers = registerSignalHandlers(logger, events);
   }
 
-  const promise = deferred();
+  const promise = defer();
 
   async function deactivate() {
     if (workerPool._active) {
@@ -1108,8 +1108,18 @@ function batch<TArgs extends [...unknown[]], TSpec, TResult>(
   let pending = 0;
   let releasing = false;
   let released = false;
-  const promise = deferred();
-  let currentBatch: { specs: TSpec[]; promise: Promise<void> } | null = null;
+  const incrementPending = () => {
+    pending++;
+  };
+  const decrementPending = () => {
+    pending--;
+    if (pending === 0 && releasing === true) {
+      released = true;
+      promise.resolve();
+    }
+  };
+  const promise = defer();
+  let currentBatch: TSpec[] | null = null;
   return {
     async release() {
       if (releasing) {
@@ -1129,33 +1139,21 @@ function batch<TArgs extends [...unknown[]], TSpec, TResult>(
         );
       }
       const spec = makeSpec(...args);
-      if (currentBatch) {
-        currentBatch.specs.push(spec);
+      if (currentBatch !== null) {
+        currentBatch.push(spec);
       } else {
         const specs = [spec];
-        currentBatch = {
-          specs,
-          promise: (async () => {
-            pending++;
-            try {
-              await sleep(delay);
-              currentBatch = null;
-              await callback(specs);
-            } catch (error) {
-              errorHandler(error, specs);
-            } finally {
-              pending--;
-              if (pending === 0 && releasing) {
-                released = true;
-                promise.resolve();
-              }
-            }
-          })(),
-        };
+        currentBatch = specs;
+        incrementPending();
+        setTimeout(() => {
+          currentBatch = null;
+          callback(specs).then(decrementPending, (error) => {
+            decrementPending();
+            errorHandler(error, specs);
+          });
+        }, delay);
       }
       return;
     },
   };
 }
-const sleep = (ms: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms));
