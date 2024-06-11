@@ -3,6 +3,7 @@ const assert = require("assert");
 const { Pool } = require("pg");
 const { runTaskList } = require("../dist/main");
 const { default: deferred } = require("../dist/deferred");
+const preset = require("./graphile.config.js");
 
 /** @type {(ms: number) => Promise<void>} */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -10,6 +11,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 /** @type {import('../dist/index.js').WorkerPoolOptions} */
 const options = {
   concurrency: 1,
+  preset,
 };
 
 async function main() {
