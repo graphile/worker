@@ -34,7 +34,7 @@ export async function completeJob(
         text: `\
 with j as (
 delete from ${escapedWorkerSchema}._private_jobs as jobs
-from unnest($1::bigint[]) n(n)
+using unnest($1::bigint[]) n(n)
 where id = n
 returning *
 )
