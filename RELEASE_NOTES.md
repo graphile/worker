@@ -25,6 +25,8 @@ Read more:
   than the `workerId`. Be sure to upgrade
   [Worker Pro](https://worker.graphile.org/docs/pro) at the same time if you're
   using it!
+- Fixes bug where CLI defaults override `graphile.config.js` settings (by
+  removing CLI defaults)
 
 ## v0.16.6
 
