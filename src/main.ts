@@ -582,11 +582,16 @@ export function _runTaskList(
       // TODO: stop the batch()es and await the promises here
       const releaseCompleteJobPromise = releaseCompleteJob?.();
       const releaseFailJobPromise = releaseFailJob?.();
-      const [releaseCompleteJobResult, releaseFailJobResult] =
-        await Promise.allSettled([
-          releaseCompleteJobPromise,
-          releaseFailJobPromise,
-        ]);
+      const releaseLocalQueue = localQueue?.release();
+      const [
+        releaseCompleteJobResult,
+        releaseFailJobResult,
+        releaseLocalQueueResult,
+      ] = await Promise.allSettled([
+        releaseCompleteJobPromise,
+        releaseFailJobPromise,
+        releaseLocalQueue,
+      ]);
       if (releaseCompleteJobResult.status === "rejected") {
         // Log but continue regardless
         logger.error(
@@ -602,6 +607,15 @@ export function _runTaskList(
           `Releasing failed job batcher failed: ${releaseFailJobResult.reason}`,
           {
             error: releaseFailJobResult.reason,
+          },
+        );
+      }
+      if (releaseLocalQueueResult.status === "rejected") {
+        // Log but continue regardless
+        logger.error(
+          `Releasing local queue failed: ${releaseLocalQueueResult.reason}`,
+          {
+            error: releaseLocalQueueResult.reason,
           },
         );
       }
@@ -906,6 +920,7 @@ export function _runTaskList(
           withPgClient,
           workerPool,
           localQueueSize,
+          continuous,
         )
       : null;
   const getJob: GetJobFunction = localQueue
