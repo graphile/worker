@@ -9,8 +9,6 @@ import { getUtilsAndReleasersFromOptions } from "./lib";
 import { EMPTY_PRESET, WorkerPreset } from "./preset";
 import { runInternal, runOnceInternal } from "./runner";
 
-const defaults = WorkerPreset.worker!;
-
 const argv = yargs
   .parserConfiguration({
     "boolean-negation": false,
@@ -116,7 +114,7 @@ async function main() {
 
   const [compiledOptions, release] = await getUtilsAndReleasersFromOptions({
     preset: {
-      extends: [userPreset ?? EMPTY_PRESET, argvPreset],
+      extends: [WorkerPreset, userPreset ?? EMPTY_PRESET, argvPreset],
     },
   });
   try {
