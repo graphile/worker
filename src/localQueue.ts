@@ -354,10 +354,14 @@ export class LocalQueue {
     this.mode = RELEASED;
 
     if (oldMode === POLLING) {
+      // Release pending workers
+      const workers = this.workerQueue.splice(0, this.workerQueue.length);
+      workers.forEach((w) => w.resolve(undefined));
+
+      // Release next fetch call
       if (this.fetchTimer) {
         clearTimeout(this.fetchTimer);
         this.fetchTimer = null;
-        this.workerQueue.forEach((w) => w.resolve(undefined));
       } else {
         // Rely on checking mode at end of fetch
       }
