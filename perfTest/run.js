@@ -3,7 +3,7 @@ const { execSync, exec: rawExec } = require("child_process");
 const { promisify } = require("util");
 const exec = promisify(rawExec);
 
-const JOB_COUNT = 20000;
+const JOB_COUNT = 200000;
 const STUCK_JOB_COUNT = 0;
 const PARALLELISM = 4;
 const CONCURRENCY = 24;
