@@ -435,6 +435,8 @@ export interface Worker {
 
 export interface WorkerPool {
   id: string;
+  /** Encourage `n` workers to look for jobs _right now_, cancelling the delay timers. */
+  nudge(n: number): void;
   /** @deprecated Use gracefulShutdown instead */
   release: () => Promise<void>;
   gracefulShutdown: (message?: string) => Promise<void>;

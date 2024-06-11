@@ -437,10 +437,9 @@ export function runTaskListInternal(
             const payload = tryParseJson<{
               count: number;
             }>(message.payload);
-            let n = payload?.count ?? 1;
+            const n = payload?.count ?? 1;
             if (n > 0) {
-              // Nudge up to `n` workers
-              workerPool._workers.some((worker) => worker.nudge() && --n <= 0);
+              workerPool.nudge(n);
             }
             break;
           }
@@ -658,6 +657,14 @@ export function _runTaskList(
     _withPgClient: withPgClient,
     get worker() {
       return concurrency === 1 ? this._workers[0] ?? null : null;
+    },
+    nudge(this: WorkerPool, n: number) {
+      if (localQueue) {
+        localQueue.pulse();
+      } else {
+        // Nudge up to `n` workers
+        this._workers.some((worker) => worker.nudge() && --n <= 0);
+      }
     },
     abortSignal,
     release: async () => {
