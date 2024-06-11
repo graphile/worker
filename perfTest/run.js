@@ -53,9 +53,7 @@ async function main() {
   let result;
   const startupTime = await time(async () => {
     result = await exec(
-      `node ../dist/cli.js --once --once -j ${CONCURRENCY} -m ${
-        CONCURRENCY + 1
-      }`,
+      `node ../dist/cli.js --once -j ${CONCURRENCY} -m ${CONCURRENCY + 1}`,
       execOptions,
     );
   });
