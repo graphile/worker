@@ -3,6 +3,7 @@ import assert from "assert";
 import {
   CompiledSharedOptions,
   EnhancedWithPgClient,
+  PromiseOrDirect,
   WorkerPoolOptions,
 } from ".";
 import { MINUTE, SECOND } from "./cronConstants";
@@ -95,6 +96,8 @@ export class LocalQueue {
   // when the queue is pulsed during a fetch.
   fetchAgain = false;
   mode: typeof POLLING | typeof WAITING | typeof TTL_EXPIRED | typeof RELEASED;
+  private promise = defer();
+  private backgroundCount = 0;
 
   constructor(
     private readonly compiledSharedOptions: CompiledSharedOptions<WorkerPoolOptions>,
@@ -109,6 +112,28 @@ export class LocalQueue {
     this.pollInterval =
       compiledSharedOptions.resolvedPreset.worker.pollInterval ?? 2 * SECOND;
     this.setModePolling();
+  }
+
+  private decreaseBackgroundCount = () => {
+    this.backgroundCount--;
+    if (this.mode === "RELEASED" && this.backgroundCount === 0) {
+      this.promise.resolve();
+    }
+  };
+
+  /**
+   * For promises that happen in the background, but that we want to ensure are
+   * handled before we release the queue (so that the database pool isn't
+   * released too early).
+   */
+  private background(promise: Promise<void>) {
+    if (this.mode === "RELEASED" && this.backgroundCount === 0) {
+      throw new Error(
+        `Cannot background something when the queue is already released`,
+      );
+    }
+    this.backgroundCount++;
+    promise.then(this.decreaseBackgroundCount, this.decreaseBackgroundCount);
   }
 
   private setModePolling() {
@@ -194,27 +219,31 @@ export class LocalQueue {
 
   private returnJobs() {
     const jobsToReturn = this.jobQueue.splice(0, this.jobQueue.length);
-    returnJob(
-      this.compiledSharedOptions,
-      this.withPgClient,
-      this.workerPool.id,
-      jobsToReturn,
-    ).catch((e) => {
-      // TODO: handle this better!
-      this.compiledSharedOptions.logger.error(
-        `Failed to return jobs from local queue to database queue`,
-        { error: e },
-      );
-    });
+    this.background(
+      returnJob(
+        this.compiledSharedOptions,
+        this.withPgClient,
+        this.workerPool.id,
+        jobsToReturn,
+      ).then((e) => {
+        // TODO: handle this better!
+        this.compiledSharedOptions.logger.error(
+          `Failed to return jobs from local queue to database queue`,
+          { error: e },
+        );
+      }),
+    );
   }
 
   private fetch = (): void => {
-    this._fetch().catch((e) => {
-      // This should not happen
-      this.compiledSharedOptions.logger.error(`Error occurred during fetch`, {
-        error: e,
-      });
-    });
+    this.background(
+      this._fetch().catch((e) => {
+        // This should not happen
+        this.compiledSharedOptions.logger.error(`Error occurred during fetch`, {
+          error: e,
+        });
+      }),
+    );
   };
 
   private async _fetch() {
@@ -303,14 +332,14 @@ export class LocalQueue {
   }
 
   // If you refactor this to be a method rather than a property, make sure that you `.bind(this)` to it.
-  public getJob: GetJobFunction = async (workerId, flagsToSkip) => {
+  public getJob: GetJobFunction = (workerId, flagsToSkip) => {
     if (this.mode === RELEASED) {
       return undefined;
     }
 
     // Cannot batch if there's flags
     if (flagsToSkip !== null) {
-      const jobs = await baseGetJob(
+      const jobsPromise = baseGetJob(
         this.compiledSharedOptions,
         this.withPgClient,
         this.tasks,
@@ -318,7 +347,7 @@ export class LocalQueue {
         flagsToSkip,
         1,
       );
-      return jobs[0];
+      return jobsPromise.then((jobs) => jobs[0]);
     }
 
     if (this.mode === TTL_EXPIRED) {
@@ -340,7 +369,10 @@ export class LocalQueue {
   };
 
   public release() {
-    this.setModeReleased();
+    if (this.mode !== "RELEASED") {
+      this.setModeReleased();
+    }
+    return this.promise;
   }
 
   private setModeReleased() {
@@ -362,6 +394,7 @@ export class LocalQueue {
       if (this.fetchTimer) {
         clearTimeout(this.fetchTimer);
         this.fetchTimer = null;
+        this.promise.resolve();
       } else {
         // Rely on checking mode at end of fetch
       }
@@ -376,6 +409,8 @@ export class LocalQueue {
       // No action necessary
     }
 
-    // TODO: we should await the returnJobs promise, the fetch promise, etc.
+    if (this.backgroundCount === 0) {
+      this.promise.resolve();
+    }
   }
 }
