@@ -1106,7 +1106,7 @@ function batch<TSpec, TResult>(
   };
   const decrementPending = () => {
     pending--;
-    if (pending === 0 && releasing === true) {
+    if (releasing === true && pending === 0) {
       released = true;
       promise.resolve();
     }
