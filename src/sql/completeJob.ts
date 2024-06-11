@@ -32,7 +32,8 @@ export async function completeJob(
         text: `\
 with j as (
 delete from ${escapedWorkerSchema}._private_jobs as jobs
-where id = ANY($1::bigint[])
+from unnest($1::bigint[]) n(n)
+where id = n
 returning *
 )
 update ${escapedWorkerSchema}._private_job_queues as job_queues
@@ -51,7 +52,8 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
       client.query({
         text: `\
 delete from ${escapedWorkerSchema}._private_jobs as jobs
-where id = ANY($1::bigint[])`,
+using unnest($1::bigint[]) n(n)
+where id = n`,
         values: [jobIdsWithoutQueue],
         name: !preparedStatements ? undefined : `complete_job/${workerSchema}`,
       }),
