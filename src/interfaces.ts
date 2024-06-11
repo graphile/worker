@@ -1171,7 +1171,7 @@ export interface WorkerPluginContext {
 export type GetJobFunction = (
   workerId: string,
   flagsToSkip: string[] | null,
-) => Promise<Job | undefined>;
+) => PromiseOrDirect<Job | undefined>;
 
 export type CompleteJobFunction = (job: DbJob) => void;
 export type FailJobFunction = (
