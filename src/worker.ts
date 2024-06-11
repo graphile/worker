@@ -342,14 +342,15 @@ export function makeNewWorker(
           }`,
           { failure: true, job, error: err, duration },
         );
-        failJob(
+        failJob({
           job,
           message,
           // "Batch jobs": copy through only the unsuccessful parts of the payload
-          batchJobFailedPayloads.length > 0
-            ? batchJobFailedPayloads
-            : undefined,
-        );
+          replacementPayload:
+            batchJobFailedPayloads.length > 0
+              ? batchJobFailedPayloads
+              : undefined,
+        });
       } else {
         try {
           events.emit("job:success", { worker, job });

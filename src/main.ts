@@ -941,7 +941,6 @@ export function _runTaskList(
     completeJobBatchDelay >= 0
       ? batch(
           completeJobBatchDelay,
-          (job) => job,
           (jobs) =>
             baseCompleteJob(
               compiledSharedOptions,
@@ -980,11 +979,6 @@ export function _runTaskList(
     failJobBatchDelay >= 0
       ? batch(
           failJobBatchDelay,
-          (job, message, replacementPayload) => ({
-            job,
-            message,
-            replacementPayload,
-          }),
           (specs) =>
             baseFailJob(
               compiledSharedOptions,
@@ -1009,9 +1003,9 @@ export function _runTaskList(
         )
       : {
           release: null,
-          fn: (job, message, replacementPayload) =>
+          fn: (spec) =>
             baseFailJob(compiledSharedOptions, withPgClient, workerPool.id, [
-              { job, message, replacementPayload },
+              spec,
             ]),
         }
   ) as { release: (() => void) | null; fn: FailJobFunction };
@@ -1093,9 +1087,8 @@ export const runTaskListOnce = (
   return pool;
 };
 
-function batch<TArgs extends [...unknown[]], TSpec, TResult>(
+function batch<TSpec, TResult>(
   delay: number,
-  makeSpec: (...args: TArgs) => TSpec,
   callback: (specs: ReadonlyArray<TSpec>) => Promise<TResult>,
   errorHandler: (
     error: unknown,
@@ -1103,7 +1096,7 @@ function batch<TArgs extends [...unknown[]], TSpec, TResult>(
   ) => void | Promise<void>,
 ): {
   release(): void | Promise<void>;
-  fn: (...args: TArgs) => void;
+  fn: (spec: TSpec) => void;
 } {
   let pending = 0;
   let releasing = false;
@@ -1132,13 +1125,12 @@ function batch<TArgs extends [...unknown[]], TSpec, TResult>(
       }
       await promise;
     },
-    fn(...args) {
+    fn(spec) {
       if (released) {
         throw new Error(
           "This batcher has been released, and so no more calls can be made.",
         );
       }
-      const spec = makeSpec(...args);
       if (currentBatch !== null) {
         currentBatch.push(spec);
       } else {

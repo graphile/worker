@@ -1174,8 +1174,8 @@ export type GetJobFunction = (
 ) => PromiseOrDirect<Job | undefined>;
 
 export type CompleteJobFunction = (job: DbJob) => void;
-export type FailJobFunction = (
-  job: DbJob,
-  message: string,
-  replacementPayload: undefined | unknown[],
-) => void;
+export type FailJobFunction = (spec: {
+  job: DbJob;
+  message: string;
+  replacementPayload: undefined | unknown[];
+}) => void;
