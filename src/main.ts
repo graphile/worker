@@ -658,10 +658,11 @@ export function _runTaskList(
     get worker() {
       return concurrency === 1 ? this._workers[0] ?? null : null;
     },
-    nudge(this: WorkerPool, n: number) {
+    nudge(this: WorkerPool, count: number) {
       if (localQueue) {
         localQueue.pulse();
       } else {
+        let n = count;
         // Nudge up to `n` workers
         this._workers.some((worker) => worker.nudge() && --n <= 0);
       }

@@ -3,7 +3,6 @@ import assert from "assert";
 import {
   CompiledSharedOptions,
   EnhancedWithPgClient,
-  PromiseOrDirect,
   WorkerPoolOptions,
 } from ".";
 import { MINUTE, SECOND } from "./cronConstants";
