@@ -1157,3 +1157,7 @@ export interface WorkerPluginContext {
   hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
   resolvedPreset: ResolvedWorkerPreset;
 }
+export type GetJobFunction = (
+  workerId: string,
+  flagsToSkip: string[] | null,
+) => Promise<Job | undefined>;

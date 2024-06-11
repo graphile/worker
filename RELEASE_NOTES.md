@@ -21,6 +21,10 @@ Read more:
 
 ## Pending
 
+- BREAKING: Jobs and queues are now `locked_by` their `WorkerPool`'s id rather
+  than the `workerId`. Be sure to upgrade
+  [Worker Pro](https://worker.graphile.org/docs/pro) at the same time if you're
+  using it!
 - Fixes bug where CLI defaults override `graphile.config.js` settings (by
   removing CLI defaults)
 

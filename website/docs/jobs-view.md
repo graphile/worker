@@ -49,7 +49,7 @@ performance issues!
 - `updated_at` - when the job was last updated
 - `key` - the `job_key` of the job, if any
 - `locked_at` - when the job was locked, if locked
-- `locked_by` - the worker id that the job was locked by, if locked
+- `locked_by` - the WorkerPool id that the job was locked by, if locked
 - `revision` - the revision number of the job, bumped each time the record is
   updated
 - `flags` - the [forbidden flags](/docs/forbidden-flags) associated with this

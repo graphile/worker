@@ -663,7 +663,7 @@ test("runs jobs asynchronously", () =>
         expect(q.job_count).toEqual(1);
         expect(+q.locked_at).toBeGreaterThanOrEqual(+start);
         expect(+q.locked_at).toBeLessThanOrEqual(+new Date());
-        expect(q.locked_by).toEqual(worker.workerId);
+        expect(q.locked_by).toEqual(worker.workerPool.id);
       }
 
       jobPromise!.resolve();

@@ -57,7 +57,7 @@ where locked_by is not null and locked_by not in (
 commit;
 ```
 
-For Graphile Worker v0.16.0+ it would be:
+For Graphile Worker v0.16.x it would be:
 
 ```sql
 begin;
@@ -70,6 +70,23 @@ update graphile_worker._private_job_queues as job_queues
 set locked_at = null, locked_by = null
 where locked_by is not null and locked_by not in (
   select worker_id from graphile_worker._private_pro_workers
+);
+commit;
+```
+
+For Graphile Worker v0.17.x+ it would be:
+
+```sql
+begin;
+update graphile_worker._private_jobs as jobs
+set locked_at = null, locked_by = null
+where locked_by is not null and locked_by not in (
+  select pool_id from graphile_worker._private_pro_pools
+);
+update graphile_worker._private_job_queues as job_queues
+set locked_at = null, locked_by = null
+where locked_by is not null and locked_by not in (
+  select pool_id from graphile_worker._private_pro_pools
 );
 commit;
 ```

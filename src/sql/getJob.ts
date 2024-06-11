@@ -15,7 +15,7 @@ export async function getJob(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: EnhancedWithPgClient,
   tasks: TaskList,
-  workerId: string,
+  poolId: string,
   flagsToSkip: string[] | null,
 ): Promise<Job | undefined> {
   const {
@@ -172,7 +172,7 @@ with j as (
   // TODO: breaking change; change this to more optimal:
   // `RETURNING id, job_queue_id, task_id, payload`,
   const values = [
-    workerId,
+    poolId,
     taskDetails.taskIds,
     ...(hasFlags ? [flagsToSkip!] : []),
     ...(useNodeTime ? [new Date().toISOString()] : []),
