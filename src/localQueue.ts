@@ -14,6 +14,7 @@ import { returnJob } from "./sql/returnJob";
 const POLLING = "POLLING";
 const WAITING = "WAITING";
 const TTL_EXPIRED = "TTL_EXPIRED";
+const RELEASED = "RELEASED";
 
 /**
  * The local queue exists to reduce strain on the database; it works by
@@ -32,6 +33,7 @@ const TTL_EXPIRED = "TTL_EXPIRED";
  * - POLLING mode
  * - WAITING mode
  * - TTL_EXPIRED mode
+ * - RELEASED mode
  *
  * ## POLLING mode
  *
@@ -76,6 +78,9 @@ const TTL_EXPIRED = "TTL_EXPIRED";
  * local queue will sit in TTL_EXPIRED mode until a worker asks for a job,
  * whereupon the local queue will enter POLLING mode (triggering a fetch).
  *
+ * ## RELEASED mode
+ *
+ * Triggered on shutdown.
  */
 
 export class LocalQueue {
@@ -89,7 +94,7 @@ export class LocalQueue {
   // Set true to fetch immediately after a fetch completes; typically only used
   // when the queue is pulsed during a fetch.
   fetchAgain = false;
-  mode: typeof POLLING | typeof WAITING | typeof TTL_EXPIRED;
+  mode: typeof POLLING | typeof WAITING | typeof TTL_EXPIRED | typeof RELEASED;
 
   constructor(
     private readonly compiledSharedOptions: CompiledSharedOptions<WorkerPoolOptions>,
@@ -97,6 +102,7 @@ export class LocalQueue {
     private readonly withPgClient: EnhancedWithPgClient,
     private readonly workerPool: WorkerPool,
     private readonly getJobBatchSize: number,
+    private readonly continuous: boolean,
   ) {
     this.ttl =
       compiledSharedOptions.resolvedPreset.worker.localQueueTtl ?? 5 * MINUTE;
@@ -183,6 +189,10 @@ export class LocalQueue {
     this.mode = TTL_EXPIRED;
 
     // Return jobs to the pool
+    this.returnJobs();
+  }
+
+  private returnJobs() {
     const jobsToReturn = this.jobQueue.splice(0, this.jobQueue.length);
     returnJob(
       this.compiledSharedOptions,
@@ -208,6 +218,7 @@ export class LocalQueue {
   };
 
   private async _fetch() {
+    let fetchedMax = false;
     try {
       assert.equal(this.mode, POLLING, "Can only fetch when in polling mode");
       assert.equal(
@@ -222,6 +233,7 @@ export class LocalQueue {
       this.fetchAgain = false;
       this.fetchInProgress = true;
 
+      // The ONLY await in this function.
       const jobs = await baseGetJob(
         this.compiledSharedOptions,
         this.withPgClient,
@@ -230,12 +242,14 @@ export class LocalQueue {
         null,
         this.getJobBatchSize,
       );
+
       assert.equal(
         this.jobQueue.length,
         0,
         "Should not fetch when job queue isn't empty",
       );
       const jobCount = jobs.length;
+      fetchedMax = jobCount >= this.getJobBatchSize;
       const workerCount = Math.min(jobCount, this.workerQueue.length);
       const workers = this.workerQueue.splice(0, workerCount);
       for (let i = 0; i < jobCount; i++) {
@@ -246,17 +260,6 @@ export class LocalQueue {
           this.jobQueue.push(job);
         }
       }
-      if (this.jobQueue.length > 0) {
-        this.setModeWaiting();
-      } else {
-        if (jobCount === this.getJobBatchSize || this.fetchAgain) {
-          // Maximal fetch; trigger immediate refetch
-          process.nextTick(this.fetch);
-        } else {
-          // Set up the timer
-          this.fetchTimer = setTimeout(this.fetch, this.pollInterval);
-        }
-      }
     } catch (e) {
       // Error happened; rely on poll interval.
       this.compiledSharedOptions.logger.error(
@@ -265,6 +268,23 @@ export class LocalQueue {
       );
     } finally {
       this.fetchInProgress = false;
+    }
+
+    // Finally, now that there is no fetch in progress, choose what to do next
+    if (this.mode === "RELEASED") {
+      this.returnJobs();
+    } else if (this.jobQueue.length > 0) {
+      this.setModeWaiting();
+    } else {
+      if (fetchedMax || this.fetchAgain) {
+        // Maximal fetch; trigger immediate refetch
+        this.fetch();
+      } else if (this.continuous) {
+        // Set up the timer
+        this.fetchTimer = setTimeout(this.fetch, this.pollInterval);
+      } else {
+        this.setModeReleased();
+      }
     }
   }
 
@@ -284,6 +304,10 @@ export class LocalQueue {
 
   // If you refactor this to be a method rather than a property, make sure that you `.bind(this)` to it.
   public getJob: GetJobFunction = async (workerId, flagsToSkip) => {
+    if (this.mode === RELEASED) {
+      return undefined;
+    }
+
     // Cannot batch if there's flags
     if (flagsToSkip !== null) {
       const jobs = await baseGetJob(
@@ -303,6 +327,10 @@ export class LocalQueue {
 
     const job = this.jobQueue.shift();
     if (job !== undefined) {
+      if (this.jobQueue.length === 0) {
+        assert.equal(this.mode, WAITING);
+        this.setModePolling();
+      }
       return job;
     } else {
       const d = defer<Job>();
@@ -310,4 +338,40 @@ export class LocalQueue {
       return d;
     }
   };
+
+  public release() {
+    this.setModeReleased();
+  }
+
+  private setModeReleased() {
+    assert.notEqual(
+      this.mode,
+      RELEASED,
+      "LocalQueue must only be released once",
+    );
+
+    const oldMode = this.mode;
+    this.mode = RELEASED;
+
+    if (oldMode === POLLING) {
+      if (this.fetchTimer) {
+        clearTimeout(this.fetchTimer);
+        this.fetchTimer = null;
+        this.workerQueue.forEach((w) => w.resolve(undefined));
+      } else {
+        // Rely on checking mode at end of fetch
+      }
+    } else if (oldMode === WAITING) {
+      if (this.ttlExpiredTimer) {
+        clearTimeout(this.ttlExpiredTimer);
+        this.ttlExpiredTimer = null;
+      }
+      // Trigger the jobs to be released
+      this.returnJobs();
+    } else if (oldMode === TTL_EXPIRED) {
+      // No action necessary
+    }
+
+    // TODO: we should await the returnJobs promise, the fetch promise, etc.
+  }
 }
