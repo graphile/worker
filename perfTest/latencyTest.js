@@ -1,10 +1,13 @@
+// @ts-check
 const assert = require("assert");
 const { Pool } = require("pg");
 const { runTaskList } = require("../dist/main");
 const { default: deferred } = require("../dist/deferred");
 
+/** @type {(ms: number) => Promise<void>} */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** @type {import('../dist/index.js').WorkerPoolOptions} */
 const options = {
   concurrency: 1,
 };
@@ -14,6 +17,7 @@ async function main() {
   const startTimes = {};
   let latencies = [];
   const deferreds = {};
+  /** @type {import('../dist/index.js').TaskList} */
   const tasks = {
     latency: ({ id }) => {
       latencies.push(process.hrtime(startTimes[id]));
@@ -86,6 +90,7 @@ main().catch((e) => {
   process.exit(1);
 });
 
+/** @type {(pgPool: Pool) => Promise<void>} */
 async function forEmptyQueue(pgPool) {
   let remaining;
   do {
