@@ -27,6 +27,8 @@ Read more:
   using it!
 - Fixes bug where CLI defaults override `graphile.config.js` settings (by
   removing CLI defaults)
+- Fix bug where executable tasks had their stdout/stderr ignored; this is now
+  output via logging (thanks @wineTGH).
 
 ## v0.16.6
 
