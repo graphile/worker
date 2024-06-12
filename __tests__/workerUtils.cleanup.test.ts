@@ -71,18 +71,18 @@ test("cleanup with GC_JOB_QUEUES", () =>
     });
 
     const jobs: Job[] = [];
-    const WORKER_ID_1 = "worker1";
-    const WORKER_ID_2 = "worker2";
-    const WORKER_ID_3 = "worker3";
+    const POOL_ID_1 = "pool-1";
+    const POOL_ID_2 = "pool-2";
+    const POOL_ID_3 = "pool-3";
     let a = 0;
     const date = new Date();
     const specs = [
-      [WORKER_ID_1, "test", "test_job1"],
-      [WORKER_ID_2, "test2", "test_job2"],
-      [WORKER_ID_3, "test3", "test_job3"],
+      [POOL_ID_1, "test", "test_job1"],
+      [POOL_ID_2, "test2", "test_job2"],
+      [POOL_ID_3, "test3", "test_job3"],
       [null, null, "test_job4"],
     ] as const;
-    for (const [workerId, queueName, taskIdentifier] of specs) {
+    for (const [poolId, queueName, taskIdentifier] of specs) {
       date.setMinutes(date.getMinutes() - 1);
       const job = await utils.addJob(
         taskIdentifier,
@@ -90,7 +90,7 @@ test("cleanup with GC_JOB_QUEUES", () =>
         { queueName: queueName ?? undefined },
       );
       jobs.push(job);
-      if (workerId) {
+      if (poolId) {
         await pgClient.query(
           `\
 with j as (
@@ -107,7 +107,7 @@ with j as (
     where job_queues.id = j.job_queue_id
 )
 select * from j`,
-          [date.toISOString(), workerId, job.id],
+          [date.toISOString(), poolId, job.id],
         );
       }
     }
@@ -121,7 +121,7 @@ select * from j`,
       "test3",
     ]);
 
-    await utils.forceUnlockWorkers(["worker3"]);
+    await utils.forceUnlockWorkers([POOL_ID_3]);
     const thirdJob = jobs[2]; // Belongs to queueName 'task3'
     await utils.completeJobs([thirdJob.id]);
     await utils.cleanup({ tasks: ["GC_JOB_QUEUES"] });

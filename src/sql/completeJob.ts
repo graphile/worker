@@ -4,7 +4,7 @@ import { CompiledSharedOptions } from "../lib";
 export async function completeJob(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: EnhancedWithPgClient,
-  workerId: string,
+  poolId: string,
   job: DbJob,
 ): Promise<void> {
   const {
@@ -29,7 +29,7 @@ update ${escapedWorkerSchema}._private_job_queues as job_queues
 set locked_by = null, locked_at = null
 from j
 where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
-        values: [job.id, workerId],
+        values: [job.id, poolId],
         name: !preparedStatements
           ? undefined
           : `complete_job_q/${workerSchema}`,

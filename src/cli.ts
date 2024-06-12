@@ -9,8 +9,6 @@ import { getUtilsAndReleasersFromOptions } from "./lib";
 import { EMPTY_PRESET, WorkerPreset } from "./preset";
 import { runInternal, runOnceInternal } from "./runner";
 
-const defaults = WorkerPreset.worker!;
-
 const argv = yargs
   .parserConfiguration({
     "boolean-negation": false,
@@ -25,7 +23,6 @@ const argv = yargs
     description:
       "The database schema in which Graphile Worker is (to be) located",
     alias: "s",
-    default: defaults.schema,
   })
   .string("schema")
   .option("schema-only", {
@@ -45,25 +42,21 @@ const argv = yargs
   .option("jobs", {
     description: "number of jobs to run concurrently",
     alias: "j",
-    default: defaults.concurrentJobs,
   })
   .number("jobs")
   .option("max-pool-size", {
     description: "maximum size of the PostgreSQL pool",
     alias: "m",
-    default: 10,
   })
   .number("max-pool-size")
   .option("poll-interval", {
     description:
       "how long to wait between polling for jobs in milliseconds (for jobs scheduled in the future/retries)",
-    default: defaults.pollInterval,
   })
   .number("poll-interval")
   .option("no-prepared-statements", {
     description:
       "set this flag if you want to disable prepared statements, e.g. for compatibility with pgBouncer",
-    default: false,
   })
   .boolean("no-prepared-statements")
   .option("config", {
@@ -117,9 +110,11 @@ async function main() {
     throw new Error("Cannot specify both --once and --schema-only");
   }
 
+  const argvPreset = argvToPreset(argv);
+
   const [compiledOptions, release] = await getUtilsAndReleasersFromOptions({
     preset: {
-      extends: [userPreset ?? EMPTY_PRESET, argvToPreset(argv)],
+      extends: [WorkerPreset, userPreset ?? EMPTY_PRESET, argvPreset],
     },
   });
   try {
