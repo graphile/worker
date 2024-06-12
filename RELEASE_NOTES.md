@@ -19,6 +19,11 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
+## Pending
+
+- Fix bug where executable tasks had their stdout/stderr ignored; this is now
+  output via logging (thanks @wineTGH).
+
 ## v0.16.6
 
 - Fix bug in `workerUtils.cleanup()` where queues would not be cleaned up if
