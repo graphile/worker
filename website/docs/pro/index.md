@@ -33,12 +33,37 @@ at least 18 months after the launch offer ends.
 Worker Pro is currently in sponsors-only early access; any
 [sponsor](https://github.com/sponsors/benjie) on ~~$100/mo~~ $25+/mo may request
 access from @jemgillam or @benjie via the Discord, or email `team` at the domain
-`graphile.com`. Access to Worker Pro grants access to the GitHub Packages module
-and
+`graphile.com`.
+
+The module is stored on and access is managed through GitHub Packages. We will
+need to know the GitHub username(s) of the person(s) that will need access so
+that we can add them to the repository. We strongly recommend that you also send
+us the GitHub username of a GitHub "service account" (see below) that you can
+use to generate an access token which can be shared across your various
+environments.
+
+The usernames will be added to a team within the https://github.com/graphile-pro
+organization. This will grant access to the GitHub Packages module and
 [the source code repository on GitHub](https://github.com/graphile-pro/worker),
 including the ability to
 [file issues](https://github.com/graphile-pro/worker/issues/new) and open
-discussions about Worker Pro.
+discussions about Worker Pro. Though the repositories are currently private, any
+content posted to them via issues, discussions, PRs or otherwise may be made
+public in future, so post accordingly.
+
+### Service account
+
+Access to GitHub Packages requires a (highly restricted) security token. Despite
+the very limited scope of these tokens, using your own security credentials for
+shared systems (production, staging, development) isn't ideal; we therefore
+suggest that you create (if you haven't already) a separate GitHub user account
+that is granted minimal privileges, and this account can be used to generate a
+token that can be shared between the team and production environments. The
+service account you create on GitHub likely doesn't even need access to your
+source code.
+
+Send us the username of the service account and we can invite it to the
+https://github.com/graphile-pro organization.
 
 ### Source available
 
