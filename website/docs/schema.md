@@ -58,3 +58,19 @@ schema in which you can store additional details.
    row from your task code. This is particularly useful to keep the end user
    abreast of the progress of their various background jobs, but is also useful
    for tracking completed jobs (which Graphile Worker will delete on success).
+
+## Use a postgresql user with restricted rights
+
+If you want to use a postgresql user with restricted rights on the
+`graphile_worker` schema in your database you can use the following trick
+describe in this [issue](https://github.com/graphile/worker/issues/132). Create
+the following table as your limited user. You'll avoid the error of missing
+create right on the `graphile_worker` schema
+
+```
+create table graphile_worker.migrations(
+  id int primary key,
+  ts timestamptz default now() not null,
+  breaking bool
+);
+```
