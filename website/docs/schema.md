@@ -59,7 +59,7 @@ schema in which you can store additional details.
    abreast of the progress of their various background jobs, but is also useful
    for tracking completed jobs (which Graphile Worker will delete on success).
 
-## Use a PostgreSQL user with restricted rights
+## Using a PostgreSQL user with restricted rights
 
 Graphile Worker expects to execute as the database owner (not superuser) role.
 If you want to use a PostgreSQL user with limited permissions instead, you will
