@@ -59,15 +59,23 @@ schema in which you can store additional details.
    abreast of the progress of their various background jobs, but is also useful
    for tracking completed jobs (which Graphile Worker will delete on success).
 
-## Use a postgresql user with restricted rights
+## Use a PostgreSQL user with restricted rights
 
-If you want to use a PostgreSQL user with restricted rights on the
-`graphile_worker` schema in your database you can use the following trick
-describe in [issue #132](https://github.com/graphile/worker/issues/132). Create
-the following table as your limited user. You'll avoid the error of missing
-create right on the `graphile_worker` schema
+Graphile Worker expects to execute as the database owner (not superuser) role.
+If you want to use a PostgreSQL user with limited permissions instead, you will
+need to make some adjustments.
+
+For example, if you want to create the `graphile_worker` schema yourself then
+you can follow the technique described in
+[issue #132](https://github.com/graphile/worker/issues/132) to avoid errors
+about the worker role missing the privileges required to create the
+`graphile_worker` schema. Worker determines whether to create the schema or not
+based on whether or not the migrations table in the schema exists, so by
+creating the migrations table in addition to the `graphile_worker` schema Worker
+should be able to move on to the next step without raising an error.
 
 ```sql
+create schema graphile_worker;
 create table graphile_worker.migrations (
   id int primary key,
   ts timestamptz default now() not null,
