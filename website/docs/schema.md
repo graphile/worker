@@ -61,16 +61,16 @@ schema in which you can store additional details.
 
 ## Use a postgresql user with restricted rights
 
-If you want to use a postgresql user with restricted rights on the
+If you want to use a PostgreSQL user with restricted rights on the
 `graphile_worker` schema in your database you can use the following trick
-describe in this [issue](https://github.com/graphile/worker/issues/132). Create
+describe in [issue #132](https://github.com/graphile/worker/issues/132). Create
 the following table as your limited user. You'll avoid the error of missing
 create right on the `graphile_worker` schema
 
-```
-create table graphile_worker.migrations(
+```sql
+create table graphile_worker.migrations (
   id int primary key,
   ts timestamptz default now() not null,
-  breaking bool
+  breaking bool default false not null
 );
 ```
