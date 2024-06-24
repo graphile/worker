@@ -34,7 +34,7 @@ export async function installSchema(
   (event as Writeable<GraphileWorker.MigrateEvent>).postgresVersion =
     await fetchAndCheckPostgresVersion(event.client);
   await hooks.process("prebootstrap", event);
-
+  // Change to this query should be reflected in website/docs/schema.md
   await event.client.query(`
     create schema if not exists ${escapedWorkerSchema};
     create table if not exists ${escapedWorkerSchema}.migrations(
