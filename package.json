@@ -1,6 +1,6 @@
 {
   "name": "graphile-worker",
-  "version": "0.16.6",
+  "version": "0.17.0-canary.6c2c85c",
   "type": "commonjs",
   "description": "Job queue for PostgreSQL",
   "main": "dist/index.js",
