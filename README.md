@@ -36,7 +36,6 @@ And please give some love to our featured sponsors 🤩:
 <td align="center"><a href="https://gosteelhead.com/"><img src="https://graphile.org/images/sponsors/steelhead.svg" width="90" height="90" alt="Steelhead" /><br />Steelhead</a> *</td>
 </tr><tr>
 <td align="center"><a href=""><img src="https://graphile.org/images/sponsors/latchbio.jpg" width="90" height="90" alt="LatchBio" /><br />LatchBio</a> *</td>
-<td align="center"><a href=""><img src="https://graphile.org/images/sponsors/triggerdev.png" width="90" height="90" alt="Trigger.dev" /><br />Trigger.dev</a></td>
 </tr></table>
 
 <em>\* Sponsors the entire Graphile suite</em>
