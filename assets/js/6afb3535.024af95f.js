@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkgraphile_worker=self.webpackChunkgraphile_worker||[]).push([[2890],{3011:e=>{e.exports=JSON.parse('[{"label":"releases","permalink":"/news/tags/releases","count":1}]')}}]);
