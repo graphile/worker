@@ -83,8 +83,8 @@ SELECT graphile_worker.add_job(
   $1,
   payload := $2,
   queue_name := $3,
-  max_attempts := $4,
-  run_at := NOW() + ($5 * INTERVAL '1 second')
+  run_at := NOW() + ($4 * INTERVAL '1 second'),
+  max_attempts := $5
 );
 ```
 
