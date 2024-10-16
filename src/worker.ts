@@ -284,7 +284,7 @@ export function makeNewWorker(
             // Create a "partial" error for the batch
             err = new Error(
               `Batch failures:\n${batchJobErrors
-                .map((e) => (e as Error).message ?? String(e))
+                .map((e) => (e as Error)?.message ?? String(e))
                 .join("\n")}`,
             );
           }
