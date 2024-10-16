@@ -143,7 +143,10 @@ A Logger instance.
 
 Type: `number | undefined`
 
-Maximum number of concurrent connections to Postgres
+Maximum number of concurrent connections to Postgres. This number can be lower
+than concurrentJobs. However a low pool size may cause you issues. If all your 
+pool clients are busy then no jobs can be started and no jobs can be 
+released, so it's critical that you don't run out.
 
 ### worker.maxResetLockedInterval
 
