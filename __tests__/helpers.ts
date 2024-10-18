@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { EventEmitter } from "events";
 import * as pg from "pg";
 import { parse } from "pg-connection-string";
@@ -42,13 +43,48 @@ jest.setTimeout(15000);
 
 // process.env.GRAPHILE_LOGGER_DEBUG = "1";
 
-export const TEST_CONNECTION_STRING =
-  process.env.TEST_CONNECTION_STRING || "postgres:///graphile_worker_test";
+async function createTestDatabase() {
+  const id = randomBytes(8).toString("hex");
+  const PGDATABASE = `graphile_worker_test_${id}`;
+  {
+    const client = new pg.Client({ connectionString: `postgres:///template1` });
+    await client.connect();
+    await client.query(
+      `create database ${pg.Client.prototype.escapeIdentifier(
+        PGDATABASE,
+      )} with template = graphile_worker_testtemplate;`,
+    );
+    await client.end();
+  }
+  const TEST_CONNECTION_STRING = `postgres:///${PGDATABASE}`;
+  const PGHOST = process.env.PGHOST;
+  async function release() {
+    const client = new pg.Client({ connectionString: `postgres:///template1` });
+    await client.connect();
+    await client.query(
+      `drop database ${pg.Client.prototype.escapeIdentifier(PGDATABASE)};`,
+    );
+    await client.end();
+  }
 
-const parsed = parse(TEST_CONNECTION_STRING);
+  return {
+    TEST_CONNECTION_STRING,
+    PGHOST,
+    PGDATABASE,
+    release,
+  };
+}
 
-export const PGHOST = parsed.host || process.env.PGHOST;
-export const PGDATABASE = parsed.database || undefined;
+export let databaseDetails: Awaited<
+  ReturnType<typeof createTestDatabase>
+> | null = null;
+
+beforeAll(async () => {
+  databaseDetails = await createTestDatabase();
+});
+afterAll(async () => {
+  databaseDetails?.release();
+});
 
 export const GRAPHILE_WORKER_SCHEMA =
   process.env.GRAPHILE_WORKER_SCHEMA || "graphile_worker";
@@ -58,6 +94,7 @@ export const ESCAPED_GRAPHILE_WORKER_SCHEMA =
 export async function withPgPool<T>(
   cb: (pool: pg.Pool) => Promise<T>,
 ): Promise<T> {
+  const { TEST_CONNECTION_STRING } = databaseDetails!;
   const pool = new pg.Pool({
     connectionString: TEST_CONNECTION_STRING,
   });
@@ -75,12 +112,17 @@ afterEach(() => {
 });
 
 export async function withPgClient<T>(
-  cb: (client: pg.PoolClient) => Promise<T>,
+  cb: (
+    client: pg.PoolClient,
+    extra: {
+      TEST_CONNECTION_STRING: string;
+    },
+  ) => Promise<T>,
 ): Promise<T> {
   return withPgPool(async (pool) => {
     const client = await pool.connect();
     try {
-      return await cb(client);
+      return await cb(client, databaseDetails!);
     } finally {
       client.release();
     }

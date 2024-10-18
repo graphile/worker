@@ -9,7 +9,6 @@ import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   makeSelectionOfJobs,
   reset,
-  TEST_CONNECTION_STRING,
   withPgClient,
 } from "./helpers";
 
@@ -28,7 +27,7 @@ afterEach(async () => {
 
 // Test DELETE_PERMAFAILED_JOBS
 test("cleanup with DELETE_PERMAFAILED_JOBS", () =>
-  withPgClient(async (pgClient) => {
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
     await reset(pgClient, options);
 
     utils = await makeWorkerUtils({
@@ -63,7 +62,7 @@ test("cleanup with DELETE_PERMAFAILED_JOBS", () =>
   }));
 
 test("cleanup with GC_JOB_QUEUES", () =>
-  withPgClient(async (pgClient) => {
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
     await reset(pgClient, options);
 
     utils = await makeWorkerUtils({
@@ -135,7 +134,7 @@ select * from j`,
   }));
 
 test("cleanup with GC_TASK_IDENTIFIERS", () =>
-  withPgClient(async (pgClient) => {
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
     await reset(pgClient, options);
 
     utils = await makeWorkerUtils({

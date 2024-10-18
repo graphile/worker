@@ -1,5 +1,6 @@
 import type {} from "graphile-config";
-import type {} from "graphile-worker";
+
+import type {} from "./dist/index.js";
 
 const preset: GraphileConfig.Preset = {
   worker: {},
