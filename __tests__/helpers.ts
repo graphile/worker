@@ -1,7 +1,6 @@
 import { randomBytes } from "crypto";
 import { EventEmitter } from "events";
 import * as pg from "pg";
-import { parse } from "pg-connection-string";
 
 import defer from "../src/deferred";
 import {
