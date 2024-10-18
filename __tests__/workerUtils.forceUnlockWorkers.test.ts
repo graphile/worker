@@ -8,7 +8,6 @@ import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobs,
   reset,
-  TEST_CONNECTION_STRING,
   withPgClient,
 } from "./helpers";
 
@@ -21,7 +20,7 @@ afterEach(async () => {
 });
 
 test("unlocks jobs for the given workers, leaves others unaffected", () =>
-  withPgClient(async (pgClient) => {
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
     await reset(pgClient, options);
 
     utils = await makeWorkerUtils({

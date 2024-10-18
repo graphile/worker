@@ -40,7 +40,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
-      - run: yarn node --experimental-vm-modules node_modules/.bin/jest -i --ci
+      - run: yarn prepack
+      - run: yarn test:setupdb
+      - run: yarn test:only --ci
 
   lint:
     runs-on: ubuntu-latest
@@ -89,8 +91,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
-      # - run: yarn lint # No need to lint altschema
-      - run: yarn node --experimental-vm-modules node_modules/.bin/jest -i --ci
+      - run: yarn prepack
+      - run: yarn test:setupdb
+      - run: yarn test:only --ci
 
   database_updated:
     runs-on: ubuntu-latest

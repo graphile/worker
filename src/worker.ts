@@ -4,7 +4,9 @@ import { randomBytes } from "crypto";
 import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
+  CompleteJobFunction,
   EnhancedWithPgClient,
+  FailJobFunction,
   GetJobFunction,
   Job,
   PromiseOrDirect,
@@ -14,8 +16,8 @@ import {
   WorkerSharedOptions,
 } from "./interfaces";
 import { CompiledSharedOptions } from "./lib";
-import { completeJob } from "./sql/completeJob";
-import { failJob } from "./sql/failJob";
+
+const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
 
 export function makeNewWorker(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
@@ -28,6 +30,8 @@ export function makeNewWorker(
     autostart?: boolean;
     workerId?: string;
     getJob: GetJobFunction;
+    completeJob: CompleteJobFunction;
+    failJob: FailJobFunction;
   },
 ): Worker {
   const {
@@ -39,6 +43,8 @@ export function makeNewWorker(
     autostart = true,
     workerId = `worker-${randomBytes(9).toString("hex")}`,
     getJob,
+    completeJob,
+    failJob,
   } = params;
   const {
     events,
@@ -278,7 +284,7 @@ export function makeNewWorker(
             // Create a "partial" error for the batch
             err = new Error(
               `Batch failures:\n${batchJobErrors
-                .map((e) => (e as Error).message ?? String(e))
+                .map((e) => (e as Error)?.message ?? String(e))
                 .join("\n")}`,
             );
           }
@@ -336,17 +342,15 @@ export function makeNewWorker(
           }`,
           { failure: true, job, error: err, duration },
         );
-        await failJob(
-          compiledSharedOptions,
-          withPgClient,
-          workerPool.id,
+        failJob({
           job,
           message,
           // "Batch jobs": copy through only the unsuccessful parts of the payload
-          batchJobFailedPayloads.length > 0
-            ? batchJobFailedPayloads
-            : undefined,
-        );
+          replacementPayload:
+            batchJobFailedPayloads.length > 0
+              ? batchJobFailedPayloads
+              : undefined,
+        });
       } else {
         try {
           events.emit("job:success", { worker, job });
@@ -355,7 +359,7 @@ export function makeNewWorker(
             "Error occurred in event emitter for 'job:success'; this is an issue in your application code and you should fix it",
           );
         }
-        if (!process.env.NO_LOG_SUCCESS) {
+        if (!NO_LOG_SUCCESS) {
           logger.info(
             `Completed task ${job.id} (${
               job.task_identifier
@@ -368,12 +372,7 @@ export function makeNewWorker(
           );
         }
 
-        await completeJob(
-          compiledSharedOptions,
-          withPgClient,
-          workerPool.id,
-          job,
-        );
+        completeJob(job);
       }
       events.emit("job:complete", { worker, job, error: err });
     } catch (fatalError) {

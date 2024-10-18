@@ -3,13 +3,15 @@ import { EventEmitter } from "events";
 import { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
-import deferred from "./deferred";
+import defer from "./deferred";
 import {
   makeWithPgClientFromClient,
   makeWithPgClientFromPool,
 } from "./helpers";
 import {
+  CompleteJobFunction,
   EnhancedWithPgClient,
+  FailJobFunction,
   GetJobFunction,
   Job,
   RunOnceOptions,
@@ -25,9 +27,11 @@ import {
   processSharedOptions,
   tryParseJson,
 } from "./lib";
+import { LocalQueue } from "./localQueue";
 import { Logger } from "./logger";
 import SIGNALS, { Signal } from "./signals";
-import { failJobs } from "./sql/failJob";
+import { completeJob as baseCompleteJob } from "./sql/completeJob";
+import { failJob as baseFailJob, failJobs } from "./sql/failJob";
 import { getJob as baseGetJob } from "./sql/getJob";
 import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
@@ -433,10 +437,9 @@ export function runTaskListInternal(
             const payload = tryParseJson<{
               count: number;
             }>(message.payload);
-            let n = payload?.count ?? 1;
+            const n = payload?.count ?? 1;
             if (n > 0) {
-              // Nudge up to `n` workers
-              workerPool._workers.some((worker) => worker.nudge() && --n <= 0);
+              workerPool.nudge(n);
             }
             break;
           }
@@ -530,7 +533,13 @@ export function _runTaskList(
 ): WorkerPool {
   const {
     resolvedPreset: {
-      worker: { concurrentJobs: baseConcurrency, gracefulShutdownAbortTimeout },
+      worker: {
+        concurrentJobs: baseConcurrency,
+        gracefulShutdownAbortTimeout,
+        localQueueSize = -1,
+        completeJobBatchDelay = -1,
+        failJobBatchDelay = -1,
+      },
     },
     _rawOptions: { noHandleSignals = false },
   } = compiledSharedOptions;
@@ -541,6 +550,7 @@ export function _runTaskList(
     onTerminate,
     onDeactivate,
   } = options;
+
   let autostart = rawAutostart;
   const { logger, events } = compiledSharedOptions;
 
@@ -551,17 +561,63 @@ export function _runTaskList(
     );
   }
 
+  if (localQueueSize > 0 && localQueueSize < concurrency) {
+    logger.warn(
+      `Your job batch size (${localQueueSize}) is smaller than your concurrency setting (${concurrency}); this may result in drastically lower performance if your jobs can complete quickly. Please update to \`localQueueSize: ${concurrency}\` to improve performance, or \`localQueueSize: -1\` to disable batching.`,
+    );
+  }
+
   let unregisterSignalHandlers: (() => void) | undefined = undefined;
   if (!noHandleSignals) {
     // Clean up when certain signals occur
     unregisterSignalHandlers = registerSignalHandlers(logger, events);
   }
 
-  const promise = deferred();
+  const promise = defer();
 
-  function deactivate() {
+  async function deactivate() {
     if (workerPool._active) {
       workerPool._active = false;
+      // TODO: stop the batch()es and await the promises here
+      const releaseCompleteJobPromise = releaseCompleteJob?.();
+      const releaseFailJobPromise = releaseFailJob?.();
+      const releaseLocalQueue = localQueue?.release();
+      const [
+        releaseCompleteJobResult,
+        releaseFailJobResult,
+        releaseLocalQueueResult,
+      ] = await Promise.allSettled([
+        releaseCompleteJobPromise,
+        releaseFailJobPromise,
+        releaseLocalQueue,
+      ]);
+      if (releaseCompleteJobResult.status === "rejected") {
+        // Log but continue regardless
+        logger.error(
+          `Releasing complete job batcher failed: ${releaseCompleteJobResult.reason}`,
+          {
+            error: releaseCompleteJobResult.reason,
+          },
+        );
+      }
+      if (releaseFailJobResult.status === "rejected") {
+        // Log but continue regardless
+        logger.error(
+          `Releasing failed job batcher failed: ${releaseFailJobResult.reason}`,
+          {
+            error: releaseFailJobResult.reason,
+          },
+        );
+      }
+      if (releaseLocalQueueResult.status === "rejected") {
+        // Log but continue regardless
+        logger.error(
+          `Releasing local queue failed: ${releaseLocalQueueResult.reason}`,
+          {
+            error: releaseLocalQueueResult.reason,
+          },
+        );
+      }
       return onDeactivate?.();
     }
   }
@@ -577,9 +633,13 @@ export function _runTaskList(
         unregisterSignalHandlers();
       }
     } else {
-      logger.error(
-        `Graphile Worker internal error: terminate() was called twice for worker pool. Ignoring second call; but this indicates a bug - please file an issue.`,
-      );
+      try {
+        throw new Error(
+          `Graphile Worker internal error: terminate() was called twice for worker pool. Ignoring second call; but this indicates a bug - please file an issue.`,
+        );
+      } catch (e) {
+        logger.error(String(e.stack));
+      }
     }
   }
 
@@ -592,10 +652,20 @@ export function _runTaskList(
     id: `${continuous ? "pool" : "otpool"}-${randomBytes(9).toString("hex")}`,
     _active: true,
     _shuttingDown: false,
+    _forcefulShuttingDown: false,
     _workers: [],
     _withPgClient: withPgClient,
     get worker() {
       return concurrency === 1 ? this._workers[0] ?? null : null;
+    },
+    nudge(this: WorkerPool, count: number) {
+      if (localQueue) {
+        localQueue.pulse();
+      } else {
+        let n = count;
+        // Nudge up to `n` workers
+        this._workers.some((worker) => worker.nudge() && --n <= 0);
+      }
     },
     abortSignal,
     release: async () => {
@@ -612,6 +682,12 @@ export function _runTaskList(
     async gracefulShutdown(
       message = "Worker pool is shutting down gracefully",
     ) {
+      if (workerPool._forcefulShuttingDown) {
+        logger.error(
+          `gracefulShutdown called when forcefulShutdown is already in progress`,
+        );
+        return;
+      }
       if (workerPool._shuttingDown) {
         logger.error(
           `gracefulShutdown called when gracefulShutdown is already in progress`,
@@ -711,13 +787,22 @@ export function _runTaskList(
         });
         return this.forcefulShutdown(e.message);
       }
-      terminate();
+      if (!terminated) {
+        terminate();
+      }
     },
 
     /**
      * Stop accepting jobs and "fail" all currently running jobs.
      */
     async forcefulShutdown(message: string) {
+      if (workerPool._forcefulShuttingDown) {
+        logger.error(
+          `forcefulShutdown called when forcefulShutdown is already in progress`,
+        );
+        return;
+      }
+      workerPool._forcefulShuttingDown = true;
       events.emit("pool:forcefulShutdown", {
         pool: workerPool,
         workerPool,
@@ -786,7 +871,9 @@ export function _runTaskList(
           error: e,
         });
       }
-      terminate();
+      if (!terminated) {
+        terminate();
+      }
     },
 
     promise,
@@ -833,15 +920,104 @@ export function _runTaskList(
       `You must not set workerId when concurrency > 1; each worker must have a unique identifier`,
     );
   }
-  const getJob: GetJobFunction = async (workerId, flagsToSkip) => {
-    return baseGetJob(
-      compiledSharedOptions,
-      withPgClient,
-      tasks,
-      workerId,
-      flagsToSkip,
-    );
-  };
+  const localQueue =
+    localQueueSize >= 1
+      ? new LocalQueue(
+          compiledSharedOptions,
+          tasks,
+          withPgClient,
+          workerPool,
+          localQueueSize,
+          continuous,
+        )
+      : null;
+  const getJob: GetJobFunction = localQueue
+    ? localQueue.getJob // Already bound
+    : async (_workerId, flagsToSkip) => {
+        const jobs = await baseGetJob(
+          compiledSharedOptions,
+          withPgClient,
+          tasks,
+          workerPool.id,
+          flagsToSkip,
+          1,
+        );
+        return jobs[0];
+      };
+
+  const { release: releaseCompleteJob, fn: completeJob } = (
+    completeJobBatchDelay >= 0
+      ? batch(
+          completeJobBatchDelay,
+          (jobs) =>
+            baseCompleteJob(
+              compiledSharedOptions,
+              withPgClient,
+              workerPool.id,
+              jobs,
+            ),
+          (error, jobs) => {
+            events.emit("pool:fatalError", {
+              error,
+              workerPool,
+              action: "completeJob",
+            });
+            logger.error(
+              `Failed to complete jobs '${jobs
+                .map((j) => j.id)
+                .join("', '")}':\n${String(error)}`,
+              { fatalError: error, jobs },
+            );
+            workerPool.gracefulShutdown();
+          },
+        )
+      : {
+          release: null,
+          fn: (job) =>
+            baseCompleteJob(
+              compiledSharedOptions,
+              withPgClient,
+              workerPool.id,
+              [job],
+            ),
+        }
+  ) as { release: (() => void) | null; fn: CompleteJobFunction };
+
+  const { release: releaseFailJob, fn: failJob } = (
+    failJobBatchDelay >= 0
+      ? batch(
+          failJobBatchDelay,
+          (specs) =>
+            baseFailJob(
+              compiledSharedOptions,
+              withPgClient,
+              workerPool.id,
+              specs,
+            ),
+          (error, specs) => {
+            events.emit("pool:fatalError", {
+              error,
+              workerPool,
+              action: "failJob",
+            });
+            logger.error(
+              `Failed to fail jobs '${specs
+                .map((spec) => spec.job.id)
+                .join("', '")}':\n${String(error)}`,
+              { fatalError: error, specs },
+            );
+            workerPool.gracefulShutdown();
+          },
+        )
+      : {
+          release: null,
+          fn: (spec) =>
+            baseFailJob(compiledSharedOptions, withPgClient, workerPool.id, [
+              spec,
+            ]),
+        }
+  ) as { release: (() => void) | null; fn: FailJobFunction };
+
   for (let i = 0; i < concurrency; i++) {
     const worker = makeNewWorker(compiledSharedOptions, {
       tasks,
@@ -852,6 +1028,8 @@ export function _runTaskList(
       autostart,
       workerId,
       getJob,
+      completeJob,
+      failJob,
     });
     workerPool._workers.push(worker);
     const remove = () => {
@@ -862,8 +1040,7 @@ export function _runTaskList(
       }
       workerPool._workers.splice(workerPool._workers.indexOf(worker), 1);
       if (!continuous && workerPool._workers.length === 0) {
-        deactivate();
-        terminate();
+        deactivate().then(terminate, terminate);
       }
     };
     worker.promise.then(
@@ -917,3 +1094,66 @@ export const runTaskListOnce = (
 
   return pool;
 };
+
+function batch<TSpec, TResult>(
+  delay: number,
+  callback: (specs: ReadonlyArray<TSpec>) => Promise<TResult>,
+  errorHandler: (
+    error: unknown,
+    specs: ReadonlyArray<TSpec>,
+  ) => void | Promise<void>,
+): {
+  release(): void | Promise<void>;
+  fn: (spec: TSpec) => void;
+} {
+  let pending = 0;
+  let releasing = false;
+  let released = false;
+  const incrementPending = () => {
+    pending++;
+  };
+  const decrementPending = () => {
+    pending--;
+    if (releasing === true && pending === 0) {
+      released = true;
+      promise.resolve();
+    }
+  };
+  const promise = defer();
+  let currentBatch: TSpec[] | null = null;
+  return {
+    async release() {
+      if (releasing) {
+        return;
+      }
+      releasing = true;
+      if (pending === 0) {
+        released = true;
+        promise.resolve();
+      }
+      await promise;
+    },
+    fn(spec) {
+      if (released) {
+        throw new Error(
+          "This batcher has been released, and so no more calls can be made.",
+        );
+      }
+      if (currentBatch !== null) {
+        currentBatch.push(spec);
+      } else {
+        const specs = [spec];
+        currentBatch = specs;
+        incrementPending();
+        setTimeout(() => {
+          currentBatch = null;
+          callback(specs).then(decrementPending, (error) => {
+            decrementPending();
+            errorHandler(error, specs);
+          });
+        }, delay);
+      }
+      return;
+    },
+  };
+}

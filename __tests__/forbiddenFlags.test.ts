@@ -5,20 +5,14 @@ import {
   TaskList,
   WorkerSharedOptions,
 } from "../src/index";
-import {
-  getJobs,
-  reset,
-  TEST_CONNECTION_STRING,
-  withPgClient,
-  withPgPool,
-} from "./helpers";
+import { getJobs, reset, withPgClient, withPgPool } from "./helpers";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const options: WorkerSharedOptions = {};
 
 test("supports the flags API", () =>
-  withPgClient(async (pgClient) => {
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
     await reset(pgClient, options);
 
     // Schedule a job

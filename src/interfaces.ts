@@ -435,6 +435,8 @@ export interface Worker {
 
 export interface WorkerPool {
   id: string;
+  /** Encourage `n` workers to look for jobs _right now_, cancelling the delay timers. */
+  nudge(n: number): void;
   /** @deprecated Use gracefulShutdown instead */
   release: () => Promise<void>;
   gracefulShutdown: (message?: string) => Promise<void>;
@@ -444,6 +446,8 @@ export interface WorkerPool {
   abortSignal: AbortSignal;
   /** @internal */
   _shuttingDown: boolean;
+  /** @internal */
+  _forcefulShuttingDown: boolean;
   /** @internal */
   _active: boolean;
   /** @internal */
@@ -852,6 +856,15 @@ export type WorkerEventMap = {
   };
 
   /**
+   * When a worker pool fails to complete/fail a job
+   */
+  "pool:fatalError": {
+    workerPool: WorkerPool;
+    error: unknown;
+    action: string;
+  };
+
+  /**
    * When a worker pool is released
    */
   "pool:release": {
@@ -1160,4 +1173,11 @@ export interface WorkerPluginContext {
 export type GetJobFunction = (
   workerId: string,
   flagsToSkip: string[] | null,
-) => Promise<Job | undefined>;
+) => PromiseOrDirect<Job | undefined>;
+
+export type CompleteJobFunction = (job: DbJob) => void;
+export type FailJobFunction = (spec: {
+  job: DbJob;
+  message: string;
+  replacementPayload: undefined | unknown[];
+}) => void;
