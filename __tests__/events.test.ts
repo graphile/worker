@@ -7,7 +7,6 @@ import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   expectJobCount,
-  jobCount,
   reset,
   sleep,
   sleepUntil,

@@ -171,7 +171,18 @@ export async function reset(
   }
 }
 
-export async function jobCount(
+/**
+ * Counts the number of jobs currently in DB.
+ *
+ * If you have a pool, you may hit race conditions with this method, instead
+ * use `expectJobCount()` which will try multiple times to give time for
+ * multiple clients to synchronize.
+ */
+export async function jobCount(pgClient: pg.PoolClient): Promise<number> {
+  return _jobCount(pgClient);
+}
+
+async function _jobCount(
   pgPoolOrClient: pg.Pool | pg.PoolClient,
 ): Promise<number> {
   const {
@@ -346,7 +357,7 @@ export function withOptions<T>(
 /**
  * Wait for the job count to match the expected count, handles
  * issues with different connections to the database not
- * reflecting the same data.
+ * reflecting the same data by retrying.
  */
 export async function expectJobCount(
   // NOTE: if you have a pgClient then you shouldn't need to
@@ -356,15 +367,14 @@ export async function expectJobCount(
   expectedCount: number,
 ) {
   let count: number = Infinity;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 8; i++) {
     if (i > 0) {
-      await sleep(i * 100);
+      await sleep(i * 50);
     }
-    count = await jobCount(pool);
-    if (count !== expectedCount) {
-      continue;
+    count = await _jobCount(pool);
+    if (count === expectedCount) {
+      break;
     }
-    break;
   }
   expect(count).toEqual(expectedCount);
 }

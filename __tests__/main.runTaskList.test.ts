@@ -7,7 +7,6 @@ import { runTaskList } from "../src/main";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   expectJobCount,
-  jobCount,
   reset,
   sleep,
   sleepUntil,
