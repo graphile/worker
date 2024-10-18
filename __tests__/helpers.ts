@@ -1,6 +1,6 @@
 import { randomBytes } from "crypto";
 import { EventEmitter } from "events";
-import { sleepUntil as baseSleepUntil } from "jest-time-helpers";
+import { sleep, sleepUntil as baseSleepUntil } from "jest-time-helpers";
 import * as pg from "pg";
 
 import defer from "../src/deferred";
@@ -341,4 +341,30 @@ export function withOptions<T>(
       },
     }),
   );
+}
+
+/**
+ * Wait for the job count to match the expected count, handles
+ * issues with different connections to the database not
+ * reflecting the same data.
+ */
+export async function expectJobCount(
+  // NOTE: if you have a pgClient then you shouldn't need to
+  // use this - just call `jobCount()` directly since you're
+  // in the same client
+  pool: pg.Pool,
+  expectedCount: number,
+) {
+  let count: number = Infinity;
+  for (let i = 0; i < 5; i++) {
+    if (i > 0) {
+      await sleep(i * 100);
+    }
+    count = await jobCount(pool);
+    if (count !== expectedCount) {
+      continue;
+    }
+    break;
+  }
+  expect(count).toEqual(expectedCount);
 }

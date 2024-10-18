@@ -6,6 +6,7 @@ import deferred, { Deferred } from "../src/deferred";
 import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  expectJobCount,
   jobCount,
   reset,
   sleep,
@@ -132,7 +133,7 @@ test("emits the expected events", () =>
       expect(eventCount("worker:release")).toEqual(CONCURRENCY);
       expect(eventCount("worker:stop")).toEqual(CONCURRENCY);
       expect(eventCount("pool:release")).toEqual(1);
-      expect(await jobCount(pgPool)).toEqual(0);
+      await expectJobCount(pgPool, 0);
     } finally {
       Object.values(jobPromises).forEach((p) => p?.resolve());
     }
