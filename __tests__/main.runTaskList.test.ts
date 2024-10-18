@@ -70,7 +70,18 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
       await sleep(1);
       expect(finished).toBeTruthy();
       await workerPool.promise;
-      expect(await jobCount(pgPool)).toEqual(0);
+      let count: number = Infinity;
+      for (let i = 0; i < 5; i++) {
+        if (i > 0) {
+          await sleep(i * 100);
+        }
+        count = await jobCount(pgPool);
+        if (count !== 0) {
+          continue;
+        }
+        break;
+      }
+      expect(count).toEqual(0);
       expect(process.listeners("SIGTERM")).toHaveLength(0);
     } finally {
       Object.values(jobPromises).forEach((p) => p?.resolve());
