@@ -155,31 +155,33 @@ declare global {
 
       events?: WorkerEvents;
 
-      /**
-       * To enable processing jobs in batches, set this to an integer larger
-       * than 1. This will result in jobs being fetched by the pool rather than
-       * the worker, the pool will fetch (and lock!) `localQueueSize` jobs up
-       * front, and each time a worker requests a job it will be served from
-       * this list until the list is exhausted, at which point a new set of
-       * jobs will be fetched (and locked).
-       *
-       * This setting can help reduce the load on your database from looking
-       * for jobs, but is only really effective when there are often many jobs
-       * queued and ready to go, and can increase the latency of job execution
-       * because a single worker may lock jobs into its queue leaving other
-       * workers idle.
-       *
-       * @default `-1`
-       */
-      localQueueSize?: number;
+      localQueue?: {
+        /**
+         * To enable processing jobs in batches, set this to an integer larger
+         * than 1. This will result in jobs being fetched by the pool rather than
+         * the worker, the pool will fetch (and lock!) `localQueue.size` jobs up
+         * front, and each time a worker requests a job it will be served from
+         * this list until the list is exhausted, at which point a new set of
+         * jobs will be fetched (and locked).
+         *
+         * This setting can help reduce the load on your database from looking
+         * for jobs, but is only really effective when there are often many jobs
+         * queued and ready to go, and can increase the latency of job execution
+         * because a single worker may lock jobs into its queue leaving other
+         * workers idle.
+         *
+         * @default `-1`
+         */
+        size: number;
 
-      /**
-       * How long should jobs sit in the local queue before they are returned
-       * to the database? Defaults to 5 minutes.
-       *
-       * @default `300000`
-       */
-      localQueueTtl?: number;
+        /**
+         * How long should jobs sit in the local queue before they are returned
+         * to the database? Defaults to 5 minutes.
+         *
+         * @default `300000`
+         */
+        ttl?: number;
+      };
 
       /**
        * The time in milliseconds to wait after a `completeJob` call to see if
