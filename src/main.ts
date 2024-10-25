@@ -536,7 +536,7 @@ export function _runTaskList(
       worker: {
         concurrentJobs: baseConcurrency,
         gracefulShutdownAbortTimeout,
-        localQueueSize = -1,
+        localQueue: { size: localQueueSize = -1 } = {},
         completeJobBatchDelay = -1,
         failJobBatchDelay = -1,
       },

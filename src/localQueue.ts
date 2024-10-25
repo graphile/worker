@@ -23,8 +23,8 @@ const RELEASED = "RELEASED";
  * relieving the workers of this responsibility.
  *
  * The local queue trades latency for throughput: jobs may sit in the local
- * queue for a longer time (maximum `localQueueSize` jobs waiting maximum
- * `localQueueTTL` milliseconds), but fewer requests to the database are made
+ * queue for a longer time (maximum `localQueue.size` jobs waiting maximum
+ * `localQueue.ttl` milliseconds), but fewer requests to the database are made
  * for jobs since more jobs are fetched at once, enabling the worker to reach
  * higher levels of performance (and reducing read stress on the DB).
  *
@@ -107,7 +107,7 @@ export class LocalQueue {
     private readonly continuous: boolean,
   ) {
     this.ttl =
-      compiledSharedOptions.resolvedPreset.worker.localQueueTtl ?? 5 * MINUTE;
+      compiledSharedOptions.resolvedPreset.worker.localQueue?.ttl ?? 5 * MINUTE;
     this.pollInterval =
       compiledSharedOptions.resolvedPreset.worker.pollInterval ?? 2 * SECOND;
     this.setModePolling();
