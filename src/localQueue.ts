@@ -410,7 +410,7 @@ export class LocalQueue {
     }
 
     // In case the counter was incremented sufficiently during fetch()
-    this.checkRefetchDelayAbortThreshold();
+    this.handleCheckRefetchDelayAbortThreshold();
   }
 
   private refetchDelayCompleteOrAbort = (): void => {
@@ -429,24 +429,25 @@ export class LocalQueue {
     }
   };
 
-  private checkRefetchDelayAbortThreshold() {
+  private handleCheckRefetchDelayAbortThreshold(): boolean {
     if (!this.refetchDelayActive || this.mode === "RELEASED") {
-      return;
+      return false;
     }
     if (this.refetchDelayCounter >= this.refetchDelayAbortThreshold) {
       this.refetchDelayFetchOnComplete = true;
       this.refetchDelayCompleteOrAbort();
+      return true;
     }
+    return false;
   }
 
   /** Called when a new job becomes available in the DB */
   public pulse(count: number) {
     this.refetchDelayCounter += count;
 
-    this.checkRefetchDelayAbortThreshold();
-
-    // The only situation when this affects anything is if we're running in polling mode.
-    if (this.mode === POLLING) {
+    if (this.handleCheckRefetchDelayAbortThreshold()) {
+      /* handled */
+    } else if (this.mode === POLLING) {
       if (this.fetchInProgress) {
         this.fetchAgain = true;
       } else if (this.fetchTimer) {
@@ -515,6 +516,7 @@ export class LocalQueue {
       clearTimeout(this.refetchDelayTimer);
       this.refetchDelayTimer = null;
     }
+    this.refetchDelayActive = false;
 
     if (oldMode === POLLING) {
       // Release pending workers
