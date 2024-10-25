@@ -11,6 +11,7 @@ import { GetJobFunction, Job, TaskList, WorkerPool } from "./interfaces";
 import { getJob as baseGetJob } from "./sql/getJob";
 import { returnJob } from "./sql/returnJob";
 
+const STARTING = "STARTING";
 const POLLING = "POLLING";
 const WAITING = "WAITING";
 const TTL_EXPIRED = "TTL_EXPIRED";
@@ -30,18 +31,24 @@ const RELEASED = "RELEASED";
  *
  * The local queue is always in one of these modes:
  *
+ * - STARTING mode
  * - POLLING mode
  * - WAITING mode
  * - TTL_EXPIRED mode
  * - RELEASED mode
  *
+ * ## STARTING mode
+ *
+ * STARTING mode is the initial state of the local queue.
+ *
+ * Immediately move to POLLING mode.
+ *
  * ## POLLING mode
  *
- * POLLING mode is the initial state of the local queue. The queue will only be
- * in POLLING mode when it contains no cached jobs.
+ * The queue will only be in POLLING mode when it contains no cached jobs.
  *
- * When the queue enters POLLING mode (and when it starts) it will trigger a
- * fetch of jobs from the database.
+ * When the queue enters POLLING mode it will trigger a fetch of jobs from the
+ * database.
  *
  * If no jobs were returned then it will wait `pollInterval` ms and then fetch
  * again.
@@ -94,7 +101,12 @@ export class LocalQueue {
   // Set true to fetch immediately after a fetch completes; typically only used
   // when the queue is pulsed during a fetch.
   fetchAgain = false;
-  mode: typeof POLLING | typeof WAITING | typeof TTL_EXPIRED | typeof RELEASED;
+  mode:
+    | typeof STARTING
+    | typeof POLLING
+    | typeof WAITING
+    | typeof TTL_EXPIRED
+    | typeof RELEASED = STARTING;
   private promise = defer();
   private backgroundCount = 0;
 
