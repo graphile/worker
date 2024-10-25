@@ -181,6 +181,48 @@ declare global {
          * @default `300000`
          */
         ttl?: number;
+
+        /**
+         * When running at very high scale (multiple worker instances, each
+         * with some level of concurrency), Worker's polling can cause
+         * significant load on the database when there are too few jobs in the
+         * database to keep all worker pools busy - each time a new job comes
+         * in, each pool may request it, multiplying up the load. To reduce
+         * this impact, when a pool receives no (or few) results to its query
+         * for new jobs, we can instigate a "refetch delay" to cause the pool
+         * to wait before issuing its next poll for jobs, even when new job
+         * notifications come in.
+         */
+        refetchDelay?: {
+          /**
+           * How long in milliseconds to wait, on average, before asking for
+           * more jobs when a previous fetch results in insufficient jobs to
+           * fill the local queue. (Causes the local queue to (mostly) ignore
+           * "new job" notifications.)
+           *
+           * When new jobs are coming in but the workers are mostly idle, you
+           * can expect on average `(1000/durationMs) * INSTANCE_COUNT` "get jobs"
+           * queries per second to be issued to your database. Increasing this
+           * decreases database load at the cost of increased latency when there
+           * are insufficient jobs in the database to keep the local queue full.
+           */
+          durationMs: number;
+          /**
+           * How many jobs should a fetch return to trigger the refetchDelay?
+           * Must be less than the local queue size
+           *
+           * @default {0}
+           */
+          threshold?: number;
+          /**
+           * How many new jobs, on average, can the pool that's in idle fetch
+           * delay be notified of before it aborts the refetch delay and fetches
+           * anyway
+           *
+           * @default {5 * localQueue.size}
+           */
+          abortThreshold?: number;
+        };
       };
 
       /**

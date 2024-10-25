@@ -682,7 +682,7 @@ export function _runTaskList(
     },
     nudge(this: WorkerPool, count: number) {
       if (localQueue) {
-        localQueue.pulse();
+        localQueue.pulse(count);
       } else {
         let n = count;
         // Nudge up to `n` workers

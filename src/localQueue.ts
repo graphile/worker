@@ -47,17 +47,25 @@ const RELEASED = "RELEASED";
  *
  * The queue will only be in POLLING mode when it contains no cached jobs.
  *
- * When the queue enters POLLING mode it will trigger a fetch of jobs from the
- * database.
+ * When the queue enters POLLING mode:
  *
- * If no jobs were returned then it will wait `pollInterval` ms and then fetch
- * again.
+ * - if any refetch delay has expired it will trigger a fetch of jobs from the
+ *   database,
+ * - otherwise it will trigger a refetch to happen once the refetch delay has
+ *   completed.
  *
- * If a "new job" notification is received during the polling interval then the
- * timer will be cancelled, and a fetch will be fired immediately.
+ * When jobs are fetched:
  *
- * If jobs are returned from a POLLING mode fetch then the queue immediately
- * enters WAITING mode.
+ * - if no jobs were returned then it will wait `pollInterval` ms and then
+ *   fetch again.
+ * - if fewer than `Math.ceil(Math.min(localQueueRefetchDelay.threshold, localQueueSize))`
+ *   jobs were returned then a refetch delay will be set (if configured).
+ * - if jobs are returned from a POLLING mode fetch then the queue immediately
+ *   enters WAITING mode.
+ *
+ * When a "new job" notification is received, once any required refetch delay
+ * has expired (or immediately if it has already expired) the timer will be
+ * cancelled, and a fetch will be fired immediately.
  *
  * ## WAITING mode
  *
@@ -110,6 +118,12 @@ export class LocalQueue {
   private promise = defer();
   private backgroundCount = 0;
 
+  /** If `localQueueRefetchDelay` is configured; set this true if the fetch resulted in a queue size lower than the threshold. */
+  private refetchDelayActive = false;
+  private refetchDelayFetchOnComplete = false;
+  private refetchDelayTimer: NodeJS.Timeout | null = null;
+  private refetchDelayCounter: number = 0;
+
   constructor(
     private readonly compiledSharedOptions: CompiledSharedOptions<WorkerPoolOptions>,
     private readonly tasks: TaskList,
@@ -122,6 +136,17 @@ export class LocalQueue {
       compiledSharedOptions.resolvedPreset.worker.localQueue?.ttl ?? 5 * MINUTE;
     this.pollInterval =
       compiledSharedOptions.resolvedPreset.worker.pollInterval ?? 2 * SECOND;
+    const localQueueRefetchDelayDuration =
+      compiledSharedOptions.resolvedPreset.worker.localQueue?.refetchDelay
+        ?.durationMs;
+    if (
+      localQueueRefetchDelayDuration != null &&
+      localQueueRefetchDelayDuration > this.pollInterval
+    ) {
+      throw new Error(
+        `Invalid configuration; 'preset.worker.localQueue.refetchDelay.durationMs' (${localQueueRefetchDelayDuration}) must not be larger than 'preset.worker.pollInterval' (${this.pollInterval})`,
+      );
+    }
     this.setModePolling();
   }
 
@@ -250,6 +275,14 @@ export class LocalQueue {
   }
 
   private fetch = (): void => {
+    if (this.fetchTimer) {
+      clearTimeout(this.fetchTimer);
+      this.fetchTimer = null;
+    }
+    if (this.refetchDelayActive) {
+      this.refetchDelayFetchOnComplete = true;
+      return;
+    }
     this.background(
       this._fetch().catch((e) => {
         // This should not happen
@@ -262,6 +295,9 @@ export class LocalQueue {
 
   private async _fetch() {
     let fetchedMax = false;
+    let fetchedUnderRefetchDelayThreshold = false;
+    const refetchDelayOptions =
+      this.compiledSharedOptions.resolvedPreset.worker.localQueue?.refetchDelay;
     try {
       assert.equal(this.mode, POLLING, "Can only fetch when in polling mode");
       assert.equal(
@@ -269,12 +305,19 @@ export class LocalQueue {
         false,
         "Cannot fetch when a fetch is already in progress",
       );
-      if (this.fetchTimer) {
-        clearTimeout(this.fetchTimer);
-        this.fetchTimer = null;
-      }
+      assert.equal(
+        this.refetchDelayActive,
+        false,
+        "Can not fetch when fetches are meant to be delayed",
+      );
+      assert.equal(
+        this.jobQueue.length,
+        0,
+        "Should not fetch when job queue isn't empty",
+      );
       this.fetchAgain = false;
       this.fetchInProgress = true;
+      this.refetchDelayCounter = 0;
 
       // The ONLY await in this function.
       const jobs = await baseGetJob(
@@ -289,10 +332,18 @@ export class LocalQueue {
       assert.equal(
         this.jobQueue.length,
         0,
-        "Should not fetch when job queue isn't empty",
+        "Should not fetch when job queue isn't empty (recheck)",
       );
       const jobCount = jobs.length;
       fetchedMax = jobCount >= this.getJobBatchSize;
+      fetchedUnderRefetchDelayThreshold =
+        !fetchedMax &&
+        !!refetchDelayOptions &&
+        jobCount < Math.floor(refetchDelayOptions.threshold ?? 0);
+
+      // NOTE: we don't need to handle `this.mode === RELEASED` here because
+      // being in that mode guarantees the workerQueue is empty.
+
       const workerCount = Math.min(jobCount, this.workerQueue.length);
       const workers = this.workerQueue.splice(0, workerCount);
       for (let i = 0; i < jobCount; i++) {
@@ -316,11 +367,31 @@ export class LocalQueue {
     // Finally, now that there is no fetch in progress, choose what to do next
     if (this.mode === "RELEASED") {
       this.returnJobs();
-    } else if (this.jobQueue.length > 0) {
+      return;
+    }
+
+    if (fetchedUnderRefetchDelayThreshold) {
+      const ms =
+        (0.5 + Math.random()) * (refetchDelayOptions?.durationMs ?? 100);
+
+      this.fetchAgain = false;
+      this.refetchDelayActive = true;
+      this.refetchDelayFetchOnComplete = false;
+      // NOTE: this.refetchDelayCounter is set at the beginning of fetch() to allow for pulse() during fetch()
+      this.refetchDelayTimer = setTimeout(this.refetchDelayCompleteOrAbort, ms);
+    }
+
+    if (this.jobQueue.length > 0) {
       this.setModeWaiting();
     } else {
       if (fetchedMax || this.fetchAgain) {
-        // Maximal fetch; trigger immediate refetch
+        // Maximal fetch and all jobs instantly consumed; trigger immediate refetch
+        // OR: new jobs came in during fetch(); trigger immediate refetch
+        assert.equal(
+          this.refetchDelayActive,
+          false,
+          "refetchDelayActive should imply didn't fetch max and fetchAgain is false",
+        );
         this.fetch();
       } else if (this.continuous) {
         // Set up the timer
@@ -329,10 +400,49 @@ export class LocalQueue {
         this.setModeReleased();
       }
     }
+
+    // In case the counter was incremented sufficiently during fetch()
+    this.checkRefetchDelayAbortThreshold();
+  }
+
+  private refetchDelayCompleteOrAbort = (): void => {
+    if (this.refetchDelayTimer) {
+      clearTimeout(this.refetchDelayTimer);
+      this.refetchDelayTimer = null;
+    }
+    this.refetchDelayActive = false;
+    if (this.mode === POLLING && this.refetchDelayFetchOnComplete) {
+      // Cancel poll, do now
+      if (this.fetchTimer) {
+        clearTimeout(this.fetchTimer);
+        this.fetchTimer = null;
+      }
+      this.fetch();
+    }
+  };
+
+  private checkRefetchDelayAbortThreshold() {
+    if (!this.refetchDelayActive || this.mode === "RELEASED") {
+      return;
+    }
+    const refetchDelayOptions =
+      this.compiledSharedOptions.resolvedPreset.worker.localQueue?.refetchDelay;
+    const threshold = Math.min(
+      refetchDelayOptions?.abortThreshold ?? Infinity,
+      5 * this.getJobBatchSize,
+    );
+    if (this.refetchDelayCounter >= threshold) {
+      this.refetchDelayFetchOnComplete = true;
+      this.refetchDelayCompleteOrAbort();
+    }
   }
 
   /** Called when a new job becomes available in the DB */
-  public pulse() {
+  public pulse(count: number) {
+    this.refetchDelayCounter += count;
+
+    this.checkRefetchDelayAbortThreshold();
+
     // The only situation when this affects anything is if we're running in polling mode.
     if (this.mode === POLLING) {
       if (this.fetchInProgress) {
@@ -399,6 +509,11 @@ export class LocalQueue {
     const oldMode = this.mode;
     this.mode = RELEASED;
 
+    if (this.refetchDelayTimer != null) {
+      clearTimeout(this.refetchDelayTimer);
+      this.refetchDelayTimer = null;
+    }
+
     if (oldMode === POLLING) {
       // Release pending workers
       const workers = this.workerQueue.splice(0, this.workerQueue.length);
@@ -422,7 +537,6 @@ export class LocalQueue {
     } else if (oldMode === TTL_EXPIRED) {
       // No action necessary
     }
-
     if (this.backgroundCount === 0) {
       this.promise.resolve();
     }
