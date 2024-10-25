@@ -123,6 +123,7 @@ export class LocalQueue {
   private refetchDelayFetchOnComplete = false;
   private refetchDelayTimer: NodeJS.Timeout | null = null;
   private refetchDelayCounter: number = 0;
+  private refetchDelayAbortThreshold: number = Infinity;
 
   constructor(
     private readonly compiledSharedOptions: CompiledSharedOptions<WorkerPoolOptions>,
@@ -373,10 +374,17 @@ export class LocalQueue {
     if (fetchedUnderRefetchDelayThreshold) {
       const ms =
         (0.5 + Math.random()) * (refetchDelayOptions?.durationMs ?? 100);
+      const threshold =
+        (0.5 + Math.random()) *
+        Math.min(
+          refetchDelayOptions?.abortThreshold ?? Infinity,
+          5 * this.getJobBatchSize,
+        );
 
       this.fetchAgain = false;
       this.refetchDelayActive = true;
       this.refetchDelayFetchOnComplete = false;
+      this.refetchDelayAbortThreshold = threshold;
       // NOTE: this.refetchDelayCounter is set at the beginning of fetch() to allow for pulse() during fetch()
       this.refetchDelayTimer = setTimeout(this.refetchDelayCompleteOrAbort, ms);
     }
@@ -425,13 +433,7 @@ export class LocalQueue {
     if (!this.refetchDelayActive || this.mode === "RELEASED") {
       return;
     }
-    const refetchDelayOptions =
-      this.compiledSharedOptions.resolvedPreset.worker.localQueue?.refetchDelay;
-    const threshold = Math.min(
-      refetchDelayOptions?.abortThreshold ?? Infinity,
-      5 * this.getJobBatchSize,
-    );
-    if (this.refetchDelayCounter >= threshold) {
+    if (this.refetchDelayCounter >= this.refetchDelayAbortThreshold) {
       this.refetchDelayFetchOnComplete = true;
       this.refetchDelayCompleteOrAbort();
     }
