@@ -224,13 +224,16 @@ export class LocalQueue {
         this.withPgClient,
         this.workerPool.id,
         jobsToReturn,
-      ).then((e) => {
-        // TODO: handle this better!
-        this.compiledSharedOptions.logger.error(
-          `Failed to return jobs from local queue to database queue`,
-          { error: e },
-        );
-      }),
+      ).then(
+        () => {},
+        (e) => {
+          // TODO: handle this better!
+          this.compiledSharedOptions.logger.error(
+            `Failed to return jobs from local queue to database queue`,
+            { error: e },
+          );
+        }
+      ),
     );
   }
 
