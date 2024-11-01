@@ -270,7 +270,7 @@ export class LocalQueue {
             `Failed to return jobs from local queue to database queue`,
             { error: e },
           );
-        }
+        },
       ),
     );
   }
