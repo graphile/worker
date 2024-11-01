@@ -230,7 +230,9 @@ has the following properties:
 
 - `task` (required): the string identifier of the task that should be executed
   (same as the first argument to `add_job`)
-- `match` (required): a cron pattern (e.g. `* * * * *`) describing when to run
+- `match` (required): a cron pattern (e.g. `* * * * *`) describing when to run,
+  or a callback function passed a TimestampDigest and returning a boolean
+  whether the cron should fire for this timestamp (true) or not (false)
   this task
 - `options`: optional options influencing backfilling, etc
   - `backfillPeriod`: how long (in milliseconds) to backfill (see above)
