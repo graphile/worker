@@ -53,7 +53,7 @@ test("cleanup with DELETE_PERMAFAILED_JOBS", () =>
 
     await utils.cleanup({ tasks: ["DELETE_PERMAFAILED_JOBS"] });
     const { rows } = await pgClient.query<DbJob>(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs order by id asc`,
     );
     const jobIds = rows
       .map((r) => r.id)
