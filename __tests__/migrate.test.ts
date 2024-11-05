@@ -77,20 +77,23 @@ test("multiple concurrent installs of the schema is fine", async () => {
   await withPgPool(async (pool) => {
     const COUNT = 20;
     const clients: PoolClient[] = [];
-    for (let i = 0; i < COUNT; i++) {
-      clients.push(await pool.connect());
-    }
     const promises: Promise<void>[] = [];
-    for (let i = 0; i < COUNT; i++) {
-      promises.push(
-        (async () => {
-          // Perform migration
-          await migrate(compiledSharedOptions, clients[i]);
-        })(),
-      );
+    try {
+      for (let i = 0; i < COUNT; i++) {
+        clients.push(await pool.connect());
+      }
+      for (let i = 0; i < COUNT; i++) {
+        promises.push(
+          (async () => {
+            // Perform migration
+            await migrate(compiledSharedOptions, clients[i]);
+          })(),
+        );
+      }
+    } finally {
+      await Promise.allSettled(promises);
+      await Promise.allSettled(clients.map((c) => c.release()));
     }
-    await Promise.all(promises);
-    await Promise.all(clients.map((c) => c.release()));
   });
   await withPgClient(async (pgClient) => {
     // Assert migrations table exists and has relevant entries
