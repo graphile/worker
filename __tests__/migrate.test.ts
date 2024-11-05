@@ -8,7 +8,6 @@ import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobs,
   GRAPHILE_WORKER_SCHEMA,
-  sleep,
   withPgClient,
   withPgPool,
 } from "./helpers";
@@ -68,7 +67,6 @@ test("migration installs schema; second migration does no harm", async () => {
 });
 
 test("multiple concurrent installs of the schema is fine", async () => {
-  const compiledSharedOptions = processSharedOptions(options);
   await withPgClient(async (pgClient) => {
     await pgClient.query(
       `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
@@ -86,6 +84,7 @@ test("multiple concurrent installs of the schema is fine", async () => {
         promises.push(
           (async () => {
             // Perform migration
+            const compiledSharedOptions = processSharedOptions(options);
             await migrate(compiledSharedOptions, clients[i]);
           })(),
         );
