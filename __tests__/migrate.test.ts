@@ -1,3 +1,5 @@
+import { PoolClient } from "pg";
+
 import { WorkerSharedOptions } from "../src";
 import { migrations } from "../src/generated/sql";
 import { processSharedOptions } from "../src/lib";
@@ -6,7 +8,9 @@ import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobs,
   GRAPHILE_WORKER_SCHEMA,
+  sleep,
   withPgClient,
+  withPgPool,
 } from "./helpers";
 
 const options: WorkerSharedOptions = {};
@@ -62,6 +66,53 @@ test("migration installs schema; second migration does no harm", async () => {
     }
   });
 });
+
+test("multiple concurrent installs of the schema is fine", async () => {
+  const compiledSharedOptions = processSharedOptions(options);
+  await withPgClient(async (pgClient) => {
+    await pgClient.query(
+      `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
+    );
+  });
+  await withPgPool(async (pool) => {
+    const COUNT = 20;
+    const clients: PoolClient[] = [];
+    for (let i = 0; i < COUNT; i++) {
+      clients.push(await pool.connect());
+    }
+    const promises: Promise<void>[] = [];
+    for (let i = 0; i < COUNT; i++) {
+      promises.push(
+        (async () => {
+          // Perform migration
+          await migrate(compiledSharedOptions, clients[i]);
+        })(),
+      );
+    }
+    await Promise.all(promises);
+    await Promise.all(clients.map((c) => c.release()));
+  });
+  await withPgClient(async (pgClient) => {
+    // Assert migrations table exists and has relevant entries
+    const { rows: migrationRows } = await pgClient.query(
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations`,
+    );
+    expect(migrationRows).toHaveLength(18);
+    const migration = migrationRows[0];
+    expect(migration.id).toEqual(1);
+
+    // Assert job schema files have been created (we're asserting no error is thrown)
+    await pgClient.query(
+      `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('assert_jobs_work')`,
+    );
+    {
+      const jobsRows = await getJobs(pgClient);
+      expect(jobsRows).toHaveLength(1);
+      expect(jobsRows[0].task_identifier).toEqual("assert_jobs_work");
+    }
+  });
+});
+
 test("migration can take over from pre-existing migrations table", async () => {
   await withPgClient(async (pgClient) => {
     await pgClient.query(

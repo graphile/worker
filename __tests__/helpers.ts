@@ -60,6 +60,7 @@ export async function withPgPool<T>(
 ): Promise<T> {
   const pool = new pg.Pool({
     connectionString: TEST_CONNECTION_STRING,
+    max: 100,
   });
   try {
     return await cb(pool);
