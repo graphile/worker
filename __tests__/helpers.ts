@@ -34,7 +34,10 @@ export {
   sleepUntil,
   WEEK,
 } from "jest-time-helpers";
-import { setupFakeTimers as realSetupFakeTimers } from "jest-time-helpers";
+import {
+  setupFakeTimers as realSetupFakeTimers,
+  sleepUntil,
+} from "jest-time-helpers";
 
 let fakeTimers: ReturnType<typeof realSetupFakeTimers> | null = null;
 export function setupFakeTimers() {
@@ -117,9 +120,18 @@ export async function reset(
   options: WorkerPoolOptions,
 ) {
   const promise = _reset(pgPoolOrClient, options);
-  if (fakeTimers) {
+  if (fakeTimers != null) {
+    let done = false;
+    promise.then(
+      () => {
+        done = true;
+      },
+      () => {
+        done = true;
+      },
+    );
     // Force time to tick by, so that migrations can run
-    fakeTimers.setTime(Date.now() + 2000, 50);
+    sleepUntil(() => done, 2000);
   }
   return promise;
 }
