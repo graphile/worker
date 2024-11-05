@@ -132,6 +132,7 @@ export async function migrate(
       if (attempts === 0 && (e.code === "42P01" || e.code === "42703")) {
         try {
           await installSchema(compiledSharedOptions, event);
+          break;
         } catch (e2) {
           if (e2.code === "23505") {
             // Another instance installed this concurrently? Go around again.
