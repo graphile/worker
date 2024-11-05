@@ -78,7 +78,7 @@ where task_id = (select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks
     expect(states).toEqual(["started", "success"]);
     await sleep(20);
     const { rows: jobs } = await pgPool.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs as jobs order by id asc`,
     );
     expect(jobs.length).toEqual(3);
     const unlocked = jobs.find((j) => j.payload.id === "unlocked");

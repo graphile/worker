@@ -169,7 +169,7 @@ export async function jobCount(
 
 export async function getKnown(pgPool: pg.Pool) {
   const { rows } = await pgPool.query<KnownCrontab>(
-    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_known_crontabs as known_crontabs`,
+    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_known_crontabs as known_crontabs order by known_since asc, identifier asc`,
   );
   return rows;
 }

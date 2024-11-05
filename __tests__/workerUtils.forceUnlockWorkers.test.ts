@@ -91,7 +91,7 @@ where jobs.job_queue_id = job_queues.id;`,
       }
     }
     const { rows: lockedQueues } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues as job_queues where locked_at is not null`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_job_queues as job_queues where locked_at is not null order by id asc`,
     );
 
     expect(lockedQueues).toEqual([

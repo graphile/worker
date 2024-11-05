@@ -38,7 +38,7 @@ test("migration installs schema; second migration does no harm", async () => {
 
     // Assert migrations table exists and has relevant entries
     const { rows: migrationRows } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations order by id asc`,
     );
     expect(migrationRows).toHaveLength(18);
     const migration = migrationRows[0];
@@ -97,7 +97,7 @@ test("multiple concurrent installs of the schema is fine", async () => {
   await withPgClient(async (pgClient) => {
     // Assert migrations table exists and has relevant entries
     const { rows: migrationRows } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations order by id asc`,
     );
     expect(migrationRows).toHaveLength(18);
     const migration = migrationRows[0];
@@ -145,7 +145,7 @@ insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations (id) values (1);
 
     // Assert migrations table exists and has relevant entries
     const { rows: migrationRows } = await pgClient.query(
-      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations`,
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations order by id asc`,
     );
     expect(migrationRows.length).toBeGreaterThanOrEqual(18);
     const migration2 = migrationRows[1];
