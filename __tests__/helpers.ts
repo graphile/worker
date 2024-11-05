@@ -30,11 +30,17 @@ export {
   HOUR,
   MINUTE,
   SECOND,
-  setupFakeTimers,
   sleep,
   sleepUntil,
   WEEK,
 } from "jest-time-helpers";
+import { setupFakeTimers as realSetupFakeTimers } from "jest-time-helpers";
+
+let fakeTimers: ReturnType<typeof realSetupFakeTimers> | null = null;
+export function setupFakeTimers() {
+  fakeTimers = realSetupFakeTimers();
+  return fakeTimers;
+}
 
 // Sometimes CI's clock can get interrupted (it is shared infra!) so this
 // extends the default timeout just in case.
@@ -107,6 +113,18 @@ function isPoolClient(o: pg.Pool | pg.PoolClient): o is pg.PoolClient {
 }
 
 export async function reset(
+  pgPoolOrClient: pg.Pool | pg.PoolClient,
+  options: WorkerPoolOptions,
+) {
+  const promise = _reset(pgPoolOrClient, options);
+  if (fakeTimers) {
+    // Force time to tick by, so that migrations can run
+    fakeTimers.setTime(Date.now() + 2000, 50);
+  }
+  return promise;
+}
+
+async function _reset(
   pgPoolOrClient: pg.Pool | pg.PoolClient,
   options: WorkerPoolOptions,
 ) {
