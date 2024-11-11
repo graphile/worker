@@ -329,6 +329,9 @@ export class LocalQueue {
       );
       this.fetchAgain = false;
       this.fetchInProgress = true;
+      // NOTE: this.refetchDelayCounter is set here allow for pulse() during
+      // fetch(). If the refetch delay threshold is surpassed then this value
+      // is harmlessly ignored.
       this.refetchDelayCounter = 0;
 
       // The ONLY await in this function.
@@ -386,9 +389,11 @@ export class LocalQueue {
     }
 
     if (!refetchDelayThresholdSurpassed) {
-      const ms =
+      /** How long to avoid any refetches for */
+      const refetchDelayMs =
         (0.5 + Math.random()) * (refetchDelayOptions?.durationMs ?? 100);
-      const threshold =
+      /** How many notifications do we need to receive before we abort the "no refetches" behavior? */
+      const abortThreshold =
         (0.5 + Math.random()) *
         Math.min(
           refetchDelayOptions?.abortThreshold ?? Infinity,
@@ -398,9 +403,13 @@ export class LocalQueue {
       this.fetchAgain = false;
       this.refetchDelayActive = true;
       this.refetchDelayFetchOnComplete = false;
-      this.refetchDelayAbortThreshold = threshold;
-      // NOTE: this.refetchDelayCounter is set at the beginning of fetch() to allow for pulse() during fetch()
-      this.refetchDelayTimer = setTimeout(this.refetchDelayCompleteOrAbort, ms);
+      this.refetchDelayAbortThreshold = abortThreshold;
+      // NOTE: this.refetchDelayCounter is set at the beginning of fetch()
+      // (i.e. above) to allow for pulse() during fetch()
+      this.refetchDelayTimer = setTimeout(
+        this.refetchDelayCompleteOrAbort,
+        refetchDelayMs,
+      );
     }
 
     if (this.jobQueue.length > 0) {
