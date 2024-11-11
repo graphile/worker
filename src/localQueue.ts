@@ -295,8 +295,19 @@ export class LocalQueue {
   };
 
   private async _fetch() {
+    /**
+     * Did we fetch the maximum number of records that we could? (If so, we
+     * should consider fetching again straight away so there's always jobs to
+     * be done.)
+     */
     let fetchedMax = false;
-    let fetchedUnderRefetchDelayThreshold = false;
+    /**
+     * Did we fetch more jobs than the refetch delay threshold? (Greater than,
+     * not equal to.) If false, we should start a refetch delay.
+     *
+     * Initialized to `true` so on error we don't enable refetch delay.
+     */
+    let refetchDelayThresholdSurpassed = true;
     const refetchDelayOptions =
       this.compiledSharedOptions.resolvedPreset.worker.localQueue?.refetchDelay;
     try {
@@ -337,10 +348,13 @@ export class LocalQueue {
       );
       const jobCount = jobs.length;
       fetchedMax = jobCount >= this.getJobBatchSize;
-      fetchedUnderRefetchDelayThreshold =
-        !fetchedMax &&
-        !!refetchDelayOptions &&
-        jobCount < Math.floor(refetchDelayOptions.threshold ?? 0);
+      refetchDelayThresholdSurpassed =
+        // If we've fetched the maximum, we've met the requirement
+        fetchedMax ||
+        // If refetch delay is disabled, we've met the requirement
+        !refetchDelayOptions ||
+        // If we fetched more than (**not** equal to) `threshold` jobs, we've met the requirement
+        jobCount > Math.floor(refetchDelayOptions.threshold ?? 0);
 
       // NOTE: we don't need to handle `this.mode === RELEASED` here because
       // being in that mode guarantees the workerQueue is empty.
@@ -371,7 +385,7 @@ export class LocalQueue {
       return;
     }
 
-    if (fetchedUnderRefetchDelayThreshold) {
+    if (!refetchDelayThresholdSurpassed) {
       const ms =
         (0.5 + Math.random()) * (refetchDelayOptions?.durationMs ?? 100);
       const threshold =
