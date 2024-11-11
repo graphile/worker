@@ -406,6 +406,7 @@ export class LocalQueue {
         this.fetchTimer = setTimeout(this.fetch, this.pollInterval);
       } else {
         this.setModeReleased();
+        return;
       }
     }
 
