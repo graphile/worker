@@ -15,7 +15,9 @@ const preset = {
     fileExtensions: [".js", ".cjs", ".mjs"],
     // fileExtensions: [".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"],
     gracefulShutdownAbortTimeout: 2500,
-    localQueueSize: -1,
+    localQueue: {
+      size: -1,
+    },
     completeJobBatchDelay: -1,
     failJobBatchDelay: -1,
   },

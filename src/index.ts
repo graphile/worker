@@ -155,31 +155,75 @@ declare global {
 
       events?: WorkerEvents;
 
-      /**
-       * To enable processing jobs in batches, set this to an integer larger
-       * than 1. This will result in jobs being fetched by the pool rather than
-       * the worker, the pool will fetch (and lock!) `localQueueSize` jobs up
-       * front, and each time a worker requests a job it will be served from
-       * this list until the list is exhausted, at which point a new set of
-       * jobs will be fetched (and locked).
-       *
-       * This setting can help reduce the load on your database from looking
-       * for jobs, but is only really effective when there are often many jobs
-       * queued and ready to go, and can increase the latency of job execution
-       * because a single worker may lock jobs into its queue leaving other
-       * workers idle.
-       *
-       * @default `-1`
-       */
-      localQueueSize?: number;
+      localQueue?: {
+        /**
+         * To enable processing jobs in batches, set this to an integer larger
+         * than 1. This will result in jobs being fetched by the pool rather than
+         * the worker, the pool will fetch (and lock!) `localQueue.size` jobs up
+         * front, and each time a worker requests a job it will be served from
+         * this list until the list is exhausted, at which point a new set of
+         * jobs will be fetched (and locked).
+         *
+         * This setting can help reduce the load on your database from looking
+         * for jobs, but is only really effective when there are often many jobs
+         * queued and ready to go, and can increase the latency of job execution
+         * because a single worker may lock jobs into its queue leaving other
+         * workers idle.
+         *
+         * @default `-1`
+         */
+        size: number;
 
-      /**
-       * How long should jobs sit in the local queue before they are returned
-       * to the database? Defaults to 5 minutes.
-       *
-       * @default `300000`
-       */
-      localQueueTtl?: number;
+        /**
+         * How long should jobs sit in the local queue before they are returned
+         * to the database? Defaults to 5 minutes.
+         *
+         * @default `300000`
+         */
+        ttl?: number;
+
+        /**
+         * When running at very high scale (multiple worker instances, each
+         * with some level of concurrency), Worker's polling can cause
+         * significant load on the database when there are too few jobs in the
+         * database to keep all worker pools busy - each time a new job comes
+         * in, each pool may request it, multiplying up the load. To reduce
+         * this impact, when a pool receives no (or few) results to its query
+         * for new jobs, we can instigate a "refetch delay" to cause the pool
+         * to wait before issuing its next poll for jobs, even when new job
+         * notifications come in.
+         */
+        refetchDelay?: {
+          /**
+           * How long in milliseconds to wait, on average, before asking for
+           * more jobs when a previous fetch results in insufficient jobs to
+           * fill the local queue. (Causes the local queue to (mostly) ignore
+           * "new job" notifications.)
+           *
+           * When new jobs are coming in but the workers are mostly idle, you
+           * can expect on average `(1000/durationMs) * INSTANCE_COUNT` "get jobs"
+           * queries per second to be issued to your database. Increasing this
+           * decreases database load at the cost of increased latency when there
+           * are insufficient jobs in the database to keep the local queue full.
+           */
+          durationMs: number;
+          /**
+           * How many jobs should a fetch return to trigger the refetchDelay?
+           * Must be less than the local queue size
+           *
+           * @default {0}
+           */
+          threshold?: number;
+          /**
+           * How many new jobs, on average, can the pool that's in idle fetch
+           * delay be notified of before it aborts the refetch delay and fetches
+           * anyway
+           *
+           * @default {5 * localQueue.size}
+           */
+          abortThreshold?: number;
+        };
+      };
 
       /**
        * The time in milliseconds to wait after a `completeJob` call to see if

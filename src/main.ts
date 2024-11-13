@@ -536,7 +536,7 @@ export function _runTaskList(
       worker: {
         concurrentJobs: baseConcurrency,
         gracefulShutdownAbortTimeout,
-        localQueueSize = -1,
+        localQueue: { size: localQueueSize = -1 } = {},
         completeJobBatchDelay = -1,
         failJobBatchDelay = -1,
       },
@@ -660,7 +660,7 @@ export function _runTaskList(
     },
     nudge(this: WorkerPool, count: number) {
       if (localQueue) {
-        localQueue.pulse();
+        localQueue.pulse(count);
       } else {
         let n = count;
         // Nudge up to `n` workers
