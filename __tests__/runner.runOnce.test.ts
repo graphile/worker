@@ -131,6 +131,7 @@ test("providing just a connectionString is possible", async () => {
   expect.assertions(0);
   await runOnce(options);
 });
+
 test("providing just a pgPool is possible", async () =>
   withPgPool(async (pgPool) => {
     const options: RunnerOptions = {
