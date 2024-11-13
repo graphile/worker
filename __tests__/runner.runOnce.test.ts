@@ -4,12 +4,7 @@ import { makeWorkerPresetWorkerOptions } from "../src/config";
 import { RunnerOptions } from "../src/interfaces";
 import { WorkerPreset } from "../src/preset";
 import { runOnce } from "../src/runner";
-import {
-  PGDATABASE,
-  PGHOST,
-  TEST_CONNECTION_STRING,
-  withPgPool,
-} from "./helpers";
+import { databaseDetails, withPgPool } from "./helpers";
 
 delete process.env.DATABASE_URL;
 delete process.env.PGDATABASE;
@@ -57,7 +52,7 @@ async function runOnceErrorAssertion(
 
 test("either a list of tasks or a existent task directory must be provided", async () => {
   const options: RunnerOptions = {
-    connectionString: TEST_CONNECTION_STRING,
+    connectionString: databaseDetails!.TEST_CONNECTION_STRING,
   };
   await runOnceErrorAssertion(
     options,
@@ -67,7 +62,7 @@ test("either a list of tasks or a existent task directory must be provided", asy
 
 test("taskList and taskDirectory cannot be provided a the same time", async () => {
   const options: RunnerOptions = {
-    connectionString: TEST_CONNECTION_STRING,
+    connectionString: databaseDetails!.TEST_CONNECTION_STRING,
     taskDirectory: "foo",
     taskList: { task: () => {} },
   };
@@ -90,7 +85,7 @@ test("at least a connectionString, a pgPool, the DATABASE_URL or PGDATABASE envv
 test("connectionString and a pgPool cannot provided a the same time", async () => {
   const options: RunnerOptions = {
     taskList: { task: () => {} },
-    connectionString: TEST_CONNECTION_STRING,
+    connectionString: databaseDetails!.TEST_CONNECTION_STRING,
     pgPool: new Pool(),
   };
   await runOnceErrorAssertion(
@@ -100,29 +95,38 @@ test("connectionString and a pgPool cannot provided a the same time", async () =
 });
 
 test("providing just a DATABASE_URL is possible", async () => {
-  return withEnv({ DATABASE_URL: TEST_CONNECTION_STRING }, async () => {
-    const options: RunnerOptions = {
-      taskList: { task: () => {} },
-    };
-    expect.assertions(0);
-    await runOnce(options);
-  });
+  return withEnv(
+    { DATABASE_URL: databaseDetails!.TEST_CONNECTION_STRING },
+    async () => {
+      const options: RunnerOptions = {
+        taskList: { task: () => {} },
+      };
+      expect.assertions(0);
+      await runOnce(options);
+    },
+  );
 });
 
 test("providing just PGHOST and PGDATABASE is possible", async () => {
-  return withEnv({ PGHOST, PGDATABASE }, async () => {
-    const options: RunnerOptions = {
-      taskList: { task: () => {} },
-    };
-    expect.assertions(0);
-    await runOnce(options);
-  });
+  return withEnv(
+    {
+      PGHOST: databaseDetails!.PGHOST,
+      PGDATABASE: databaseDetails!.PGDATABASE,
+    },
+    async () => {
+      const options: RunnerOptions = {
+        taskList: { task: () => {} },
+      };
+      expect.assertions(0);
+      await runOnce(options);
+    },
+  );
 });
 
 test("providing just a connectionString is possible", async () => {
   const options: RunnerOptions = {
     taskList: { task: () => {} },
-    connectionString: TEST_CONNECTION_STRING,
+    connectionString: databaseDetails!.TEST_CONNECTION_STRING,
   };
   expect.assertions(0);
   await runOnce(options);

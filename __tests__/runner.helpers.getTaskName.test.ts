@@ -3,9 +3,9 @@ import { Pool, PoolClient } from "pg";
 import { DbJobSpec, Runner, RunnerOptions } from "../src/interfaces";
 import { run } from "../src/runner";
 import {
+  databaseDetails,
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   sleepUntil,
-  TEST_CONNECTION_STRING,
   withPgClient,
 } from "./helpers";
 
@@ -15,7 +15,7 @@ let runner: Runner | null = null;
 const JOB_COUNT = 10;
 beforeAll(() => {
   pgPool = new Pool({
-    connectionString: TEST_CONNECTION_STRING,
+    connectionString: databaseDetails!.TEST_CONNECTION_STRING,
     max: JOB_COUNT * 2 + 5,
   });
 });
