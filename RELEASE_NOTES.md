@@ -29,6 +29,8 @@ Read more:
   removing CLI defaults)
 - Fix bug where executable tasks had their stdout/stderr ignored; this is now
   output via logging (thanks @wineTGH).
+- Fix race condition when multiple workers attempt to initialise the database at
+  the same time
 
 ## v0.16.6
 

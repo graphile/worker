@@ -143,7 +143,13 @@ A Logger instance.
 
 Type: `number | undefined`
 
-Maximum number of concurrent connections to Postgres
+Maximum number of concurrent connections to Postgres; must be at least `2`. This
+number can be lower than `concurrentJobs`, however a low pool size may cause
+issues - if all your pool clients are busy then no jobs can be started or
+released. If in doubt, we recommend setting it to `10` or `concurrentJobs + 2`,
+whichever is larger. (Note: if your task executors use this pool, then an even
+larger value may be needed for optimum performance, depending on the shape of
+your logic.)
 
 ### worker.maxResetLockedInterval
 

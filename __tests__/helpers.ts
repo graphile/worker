@@ -31,10 +31,19 @@ export {
   HOUR,
   MINUTE,
   SECOND,
-  setupFakeTimers,
   sleep,
   WEEK,
 } from "jest-time-helpers";
+import {
+  setupFakeTimers as realSetupFakeTimers,
+  sleepUntil,
+} from "jest-time-helpers";
+
+let fakeTimers: ReturnType<typeof realSetupFakeTimers> | null = null;
+export function setupFakeTimers() {
+  fakeTimers = realSetupFakeTimers();
+  return fakeTimers;
+}
 
 export function sleepUntil(condition: () => boolean, ms?: number) {
   // Bump the default timeout from 2000ms for CI
@@ -101,6 +110,7 @@ export async function withPgPool<T>(
   const { TEST_CONNECTION_STRING } = databaseDetails!;
   const pool = new pg.Pool({
     connectionString: TEST_CONNECTION_STRING,
+    max: 100,
   });
   try {
     return await cb(pool);
@@ -155,6 +165,27 @@ export async function reset(
   pgPoolOrClient: pg.Pool | pg.PoolClient,
   options: WorkerPoolOptions,
 ) {
+  const promise = _reset(pgPoolOrClient, options);
+  if (fakeTimers != null) {
+    let done = false;
+    promise.then(
+      () => {
+        done = true;
+      },
+      () => {
+        done = true;
+      },
+    );
+    // Force time to tick by, so that migrations can run
+    sleepUntil(() => done, 2000);
+  }
+  return promise;
+}
+
+async function _reset(
+  pgPoolOrClient: pg.Pool | pg.PoolClient,
+  options: WorkerPoolOptions,
+) {
   await pgPoolOrClient.query(
     `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
   );
@@ -195,7 +226,7 @@ async function _jobCount(
 
 export async function getKnown(pgPool: pg.Pool) {
   const { rows } = await pgPool.query<KnownCrontab>(
-    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_known_crontabs as known_crontabs`,
+    `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_known_crontabs as known_crontabs order by known_since asc, identifier asc`,
   );
   return rows;
 }
