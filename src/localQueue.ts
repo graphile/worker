@@ -438,7 +438,7 @@ export class LocalQueue {
   }
 
   private refetchDelayCompleteOrAbort = (): void => {
-    if (this.refetchDelayTimer) {
+    if (this.refetchDelayTimer != null) {
       clearTimeout(this.refetchDelayTimer);
       this.refetchDelayTimer = null;
     }
@@ -453,6 +453,10 @@ export class LocalQueue {
     }
   };
 
+  /**
+   * If no refetch delay is active, returns false; otherwise returns true and
+   * checks to see if we need to abort the delay and trigger a fetch.
+   */
   private handleCheckRefetchDelayAbortThreshold(): boolean {
     if (!this.refetchDelayActive || this.mode === "RELEASED") {
       return false;
@@ -460,9 +464,8 @@ export class LocalQueue {
     if (this.refetchDelayCounter >= this.refetchDelayAbortThreshold) {
       this.refetchDelayFetchOnComplete = true;
       this.refetchDelayCompleteOrAbort();
-      return true;
     }
-    return false;
+    return true;
   }
 
   /** Called when a new job becomes available in the DB */
@@ -470,11 +473,12 @@ export class LocalQueue {
     this.refetchDelayCounter += count;
 
     if (this.handleCheckRefetchDelayAbortThreshold()) {
-      /* handled */
+      // Refetch delay was enabled; we've incremented the counter and taken
+      // action if necessary. No further action necessary.
     } else if (this.mode === POLLING) {
       if (this.fetchInProgress) {
         this.fetchAgain = true;
-      } else if (this.fetchTimer) {
+      } else if (this.fetchTimer != null) {
         clearTimeout(this.fetchTimer);
         this.fetchTimer = null;
         this.fetch();
