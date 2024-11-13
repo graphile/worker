@@ -569,6 +569,7 @@ export class LocalQueue {
     } else if (oldMode === TTL_EXPIRED) {
       // No action necessary
     }
+
     if (this.backgroundCount === 0) {
       this.promise.resolve();
     }
