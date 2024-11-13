@@ -6,4 +6,5 @@ declare global {
   }
 }
 
+// Has to be a module, so export something
 export type Foo = "Foo";
