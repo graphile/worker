@@ -3,13 +3,7 @@ import {
   WorkerSharedOptions,
   WorkerUtils,
 } from "../src/index";
-import {
-  getJobs,
-  makeSelectionOfJobs,
-  reset,
-  TEST_CONNECTION_STRING,
-  withPgClient,
-} from "./helpers";
+import { getJobs, makeSelectionOfJobs, reset, withPgClient } from "./helpers";
 
 /** For sorting arrays of numbers or numeric strings */
 function numerically(a: string | number, b: string | number) {
@@ -25,7 +19,7 @@ afterEach(async () => {
 });
 
 test("completes the jobs, leaves others unaffected", () =>
-  withPgClient(async (pgClient) => {
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
     await reset(pgClient, options);
 
     utils = await makeWorkerUtils({

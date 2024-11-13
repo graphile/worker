@@ -6,7 +6,7 @@ import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
 import { runTaskList } from "../src/main";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
-  jobCount,
+  expectJobCount,
   reset,
   sleep,
   sleepUntil,
@@ -70,7 +70,7 @@ test("main will execute jobs as they come up, and exits cleanly", () =>
       await sleep(1);
       expect(finished).toBeTruthy();
       await workerPool.promise;
-      expect(await jobCount(pgPool)).toEqual(0);
+      await expectJobCount(pgPool, 0);
       expect(process.listeners("SIGTERM")).toHaveLength(0);
     } finally {
       Object.values(jobPromises).forEach((p) => p?.resolve());

@@ -6,14 +6,7 @@ import {
   WorkerSharedOptions,
   WorkerUtils,
 } from "../src/index";
-import {
-  getJobs,
-  HOUR,
-  reset,
-  setupFakeTimers,
-  TEST_CONNECTION_STRING,
-  withPgClient,
-} from "./helpers";
+import { getJobs, HOUR, reset, setupFakeTimers, withPgClient } from "./helpers";
 
 const { setTime } = setupFakeTimers();
 const REFERENCE_TIMESTAMP = 1609459200000; /* 1st January 2021, 00:00:00 UTC */
@@ -27,7 +20,7 @@ afterEach(async () => {
 });
 
 test("runs a job added through the worker utils", () =>
-  withPgClient(async (pgClient) => {
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
     await reset(pgClient, options);
 
     // Schedule a job
@@ -48,7 +41,7 @@ test("runs a job added through the worker utils", () =>
   }));
 
 test("supports the jobKey API", () =>
-  withPgClient(async (pgClient) => {
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
     await reset(pgClient, options);
 
     // Schedule a job
@@ -74,7 +67,7 @@ test("supports the jobKey API", () =>
   }));
 
 test("supports the jobKey API with jobKeyMode", () =>
-  withPgClient(async (pgClient) => {
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
     await reset(pgClient, options);
 
     // Schedule a job
@@ -143,7 +136,7 @@ test("supports the jobKey API with jobKeyMode", () =>
   }));
 
 test("runs a job added through the addJob shortcut function", () =>
-  withPgClient(async (pgClient) => {
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
     await reset(pgClient, options);
 
     // Schedule a job
@@ -161,7 +154,7 @@ test("runs a job added through the addJob shortcut function", () =>
   }));
 
 test("adding job respects useNodeTime", () =>
-  withPgClient(async (pgClient) => {
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
     await setTime(REFERENCE_TIMESTAMP);
     await reset(pgClient, options);
 
