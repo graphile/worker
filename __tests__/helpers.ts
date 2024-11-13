@@ -1,6 +1,10 @@
 import { randomBytes } from "crypto";
 import { EventEmitter } from "events";
-import { sleep, sleepUntil as baseSleepUntil } from "jest-time-helpers";
+import {
+  setupFakeTimers as realSetupFakeTimers,
+  sleep,
+  sleepUntil as baseSleepUntil,
+} from "jest-time-helpers";
 import * as pg from "pg";
 
 import defer from "../src/deferred";
@@ -17,6 +21,8 @@ import { processSharedOptions } from "../src/lib";
 import { _allWorkerPools } from "../src/main";
 import { migrate } from "../src/migrate";
 
+export { DAY, HOUR, MINUTE, SECOND, sleep, WEEK } from "jest-time-helpers";
+
 declare global {
   namespace GraphileWorker {
     interface Tasks {
@@ -25,19 +31,6 @@ declare global {
     }
   }
 }
-
-export {
-  DAY,
-  HOUR,
-  MINUTE,
-  SECOND,
-  sleep,
-  WEEK,
-} from "jest-time-helpers";
-import {
-  setupFakeTimers as realSetupFakeTimers,
-  sleepUntil,
-} from "jest-time-helpers";
 
 let fakeTimers: ReturnType<typeof realSetupFakeTimers> | null = null;
 export function setupFakeTimers() {
