@@ -13,7 +13,7 @@ const stats = {
   timeInMode: Object.create(null),
   timeInRefetchDelay: 0n,
   refetchDelays: 0,
-  refetchDelayAborted: 0,
+  refetchDelaysAborted: 0,
 };
 
 let lastModeStart = process.hrtime.bigint();
@@ -52,7 +52,7 @@ const TowerDefenceResultPlugin = {
               ms(stats.timeInRefetchDelay),
               11,
             )}(Aborted=${p(
-              `${stats.refetchDelayAborted}/${stats.refetchDelays}`,
+              `${stats.refetchDelaysAborted}/${stats.refetchDelays}`,
               9,
             )})|${tim()}\n`,
           );
@@ -108,7 +108,8 @@ const preset = {
     //completeJobBatchDelay: -1,
     //failJobBatchDelay: -1,
 
-    localQueue: { size: 500, refetchDelay: { durationMs: 100 } },
+    pollInterval: 15000,
+    localQueue: { size: CONCURRENT_JOBS, refetchDelay: { durationMs: 15000 } },
     completeJobBatchDelay: 0,
     failJobBatchDelay: 0,
   },
