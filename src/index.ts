@@ -175,8 +175,8 @@ declare global {
         size: number;
 
         /**
-         * How long should jobs sit in the local queue before they are returned
-         * to the database? Defaults to 5 minutes.
+         * How long (in milliseconds) should jobs sit in the local queue before
+         * they are returned to the database? Defaults to 5 minutes.
          *
          * @default `300000`
          */
