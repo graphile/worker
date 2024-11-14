@@ -15,6 +15,7 @@ import type {
   Release,
   ResolvedWorkerPreset,
 } from "./lib";
+import { LocalQueue } from "./localQueue";
 import type { Logger } from "./logger";
 import type { Signal } from "./signals";
 
@@ -1021,6 +1022,73 @@ export type WorkerEventMap = {
   };
 
   /**
+   * When a local queue is created
+   */
+  "localQueue:init": {
+    localQueue: LocalQueue;
+  };
+
+  /**
+   * When a local queue enters 'polling' mode
+   */
+  "localQueue:setMode": {
+    localQueue: LocalQueue;
+    oldMode: LocalQueueMode;
+    newMode: Exclude<LocalQueueMode, typeof LocalQueueModes.STARTING>;
+  };
+
+  /**
+   * Too few jobs were fetched from the DB, so the local queue is going to
+   * sleep.
+   */
+  "localQueue:refetchDelay:start": {
+    localQueue: LocalQueue;
+    /** The number of jobs that were fetched */
+    jobCount: number;
+    /** We needed this number or fewer jobs to trigger */
+    threshold: number;
+    /** How long we should delay for */
+    delayMs: number;
+    /** If we receive this number of nudges, we will abort the delay */
+    abortThreshold: number;
+  };
+
+  /**
+   * Too many nudges happened whilst the local queue was asleep, and it has
+   * been awoken early to deal with the rush!
+   */
+  "localQueue:refetchDelay:abort": {
+    localQueue: LocalQueue;
+    /** How many nudges did we receive during the delay */
+    count: number;
+    /** How many nudges did we need to receive for the abort */
+    abortThreshold: number;
+  };
+
+  /**
+   * The refetchDelay terminated normally.
+   */
+  "localQueue:refetchDelay:expired": {
+    localQueue: LocalQueue;
+  };
+
+  /**
+   * The refetchDelay terminated normally.
+   */
+  "localQueue:getJobs:complete": {
+    localQueue: LocalQueue;
+    jobs: Job[];
+  };
+
+  /**
+   * The refetchDelay terminated normally.
+   */
+  "localQueue:returnJobs": {
+    localQueue: LocalQueue;
+    jobs: Job[];
+  };
+
+  /**
    * When a worker is created
    */
   "worker:create": { worker: Worker; tasks: TaskList };
@@ -1258,3 +1326,13 @@ export type FailJobFunction = (spec: {
   message: string;
   replacementPayload: undefined | unknown[];
 }) => void;
+
+export const LocalQueueModes = {
+  STARTING: "STARTING",
+  POLLING: "POLLING",
+  WAITING: "WAITING",
+  TTL_EXPIRED: "TTL_EXPIRED",
+  RELEASED: "RELEASED",
+} as const;
+
+export type LocalQueueMode = keyof typeof LocalQueueModes;
