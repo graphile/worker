@@ -8,6 +8,7 @@
 const CONCURRENT_JOBS = 10;
 
 const stats = {
+  fetches: 0,
   jobsFetched: 0,
   jobsReturned: 0,
   timeInMode: Object.create(null),
@@ -45,19 +46,20 @@ const TowerDefenceResultPlugin = {
       init(ctx) {
         ctx.events.on("pool:release", (event) => {
           console.log(
-            `\nPool ${event.workerPool.id} released\nFetched=${p(
-              stats.jobsFetched,
+            `\nPool ${event.workerPool.id} released\nFetches=${p(
+              stats.fetches,
+              5,
+            )}|Fetched=${p(stats.jobsFetched, 6)}|Returned=${p(
+              stats.jobsReturned,
               6,
-            )}|Returned=${p(stats.jobsReturned, 6)}|TotalDelay=${p(
-              ms(stats.timeInRefetchDelay),
-              11,
-            )}(Aborted=${p(
+            )}|TotalDelay=${p(ms(stats.timeInRefetchDelay), 11)}(Aborted=${p(
               `${stats.refetchDelaysAborted}/${stats.refetchDelays}`,
               9,
             )})|${tim()}\n`,
           );
         });
         ctx.events.on("localQueue:getJobs:complete", ({ jobs }) => {
+          stats.fetches += 1;
           stats.jobsFetched += jobs.length;
         });
         ctx.events.on("localQueue:returnJobs", ({ jobs }) => {
@@ -108,8 +110,11 @@ const preset = {
     //completeJobBatchDelay: -1,
     //failJobBatchDelay: -1,
 
-    pollInterval: 15000,
-    localQueue: { size: CONCURRENT_JOBS, refetchDelay: { durationMs: 15000 } },
+    pollInterval: 2000,
+    localQueue: {
+      size: CONCURRENT_JOBS,
+      refetchDelay: { durationMs: 1000, abortThreshold: CONCURRENT_JOBS * 10 },
+    },
     completeJobBatchDelay: 0,
     failJobBatchDelay: 0,
   },
