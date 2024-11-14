@@ -2,15 +2,14 @@
 // @ts-check
 import { execSync, spawn } from "child_process";
 import pg from "pg";
-import { promisify } from "util";
 
 const STUCK_JOB_COUNT = 0;
 const PARALLELISM = 10;
 const WAVES = [
-  makeWave([1]),
-  makeWave(new Array(10000).fill(1)),
-  makeWave(new Array(10000).fill(4)),
-  makeWave(new Array(10000).fill(20)),
+  //makeWave([1]),
+  makeWave(new Array(10000).fill(1), 10),
+  //makeWave(new Array(10000).fill(4)),
+  //makeWave(new Array(10000).fill(20)),
 ];
 
 const taskIdentifier = "log_if_999";
@@ -49,8 +48,8 @@ const pgPool = new pg.Pool({ connectionString: process.env.PERF_DATABASE_URL });
 const GENERAL_JOBS_PER_SECOND = 15000;
 const GENERAL_JOBS_PER_MILLISECOND = GENERAL_JOBS_PER_SECOND / 1000;
 
-/** @type {(jobBatches: number[]) => () => Promise<void>} */
-function makeWave(jobBatches) {
+/** @type {(jobBatches: number[], sleepDuration?: number) => () => Promise<void>} */
+function makeWave(jobBatches, sleepDuration = -1) {
   return async () => {
     let totalCount = 0;
     for (let i = 0; i < jobBatches.length; i++) {
@@ -72,6 +71,9 @@ function makeWave(jobBatches) {
         `select graphile_worker.add_jobs($1::graphile_worker.job_spec[]);`,
         [jobsString],
       );
+      if (sleepDuration >= 0) {
+        await sleep(sleepDuration);
+      }
     }
 
     // Give roughly enough time for the jobs to complete
