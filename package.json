@@ -18,6 +18,7 @@
     "depcheck": "depcheck --ignores='graphile-worker,faktory-worker,@google-cloud/tasks,bullmq,jest-environment-node,@docusaurus/*,@fortawesome/*,@mdx-js/*,@types/jest,clsx,eslint_d,graphile,juice,postcss-nested,prism-react-renderer,react,react-dom,svgo,ts-node,@types/debug,tslib'",
     "db:dump": "./scripts/dump_db",
     "perfTest": "cd perfTest && node ./run.js",
+    "towerDefence": "cd towerDefence && node ./run.mjs",
     "preversion": "grep '^### Pending' RELEASE_NOTES.md && echo \"⚠️ Cannot publish with 'Pending' in RELEASE_NOTES ⚠️\" && exit 1 || true",
     "version": "node scripts/postversion.mjs && git add src/version.ts",
     "website": "cd website && yarn run"
