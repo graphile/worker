@@ -6,7 +6,6 @@ const exec = promisify(rawExec);
 const JOB_COUNT = 200000;
 const STUCK_JOB_COUNT = 0;
 const PARALLELISM = 4;
-const CONCURRENCY = 24;
 
 const time = async (cb) => {
   const start = process.hrtime();
@@ -52,10 +51,7 @@ async function main() {
   console.log("Timing startup/shutdown time...");
   let result;
   const startupTime = await time(async () => {
-    result = await exec(
-      `node ../dist/cli.js --once -j ${CONCURRENCY} -m ${CONCURRENCY + 1}`,
-      execOptions,
-    );
+    result = await exec(`node ../dist/cli.js --once`, execOptions);
   });
   logResult(result);
   console.log();
@@ -81,12 +77,7 @@ async function main() {
   const dur = await time(async () => {
     const promises = [];
     for (let i = 0; i < PARALLELISM; i++) {
-      promises.push(
-        exec(
-          `node ../dist/cli.js --once -j ${CONCURRENCY} -m ${CONCURRENCY + 1}`,
-          execOptions,
-        ),
-      );
+      promises.push(exec(`node ../dist/cli.js --once`, execOptions));
     }
     (await Promise.all(promises)).map(logResult);
   });
