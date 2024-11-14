@@ -3,19 +3,17 @@ import assert from "assert";
 import {
   CompiledSharedOptions,
   EnhancedWithPgClient,
+  LocalQueueMode,
+  LocalQueueModes,
   WorkerPoolOptions,
 } from ".";
 import { MINUTE, SECOND } from "./cronConstants";
 import defer, { Deferred } from "./deferred";
 import { GetJobFunction, Job, TaskList, WorkerPool } from "./interfaces";
 import { getJob as baseGetJob } from "./sql/getJob";
-import { returnJob } from "./sql/returnJob";
+import { returnJobs } from "./sql/returnJobs";
 
-const STARTING = "STARTING";
-const POLLING = "POLLING";
-const WAITING = "WAITING";
-const TTL_EXPIRED = "TTL_EXPIRED";
-const RELEASED = "RELEASED";
+const { STARTING, POLLING, WAITING, TTL_EXPIRED, RELEASED } = LocalQueueModes;
 
 /**
  * The local queue exists to reduce strain on the database; it works by
@@ -109,12 +107,7 @@ export class LocalQueue {
   // Set true to fetch immediately after a fetch completes; typically only used
   // when the queue is pulsed during a fetch.
   fetchAgain = false;
-  mode:
-    | typeof STARTING
-    | typeof POLLING
-    | typeof WAITING
-    | typeof TTL_EXPIRED
-    | typeof RELEASED = STARTING;
+  public readonly mode: LocalQueueMode = STARTING;
   private promise = defer();
   private backgroundCount = 0;
 
@@ -129,7 +122,7 @@ export class LocalQueue {
     private readonly compiledSharedOptions: CompiledSharedOptions<WorkerPoolOptions>,
     private readonly tasks: TaskList,
     private readonly withPgClient: EnhancedWithPgClient,
-    private readonly workerPool: WorkerPool,
+    public readonly workerPool: WorkerPool,
     private readonly getJobBatchSize: number,
     private readonly continuous: boolean,
   ) {
@@ -148,7 +141,23 @@ export class LocalQueue {
         `Invalid configuration; 'preset.worker.localQueue.refetchDelay.durationMs' (${localQueueRefetchDelayDuration}) must not be larger than 'preset.worker.pollInterval' (${this.pollInterval})`,
       );
     }
+    compiledSharedOptions.events.emit("localQueue:init", {
+      localQueue: this,
+    });
     this.setModePolling();
+  }
+
+  private setMode(
+    newMode: Exclude<LocalQueueMode, typeof LocalQueueModes.STARTING>,
+  ) {
+    const oldMode = this.mode;
+    // Override the 'readonly'
+    (this.mode as LocalQueueMode) = newMode;
+    this.compiledSharedOptions.events.emit("localQueue:setMode", {
+      localQueue: this,
+      oldMode,
+      newMode,
+    });
   }
 
   private decreaseBackgroundCount = () => {
@@ -193,7 +202,7 @@ export class LocalQueue {
       this.ttlExpiredTimer = null;
     }
 
-    this.mode = POLLING;
+    this.setMode(POLLING);
 
     this.fetch();
   }
@@ -219,7 +228,7 @@ export class LocalQueue {
       clearTimeout(this.ttlExpiredTimer);
     }
 
-    this.mode = WAITING;
+    this.setMode(WAITING);
 
     this.ttlExpiredTimer = setTimeout(() => {
       this.setModeTtlExpired();
@@ -248,7 +257,7 @@ export class LocalQueue {
       this.ttlExpiredTimer = null;
     }
 
-    this.mode = TTL_EXPIRED;
+    this.setMode(TTL_EXPIRED);
 
     // Return jobs to the pool
     this.returnJobs();
@@ -256,8 +265,12 @@ export class LocalQueue {
 
   private returnJobs() {
     const jobsToReturn = this.jobQueue.splice(0, this.jobQueue.length);
+    this.compiledSharedOptions.events.emit("localQueue:returnJobs", {
+      localQueue: this,
+      jobs: jobsToReturn,
+    });
     this.background(
-      returnJob(
+      returnJobs(
         this.compiledSharedOptions,
         this.withPgClient,
         this.workerPool.id,
@@ -308,6 +321,7 @@ export class LocalQueue {
      * Initialized to `true` so on error we don't enable refetch delay.
      */
     let refetchDelayThresholdSurpassed = true;
+    let jobCount = 0;
     const refetchDelayOptions =
       this.compiledSharedOptions.resolvedPreset.worker.localQueue?.refetchDelay;
     try {
@@ -344,12 +358,17 @@ export class LocalQueue {
         this.getJobBatchSize,
       );
 
+      this.compiledSharedOptions.events.emit("localQueue:getJobs:complete", {
+        localQueue: this,
+        jobs,
+      });
+
       assert.equal(
         this.jobQueue.length,
         0,
         "Should not fetch when job queue isn't empty (recheck)",
       );
-      const jobCount = jobs.length;
+      jobCount = jobs.length;
       fetchedMax = jobCount >= this.getJobBatchSize;
       refetchDelayThresholdSurpassed =
         // If we've fetched the maximum, we've met the requirement
@@ -388,10 +407,10 @@ export class LocalQueue {
       return;
     }
 
+    /** How long to avoid any refetches for */
+    const refetchDelayMs =
+      (0.5 + Math.random()) * (refetchDelayOptions?.durationMs ?? 100);
     if (!refetchDelayThresholdSurpassed) {
-      /** How long to avoid any refetches for */
-      const refetchDelayMs =
-        (0.5 + Math.random()) * (refetchDelayOptions?.durationMs ?? 100);
       /** How many notifications do we need to receive before we abort the "no refetches" behavior? */
       const abortThreshold =
         (0.5 + Math.random()) *
@@ -410,6 +429,13 @@ export class LocalQueue {
         this.refetchDelayCompleteOrAbort,
         refetchDelayMs,
       );
+      this.compiledSharedOptions.events.emit("localQueue:refetchDelay:start", {
+        localQueue: this,
+        jobCount,
+        threshold: refetchDelayOptions?.threshold ?? 0,
+        delayMs: refetchDelayMs,
+        abortThreshold: this.refetchDelayAbortThreshold,
+      });
     }
 
     if (this.jobQueue.length > 0) {
@@ -437,12 +463,27 @@ export class LocalQueue {
     this.handleCheckRefetchDelayAbortThreshold();
   }
 
-  private refetchDelayCompleteOrAbort = (): void => {
+  private refetchDelayCompleteOrAbort = (aborted = false): void => {
     if (this.refetchDelayTimer != null) {
       clearTimeout(this.refetchDelayTimer);
       this.refetchDelayTimer = null;
     }
     this.refetchDelayActive = false;
+    if (aborted) {
+      this.compiledSharedOptions.events.emit("localQueue:refetchDelay:abort", {
+        localQueue: this,
+        count: this.refetchDelayCounter,
+        abortThreshold: this.refetchDelayAbortThreshold,
+      });
+    } else {
+      this.compiledSharedOptions.events.emit(
+        "localQueue:refetchDelay:expired",
+        {
+          localQueue: this,
+        },
+      );
+    }
+
     if (this.mode === POLLING && this.refetchDelayFetchOnComplete) {
       // Cancel poll, do now
       if (this.fetchTimer) {
@@ -463,7 +504,7 @@ export class LocalQueue {
     }
     if (this.refetchDelayCounter >= this.refetchDelayAbortThreshold) {
       this.refetchDelayFetchOnComplete = true;
-      this.refetchDelayCompleteOrAbort();
+      this.refetchDelayCompleteOrAbort(true);
     }
     return true;
   }
@@ -538,7 +579,7 @@ export class LocalQueue {
     );
 
     const oldMode = this.mode;
-    this.mode = RELEASED;
+    this.setMode(RELEASED);
 
     if (this.refetchDelayTimer != null) {
       clearTimeout(this.refetchDelayTimer);

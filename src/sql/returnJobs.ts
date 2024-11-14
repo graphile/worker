@@ -1,7 +1,7 @@
 import { DbJob, EnhancedWithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
-export async function returnJob(
+export async function returnJobs(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: EnhancedWithPgClient,
   poolId: string,
