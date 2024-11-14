@@ -6,7 +6,12 @@ import { promisify } from "util";
 
 const STUCK_JOB_COUNT = 0;
 const PARALLELISM = 10;
-const WAVES = [makeWave([1])];
+const WAVES = [
+  makeWave([1]),
+  makeWave(new Array(1000).fill(1)),
+  makeWave(new Array(1000).fill(4)),
+  makeWave(new Array(1000).fill(20)),
+];
 
 const taskIdentifier = "log_if_999";
 
@@ -72,17 +77,22 @@ function makeWave(jobBatches) {
     // Give roughly enough time for the jobs to complete
     await sleep(totalCount / GENERAL_JOBS_PER_MILLISECOND);
 
-    // And then wait a bit longer
-    await sleep(10000);
-
-    // And check the jobs table is empty
-    const {
-      rows: [{ count }],
-    } = await pgPool.query(
-      `select count(*) from graphile_worker.jobs where task_identifier <> 'stuck';`,
-    );
-    if (count !== "0") {
-      throw new Error(`Expected 0 jobs, got ${count}`);
+    // And wait for the jobs table to be empty
+    const MAX_ATTEMPTS = 20;
+    for (let attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
+      const {
+        rows: [{ count }],
+      } = await pgPool.query(
+        `select count(*) from graphile_worker.jobs where task_identifier <> 'stuck';`,
+      );
+      if (count === "0") {
+        break;
+      }
+      if (attempts === MAX_ATTEMPTS - 1) {
+        throw new Error(`Expected 0 jobs, got ${count}`);
+      } else {
+        await sleep(50 * (attempts + 1) ** 1.5);
+      }
     }
   };
 }
