@@ -78,43 +78,30 @@ export function makeAddJobs(
       worker: { useNodeTime },
     },
   } = compiledSharedOptions;
-  return (jobSpecs, jobKeyPreserveRunAt) => {
-    return withPgClient(async (pgClient) => {
-      const NOW = new Date().toISOString();
-      const dbSpecs = jobSpecs.map((spec): DbJobSpec => {
-        const {
-          identifier,
-          payload,
-          queueName,
-          runAt,
-          maxAttempts,
-          jobKey,
-          priority,
-          flags,
-        } = spec;
-        return {
-          identifier,
-          payload,
-          queue_name: queueName,
-          run_at: runAt ? runAt.toISOString() : useNodeTime ? NOW : undefined,
-          max_attempts: maxAttempts,
-          job_key: jobKey,
-          priority,
-          flags,
-        };
-      });
+  return (jobSpecs, jobKeyPreserveRunAt) =>
+    withPgClient(async (pgClient) => {
+      const NOW = useNodeTime ? new Date().toISOString() : undefined;
+      const dbSpecs = jobSpecs.map(
+        (spec): DbJobSpec => ({
+          identifier: spec.identifier,
+          payload: spec.payload,
+          queue_name: spec.queueName,
+          run_at: spec.runAt?.toISOString() ?? NOW,
+          max_attempts: spec.maxAttempts,
+          job_key: spec.jobKey,
+          priority: spec.priority,
+          flags: spec.flags,
+        }),
+      );
       const { rows: dbJobs } = await pgClient.query<DbJob>(
-        `
-        select * from ${escapedWorkerSchema}.add_jobs(
-          array(
-            select json_populate_recordset(
-              null::${escapedWorkerSchema}.job_spec,
-              $1::json
-            )
-          ),
-          $2::boolean
-        );
-        `,
+        `\
+select *
+from ${escapedWorkerSchema}.add_jobs(
+  array(
+    select json_populate_recordset(null::${escapedWorkerSchema}.job_spec, $1::json)
+  ),
+  $2::boolean
+);`,
         [JSON.stringify(dbSpecs), jobKeyPreserveRunAt],
       );
       const jobs: Job[] = [];
@@ -128,7 +115,6 @@ export function makeAddJobs(
       }
       return jobs;
     });
-  };
 }
 
 const $$cache = Symbol("queueNameById");
