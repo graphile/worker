@@ -9,6 +9,7 @@ const CONCURRENT_JOBS = 10;
 
 const stats = {
   fetches: 0,
+  emptyFetches: 0,
   jobsFetched: 0,
   jobsReturned: 0,
   timeInMode: Object.create(null),
@@ -49,10 +50,13 @@ const TowerDefenceResultPlugin = {
             `\nPool ${event.workerPool.id} released\nFetches=${p(
               stats.fetches,
               5,
-            )}|Fetched=${p(stats.jobsFetched, 6)}|Returned=${p(
-              stats.jobsReturned,
+            )}(empty=${p(stats.emptyFetches, 5)})|Fetched=${p(
+              stats.jobsFetched,
               6,
-            )}|TotalDelay=${p(ms(stats.timeInRefetchDelay), 11)}(Aborted=${p(
+            )}|Returned=${p(stats.jobsReturned, 6)}|TotalDelay=${p(
+              ms(stats.timeInRefetchDelay),
+              11,
+            )}(Aborted=${p(
               `${stats.refetchDelaysAborted}/${stats.refetchDelays}`,
               9,
             )})|${tim()}\n`,
@@ -60,6 +64,9 @@ const TowerDefenceResultPlugin = {
         });
         ctx.events.on("localQueue:getJobs:complete", ({ jobs }) => {
           stats.fetches += 1;
+          if (jobs.length === 0) {
+            stats.emptyFetches += 1;
+          }
           stats.jobsFetched += jobs.length;
         });
         ctx.events.on("localQueue:returnJobs", ({ jobs }) => {
