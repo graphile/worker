@@ -117,7 +117,7 @@ export interface AddJobsJobSpec<
    */
   flags?: string[];
 
-  // Must NOT set jobKeyMode - it is unsupported
+  /** Must NOT set jobKeyMode for addJobs; use addJob if you need that. */
   jobKeyMode?: never;
 }
 
