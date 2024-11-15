@@ -207,6 +207,7 @@ declare global {
            * are insufficient jobs in the database to keep the local queue full.
            */
           durationMs: number;
+
           /**
            * How many jobs should a fetch return to trigger the refetchDelay?
            * Must be less than the local queue size
@@ -214,14 +215,35 @@ declare global {
            * @default {0}
            */
           threshold?: number;
+
           /**
-           * How many new jobs, on average, can the pool that's in idle fetch
-           * delay be notified of before it aborts the refetch delay and fetches
-           * anyway
+           * How many new jobs can a pool that's in refetch delay be notified
+           * of before it must abort the refetch delay and fetch anyway.
+           *
+           * Note that because you may have many different workers in refetch
+           * delay we take a random number up to this threshold, this means
+           * that different workers will abort refetch delay at different times
+           * which a) helps avoid the thundering herd problem, and b) helps to
+           * reduce the latency of executing a new job when all workers are in
+           * refetch delay.
+           *
+           * We don't know the best value for this, it likely will change based
+           * on a large number of factors. If you're not sure what to set it
+           * to, we recommend you start by taking `localQueue.size` and
+           * multiplying it by the number of Graphile Worker instances you're
+           * running (ignoring their `concurrency` settings). Then iterate
+           * based on the behaviors you observe. And report back to us - we'd
+           * love to hear about what works and what doesn't!
+           *
+           * To force the full refetch delay to always apply, set this to
+           * `Infinity` since `Math.random() * Infinity = Infinity` (except in
+           * the case that Math.random() is zero, but that's only got a 1 in
+           * 2^53 chance of happening so you're probably fine, right? Don't
+           * worry, we handle this.)
            *
            * @default {5 * localQueue.size}
            */
-          abortThreshold?: number;
+          maxAbortThreshold?: number;
         };
       };
 

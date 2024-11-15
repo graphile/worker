@@ -411,13 +411,17 @@ export class LocalQueue {
     const refetchDelayMs =
       (0.5 + Math.random()) * (refetchDelayOptions?.durationMs ?? 100);
     if (!refetchDelayThresholdSurpassed) {
-      /** How many notifications do we need to receive before we abort the "no refetches" behavior? */
+      /** The configured abort threshold */
+      const maxAbortThreshold =
+        refetchDelayOptions?.maxAbortThreshold ?? 5 * this.getJobBatchSize;
+      /**
+       * How many notifications do we need to receive before we abort the "no
+       * refetches" behavior? Note: this is not
+       */
       const abortThreshold =
-        (0.5 + Math.random()) *
-        Math.min(
-          refetchDelayOptions?.abortThreshold ?? Infinity,
-          5 * this.getJobBatchSize,
-        );
+        // `|| Infinity` because if `maxAbortThreshold = Infinity` and
+        // `Math.random() = 0` then we'd get `NaN` (`0 * Infinity = NaN`)
+        Math.random() * maxAbortThreshold || Infinity;
 
       this.fetchAgain = false;
       this.refetchDelayActive = true;
