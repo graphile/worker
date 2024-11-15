@@ -56,7 +56,9 @@ const TowerDefenceResultPlugin = {
               stats.maxLatency,
               4,
             )}ms;avgLatency=${p(
-              (stats.latencySum / stats.jobsFetched).toFixed(2),
+              stats.jobsFetched
+                ? (stats.latencySum / stats.jobsFetched).toFixed(2)
+                : "-",
               8,
             )}ms)|Fetched=${p(stats.jobsFetched, 6)}|Returned=${p(
               stats.jobsReturned,
