@@ -26,7 +26,7 @@ export {
 export { runTaskList, runTaskListOnce } from "./main";
 export { WorkerPreset } from "./preset";
 export { run, runMigrations, runOnce } from "./runner";
-export { makeWorkerUtils, quickAddJob } from "./workerUtils";
+export { addJobAdhoc, makeWorkerUtils, quickAddJob } from "./workerUtils";
 
 export { getTasks };
 export { getCronItems };

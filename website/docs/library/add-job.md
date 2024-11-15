@@ -9,8 +9,9 @@ be used to replace existing jobs.
 
 :::note
 
-`quickAddJob` is similar to `addJob`, but accepts an additional initial
-parameter describing how to connect to the database.
+`addJobAdhoc` is similar to `addJob`, but accepts an additional initial
+parameter describing how to connect to the database and will set up and tear
+down a database connection for each call (which is inefficient).
 
 :::
 

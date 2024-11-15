@@ -5,9 +5,10 @@ import { Client, Pool, PoolClient } from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "./config";
 import { migrations } from "./generated/sql";
-import { makeAddJob, makeWithPgClientFromPool } from "./helpers";
+import { makeAddJob, makeAddJobs, makeWithPgClientFromPool } from "./helpers";
 import {
   AddJobFunction,
+  AddJobsFunction,
   EnhancedWithPgClient,
   PromiseOrDirect,
   RunnerOptions,
@@ -402,6 +403,7 @@ interface ProcessOptionsExtensions {
   pgPool: Pool;
   withPgClient: EnhancedWithPgClient;
   addJob: AddJobFunction;
+  addJobs: AddJobsFunction;
   releasers: Releasers;
 }
 
@@ -454,6 +456,7 @@ export const getUtilsAndReleasersFromOptions = async (
     });
 
     const addJob = makeAddJob(compiledSharedOptions, withPgClient);
+    const addJobs = makeAddJobs(compiledSharedOptions, withPgClient);
 
     return [
       {
@@ -461,6 +464,7 @@ export const getUtilsAndReleasersFromOptions = async (
         pgPool,
         withPgClient,
         addJob,
+        addJobs,
         releasers,
       },
       release,

@@ -3,6 +3,9 @@ import { Pool, PoolClient } from "pg";
 import defer, { Deferred } from "./deferred";
 import {
   AddJobFunction,
+  AddJobsFunction,
+  DbJob,
+  DbJobSpec,
   EnhancedWithPgClient,
   Job,
   JobHelpers,
@@ -63,6 +66,55 @@ export function makeAddJob(
       return job;
     });
   };
+}
+
+export function makeAddJobs(
+  compiledSharedOptions: CompiledSharedOptions,
+  withPgClient: WithPgClient,
+): AddJobsFunction {
+  const {
+    escapedWorkerSchema,
+    resolvedPreset: {
+      worker: { useNodeTime },
+    },
+  } = compiledSharedOptions;
+  return (jobSpecs, jobKeyPreserveRunAt) =>
+    withPgClient(async (pgClient) => {
+      const NOW = useNodeTime ? new Date().toISOString() : undefined;
+      const dbSpecs = jobSpecs.map(
+        (spec): DbJobSpec => ({
+          identifier: spec.identifier,
+          payload: spec.payload,
+          queue_name: spec.queueName,
+          run_at: spec.runAt?.toISOString() ?? NOW,
+          max_attempts: spec.maxAttempts,
+          job_key: spec.jobKey,
+          priority: spec.priority,
+          flags: spec.flags,
+        }),
+      );
+      const { rows: dbJobs } = await pgClient.query<DbJob>(
+        `\
+select *
+from ${escapedWorkerSchema}.add_jobs(
+  array(
+    select json_populate_recordset(null::${escapedWorkerSchema}.job_spec, $1::json)
+  ),
+  $2::boolean
+);`,
+        [JSON.stringify(dbSpecs), jobKeyPreserveRunAt],
+      );
+      const jobs: Job[] = [];
+      for (let i = 0, l = jobSpecs.length; i < l; i++) {
+        const dbJob = dbJobs[i];
+        const jobSpec = jobSpecs[i];
+        jobs.push({
+          ...dbJob,
+          task_identifier: jobSpec.identifier,
+        });
+      }
+      return jobs;
+    });
 }
 
 const $$cache = Symbol("queueNameById");
@@ -197,6 +249,7 @@ export function makeJobHelpers(
     query: (queryText, values) =>
       withPgClient((pgClient) => pgClient.query(queryText, values)),
     addJob: makeAddJob(compiledSharedOptions, withPgClient),
+    addJobs: makeAddJobs(compiledSharedOptions, withPgClient),
 
     // TODO: add an API for giving workers more helpers
   };
