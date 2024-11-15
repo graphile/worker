@@ -36,21 +36,19 @@ $$ language plpgsql;`,
   } else {
     const jobs = [];
     for (let i = 0; i < jobCount; i++) {
-      jobs.push(
-        `("${taskIdentifier.replace(
-          /["\\]/g,
-          "\\$&",
-        )}","{\\"id\\":${i}}",,,,,,)`,
-      );
+      jobs.push({ identifier: taskIdentifier, payload: { id: i } });
     }
-    const jobsString = `{"${jobs
-      .map((j) => j.replace(/["\\]/g, "\\$&"))
-      .join('","')}"}`;
-    console.time("Adding jobs");
-    await pgPool.query(
-      `select graphile_worker.add_jobs($1::graphile_worker.job_spec[]);`,
-      [jobsString],
-    );
+    console.time(`Adding jobs`);
+    while (jobs.length > 0) {
+      const jobsSlice = jobs.splice(0, 1000000);
+      const jobsString = JSON.stringify(jobsSlice);
+      console.log(`Adding ${jobsSlice.length} jobs`);
+      await pgPool.query(
+        `select 1 from graphile_worker.add_jobs(array(select json_populate_recordset(null::graphile_worker.job_spec, $1::json)));`,
+        [jobsString],
+      );
+      console.log(`...added`);
+    }
     console.timeEnd("Adding jobs");
   }
 
