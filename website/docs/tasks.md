@@ -253,3 +253,11 @@ await helpers.addJob(identifier, payload, options);
 ```
 
 See [`addJob`](/library/add-job.md).
+
+### `helpers.addJobs()`
+
+```ts
+await helpers.addJobs(specs, preserveRunAt);
+```
+
+See [`addJobs`](/library/add-job.md#add-jobs).

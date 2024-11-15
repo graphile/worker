@@ -25,6 +25,12 @@ Read more:
   than the `workerId`. Be sure to upgrade
   [Worker Pro](https://worker.graphile.org/docs/pro) at the same time if you're
   using it!
+- New `addJobs()` JS method to enable efficiently adding a batch of jobs via the
+  JS API
+- DEPRECATION: `quickAddJob` has been renamed to `addJobAdhoc` to make it
+  clearer that it's for use in one-off locations (some felt the "quick" referred
+  to the speed it executed, rather than the amount of effort required from the
+  programmer)
 - Fixes bug where CLI defaults override `graphile.config.js` settings (by
   removing CLI defaults)
 - Fix bug where executable tasks had their stdout/stderr ignored; this is now

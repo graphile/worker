@@ -93,15 +93,15 @@ A `WorkerUtils` instance has the following methods:
   need this, but it&apos;s useful for tests or processes where you want Node to
   exit cleanly when it&apos;s done.
 
-## `quickAddJob()`
+## `addJobAdhoc()`
 
 ```ts
-function quickAddJob(options: WorkerUtilsOptions, ...addJobArgs): Promise<Job>;
+function addJobAdhoc(options: WorkerUtilsOptions, ...addJobArgs): Promise<Job>;
 ```
 
 If you want to quickly add a job and you don&apos;t mind the cost of opening a
 DB connection pool and then cleaning it up right away _for every job added_,
-there&apos;s the `quickAddJob` convenience function. It takes the same options
+there&apos;s the `addJobAdhoc` convenience function. It takes the same options
 as `makeWorkerUtils` as the first argument; the remaining arguments are for
 [`addJob`](./add-job.md).
 
@@ -115,10 +115,10 @@ one-off scripts this convenience method may be enough.
 Runnable example:
 
 ```js
-const { quickAddJob } = require("graphile-worker");
+const { addJobAdhoc } = require("graphile-worker");
 
 async function main() {
-  await quickAddJob(
+  await addJobAdhoc(
     // makeWorkerUtils options
     { connectionString: "postgres:///my_db" },
 

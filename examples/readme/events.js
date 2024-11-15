@@ -1,4 +1,4 @@
-const { run, quickAddJob } = require(/* "graphile-worker" */ "../..");
+const { run, addJobAdhoc } = require(/* "graphile-worker" */ "../..");
 
 async function main() {
   // Run a worker to execute jobs:
@@ -24,7 +24,7 @@ async function main() {
   });
 
   // Or add a job to be executed:
-  await quickAddJob(
+  await addJobAdhoc(
     // makeWorkerUtils options
     { connectionString: "postgres:///my_db" },
 

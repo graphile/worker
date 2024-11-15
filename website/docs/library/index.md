@@ -67,9 +67,9 @@ main().catch((err) => {
 You can also use the library to quickly add a job:
 
 ```js
-const { quickAddJob } = require("graphile-worker");
+const { addJobAdhoc } = require("graphile-worker");
 
-quickAddJob(
+addJobAdhoc(
   // makeWorkerUtils options
   { connectionString: "postgres:///my_db" },
 
@@ -86,7 +86,7 @@ quickAddJob(
 
 :::tip
 
-Though `quickAddJob` is a quick and easy way for you to add a one-off job, it is
+Though `addJobAdhoc` is a quick and easy way for you to add a one-off job, it is
 not the recommended to use it in your main application due to inefficiency. It's
 fine for one-off scripts like this, but in your main application you should use
 [WorkerUtils](/docs/library/queue#workerutils)&apos; `addJob` method..
