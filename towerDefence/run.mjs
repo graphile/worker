@@ -3,6 +3,8 @@
 import { execSync, spawn } from "child_process";
 import pg from "pg";
 
+import { makeWorkerUtils } from "../dist/index.js";
+
 const STUCK_JOB_COUNT = 0;
 const PARALLELISM = 10;
 const WAVES = [
@@ -48,6 +50,10 @@ const spawnOptions = {
 
 const pgPool = new pg.Pool({ connectionString: process.env.PERF_DATABASE_URL });
 
+const workerUtils = await makeWorkerUtils({
+  pgPool,
+});
+
 const GENERAL_JOBS_PER_SECOND = 15000;
 const GENERAL_JOBS_PER_MILLISECOND = GENERAL_JOBS_PER_SECOND / 1000;
 
@@ -55,26 +61,23 @@ const GENERAL_JOBS_PER_MILLISECOND = GENERAL_JOBS_PER_SECOND / 1000;
 function makeWave(jobBatches, sleepDuration = -1) {
   return async () => {
     let totalCount = 0;
-    let start = Date.now();
+    const NOW = new Date();
+    let start = +NOW;
     for (let i = 0; i < jobBatches.length; i++) {
       const jobCount = jobBatches[i];
+      /** @type {import("../dist/index.js").AddJobsJobSpec[]} */
       const jobs = [];
       for (let i = 0; i < jobCount; i++) {
         totalCount++;
-        jobs.push(
-          `("${taskIdentifier.replace(
-            /["\\]/g,
-            "\\$&",
-          )}","{\\"id\\":${i}}",,,,,,)`,
-        );
+        jobs.push({
+          identifier: taskIdentifier,
+          payload: {
+            id: i,
+          },
+          runAt: NOW,
+        });
       }
-      const jobsString = `{"${jobs
-        .map((j) => j.replace(/["\\]/g, "\\$&"))
-        .join('","')}"}`;
-      await pgPool.query(
-        `select graphile_worker.add_jobs($1::graphile_worker.job_spec[]);`,
-        [jobsString],
-      );
+      await workerUtils.addJobs(jobs);
       if (sleepDuration >= 0) {
         await sleep(sleepDuration);
       }
