@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { EventEmitter } from "events";
 import { applyHooks, AsyncHooks, resolvePresets } from "graphile-config";
-import { Client, Pool, PoolClient } from "pg";
+import { Client, Pool, PoolClient, PoolConfig } from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "./config";
 import { migrations } from "./generated/sql";
@@ -284,7 +284,6 @@ export async function assertPool(
   releasers: Releasers,
 ): Promise<Pool> {
   const {
-    logger,
     resolvedPreset: {
       worker: { maxPoolSize, connectionString },
     },
@@ -299,21 +298,21 @@ export async function assertPool(
   let pgPool: Pool;
   if (_rawOptions.pgPool) {
     pgPool = _rawOptions.pgPool;
+    if (pgPool.listeners("error").length === 0) {
+      console.warn(
+        `Your pool doesn't have error handlers! See: https://err.red/wpeh`,
+      );
+      installErrorHandlers(compiledSharedOptions, releasers, pgPool);
+    }
   } else if (connectionString) {
-    pgPool = new Pool({
+    pgPool = makeNewPool(compiledSharedOptions, releasers, {
       connectionString,
       max: maxPoolSize,
     });
-    releasers.push(() => {
-      pgPool.end();
-    });
   } else if (process.env.PGDATABASE) {
-    pgPool = new Pool({
+    pgPool = makeNewPool(compiledSharedOptions, releasers, {
       /* Pool automatically pulls settings from envvars */
       max: maxPoolSize,
-    });
-    releasers.push(() => {
-      pgPool.end();
     });
   } else {
     throw new Error(
@@ -321,6 +320,28 @@ export async function assertPool(
     );
   }
 
+  return pgPool;
+}
+
+function makeNewPool(
+  compiledSharedOptions: CompiledSharedOptions,
+  releasers: Releasers,
+  poolOptions: PoolConfig,
+) {
+  const pgPool = new Pool(poolOptions);
+  releasers.push(() => {
+    pgPool.end();
+  });
+  installErrorHandlers(compiledSharedOptions, releasers, pgPool);
+  return pgPool;
+}
+
+function installErrorHandlers(
+  compiledSharedOptions: CompiledSharedOptions,
+  releasers: Releasers,
+  pgPool: Pool,
+) {
+  const { logger } = compiledSharedOptions;
   const handlePoolError = (err: Error) => {
     /*
      * This handler is required so that client connection errors on clients
@@ -358,7 +379,6 @@ export async function assertPool(
     pgPool.removeListener("error", handlePoolError);
     pgPool.removeListener("connect", handlePoolConnect);
   });
-  return pgPool;
 }
 
 export type Release = () => PromiseOrDirect<void>;
