@@ -57,9 +57,9 @@ const GENERAL_JOBS_PER_MILLISECOND = GENERAL_JOBS_PER_SECOND / 1000;
 function makeWave(jobBatches, sleepDuration = -1) {
   return async (workerUtils) => {
     let totalCount = 0;
-    const NOW = new Date();
-    let start = +NOW;
+    let start = Date.now();
     for (let i = 0; i < jobBatches.length; i++) {
+      const NOW = new Date();
       const jobCount = jobBatches[i];
       /** @type {import("../dist/index.js").AddJobsJobSpec[]} */
       const jobs = [];
