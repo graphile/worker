@@ -50,16 +50,12 @@ const spawnOptions = {
 
 const pgPool = new pg.Pool({ connectionString: process.env.PERF_DATABASE_URL });
 
-const workerUtils = await makeWorkerUtils({
-  pgPool,
-});
-
 const GENERAL_JOBS_PER_SECOND = 15000;
 const GENERAL_JOBS_PER_MILLISECOND = GENERAL_JOBS_PER_SECOND / 1000;
 
-/** @type {(jobBatches: number[], sleepDuration?: number) => () => Promise<void>} */
+/** @type {(jobBatches: number[], sleepDuration?: number) => (workerUtils: import("../dist/interfaces.js").WorkerUtils) => Promise<void>} */
 function makeWave(jobBatches, sleepDuration = -1) {
-  return async () => {
+  return async (workerUtils) => {
     let totalCount = 0;
     const NOW = new Date();
     let start = +NOW;
@@ -135,6 +131,10 @@ async function main() {
   console.log("Installing the schema");
   execSync("node ../dist/cli.js --schema-only", execOptions);
 
+  const workerUtils = await makeWorkerUtils({
+    pgPool,
+  });
+
   if (STUCK_JOB_COUNT > 0) {
     console.log(`Scheduling ${STUCK_JOB_COUNT} stuck jobs`);
     await time(() => {
@@ -186,7 +186,7 @@ async function main() {
   for (let waveNumber = 0; waveNumber < WAVES.length; waveNumber++) {
     const wave = WAVES[waveNumber];
     console.log(`Wave ${waveNumber + 1}...`);
-    await wave();
+    await wave(workerUtils);
     console.log();
     console.log();
   }
