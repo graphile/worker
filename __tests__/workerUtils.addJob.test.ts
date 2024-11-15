@@ -1,6 +1,6 @@
 import {
+  addJobAdhoc,
   makeWorkerUtils,
-  quickAddJob,
   runTaskListOnce,
   Task,
   WorkerSharedOptions,
@@ -140,7 +140,7 @@ test("runs a job added through the addJob shortcut function", () =>
     await reset(pgClient, options);
 
     // Schedule a job
-    await quickAddJob({ connectionString: TEST_CONNECTION_STRING }, "job3", {
+    await addJobAdhoc({ connectionString: TEST_CONNECTION_STRING }, "job3", {
       a: 1,
     });
 

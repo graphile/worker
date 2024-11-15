@@ -100,11 +100,12 @@ export async function makeWorkerUtils(
 }
 
 /**
- * This function can be used to quickly add a job; however if you need to call
- * this more than once in your process you should instead create a WorkerUtils
- * instance for efficiency and performance sake.
+ * This function can be used to add a job with minimal code required, but it is
+ * inefficient because it creates and destroys a database pool for each call.
+ * If you need to call this more than once in your process you should instead
+ * create a WorkerUtils instance for efficiency and performance sake.
  */
-export async function quickAddJob<
+export async function addJobAdhoc<
   TIdentifier extends keyof GraphileWorker.Tasks | (string & {}) = string,
 >(
   options: WorkerUtilsOptions,
@@ -121,3 +122,8 @@ export async function quickAddJob<
     await utils.release();
   }
 }
+
+/**
+ * @deprecated The name was misleading, use `addJobAdhoc` instead.
+ */
+export const quickAddJob = addJobAdhoc;

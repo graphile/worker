@@ -133,7 +133,7 @@ declare global {
 ```
 
 This should then enable auto-complete and payload type safety for `addJob` and
-`quickAddJob`, and should also allow the payloads of your task functions to be
+`addJobAdhoc`, and should also allow the payloads of your task functions to be
 inferred when defined like this:
 
 ```ts

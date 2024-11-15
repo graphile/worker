@@ -2,15 +2,16 @@
 title: "addJob()"
 ---
 
-The `addJob` API exists in many places in graphile-worker, but all the instances
-have exactly the same call signature. The API is used to add a job to the queue
-for immediate or delayed execution. With `jobKey` and `jobKeyMode` it can also
-be used to replace existing jobs.
+The `addJob` APIs exists in many places in graphile-worker, but all the
+instances have exactly the same call signature. The API is used to add a job to
+the queue for immediate or delayed execution. With `jobKey` and `jobKeyMode` it
+can also be used to replace existing jobs.
 
 :::note
 
-`quickAddJob` is similar to `addJob`, but accepts an additional initial
-parameter describing how to connect to the database.
+`addJobAdhoc` is similar to `addJob`, but accepts an additional initial
+parameter describing how to connect to the database and will set up and tear
+down a database connection for each call (which is inefficient).
 
 :::
 
