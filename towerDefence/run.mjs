@@ -55,6 +55,7 @@ const GENERAL_JOBS_PER_MILLISECOND = GENERAL_JOBS_PER_SECOND / 1000;
 function makeWave(jobBatches, sleepDuration = -1) {
   return async () => {
     let totalCount = 0;
+    let start = Date.now();
     for (let i = 0; i < jobBatches.length; i++) {
       const jobCount = jobBatches[i];
       const jobs = [];
@@ -80,7 +81,13 @@ function makeWave(jobBatches, sleepDuration = -1) {
     }
 
     // Give roughly enough time for the jobs to complete
-    await sleep(totalCount / GENERAL_JOBS_PER_MILLISECOND);
+    const estimatedExecutionTime = totalCount / GENERAL_JOBS_PER_MILLISECOND;
+
+    const elapsed = Date.now() - start;
+    const timeToSleep = estimatedExecutionTime - elapsed;
+    if (timeToSleep > 0) {
+      await sleep(timeToSleep);
+    }
 
     // And wait for the jobs table to be empty
     const MAX_ATTEMPTS = 20;
