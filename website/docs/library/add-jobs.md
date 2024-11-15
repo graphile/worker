@@ -31,6 +31,9 @@ Example:
 ```js
 await addJobs([
   { identifier: "send_email", payload: { to: "someone@example.com" } },
+  { identifier: "send_email", payload: { to: "anyone@example.com" } },
+  { identifier: "send_email", payload: { to: "thisone@example.com" } },
+  { identifier: "send_email", payload: { to: "anotherone@example.com" } },
 ]);
 ```
 
