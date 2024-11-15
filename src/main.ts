@@ -170,7 +170,7 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
       clearTimeout(switchTimeout);
       process.removeListener(signal, gracefulHandler);
       if (!_shuttingDownForcefully) {
-        logger.error(
+        logger.info(
           `Global graceful shutdown complete; killing self via ${signal}`,
         );
         process.kill(process.pid, signal);
