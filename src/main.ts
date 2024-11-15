@@ -156,7 +156,7 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
       _shuttingDownGracefully = true;
     }
 
-    logger.error(
+    logger.info(
       `Received '${signal}'; attempting global graceful shutdown... (all termination signals will be ignored for the next 5 seconds)`,
     );
     const switchTimeout = setTimeout(switchToForcefulHandler, 5000);
@@ -220,7 +220,7 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
   process.stderr.on("error", stdioErrorHandler);
   _releaseSignalHandlers = () => {
     if (_shuttingDownGracefully || _shuttingDownForcefully) {
-      logger.warn(`Not unregistering signal handlers as we're shutting down`);
+      logger.debug(`Not unregistering signal handlers as we're shutting down`);
       return;
     }
 
