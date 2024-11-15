@@ -24,13 +24,15 @@ export async function makeWorkerUtils(
       },
     },
   );
-  const { logger, escapedWorkerSchema, withPgClient, addJob } = compiledOptions;
+  const { logger, escapedWorkerSchema, withPgClient, addJob, addJobs } =
+    compiledOptions;
 
   return {
     withPgClient,
     logger,
     release,
     addJob,
+    addJobs,
     migrate: () =>
       withPgClient((pgClient) => migrate(compiledOptions, pgClient)),
 

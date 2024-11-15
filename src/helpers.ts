@@ -3,6 +3,9 @@ import { Pool, PoolClient } from "pg";
 import defer, { Deferred } from "./deferred";
 import {
   AddJobFunction,
+  AddJobsFunction,
+  DbJob,
+  DbJobSpec,
   EnhancedWithPgClient,
   Job,
   JobHelpers,
@@ -61,6 +64,69 @@ export function makeAddJob(
       const job: Job = rows[0];
       job.task_identifier = identifier;
       return job;
+    });
+  };
+}
+
+export function makeAddJobs(
+  compiledSharedOptions: CompiledSharedOptions,
+  withPgClient: WithPgClient,
+): AddJobsFunction {
+  const {
+    escapedWorkerSchema,
+    resolvedPreset: {
+      worker: { useNodeTime },
+    },
+  } = compiledSharedOptions;
+  return (jobSpecs, jobKeyPreserveRunAt) => {
+    return withPgClient(async (pgClient) => {
+      const NOW = new Date().toISOString();
+      const dbSpecs = jobSpecs.map((spec): DbJobSpec => {
+        const {
+          identifier,
+          payload,
+          queueName,
+          runAt,
+          maxAttempts,
+          jobKey,
+          priority,
+          flags,
+        } = spec;
+        return {
+          identifier,
+          payload,
+          queue_name: queueName,
+          run_at: runAt ? runAt.toISOString() : useNodeTime ? NOW : undefined,
+          max_attempts: maxAttempts,
+          job_key: jobKey,
+          priority,
+          flags,
+        };
+      });
+      const { rows: dbJobs } = await pgClient.query<DbJob>(
+        `
+        select * from ${escapedWorkerSchema}.add_jobs(
+          array(
+            json_populate_recordset(
+              null::${escapedWorkerSchema}.job_spec,
+              $1::json
+            )
+          ),
+          $2::boolean
+        );
+        `,
+        [JSON.stringify(dbSpecs), jobKeyPreserveRunAt],
+      );
+      const jobs: Job[] = [];
+      for (let i = 0, l = jobSpecs.length; i < l; i++) {
+        const dbJob = dbJobs[i];
+        const jobSpec = jobSpecs[i];
+        jobs.push({
+          ...dbJob,
+          task_identifier: jobSpec.identifier,
+        });
+      }
+      return jobs;
     });
   };
 }
@@ -197,6 +263,7 @@ export function makeJobHelpers(
     query: (queryText, values) =>
       withPgClient((pgClient) => pgClient.query(queryText, values)),
     addJob: makeAddJob(compiledSharedOptions, withPgClient),
+    addJobs: makeAddJobs(compiledSharedOptions, withPgClient),
 
     // TODO: add an API for giving workers more helpers
   };

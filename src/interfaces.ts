@@ -68,6 +68,67 @@ export type AddJobFunction = <
   spec?: TaskSpec,
 ) => Promise<Job>;
 
+export interface AddJobsJobSpec<
+  TIdentifier extends keyof GraphileWorker.Tasks = keyof GraphileWorker.Tasks,
+> {
+  /**
+   * The name of the task that will be executed for this job.
+   */
+  identifier: TIdentifier;
+
+  /**
+   * The payload (typically a JSON object) that will be passed to the task executor.
+   */
+  payload: TIdentifier extends keyof GraphileWorker.Tasks
+    ? GraphileWorker.Tasks[TIdentifier]
+    : unknown;
+
+  /**
+   * The queue to run this task under (only specify if you want jobs in this
+   * queue to run serially). (Default: null)
+   */
+  queueName?: string;
+
+  /**
+   * A Date to schedule this task to run in the future. (Default: now)
+   */
+  runAt?: Date;
+
+  /**
+   * Jobs are executed in numerically ascending order of priority (jobs with a
+   * numerically smaller priority are run first). (Default: 0)
+   */
+  priority?: number;
+
+  /**
+   * How many retries should this task get? (Default: 25)
+   */
+  maxAttempts?: number;
+
+  /**
+   * Unique identifier for the job, can be used to update or remove it later if
+   * needed. (Default: null)
+   */
+  jobKey?: string;
+
+  /**
+   * Flags for the job, can be used to dynamically filter which jobs can and
+   * cannot run at runtime. (Default: null)
+   */
+  flags?: string[];
+}
+
+/**
+ * The `addJobs` interface is implemented in many places in the library, all
+ * conforming to this.
+ *
+ * @experimental
+ */
+export type AddJobsFunction = (
+  jobSpecs: AddJobsJobSpec[],
+  jobKeyPreserveRunAt?: boolean,
+) => Promise<ReadonlyArray<Job>>;
+
 export interface Helpers {
   /**
    * A Logger instance.
@@ -84,6 +145,11 @@ export interface Helpers {
    * Adds a job into our queue.
    */
   addJob: AddJobFunction;
+
+  /**
+   * Adds multiple jobs into our queue.
+   */
+  addJobs: AddJobsFunction;
 }
 
 export interface JobHelpers extends Helpers {
