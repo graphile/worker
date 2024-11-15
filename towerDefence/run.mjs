@@ -6,10 +6,13 @@ import pg from "pg";
 const STUCK_JOB_COUNT = 0;
 const PARALLELISM = 10;
 const WAVES = [
-  //makeWave([1]),
-  makeWave(new Array(10000).fill(1), 10),
-  //makeWave(new Array(10000).fill(4)),
-  //makeWave(new Array(10000).fill(20)),
+  makeWave([1]),
+  makeWave(new Array(1000).fill(1), 10),
+  makeWave(new Array(1000).fill(1), 5),
+  makeWave(new Array(10000).fill(1), 1),
+  makeWave(new Array(10000).fill(1)),
+  makeWave(new Array(10000).fill(4)),
+  makeWave(new Array(10000).fill(200)),
 ];
 
 const taskIdentifier = "log_if_999";
