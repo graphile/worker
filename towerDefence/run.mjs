@@ -9,10 +9,10 @@ const WAVES = [
   makeWave([1]),
   makeWave(new Array(1000).fill(1), 10),
   makeWave(new Array(1000).fill(1), 5),
-  makeWave(new Array(10000).fill(1), 1),
-  makeWave(new Array(10000).fill(1)),
-  makeWave(new Array(10000).fill(4)),
-  makeWave(new Array(10000).fill(200)),
+  makeWave(new Array(3000).fill(1), 1),
+  makeWave(new Array(5000).fill(1)),
+  makeWave(new Array(5000).fill(4)),
+  makeWave(new Array(1000).fill(200)),
 ];
 
 const taskIdentifier = "log_if_999";
