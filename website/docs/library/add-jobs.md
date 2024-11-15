@@ -8,7 +8,7 @@ This API may change in a semver minor release.
 
 :::
 
-The `addJobs` APIs exists in many places in graphile-worker, but all the
+The `addJobs` API exists in many places in graphile-worker, but all the
 instances have exactly the same call signature. The API is used to efficiently
 add a batch of jobs to the queue for immediate or delayed execution. With
 `jobKey` it can also be used to replace existing jobs.
