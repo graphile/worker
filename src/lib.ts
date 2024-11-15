@@ -332,7 +332,6 @@ function makeNewPool(
   releasers.push(() => {
     pgPool.end();
   });
-
   installErrorHandlers(compiledSharedOptions, releasers, pgPool);
   return pgPool;
 }
@@ -380,8 +379,6 @@ function installErrorHandlers(
     pgPool.removeListener("error", handlePoolError);
     pgPool.removeListener("connect", handlePoolConnect);
   });
-
-  return pgPool;
 }
 
 export type Release = () => PromiseOrDirect<void>;
