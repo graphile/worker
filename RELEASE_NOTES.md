@@ -31,6 +31,8 @@ Read more:
   clearer that it's for use in one-off locations (some felt the "quick" referred
   to the speed it executed, rather than the amount of effort required from the
   programmer)
+- We'll now warn you if you haven't installed error handlers on the pool, and
+  will only install them ourself if needed
 - Fixes bug where CLI defaults override `graphile.config.js` settings (by
   removing CLI defaults)
 - Fix bug where executable tasks had their stdout/stderr ignored; this is now
