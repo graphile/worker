@@ -14,8 +14,14 @@ const WAVES = [
   makeWave(new Array(3000).fill(1), 1),
   makeWave(new Array(5000).fill(1)),
   makeWave(new Array(5000).fill(4)),
-  makeWave(new Array(1000).fill(200)),
+  makeWave(new Array(200).fill(200)),
+  makeWave(Array.from({ length: 50 }, repeat([2000, 200, 20, 2])), 5),
 ];
+
+/** @type {<T>(arr: T[]) => (_: any, i: number) => T} */
+function repeat(arr) {
+  return (_, i) => arr[i % arr.length];
+}
 
 const taskIdentifier = "log_if_999";
 

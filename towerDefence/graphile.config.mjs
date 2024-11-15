@@ -133,7 +133,7 @@ const preset = {
 
     pollInterval: 2000,
     localQueue: {
-      size: CONCURRENT_JOBS,
+      size: CONCURRENT_JOBS + 1,
       refetchDelay: {
         durationMs: 1000,
         maxAbortThreshold: CONCURRENT_JOBS * 10,
