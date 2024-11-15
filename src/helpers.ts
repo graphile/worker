@@ -107,7 +107,7 @@ export function makeAddJobs(
         `
         select * from ${escapedWorkerSchema}.add_jobs(
           array(
-            json_populate_recordset(
+            select json_populate_recordset(
               null::${escapedWorkerSchema}.job_spec,
               $1::json
             )
