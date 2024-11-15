@@ -188,3 +188,31 @@ test("adding job respects useNodeTime", () =>
     expect(+runAt).toBeGreaterThan(timeOfAddJob - 2000);
     expect(+runAt).toBeLessThan(timeOfAddJob + 2000);
   }));
+
+test("adding lots of jobs works", () =>
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
+    await reset(pgClient, options);
+
+    // Schedule a job
+    utils = await makeWorkerUtils({
+      connectionString: TEST_CONNECTION_STRING,
+    });
+    const timeOfAddJob = REFERENCE_TIMESTAMP + 1 * HOUR;
+    await setTime(timeOfAddJob);
+    await utils.addJobs([
+      { identifier: "job3", payload: { a: 1 } },
+      { identifier: "job3", payload: { a: 2 } },
+      { identifier: "job3", payload: { a: 3 } },
+      { identifier: "job3", payload: { a: 4 } },
+      { identifier: "job3", payload: { a: 5 } },
+      { identifier: "job3", payload: { a: 6 } },
+    ]);
+    await utils.release();
+    utils = null;
+
+    // Assert that it has an entry in jobs / job_queues
+    const jobs = await getJobs(pgClient);
+    expect(jobs).toHaveLength(6);
+    const a = jobs.map((j) => j.payload.a).sort();
+    expect(a).toEqual([1, 2, 3, 4, 5, 6]);
+  }));
