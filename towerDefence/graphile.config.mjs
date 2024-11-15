@@ -16,6 +16,8 @@ const stats = {
   timeInRefetchDelay: 0n,
   refetchDelays: 0,
   refetchDelaysAborted: 0,
+  maxLatency: 0,
+  latencySum: 0,
 };
 
 let lastModeStart = process.hrtime.bigint();
@@ -50,13 +52,16 @@ const TowerDefenceResultPlugin = {
             `\nPool ${event.workerPool.id} released\nFetches=${p(
               stats.fetches,
               5,
-            )}(empty=${p(stats.emptyFetches, 5)})|Fetched=${p(
-              stats.jobsFetched,
+            )}(empty=${p(stats.emptyFetches, 5)};maxLatency=${p(
+              stats.maxLatency,
+              4,
+            )}ms;avgLatency=${p(
+              (stats.latencySum / stats.jobsFetched).toFixed(2),
+              8,
+            )}ms)|Fetched=${p(stats.jobsFetched, 6)}|Returned=${p(
+              stats.jobsReturned,
               6,
-            )}|Returned=${p(stats.jobsReturned, 6)}|TotalDelay=${p(
-              ms(stats.timeInRefetchDelay),
-              11,
-            )}(Aborted=${p(
+            )}|TotalDelay=${p(ms(stats.timeInRefetchDelay), 11)}(Aborted=${p(
               `${stats.refetchDelaysAborted}/${stats.refetchDelays}`,
               9,
             )})|${tim()}\n`,
@@ -94,6 +99,13 @@ const TowerDefenceResultPlugin = {
         ctx.events.on("localQueue:refetchDelay:expired", () => {
           const elapsed = process.hrtime.bigint() - refetchDelayStart;
           stats.timeInRefetchDelay += elapsed;
+        });
+        ctx.events.on("job:start", (event) => {
+          const l = Date.now() - +event.job.run_at;
+          stats.latencySum += l;
+          if (l > stats.maxLatency) {
+            stats.maxLatency = l;
+          }
         });
       },
     },
