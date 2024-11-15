@@ -69,7 +69,7 @@ export type AddJobFunction = <
 ) => Promise<Job>;
 
 export interface AddJobsJobSpec<
-  TIdentifier extends keyof GraphileWorker.Tasks = keyof GraphileWorker.Tasks,
+  TIdentifier extends keyof GraphileWorker.Tasks | (string & {}) = string,
 > {
   /**
    * The name of the task that will be executed for this job.
@@ -116,6 +116,9 @@ export interface AddJobsJobSpec<
    * cannot run at runtime. (Default: null)
    */
   flags?: string[];
+
+  // Must NOT set jobKeyMode - it is unsupported
+  jobKeyMode?: never;
 }
 
 /**
@@ -124,8 +127,8 @@ export interface AddJobsJobSpec<
  *
  * @experimental
  */
-export type AddJobsFunction = (
-  jobSpecs: AddJobsJobSpec[],
+export type AddJobsFunction = <TSpecs extends readonly AddJobsJobSpec[]>(
+  jobSpecs: TSpecs,
   jobKeyPreserveRunAt?: boolean,
 ) => Promise<ReadonlyArray<Job>>;
 
