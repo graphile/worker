@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { EventEmitter } from "events";
 import { applyHooks, AsyncHooks, resolvePresets } from "graphile-config";
-import { Client, Pool, PoolClient } from "pg";
+import { Client, Pool, PoolClient, PoolConfig } from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "./config";
 import { migrations } from "./generated/sql";
@@ -279,48 +279,26 @@ export function processSharedOptions<
 
 export type Releasers = Array<() => void | Promise<void>>;
 
-export async function assertPool(
+function makeNewPool(
   compiledSharedOptions: CompiledSharedOptions,
   releasers: Releasers,
-): Promise<Pool> {
-  const {
-    logger,
-    resolvedPreset: {
-      worker: { maxPoolSize, connectionString },
-    },
-    _rawOptions,
-  } = compiledSharedOptions;
-  assert.ok(
-    // NOTE: we explicitly want `_rawOptions.connectionString` here - we don't
-    // mind if `connectionString` is set as part of the preset.
-    !_rawOptions.pgPool || !_rawOptions.connectionString,
-    "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
-  );
-  let pgPool: Pool;
-  if (_rawOptions.pgPool) {
-    pgPool = _rawOptions.pgPool;
-  } else if (connectionString) {
-    pgPool = new Pool({
-      connectionString,
-      max: maxPoolSize,
-    });
-    releasers.push(() => {
-      pgPool.end();
-    });
-  } else if (process.env.PGDATABASE) {
-    pgPool = new Pool({
-      /* Pool automatically pulls settings from envvars */
-      max: maxPoolSize,
-    });
-    releasers.push(() => {
-      pgPool.end();
-    });
-  } else {
-    throw new Error(
-      "You must either specify `pgPool` or `connectionString`, or you must make the `DATABASE_URL` or `PG*` environmental variables available.",
-    );
-  }
+  poolOptions: PoolConfig,
+) {
+  const pgPool = new Pool(poolOptions);
+  releasers.push(() => {
+    pgPool.end();
+  });
 
+  installErrorHandlers(compiledSharedOptions, releasers, pgPool);
+  return pgPool;
+}
+
+function installErrorHandlers(
+  compiledSharedOptions: CompiledSharedOptions,
+  releasers: Releasers,
+  pgPool: Pool,
+) {
+  const { logger } = compiledSharedOptions;
   const handlePoolError = (err: Error) => {
     /*
      * This handler is required so that client connection errors on clients
@@ -358,6 +336,51 @@ export async function assertPool(
     pgPool.removeListener("error", handlePoolError);
     pgPool.removeListener("connect", handlePoolConnect);
   });
+
+  return pgPool;
+}
+
+export async function assertPool(
+  compiledSharedOptions: CompiledSharedOptions,
+  releasers: Releasers,
+): Promise<Pool> {
+  const {
+    resolvedPreset: {
+      worker: { maxPoolSize, connectionString },
+    },
+    _rawOptions,
+  } = compiledSharedOptions;
+  assert.ok(
+    // NOTE: we explicitly want `_rawOptions.connectionString` here - we don't
+    // mind if `connectionString` is set as part of the preset.
+    !_rawOptions.pgPool || !_rawOptions.connectionString,
+    "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
+  );
+  let pgPool: Pool;
+  if (_rawOptions.pgPool) {
+    pgPool = _rawOptions.pgPool;
+    if (pgPool.listeners("error").length === 0) {
+      console.warn(
+        `Your pool doesn't have error handlers! See: https://err.red/wpeh`,
+      );
+      installErrorHandlers(compiledSharedOptions, releasers, pgPool);
+    }
+  } else if (connectionString) {
+    pgPool = makeNewPool(compiledSharedOptions, releasers, {
+      connectionString,
+      max: maxPoolSize,
+    });
+  } else if (process.env.PGDATABASE) {
+    pgPool = makeNewPool(compiledSharedOptions, releasers, {
+      /* Pool automatically pulls settings from envvars */
+      max: maxPoolSize,
+    });
+  } else {
+    throw new Error(
+      "You must either specify `pgPool` or `connectionString`, or you must make the `DATABASE_URL` or `PG*` environmental variables available.",
+    );
+  }
+
   return pgPool;
 }
 
