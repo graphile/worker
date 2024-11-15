@@ -12,6 +12,8 @@ import { getJobs, HOUR, reset, setupFakeTimers, withPgClient } from "./helpers";
 const { setTime } = setupFakeTimers();
 const REFERENCE_TIMESTAMP = 1609459200000; /* 1st January 2021, 00:00:00 UTC */
 
+// NOTE: many of these tests are copied from the `addJob` test file.
+
 const options: WorkerSharedOptions = {};
 
 let utils: WorkerUtils | null = null;
@@ -85,7 +87,8 @@ test("supports the jobKey API with jobKeyMode", () =>
     });
     const runAt1 = new Date("2200-01-01T00:00:00Z");
     const runAt2 = new Date("2201-01-01T00:00:00Z");
-    const runAt3 = new Date("2202-01-01T00:00:00Z");
+    // can't use unsafe dedupe in batch mode
+    // const runAt3 = new Date("2202-01-01T00:00:00Z");
     const runAt4 = new Date("2203-01-01T00:00:00Z");
     let job: Job;
 
@@ -117,6 +120,8 @@ test("supports the jobKey API with jobKeyMode", () =>
     expect(job.revision).toBe(1);
     expect(job.payload).toEqual({ a: 2 });
     expect(job.run_at.toISOString()).toBe(runAt1.toISOString());
+
+    // No unsafe dedupe here, batch mode doesn't support it
 
     // Replace the job one final time
     [job] = await utils.addJobs([
