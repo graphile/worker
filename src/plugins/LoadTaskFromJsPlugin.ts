@@ -4,6 +4,7 @@ import { pathToFileURL } from "url";
 import { FileDetails, isValidTask } from "../index.js";
 import { coerceError } from "../lib.js";
 import { version } from "../version.js";
+import { coerceError } from "../lib.js";
 
 const DEFAULT_EXTENSIONS = [".js", ".mjs", ".cjs"];
 

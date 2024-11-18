@@ -19,8 +19,6 @@ import { coerceError, CompiledSharedOptions } from "./lib";
 
 const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
 
-const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
-
 export function makeNewWorker(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
   params: {
