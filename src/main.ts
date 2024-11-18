@@ -693,7 +693,7 @@ export function _runTaskList(
   const abortSignal = abortController.signal;
   const abortPromise = new Promise<void>((_resolve, reject) => {
     abortSignal.addEventListener("abort", () => {
-      reject(abortSignal.reason);
+      reject(coerceError(abortSignal.reason));
     });
   });
   // Make sure Node doesn't get upset about unhandled rejection
