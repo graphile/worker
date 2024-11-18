@@ -593,20 +593,49 @@ export function _runTaskList(
   async function deactivate() {
     if (workerPool._active) {
       workerPool._active = false;
-      // TODO: stop the batch()es and await the promises here
+      const errors: Error[] = [];
+      try {
+        await localQueue?.release();
+      } catch (rawE) {
+        const e = coerceError(rawE);
+        errors.push(e);
+        // Log but continue regardless
+        logger.error(`Releasing local queue failed: ${e}`, { error: rawE });
+      }
+      try {
+        // Note: this runs regardless of success of the above
+        await onDeactivate?.();
+      } catch (rawE) {
+        const e = coerceError(rawE);
+        errors.push(e);
+        // Log but continue regardless
+        logger.error(`onDeactivate raised an error: ${e}`, { error: rawE });
+      }
+
+      if (errors.length > 0) {
+        throw new AggregateError(
+          errors,
+          "Errors occurred whilst deactivating queue",
+        );
+      }
+    }
+  }
+
+  let terminated = false;
+  async function terminate(error?: Error) {
+    if (!terminated) {
+      terminated = true;
+
       const releaseCompleteJobPromise = releaseCompleteJob?.();
       const releaseFailJobPromise = releaseFailJob?.();
-      const releaseLocalQueue = localQueue?.release();
-      const [
-        releaseCompleteJobResult,
-        releaseFailJobResult,
-        releaseLocalQueueResult,
-      ] = await Promise.allSettled([
-        releaseCompleteJobPromise,
-        releaseFailJobPromise,
-        releaseLocalQueue,
-      ]);
+      const [releaseCompleteJobResult, releaseFailJobResult] =
+        await Promise.allSettled([
+          releaseCompleteJobPromise,
+          releaseFailJobPromise,
+        ]);
+      const errors: Error[] = error ? [error] : [];
       if (releaseCompleteJobResult.status === "rejected") {
+        errors.push(coerceError(releaseCompleteJobResult.reason));
         // Log but continue regardless
         logger.error(
           `Releasing complete job batcher failed: ${releaseCompleteJobResult.reason}`,
@@ -616,6 +645,7 @@ export function _runTaskList(
         );
       }
       if (releaseFailJobResult.status === "rejected") {
+        errors.push(coerceError(releaseFailJobResult.reason));
         // Log but continue regardless
         logger.error(
           `Releasing failed job batcher failed: ${releaseFailJobResult.reason}`,
@@ -624,26 +654,27 @@ export function _runTaskList(
           },
         );
       }
-      if (releaseLocalQueueResult.status === "rejected") {
-        // Log but continue regardless
-        logger.error(
-          `Releasing local queue failed: ${releaseLocalQueueResult.reason}`,
-          {
-            error: releaseLocalQueueResult.reason,
-          },
-        );
-      }
-      return onDeactivate?.();
-    }
-  }
 
-  let terminated = false;
-  function terminate() {
-    if (!terminated) {
-      terminated = true;
       const idx = allWorkerPools.indexOf(workerPool);
       allWorkerPools.splice(idx, 1);
-      promise.resolve(onTerminate?.());
+
+      try {
+        const result = onTerminate?.();
+        promise.resolve(result);
+      } catch (e) {
+        errors.push(coerceError(e));
+      }
+      if (errors.length === 1) {
+        promise.reject(errors[0]);
+      } else if (errors.length > 1) {
+        promise.reject(
+          new AggregateError(
+            errors,
+            "Errors occurred whilst terminating queue",
+          ),
+        );
+      }
+
       if (unregisterSignalHandlers) {
         unregisterSignalHandlers();
       }
@@ -732,7 +763,10 @@ export function _runTaskList(
       try {
         logger.debug(`Attempting graceful shutdown`);
         // Stop new jobs being added
+        // TODO: releasing the job releasers BEFORE we release the workers doesn't make any sense?
         const deactivatePromise = deactivate();
+
+        const errors: Error[] = [];
 
         // Remove all the workers - we're shutting them down manually
         const workers = [...workerPool._workers];
@@ -740,6 +774,7 @@ export function _runTaskList(
         const [deactivateResult, ...workerReleaseResults] =
           await Promise.allSettled([deactivatePromise, ...workerPromises]);
         if (deactivateResult.status === "rejected") {
+          errors.push(coerceError(deactivateResult.reason));
           // Log but continue regardless
           logger.error(`Deactivation failed: ${deactivateResult.reason}`, {
             error: deactivateResult.reason,
@@ -793,6 +828,12 @@ export function _runTaskList(
           logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
             cancelledJobs,
           });
+        }
+        if (errors.length > 0) {
+          throw new AggregateError(
+            errors,
+            "Errors occurred whilst shutting down worker",
+          );
         }
         events.emit("pool:gracefulShutdown:complete", {
           pool: workerPool,
@@ -1067,7 +1108,32 @@ export function _runTaskList(
       }
       workerPool._workers.splice(workerPool._workers.indexOf(worker), 1);
       if (!continuous && workerPool._workers.length === 0) {
-        deactivate().then(terminate, terminate);
+        compiledSharedOptions.events.emit("pool:gracefulShutdown", {
+          workerPool,
+          pool: workerPool,
+          message:
+            "'Run once' mode processed all available jobs and is now exiting",
+        });
+        deactivate().then(
+          () => {
+            compiledSharedOptions.events.emit(
+              "pool:gracefulShutdown:complete",
+              {
+                workerPool,
+                pool: workerPool,
+              },
+            );
+            terminate();
+          },
+          (error) => {
+            compiledSharedOptions.events.emit("pool:gracefulShutdown:error", {
+              workerPool,
+              pool: workerPool,
+              error,
+            });
+            terminate(error);
+          },
+        );
       }
     };
     worker.promise.then(
