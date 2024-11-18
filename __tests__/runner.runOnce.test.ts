@@ -197,11 +197,13 @@ test("runs all available tasks and then exits", async () =>
     }
   }));
 
-test.only("gracefulShutdown", async () =>
+test("gracefulShutdown", async () =>
   withPgPool(async (pgPool) => {
+    let jobStarted = false;
     const options: RunnerOptions = {
       taskList: {
         job1(payload, helpers) {
+          jobStarted = true;
           return Promise.race([sleep(100000, true), helpers.abortPromise]);
         },
       },
@@ -220,6 +222,7 @@ test.only("gracefulShutdown", async () =>
     await sleepUntil(() => _allWorkerPools.length === 1);
     expect(_allWorkerPools).toHaveLength(1);
     const pool = _allWorkerPools[0];
+    await sleepUntil(() => jobStarted);
     await pool.gracefulShutdown();
     await promise;
     let jobs: Job[] = [];
