@@ -185,7 +185,14 @@ export interface JobHelpers extends Helpers {
    *
    * @experimental
    */
-  abortSignal?: AbortSignal;
+  abortSignal: AbortSignal | undefined;
+
+  /**
+   * A promise that rejects when the AbortSignal aborts.
+   *
+   * @experimental
+   */
+  abortPromise: Promise<void> | undefined;
 }
 
 export type CleanupTask =
@@ -509,8 +516,10 @@ export interface WorkerPool {
   gracefulShutdown: (message?: string) => Promise<void>;
   forcefulShutdown: (message: string) => Promise<void>;
   promise: Promise<void>;
-  /** @experimental */
+  /** Fires 'abort' when all running jobs should stop because worker is shutting down. @experimental */
   abortSignal: AbortSignal;
+  /** Rejects when the abortSignal aborts. @experimental */
+  abortPromise: Promise<void>;
   /** @internal */
   _shuttingDown: boolean;
   /** @internal */
