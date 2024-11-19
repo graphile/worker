@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import type { EventEmitter } from "events";
 import type { Stats } from "fs";
-import { AsyncHooks } from "graphile-config";
+import { AsyncHooks, Middleware } from "graphile-config";
 import type {
   Notification,
   Pool,
@@ -1302,18 +1302,21 @@ export interface FileDetails {
 
 export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
-export interface WorkerPluginContext {
+// The options available before we connect to the database
+export interface WorkerPluginBaseContext {
   version: string;
-  maxMigrationNumber: number;
-  breakingMigrationNumbers: number[];
-  events: WorkerEvents;
-  logger: Logger;
+  resolvedPreset: ResolvedWorkerPreset;
   workerSchema: string;
   escapedWorkerSchema: string;
-  /** @internal */
-  _rawOptions: SharedOptions;
+  events: WorkerEvents;
+  logger: Logger;
+}
+// Once we've connected to the DB, we know more
+export interface WorkerPluginContext extends WorkerPluginBaseContext {
   hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
-  resolvedPreset: ResolvedWorkerPreset;
+  middleware: Middleware<GraphileConfig.WorkerMiddleware>;
+  maxMigrationNumber: number;
+  breakingMigrationNumbers: number[];
 }
 export type GetJobFunction = (
   workerId: string,

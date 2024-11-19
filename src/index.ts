@@ -18,12 +18,13 @@ import {
   WithPgClient,
   Worker,
   WorkerEvents,
+  WorkerPluginBaseContext,
   WorkerPluginContext,
   WorkerPool,
   WorkerSharedOptions,
   WorkerUtilsOptions,
 } from "./interfaces";
-import { CompiledSharedOptions, ResolvedWorkerPreset } from "./lib";
+import { CompiledSharedOptions } from "./lib";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
 export * from "./interfaces";
 export {
@@ -46,7 +47,11 @@ declare global {
     interface Tasks {
       /* extend this through declaration merging */
     }
+    interface InitEvent {
+      ctx: WorkerPluginBaseContext;
+    }
     interface BootstrapEvent {
+      ctx: WorkerPluginContext;
       /**
        * The client used to perform the bootstrap. Replacing this is not officially
        * supported, but...
@@ -64,6 +69,7 @@ declare global {
     }
 
     interface MigrateEvent {
+      ctx: WorkerPluginContext;
       /**
        * The client used to run the migration. Replacing this is not officially
        * supported, but...
@@ -81,11 +87,13 @@ declare global {
     }
 
     interface PoolGracefulShutdownEvent {
+      ctx: WorkerPluginContext;
       workerPool: WorkerPool;
       message: string;
     }
 
     interface PoolForcefulShutdownEvent {
+      ctx: WorkerPluginContext;
       workerPool: WorkerPool;
       message: string;
     }
@@ -348,11 +356,9 @@ declare global {
           | WorkerOptions
           | RunOnceOptions
           | WorkerUtilsOptions,
-      >(event: {
-        version: string;
-        resolvedPreset: ResolvedWorkerPreset;
-        escapedWorkerSchema: string;
-      }): CompiledSharedOptions<T>;
+      >(
+        event: GraphileWorker.InitEvent,
+      ): CompiledSharedOptions<T>;
 
       /**
        * Called when installing the Graphile Worker DB schema (or upgrading it).

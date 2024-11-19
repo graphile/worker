@@ -122,7 +122,12 @@ export async function migrate(
     compiledSharedOptions;
   let latestMigration: number | null = null;
   let latestBreakingMigration: number | null = null;
-  const event = { client, postgresVersion: 0, scratchpad: Object.create(null) };
+  const event = {
+    ctx: compiledSharedOptions,
+    client,
+    postgresVersion: 0,
+    scratchpad: Object.create(null),
+  };
   for (let attempts = 0; attempts < 2; attempts++) {
     try {
       const {

@@ -755,7 +755,7 @@ export function _runTaskList(
 
       return middleware.run(
         "poolGracefulShutdown",
-        { workerPool, message },
+        { ctx: compiledSharedOptions, workerPool, message },
         async ({ message }) => {
           events.emit("pool:gracefulShutdown", {
             pool: workerPool,
@@ -876,7 +876,7 @@ export function _runTaskList(
       }
       return middleware.run(
         "poolForcefulShutdown",
-        { workerPool: this, message },
+        { ctx: compiledSharedOptions, workerPool: this, message },
         async ({ message }) => {
           workerPool._forcefulShuttingDown = true;
           events.emit("pool:forcefulShutdown", {
