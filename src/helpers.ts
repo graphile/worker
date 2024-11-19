@@ -229,8 +229,8 @@ export function makeJobHelpers(
     logger: overrideLogger,
   }: {
     withPgClient: EnhancedWithPgClient;
-    abortSignal: AbortSignal;
-    abortPromise: Promise<void>;
+    abortSignal: AbortSignal | undefined;
+    abortPromise: Promise<void> | undefined;
     logger?: Logger;
   },
 ): JobHelpers {

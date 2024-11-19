@@ -33,6 +33,7 @@ Array [
             makeWithPgClientFromClient(client),
           ),
           abortSignal: undefined,
+          abortPromise: undefined,
         },
       );
       expect(await tasks.wouldyoulike!(helpers.job.payload, helpers)).toEqual(
@@ -69,6 +70,7 @@ Array [
             makeWithPgClientFromClient(client),
           ),
           abortSignal: undefined,
+          abortPromise: undefined,
         },
       );
       expect(await tasks.task1!(helpers.job.payload, helpers)).toEqual("hi");
@@ -99,6 +101,7 @@ Array [
             makeWithPgClientFromClient(client),
           ),
           abortSignal: undefined,
+          abortPromise: undefined,
         },
       );
       expect(await tasks.task1!(helpers.job.payload, helpers)).toEqual("hi");
@@ -128,6 +131,7 @@ Array [
           makeWithPgClientFromClient(client),
         ),
         abortSignal: undefined,
+        abortPromise: undefined,
       });
       expect(await tasks.t1!(helpers.job.payload, helpers)).toEqual(
         "come with me",
@@ -158,6 +162,7 @@ Array [
           makeWithPgClientFromClient(client),
         ),
         abortSignal: undefined,
+        abortPromise: undefined,
       });
       expect(await tasks.t1!(helpers.job.payload, helpers)).toEqual(
         "come with me, TS",
@@ -192,6 +197,7 @@ Array [
             makeWithPgClientFromClient(client),
           ),
           abortSignal: undefined,
+          abortPromise: undefined,
         },
       );
       expect(await tasks.wouldyoulike!(helpers.job.payload, helpers)).toEqual(
@@ -225,6 +231,7 @@ Array [
             makeWithPgClientFromClient(client),
           ),
           abortSignal: undefined,
+          abortPromise: undefined,
         },
       );
       expect(await tasks.task1!(helpers.job.payload, helpers)).toEqual("hi");
@@ -252,6 +259,7 @@ Array [
           makeWithPgClientFromClient(client),
         ),
         abortSignal: undefined,
+        abortPromise: undefined,
       });
       expect(await tasks.t1!(helpers.job.payload, helpers)).toEqual(
         "come with me",
