@@ -1124,9 +1124,11 @@ export function _runTaskList(
       }
       workerPool._workers.splice(workerPool._workers.indexOf(worker), 1);
       if (!continuous && workerPool._workers.length === 0) {
-        workerPool.gracefulShutdown(
-          "'Run once' mode processed all available jobs and is now exiting",
-        );
+        if (!workerPool._shuttingDown) {
+          workerPool.gracefulShutdown(
+            "'Run once' mode processed all available jobs and is now exiting",
+          );
+        }
       }
     };
     worker.promise.then(
