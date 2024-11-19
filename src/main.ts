@@ -756,7 +756,7 @@ export function _runTaskList(
       return middleware.run(
         "poolGracefulShutdown",
         { workerPool, message },
-        async ({ workerPool, message }) => {
+        async ({ message }) => {
           events.emit("pool:gracefulShutdown", {
             pool: workerPool,
             workerPool,
@@ -867,87 +867,96 @@ export function _runTaskList(
     /**
      * Stop accepting jobs and "fail" all currently running jobs.
      */
-    async forcefulShutdown(message: string) {
+    forcefulShutdown(message: string) {
       if (workerPool._forcefulShuttingDown) {
         logger.error(
           `forcefulShutdown called when forcefulShutdown is already in progress`,
         );
         return;
       }
-      workerPool._forcefulShuttingDown = true;
-      events.emit("pool:forcefulShutdown", {
-        pool: workerPool,
-        workerPool,
-        message,
-      });
-      try {
-        logger.debug(`Attempting forceful shutdown`);
-        // Stop new jobs being added
-        const deactivatePromise = deactivate();
-
-        // Release all our workers' jobs
-        const workers = [...workerPool._workers];
-        const jobsInProgress: Array<Job> = workers
-          .map((worker) => worker.getActiveJob())
-          .filter((job): job is Job => !!job);
-
-        // Remove all the workers - we're shutting them down manually
-        const workerPromises = workers.map((worker) => worker.release(true));
-        // Ignore the results, we're shutting down anyway
-        // TODO: add a timeout
-        const [deactivateResult, ..._ignoreWorkerReleaseResults] =
-          await Promise.allSettled([deactivatePromise, ...workerPromises]);
-        if (deactivateResult.status === "rejected") {
-          // Log but continue regardless
-          logger.error(`Deactivation failed: ${deactivateResult.reason}`, {
-            error: deactivateResult.reason,
-          });
-        }
-
-        if (jobsInProgress.length > 0) {
-          const workerIds = workers.map((worker) => worker.workerId);
-          logger.debug(
-            `Releasing the jobs ${jobsInProgress
-              .map((j) => j.id)
-              .join()} (workers: ${workerIds.join(", ")})`,
-            {
-              jobs: jobsInProgress,
-              workerIds,
-            },
-          );
-          const cancelledJobs = await failJobs(
-            compiledSharedOptions,
-            withPgClient,
-            workerPool.id,
-            jobsInProgress,
+      return middleware.run(
+        "poolForcefulShutdown",
+        { workerPool: this, message },
+        async ({ message }) => {
+          workerPool._forcefulShuttingDown = true;
+          events.emit("pool:forcefulShutdown", {
+            pool: workerPool,
+            workerPool,
             message,
-          );
-          logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
-            cancelledJobs,
           });
-        } else {
-          logger.debug("No active jobs to release");
-        }
-        events.emit("pool:forcefulShutdown:complete", {
-          pool: workerPool,
-          workerPool,
-        });
-        logger.debug("Forceful shutdown complete");
-      } catch (e) {
-        events.emit("pool:forcefulShutdown:error", {
-          pool: workerPool,
-          workerPool,
-          error: e,
-        });
-        const error = coerceError(e);
-        logger.error(
-          `Error occurred during forceful shutdown: ${error.message}`,
-          { error: e },
-        );
-      }
-      if (!terminated) {
-        terminate();
-      }
+          try {
+            logger.debug(`Attempting forceful shutdown`);
+            // Stop new jobs being added
+            const deactivatePromise = deactivate();
+
+            // Release all our workers' jobs
+            const workers = [...workerPool._workers];
+            const jobsInProgress: Array<Job> = workers
+              .map((worker) => worker.getActiveJob())
+              .filter((job): job is Job => !!job);
+
+            // Remove all the workers - we're shutting them down manually
+            const workerPromises = workers.map((worker) =>
+              worker.release(true),
+            );
+            // Ignore the results, we're shutting down anyway
+            // TODO: add a timeout
+            const [deactivateResult, ..._ignoreWorkerReleaseResults] =
+              await Promise.allSettled([deactivatePromise, ...workerPromises]);
+            if (deactivateResult.status === "rejected") {
+              // Log but continue regardless
+              logger.error(`Deactivation failed: ${deactivateResult.reason}`, {
+                error: deactivateResult.reason,
+              });
+            }
+
+            if (jobsInProgress.length > 0) {
+              const workerIds = workers.map((worker) => worker.workerId);
+              logger.debug(
+                `Releasing the jobs ${jobsInProgress
+                  .map((j) => j.id)
+                  .join()} (workers: ${workerIds.join(", ")})`,
+                {
+                  jobs: jobsInProgress,
+                  workerIds,
+                },
+              );
+              const cancelledJobs = await failJobs(
+                compiledSharedOptions,
+                withPgClient,
+                workerPool.id,
+                jobsInProgress,
+                message,
+              );
+              logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
+                cancelledJobs,
+              });
+            } else {
+              logger.debug("No active jobs to release");
+            }
+            events.emit("pool:forcefulShutdown:complete", {
+              pool: workerPool,
+              workerPool,
+            });
+            logger.debug("Forceful shutdown complete");
+          } catch (e) {
+            events.emit("pool:forcefulShutdown:error", {
+              pool: workerPool,
+              workerPool,
+              error: e,
+            });
+            logger.error(
+              `Error occurred during forceful shutdown: ${
+                coerceError(e).message
+              }`,
+              { error: e },
+            );
+          }
+          if (!terminated) {
+            terminate();
+          }
+        },
+      );
     },
 
     promise,

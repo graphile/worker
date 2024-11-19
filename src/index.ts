@@ -84,6 +84,11 @@ declare global {
       workerPool: WorkerPool;
       message: string;
     }
+
+    interface PoolForcefulShutdownEvent {
+      workerPool: WorkerPool;
+      message: string;
+    }
   }
 
   namespace GraphileConfig {
@@ -344,7 +349,9 @@ declare global {
           | RunOnceOptions
           | WorkerUtilsOptions,
       >(event: {
+        version: string;
         resolvedPreset: ResolvedWorkerPreset;
+        escapedWorkerSchema: string;
       }): CompiledSharedOptions<T>;
 
       /**
@@ -359,6 +366,10 @@ declare global {
 
       poolGracefulShutdown(
         event: GraphileWorker.PoolGracefulShutdownEvent,
+      ): PromiseOrDirect<void>;
+
+      poolForcefulShutdown(
+        event: GraphileWorker.PoolForcefulShutdownEvent,
       ): PromiseOrDirect<void>;
     }
 

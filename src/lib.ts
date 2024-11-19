@@ -231,22 +231,22 @@ export function processSharedOptions<
       },
     );
 
+    const {
+      worker: {
+        minResetLockedInterval,
+        maxResetLockedInterval,
+        schema: workerSchema,
+        logger,
+        events,
+      },
+      plugins,
+    } = resolvedPreset;
+    const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
+
     compiled = middleware.run(
       "init",
-      { resolvedPreset },
-      ({ resolvedPreset }) => {
-        const {
-          worker: {
-            minResetLockedInterval,
-            maxResetLockedInterval,
-            schema: workerSchema,
-            logger,
-            events = new EventEmitter(),
-          },
-        } = resolvedPreset;
-
-        const escapedWorkerSchema =
-          Client.prototype.escapeIdentifier(workerSchema);
+      { resolvedPreset, escapedWorkerSchema, version },
+      () => {
         if (
           !Number.isFinite(minResetLockedInterval) ||
           !Number.isFinite(maxResetLockedInterval) ||
@@ -272,7 +272,7 @@ export function processSharedOptions<
           resolvedPreset,
         };
         applyHooks(
-          resolvedPreset.plugins,
+          plugins,
           (p) => p.worker?.hooks,
           (name, fn, plugin) => {
             const context: WorkerPluginContext = compiled!;
