@@ -1,6 +1,12 @@
 import * as assert from "assert";
 import { EventEmitter } from "events";
-import { applyHooks, AsyncHooks, resolvePresets } from "graphile-config";
+import {
+  applyHooks,
+  AsyncHooks,
+  Middleware,
+  orderedApply,
+  resolvePresets,
+} from "graphile-config";
 import { Client, Pool, PoolClient, PoolConfig } from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "./config";
@@ -64,6 +70,7 @@ export interface CompiledSharedOptions<
   _rawOptions: T;
   resolvedPreset: ResolvedWorkerPreset;
   hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
+  middleware: Middleware<GraphileConfig.WorkerMiddleware>;
 }
 
 interface ProcessSharedOptionsSettings {
@@ -214,58 +221,78 @@ export function processSharedOptions<
       legacyOptionsToPreset(options),
     ]) as ResolvedWorkerPreset;
 
-    const {
-      worker: {
-        minResetLockedInterval,
-        maxResetLockedInterval,
-        schema: workerSchema,
-        logger,
-        events = new EventEmitter(),
-      },
-    } = resolvedPreset;
+    const middleware = new Middleware<GraphileConfig.WorkerMiddleware>();
 
-    const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
-    if (
-      !Number.isFinite(minResetLockedInterval) ||
-      !Number.isFinite(maxResetLockedInterval) ||
-      minResetLockedInterval < 1 ||
-      maxResetLockedInterval < minResetLockedInterval
-    ) {
-      throw new Error(
-        `Invalid values for minResetLockedInterval (${minResetLockedInterval})/maxResetLockedInterval (${maxResetLockedInterval})`,
-      );
-    }
-    const hooks = new AsyncHooks<GraphileConfig.WorkerHooks>();
-    compiled = {
-      version,
-      maxMigrationNumber: MAX_MIGRATION_NUMBER,
-      breakingMigrationNumbers: BREAKING_MIGRATIONS,
-      events,
-      logger,
-      workerSchema,
-      escapedWorkerSchema,
-      _rawOptions: options,
-      hooks,
-      resolvedPreset,
-    };
-    applyHooks(
+    orderedApply(
       resolvedPreset.plugins,
-      (p) => p.worker?.hooks,
-      (name, fn, plugin) => {
-        const context: WorkerPluginContext = compiled!;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const cb = ((...args: any[]) => fn(context, ...args)) as any;
-        cb.displayName = `${plugin.name}_hook_${name}`;
-        hooks.hook(name, cb);
+      (plugin) => plugin.worker?.middleware,
+      (name, fn, _plugin) => {
+        middleware.register(name, fn as any);
       },
     );
-    _sharedOptionsCache.set(options, compiled);
-    Promise.resolve(hooks.process("init")).catch((error) => {
-      logger.error(
-        `One of the plugins you are using raised an error during 'init'; but errors during 'init' are currently ignored. Continuing. Error: ${error}`,
-        { error },
-      );
-    });
+
+    compiled = middleware.run(
+      "init",
+      { resolvedPreset },
+      ({ resolvedPreset }) => {
+        const {
+          worker: {
+            minResetLockedInterval,
+            maxResetLockedInterval,
+            schema: workerSchema,
+            logger,
+            events = new EventEmitter(),
+          },
+        } = resolvedPreset;
+
+        const escapedWorkerSchema =
+          Client.prototype.escapeIdentifier(workerSchema);
+        if (
+          !Number.isFinite(minResetLockedInterval) ||
+          !Number.isFinite(maxResetLockedInterval) ||
+          minResetLockedInterval < 1 ||
+          maxResetLockedInterval < minResetLockedInterval
+        ) {
+          throw new Error(
+            `Invalid values for minResetLockedInterval (${minResetLockedInterval})/maxResetLockedInterval (${maxResetLockedInterval})`,
+          );
+        }
+        const hooks = new AsyncHooks<GraphileConfig.WorkerHooks>();
+        const compiled = {
+          version,
+          maxMigrationNumber: MAX_MIGRATION_NUMBER,
+          breakingMigrationNumbers: BREAKING_MIGRATIONS,
+          events,
+          logger,
+          workerSchema,
+          escapedWorkerSchema,
+          _rawOptions: options,
+          hooks,
+          middleware,
+          resolvedPreset,
+        };
+        applyHooks(
+          resolvedPreset.plugins,
+          (p) => p.worker?.hooks,
+          (name, fn, plugin) => {
+            const context: WorkerPluginContext = compiled!;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const cb = ((...args: any[]) => fn(context, ...args)) as any;
+            cb.displayName = `${plugin.name}_hook_${name}`;
+            hooks.hook(name, cb);
+          },
+        );
+        _sharedOptionsCache.set(options, compiled);
+        // 'init' hook is deprecated; use middleware instead.
+        Promise.resolve(hooks.process("init")).catch((error) => {
+          logger.error(
+            `One of the plugins you are using raised an error during 'init'; but errors during 'init' are currently ignored. Continuing. Error: ${error}`,
+            { error },
+          );
+        });
+        return compiled;
+      },
+    ) as CompiledSharedOptions<T>;
   }
   if (scope) {
     return {

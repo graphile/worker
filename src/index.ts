@@ -1,5 +1,9 @@
 import { Logger } from "@graphile/logger";
-import { PluginHook } from "graphile-config";
+import {
+  CallbackOrDescriptor,
+  MiddlewareNext,
+  PluginHook,
+} from "graphile-config";
 import type { PoolClient } from "pg";
 
 import { getCronItems } from "./getCronItems";
@@ -7,14 +11,18 @@ import { getTasks } from "./getTasks";
 import {
   FileDetails,
   PromiseOrDirect,
+  RunOnceOptions,
+  SharedOptions,
   Task,
   TaskList,
   WithPgClient,
   Worker,
   WorkerEvents,
   WorkerPluginContext,
+  WorkerSharedOptions,
+  WorkerUtilsOptions,
 } from "./interfaces";
-import { CompiledSharedOptions } from "./lib";
+import { CompiledSharedOptions, ResolvedWorkerPreset } from "./lib";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
 export * from "./interfaces";
 export {
@@ -36,6 +44,22 @@ declare global {
   namespace GraphileWorker {
     interface Tasks {
       /* extend this through declaration merging */
+    }
+    interface BootstrapEvent {
+      /**
+       * The client used to perform the bootstrap. Replacing this is not officially
+       * supported, but...
+       */
+      client: PoolClient;
+      /**
+       * The Postgres version number, e.g. 120000 for PostgreSQL 12.0
+       */
+      readonly postgresVersion: number;
+      /**
+       * Somewhere to store temporary data from plugins, only used during
+       * bootstrap and migrate
+       */
+      readonly scratchpad: Record<string, unknown>;
     }
     interface MigrateEvent {
       /**
@@ -278,6 +302,19 @@ declare global {
 
     interface Plugin {
       worker?: {
+        // TODO: replace with the following once we upgrade graphile-config again
+        //   middleware?: MiddlewareHandlers<WorkerMiddleware>
+        middleware?: {
+          [key in keyof WorkerMiddleware]?: CallbackOrDescriptor<
+            WorkerMiddleware[key] extends (
+              ...args: infer UArgs
+            ) => infer UResult
+              ? (next: MiddlewareNext<UResult>, ...args: UArgs) => UResult
+              : never
+          >;
+        };
+
+        // TODO: deprecate this, replace with middleware
         hooks?: {
           [key in keyof WorkerHooks]?: PluginHook<
             WorkerHooks[key] extends (...args: infer UArgs) => infer UResult
@@ -287,6 +324,33 @@ declare global {
         };
       };
     }
+
+    interface WorkerMiddleware {
+      /**
+       * Called when Graphile Worker starts up.
+       */
+      init<
+        T extends
+          | SharedOptions
+          | WorkerSharedOptions
+          | WorkerOptions
+          | RunOnceOptions
+          | WorkerUtilsOptions,
+      >(event: {
+        resolvedPreset: ResolvedWorkerPreset;
+      }): CompiledSharedOptions<T>;
+
+      /**
+       * Called when installing the Graphile Worker DB schema (or upgrading it).
+       */
+      bootstrap(event: GraphileWorker.BootstrapEvent): PromiseOrDirect<void>;
+
+      /**
+       * Called when migrating the Graphile Worker DB.
+       */
+      migrate(event: GraphileWorker.MigrateEvent): PromiseOrDirect<void>;
+    }
+
     interface WorkerHooks {
       /**
        * Called when Graphile Worker starts up.
