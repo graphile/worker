@@ -516,8 +516,8 @@ export interface WorkerPool {
   nudge(n: number): void;
   /** @deprecated Use gracefulShutdown instead */
   release: () => Promise<void>;
-  gracefulShutdown: (message?: string) => Promise<void>;
-  forcefulShutdown: (message: string) => Promise<void>;
+  gracefulShutdown: (message?: string) => PromiseOrDirect<void>;
+  forcefulShutdown: (message: string) => PromiseOrDirect<void>;
   promise: Promise<void>;
   /** Fires 'abort' when all running jobs should stop because worker is shutting down. @experimental */
   abortSignal: AbortSignal;

@@ -567,7 +567,7 @@ export function _runTaskList(
   } = options;
 
   let autostart = rawAutostart;
-  const { logger, events } = compiledSharedOptions;
+  const { logger, events, middleware } = compiledSharedOptions;
 
   if (ENABLE_DANGEROUS_LOGS) {
     logger.debug(
@@ -733,9 +733,7 @@ export function _runTaskList(
      * Stop accepting jobs, and wait gracefully for the jobs that are in
      * progress to complete.
      */
-    async gracefulShutdown(
-      message = "Worker pool is shutting down gracefully",
-    ) {
+    gracefulShutdown(message = "Worker pool is shutting down gracefully") {
       if (workerPool._forcefulShuttingDown) {
         logger.error(
           `gracefulShutdown called when forcefulShutdown is already in progress`,
@@ -755,106 +753,115 @@ export function _runTaskList(
       }, gracefulShutdownAbortTimeout);
       abortTimer.unref();
 
-      events.emit("pool:gracefulShutdown", {
-        pool: workerPool,
-        workerPool,
-        message,
-      });
-      try {
-        logger.debug(`Attempting graceful shutdown`);
-        // Stop new jobs being added
-        // TODO: releasing the job releasers BEFORE we release the workers doesn't make any sense?
-        const deactivatePromise = deactivate();
-
-        const errors: Error[] = [];
-
-        // Remove all the workers - we're shutting them down manually
-        const workers = [...workerPool._workers];
-        const workerPromises = workers.map((worker) => worker.release());
-        const [deactivateResult, ...workerReleaseResults] =
-          await Promise.allSettled([deactivatePromise, ...workerPromises]);
-        if (deactivateResult.status === "rejected") {
-          errors.push(coerceError(deactivateResult.reason));
-          // Log but continue regardless
-          logger.error(`Deactivation failed: ${deactivateResult.reason}`, {
-            error: deactivateResult.reason,
+      return middleware.run(
+        "poolGracefulShutdown",
+        { workerPool, message },
+        async ({ workerPool, message }) => {
+          events.emit("pool:gracefulShutdown", {
+            pool: workerPool,
+            workerPool,
+            message,
           });
-        }
-        const jobsToRelease: Job[] = [];
-        for (let i = 0; i < workerReleaseResults.length; i++) {
-          const workerReleaseResult = workerReleaseResults[i];
-          if (workerReleaseResult.status === "rejected") {
-            const worker = workers[i];
-            const job = worker.getActiveJob();
-            events.emit("pool:gracefulShutdown:workerError", {
+          try {
+            logger.debug(`Attempting graceful shutdown`);
+            // Stop new jobs being added
+            // TODO: releasing the job releasers BEFORE we release the workers doesn't make any sense?
+            const deactivatePromise = deactivate();
+
+            const errors: Error[] = [];
+
+            // Remove all the workers - we're shutting them down manually
+            const workers = [...workerPool._workers];
+            const workerPromises = workers.map((worker) => worker.release());
+            const [deactivateResult, ...workerReleaseResults] =
+              await Promise.allSettled([deactivatePromise, ...workerPromises]);
+            if (deactivateResult.status === "rejected") {
+              errors.push(coerceError(deactivateResult.reason));
+              // Log but continue regardless
+              logger.error(`Deactivation failed: ${deactivateResult.reason}`, {
+                error: deactivateResult.reason,
+              });
+            }
+            const jobsToRelease: Job[] = [];
+            for (let i = 0; i < workerReleaseResults.length; i++) {
+              const workerReleaseResult = workerReleaseResults[i];
+              if (workerReleaseResult.status === "rejected") {
+                const worker = workers[i];
+                const job = worker.getActiveJob();
+                events.emit("pool:gracefulShutdown:workerError", {
+                  pool: workerPool,
+                  workerPool,
+                  error: workerReleaseResult.reason,
+                  job,
+                });
+                logger.debug(
+                  `Cancelling worker ${worker.workerId} (job: ${
+                    job?.id ?? "none"
+                  }) failed`,
+                  {
+                    worker,
+                    job,
+                    reason: workerReleaseResult.reason,
+                  },
+                );
+                if (job) {
+                  jobsToRelease.push(job);
+                }
+              }
+            }
+            if (jobsToRelease.length > 0) {
+              const workerIds = workers.map((worker) => worker.workerId);
+              logger.debug(
+                `Releasing the jobs ${jobsToRelease
+                  .map((j) => j.id)
+                  .join()} (workers: ${workerIds.join(", ")})`,
+                {
+                  jobs: jobsToRelease,
+                  workerIds,
+                },
+              );
+              const cancelledJobs = await failJobs(
+                compiledSharedOptions,
+                withPgClient,
+                workerPool.id,
+                jobsToRelease,
+                message,
+              );
+              logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
+                cancelledJobs,
+              });
+            }
+            if (errors.length > 0) {
+              throw new AggregateError(
+                errors,
+                "Errors occurred whilst shutting down worker",
+              );
+            }
+            events.emit("pool:gracefulShutdown:complete", {
               pool: workerPool,
               workerPool,
-              error: workerReleaseResult.reason,
-              job,
             });
-            logger.debug(
-              `Cancelling worker ${worker.workerId} (job: ${
-                job?.id ?? "none"
-              }) failed`,
+            logger.debug("Graceful shutdown complete");
+          } catch (e) {
+            events.emit("pool:gracefulShutdown:error", {
+              pool: workerPool,
+              workerPool,
+              error: e,
+            });
+            const message = coerceError(e).message;
+            logger.error(
+              `Error occurred during graceful shutdown: ${message}`,
               {
-                worker,
-                job,
-                reason: workerReleaseResult.reason,
+                error: e,
               },
             );
-            if (job) {
-              jobsToRelease.push(job);
-            }
+            return this.forcefulShutdown(message);
           }
-        }
-        if (jobsToRelease.length > 0) {
-          const workerIds = workers.map((worker) => worker.workerId);
-          logger.debug(
-            `Releasing the jobs ${jobsToRelease
-              .map((j) => j.id)
-              .join()} (workers: ${workerIds.join(", ")})`,
-            {
-              jobs: jobsToRelease,
-              workerIds,
-            },
-          );
-          const cancelledJobs = await failJobs(
-            compiledSharedOptions,
-            withPgClient,
-            workerPool.id,
-            jobsToRelease,
-            message,
-          );
-          logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
-            cancelledJobs,
-          });
-        }
-        if (errors.length > 0) {
-          throw new AggregateError(
-            errors,
-            "Errors occurred whilst shutting down worker",
-          );
-        }
-        events.emit("pool:gracefulShutdown:complete", {
-          pool: workerPool,
-          workerPool,
-        });
-        logger.debug("Graceful shutdown complete");
-      } catch (e) {
-        events.emit("pool:gracefulShutdown:error", {
-          pool: workerPool,
-          workerPool,
-          error: e,
-        });
-        const message = coerceError(e).message;
-        logger.error(`Error occurred during graceful shutdown: ${message}`, {
-          error: e,
-        });
-        return this.forcefulShutdown(message);
-      }
-      if (!terminated) {
-        terminate();
-      }
+          if (!terminated) {
+            terminate();
+          }
+        },
+      );
     },
 
     /**

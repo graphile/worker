@@ -19,6 +19,7 @@ import {
   Worker,
   WorkerEvents,
   WorkerPluginContext,
+  WorkerPool,
   WorkerSharedOptions,
   WorkerUtilsOptions,
 } from "./interfaces";
@@ -61,6 +62,7 @@ declare global {
        */
       readonly scratchpad: Record<string, unknown>;
     }
+
     interface MigrateEvent {
       /**
        * The client used to run the migration. Replacing this is not officially
@@ -76,6 +78,11 @@ declare global {
        * premigrate, postmigrate, prebootstrap and postbootstrap
        */
       readonly scratchpad: Record<string, unknown>;
+    }
+
+    interface PoolGracefulShutdownEvent {
+      workerPool: WorkerPool;
+      message: string;
     }
   }
 
@@ -349,6 +356,10 @@ declare global {
        * Called when migrating the Graphile Worker DB.
        */
       migrate(event: GraphileWorker.MigrateEvent): PromiseOrDirect<void>;
+
+      poolGracefulShutdown(
+        event: GraphileWorker.PoolGracefulShutdownEvent,
+      ): PromiseOrDirect<void>;
     }
 
     interface WorkerHooks {
