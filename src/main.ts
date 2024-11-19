@@ -1115,31 +1115,8 @@ export function _runTaskList(
       }
       workerPool._workers.splice(workerPool._workers.indexOf(worker), 1);
       if (!continuous && workerPool._workers.length === 0) {
-        compiledSharedOptions.events.emit("pool:gracefulShutdown", {
-          workerPool,
-          pool: workerPool,
-          message:
-            "'Run once' mode processed all available jobs and is now exiting",
-        });
-        deactivate().then(
-          () => {
-            compiledSharedOptions.events.emit(
-              "pool:gracefulShutdown:complete",
-              {
-                workerPool,
-                pool: workerPool,
-              },
-            );
-            terminate();
-          },
-          (error) => {
-            compiledSharedOptions.events.emit("pool:gracefulShutdown:error", {
-              workerPool,
-              pool: workerPool,
-              error,
-            });
-            terminate(error);
-          },
+        workerPool.gracefulShutdown(
+          "'Run once' mode processed all available jobs and is now exiting",
         );
       }
     };
