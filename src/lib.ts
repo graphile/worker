@@ -1,5 +1,4 @@
 import * as assert from "assert";
-import { EventEmitter } from "events";
 import {
   applyHooks,
   AsyncHooks,
@@ -21,14 +20,13 @@ import {
   RunOnceOptions,
   SharedOptions,
   WithPgClient,
-  WorkerEvents,
   WorkerOptions,
   WorkerPluginBaseContext,
   WorkerPluginContext,
   WorkerSharedOptions,
   WorkerUtilsOptions,
 } from "./interfaces";
-import { Logger, LogScope } from "./logger";
+import { LogScope } from "./logger";
 import { migrate } from "./migrate";
 import { WorkerPreset } from "./preset";
 import { version } from "./version";
@@ -217,6 +215,7 @@ export function processSharedOptions<
       resolvedPreset.plugins,
       (plugin) => plugin.worker?.middleware,
       (name, fn, _plugin) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         middleware.register(name, fn as any);
       },
     );
