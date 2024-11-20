@@ -854,6 +854,7 @@ export function _runTaskList(
                 "Errors occurred whilst shutting down worker",
               );
             }
+
             events.emit("pool:gracefulShutdown:complete", {
               pool: workerPool,
               workerPool,
@@ -868,9 +869,7 @@ export function _runTaskList(
             const message = coerceError(e).message;
             logger.error(
               `Error occurred during graceful shutdown: ${message}`,
-              {
-                error: e,
-              },
+              { error: e },
             );
             // NOTE: we now rely on forcefulShutdown to handle terminate()
             if (this._forcefulShuttingDown) {
@@ -920,6 +919,8 @@ export function _runTaskList(
             // Stop new jobs being added
             const deactivatePromise = deactivate();
 
+            const errors: Error[] = [];
+
             // Release all our workers' jobs
             const workers = [...workerPool._workers];
             const jobsInProgress: Array<Job> = workers
@@ -939,6 +940,7 @@ export function _runTaskList(
               logger.error(`Deactivation failed: ${deactivateResult.reason}`, {
                 error: deactivateResult.reason,
               });
+              errors.push(coerceError(deactivateResult.reason));
             }
 
             if (jobsInProgress.length > 0) {
@@ -952,19 +954,33 @@ export function _runTaskList(
                   workerIds,
                 },
               );
-              const cancelledJobs = await failJobs(
-                compiledSharedOptions,
-                withPgClient,
-                workerPool.id,
-                jobsInProgress,
-                message,
-              );
-              logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
-                cancelledJobs,
-              });
+              try {
+                const cancelledJobs = await failJobs(
+                  compiledSharedOptions,
+                  withPgClient,
+                  workerPool.id,
+                  jobsInProgress,
+                  message,
+                );
+                logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
+                  cancelledJobs,
+                });
+              } catch (e) {
+                errors.push(coerceError(e));
+              }
             } else {
               logger.debug("No active jobs to release");
             }
+
+            if (errors.length === 1) {
+              throw errors[0];
+            } else if (errors.length > 1) {
+              throw new AggregateError(
+                errors,
+                "Errors occurred whilst forcefully shutting down worker",
+              );
+            }
+
             events.emit("pool:forcefulShutdown:complete", {
               pool: workerPool,
               workerPool,
