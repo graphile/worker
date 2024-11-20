@@ -837,6 +837,7 @@ export function _runTaskList(
                 cancelledJobs,
               });
             }
+
             if (this._forcefulShuttingDown) {
               errors.push(
                 new Error(
@@ -844,6 +845,7 @@ export function _runTaskList(
                 ),
               );
             }
+
             if (errors.length === 1) {
               throw errors[0];
             } else if (errors.length > 1) {
@@ -870,8 +872,13 @@ export function _runTaskList(
                 error: e,
               },
             );
-            // Note: we now rely on forcefulShutdown to handle terminate()
-            return this.forcefulShutdown(message);
+            // NOTE: we now rely on forcefulShutdown to handle terminate()
+            if (this._forcefulShuttingDown) {
+              // Skip the warning about double shutdown
+              return forcefulShutdownPromise;
+            } else {
+              return this.forcefulShutdown(message);
+            }
           }
           if (!terminated) {
             await terminate();
