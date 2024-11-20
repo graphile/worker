@@ -238,6 +238,7 @@ test("throws helpful error message in migration 11", async () => {
 
     // Manually run the first 10 migrations
     const event = {
+      ctx: compiledSharedOptions,
       client: pgClient,
       postgresVersion: 120000, // TODO: use the actual postgres version
       scratchpad: Object.create(null),
