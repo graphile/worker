@@ -685,7 +685,7 @@ export function _runTaskList(
           `Graphile Worker internal error: terminate() was called twice for worker pool. Ignoring second call; but this indicates a bug - please file an issue.`,
         );
       } catch (e) {
-        logger.error(String(coerceError(e).stack));
+        logger.error(String((e as Error).stack));
       }
     }
   }
