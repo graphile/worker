@@ -815,7 +815,7 @@ export function _runTaskList(
                 }
               }
             }
-            if (jobsToRelease.length > 0) {
+            if (!this._forcefulShuttingDown && jobsToRelease.length > 0) {
               const workerIds = workers.map((worker) => worker.workerId);
               logger.debug(
                 `Releasing the jobs ${jobsToRelease
@@ -837,7 +837,16 @@ export function _runTaskList(
                 cancelledJobs,
               });
             }
-            if (errors.length > 0) {
+            if (this._forcefulShuttingDown) {
+              errors.push(
+                new Error(
+                  "forcefulShutdown was initiated whilst gracefulShutdown was still executing.",
+                ),
+              );
+            }
+            if (errors.length === 1) {
+              throw errors[0];
+            } else if (errors.length > 1) {
               throw new AggregateError(
                 errors,
                 "Errors occurred whilst shutting down worker",
