@@ -859,7 +859,7 @@ export function _runTaskList(
             return this.forcefulShutdown(message);
           }
           if (!terminated) {
-            terminate();
+            await terminate();
           }
         },
       );
@@ -946,15 +946,18 @@ export function _runTaskList(
               workerPool,
               error: e,
             });
+            const error = coerceError(e);
             logger.error(
-              `Error occurred during forceful shutdown: ${
-                coerceError(e).message
-              }`,
+              `Error occurred during forceful shutdown: ${error.message}`,
               { error: e },
             );
+            if (!terminated) {
+              await terminate(error);
+            }
+            throw e;
           }
           if (!terminated) {
-            terminate();
+            await terminate();
           }
         },
       );
