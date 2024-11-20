@@ -856,6 +856,7 @@ export function _runTaskList(
                 error: e,
               },
             );
+            // Note: we now rely on forcefulShutdown to handle terminate()
             return this.forcefulShutdown(message);
           }
           if (!terminated) {
@@ -957,7 +958,7 @@ export function _runTaskList(
             throw e;
           }
           if (!terminated) {
-            await terminate();
+            await terminate(new Error("Forceful shutdown"));
           }
         },
       );
