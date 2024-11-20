@@ -10,6 +10,7 @@ import {
 import { MINUTE, SECOND } from "./cronConstants";
 import defer, { Deferred } from "./deferred";
 import { GetJobFunction, Job, TaskList, WorkerPool } from "./interfaces";
+import { coerceError } from "./lib";
 import { getJob as baseGetJob } from "./sql/getJob";
 import { returnJobs } from "./sql/returnJobs";
 
@@ -108,7 +109,9 @@ export class LocalQueue {
   // when the queue is pulsed during a fetch.
   fetchAgain = false;
   public readonly mode: LocalQueueMode = STARTING;
-  private promise = defer();
+  /** The promise that resolves/rejects when the queue is disposed of */
+  private _finPromise = defer();
+  private errors: Error[] = [];
   /** A count of the number of "background" processes such as fetching or returning jobs */
   private backgroundCount = 0;
 
@@ -161,10 +164,37 @@ export class LocalQueue {
     });
   }
 
+  private fin() {
+    assert.equal(this.mode, "RELEASED");
+    assert.equal(this.backgroundCount, 0);
+    if (this.errors.length === 1) {
+      this._finPromise.reject(this.errors[0]);
+    } else if (this.errors.length > 1) {
+      this._finPromise.reject(new AggregateError(this.errors));
+    } else {
+      this._finPromise.resolve();
+    }
+  }
+
   private decreaseBackgroundCount = () => {
     this.backgroundCount--;
     if (this.mode === "RELEASED" && this.backgroundCount === 0) {
-      this.promise.resolve();
+      this.fin();
+    }
+  };
+
+  private decreaseBackgroundCountWithError = (e: unknown) => {
+    this.backgroundCount--;
+    if (this.mode === "RELEASED") {
+      this.errors.push(coerceError(e));
+      if (this.backgroundCount === 0) {
+        this.fin();
+      }
+    } else {
+      this.compiledSharedOptions.logger.error(
+        `Backgrounding should never yield errors when the queue is not RELEASED`,
+        { error: e },
+      );
     }
   };
 
@@ -172,6 +202,9 @@ export class LocalQueue {
    * For promises that happen in the background, but that we want to ensure are
    * handled before we release the queue (so that the database pool isn't
    * released too early).
+   *
+   * IMPORTANT: never raise an error from background unless mode === "RELEASED" - you
+   * need to handle errors yourself!
    */
   private background(promise: Promise<void>) {
     if (this.mode === "RELEASED" && this.backgroundCount === 0) {
@@ -180,7 +213,10 @@ export class LocalQueue {
       );
     }
     this.backgroundCount++;
-    promise.then(this.decreaseBackgroundCount, this.decreaseBackgroundCount);
+    promise.then(
+      this.decreaseBackgroundCount,
+      this.decreaseBackgroundCountWithError,
+    );
   }
 
   private setModePolling() {
@@ -265,7 +301,11 @@ export class LocalQueue {
   }
 
   private returnJobs() {
-    const jobsToReturn = this.jobQueue.splice(0, this.jobQueue.length);
+    const l = this.jobQueue.length;
+    if (l === 0) {
+      return;
+    }
+    const jobsToReturn = this.jobQueue.splice(0, l);
     this.compiledSharedOptions.events.emit("localQueue:returnJobs", {
       localQueue: this,
       jobs: jobsToReturn,
@@ -279,14 +319,37 @@ export class LocalQueue {
       ).then(
         () => {},
         (e) => {
-          // TODO: handle this better!
-          this.compiledSharedOptions.logger.error(
-            `Failed to return jobs from local queue to database queue`,
-            { error: e },
-          );
+          if (this.mode === "RELEASED") {
+            throw new Error(
+              `Error occurred whilst returning jobs from local queue to database queue: ${
+                coerceError(e).message
+              }`,
+            );
+          } else {
+            // Return the jobs to the queue; MUST NOT HAPPEN IN RELEASED MODE.
+            this.receivedJobs(jobsToReturn);
+            this.compiledSharedOptions.logger.error(
+              `Failed to return jobs from local queue to database queue`,
+              { error: e },
+            );
+          }
         },
       ),
     );
+  }
+
+  private receivedJobs(jobs: Job[]) {
+    const jobCount = jobs.length;
+    const workerCount = Math.min(jobCount, this.workerQueue.length);
+    const workers = this.workerQueue.splice(0, workerCount);
+    for (let i = 0; i < jobCount; i++) {
+      const job = jobs[i];
+      if (i < workerCount) {
+        workers[i].resolve(job);
+      } else {
+        this.jobQueue.push(job);
+      }
+    }
   }
 
   private fetch = (): void => {
@@ -364,11 +427,6 @@ export class LocalQueue {
         jobs,
       });
 
-      assert.equal(
-        this.jobQueue.length,
-        0,
-        "Should not fetch when job queue isn't empty (recheck)",
-      );
       jobCount = jobs.length;
       fetchedMax = jobCount >= this.getJobBatchSize;
       refetchDelayThresholdSurpassed =
@@ -381,17 +439,7 @@ export class LocalQueue {
 
       // NOTE: we don't need to handle `this.mode === RELEASED` here because
       // being in that mode guarantees the workerQueue is empty.
-
-      const workerCount = Math.min(jobCount, this.workerQueue.length);
-      const workers = this.workerQueue.splice(0, workerCount);
-      for (let i = 0; i < jobCount; i++) {
-        const job = jobs[i];
-        if (i < workerCount) {
-          workers[i].resolve(job);
-        } else {
-          this.jobQueue.push(job);
-        }
-      }
+      this.receivedJobs(jobs);
     } catch (e) {
       // Error happened; rely on poll interval.
       this.compiledSharedOptions.logger.error(
@@ -573,7 +621,7 @@ export class LocalQueue {
     if (this.mode !== "RELEASED") {
       this.setModeReleased();
     }
-    return this.promise;
+    return this._finPromise;
   }
 
   private setModeReleased() {
@@ -594,14 +642,16 @@ export class LocalQueue {
         futureJobs.forEach((futureJob) => futureJob.resolve(undefined));
 
         // Release next fetch call
-        if (this.fetchTimer) {
+        if (this.fetchTimer != null) {
+          // No need to return jobs in POLLING mode
           clearTimeout(this.fetchTimer);
           this.fetchTimer = null;
-          this.promise.resolve();
         } else {
-          // Rely on checking mode at end of fetch
+          // There's a fetch in progress, so backgroundCount will not be 0, and
+          // fetch handles calling returnJobs if it completes when in RELEASED
+          // mode.
         }
-        // No need to return jobs
+
         break;
       }
       case WAITING: {
@@ -615,7 +665,7 @@ export class LocalQueue {
         break;
       }
       case TTL_EXPIRED: {
-        // No action necessary
+        // No action necessary, jobs are already returned
         break;
       }
       case STARTING: {
@@ -633,7 +683,7 @@ export class LocalQueue {
     }
 
     if (this.backgroundCount === 0) {
-      this.promise.resolve();
+      this.fin();
     }
   }
 }
