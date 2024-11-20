@@ -14,7 +14,6 @@ import {
   FailJobFunction,
   GetJobFunction,
   Job,
-  PromiseOrDirect,
   RunOnceOptions,
   TaskList,
   WorkerEventMap,
@@ -589,7 +588,7 @@ export function _runTaskList(
     unregisterSignalHandlers = registerSignalHandlers(logger, events);
   }
 
-  const promise = defer();
+  const _finPromise = defer();
 
   let deactivatePromise: Promise<void> | null = null;
 
@@ -671,21 +670,14 @@ export function _runTaskList(
       } catch (e) {
         errors.push(coerceError(e));
       }
-      if (errors.length === 1) {
-        promise.reject(errors[0]);
-      } else if (errors.length > 1) {
-        promise.reject(
-          new AggregateError(
-            errors,
-            "Errors occurred whilst terminating queue",
-          ),
-        );
-      } else {
-        promise.resolve();
-      }
 
-      if (unregisterSignalHandlers) {
-        unregisterSignalHandlers();
+      if (errors.length === 1) {
+        throw errors[0];
+      } else if (errors.length > 1) {
+        throw new AggregateError(
+          errors,
+          "Errors occurred whilst terminating queue",
+        );
       }
     } else {
       try {
@@ -708,8 +700,22 @@ export function _runTaskList(
   // Make sure Node doesn't get upset about unhandled rejection
   abortPromise.then(null, () => /* noop */ void 0);
 
-  let gracefulShutdownPromise: PromiseOrDirect<void>;
-  let forcefulShutdownPromise: PromiseOrDirect<void>;
+  let gracefulShutdownPromise: Promise<void> | null = null;
+  let forcefulShutdownPromise: Promise<void> | null = null;
+
+  const finWithError = (e: unknown) => {
+    const error = e != null ? coerceError(e) : null;
+    if (error) {
+      _finPromise.reject(error);
+    } else {
+      _finPromise.resolve();
+    }
+
+    if (unregisterSignalHandlers) {
+      unregisterSignalHandlers();
+    }
+  };
+  const fin = () => finWithError(null);
 
   // This is a representation of us that can be interacted with externally
   const workerPool: WorkerPool = {
@@ -750,13 +756,13 @@ export function _runTaskList(
         logger.error(
           `gracefulShutdown called when forcefulShutdown is already in progress`,
         );
-        return forcefulShutdownPromise;
+        return forcefulShutdownPromise!;
       }
       if (workerPool._shuttingDown) {
         logger.error(
           `gracefulShutdown called when gracefulShutdown is already in progress`,
         );
-        return gracefulShutdownPromise;
+        return gracefulShutdownPromise!;
       }
 
       workerPool._shuttingDown = true;
@@ -874,7 +880,7 @@ export function _runTaskList(
             // NOTE: we now rely on forcefulShutdown to handle terminate()
             if (this._forcefulShuttingDown) {
               // Skip the warning about double shutdown
-              return forcefulShutdownPromise;
+              return forcefulShutdownPromise!;
             } else {
               return this.forcefulShutdown(message);
             }
@@ -884,6 +890,8 @@ export function _runTaskList(
           }
         },
       );
+
+      gracefulShutdownPromise.then(fin, finWithError);
 
       const abortTimer = setTimeout(() => {
         abortController.abort();
@@ -901,7 +909,7 @@ export function _runTaskList(
         logger.error(
           `forcefulShutdown called when forcefulShutdown is already in progress`,
         );
-        return forcefulShutdownPromise;
+        return forcefulShutdownPromise!;
       }
 
       workerPool._forcefulShuttingDown = true;
@@ -998,29 +1006,34 @@ export function _runTaskList(
               { error: e },
             );
             if (!terminated) {
+              // Guaranteed to throw
               await terminate(error);
             }
-            throw e;
+            throw error;
           }
           if (!terminated) {
+            // Guaranteed to throw
             await terminate(new Error("Forceful shutdown"));
           }
         },
       );
 
+      // This should never call fin() since forceful shutdown always errors
+      forcefulShutdownPromise.then(fin, finWithError);
+
       return forcefulShutdownPromise;
     },
 
-    promise,
+    promise: _finPromise,
 
     then(onfulfilled, onrejected) {
-      return promise.then(onfulfilled, onrejected);
+      return _finPromise.then(onfulfilled, onrejected);
     },
     catch(onrejected) {
-      return promise.catch(onrejected);
+      return _finPromise.catch(onrejected);
     },
     finally(onfinally) {
-      return promise.finally(onfinally);
+      return _finPromise.finally(onfinally);
     },
     _start: autostart
       ? null
@@ -1031,7 +1044,7 @@ export function _runTaskList(
         },
   };
 
-  promise.finally(() => {
+  _finPromise.finally(() => {
     events.emit("pool:release", { pool: workerPool, workerPool });
   });
 
