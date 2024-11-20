@@ -109,6 +109,7 @@ export class LocalQueue {
   fetchAgain = false;
   public readonly mode: LocalQueueMode = STARTING;
   private promise = defer();
+  /** A count of the number of "background" processes such as fetching or returning jobs */
   private backgroundCount = 0;
 
   /** If `localQueueRefetchDelay` is configured; set this true if the fetch resulted in a queue size lower than the threshold. */
@@ -576,13 +577,8 @@ export class LocalQueue {
   }
 
   private setModeReleased() {
-    assert.notEqual(
-      this.mode,
-      RELEASED,
-      "LocalQueue must only be released once",
-    );
-
     const oldMode = this.mode;
+    assert.notEqual(oldMode, RELEASED, "LocalQueue must only be released once");
     this.setMode(RELEASED);
 
     if (this.refetchDelayTimer != null) {
@@ -591,28 +587,49 @@ export class LocalQueue {
     }
     this.refetchDelayActive = false;
 
-    if (oldMode === POLLING) {
-      // Release pending workers
-      const workers = this.workerQueue.splice(0, this.workerQueue.length);
-      workers.forEach((w) => w.resolve(undefined));
+    switch (oldMode) {
+      case POLLING: {
+        // Release pending workers
+        const futureJobs = this.workerQueue.splice(0, this.workerQueue.length);
+        futureJobs.forEach((futureJob) => futureJob.resolve(undefined));
 
-      // Release next fetch call
-      if (this.fetchTimer) {
-        clearTimeout(this.fetchTimer);
-        this.fetchTimer = null;
-        this.promise.resolve();
-      } else {
-        // Rely on checking mode at end of fetch
+        // Release next fetch call
+        if (this.fetchTimer) {
+          clearTimeout(this.fetchTimer);
+          this.fetchTimer = null;
+          this.promise.resolve();
+        } else {
+          // Rely on checking mode at end of fetch
+        }
+        // No need to return jobs
+        break;
       }
-    } else if (oldMode === WAITING) {
-      if (this.ttlExpiredTimer) {
-        clearTimeout(this.ttlExpiredTimer);
-        this.ttlExpiredTimer = null;
+      case WAITING: {
+        if (this.ttlExpiredTimer) {
+          clearTimeout(this.ttlExpiredTimer);
+          this.ttlExpiredTimer = null;
+        }
+        // Trigger the jobs to be released
+        // NOTE: this will add to backgroundCount
+        this.returnJobs();
+        break;
       }
-      // Trigger the jobs to be released
-      this.returnJobs();
-    } else if (oldMode === TTL_EXPIRED) {
-      // No action necessary
+      case TTL_EXPIRED: {
+        // No action necessary
+        break;
+      }
+      case STARTING: {
+        // From STARTING to RELEASED directly? This should never happen!
+        break;
+      }
+      case RELEASED: {
+        // Explicitly ruled against via assertion above.
+        break;
+      }
+      default: {
+        const never: never = oldMode;
+        throw new Error(`Unhandled mode: ${never}`);
+      }
     }
 
     if (this.backgroundCount === 0) {
