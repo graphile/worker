@@ -766,7 +766,6 @@ export function _runTaskList(
           try {
             logger.debug(`Attempting graceful shutdown`);
             // Stop new jobs being added
-            // TODO: releasing the job releasers BEFORE we release the workers doesn't make any sense?
             const deactivatePromise = deactivate();
 
             const errors: Error[] = [];
