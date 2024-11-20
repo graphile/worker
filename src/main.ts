@@ -703,7 +703,12 @@ export function _runTaskList(
   let gracefulShutdownPromise: Promise<void> | null = null;
   let forcefulShutdownPromise: Promise<void> | null = null;
 
+  let finished = false;
   const finWithError = (e: unknown) => {
+    if (finished) {
+      return;
+    }
+    finished = true;
     const error = e != null ? coerceError(e) : null;
     if (error) {
       _finPromise.reject(error);
