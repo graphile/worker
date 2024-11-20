@@ -14,6 +14,7 @@ import {
   FailJobFunction,
   GetJobFunction,
   Job,
+  PromiseOrDirect,
   RunOnceOptions,
   TaskList,
   WorkerEventMap,
@@ -707,6 +708,9 @@ export function _runTaskList(
   // Make sure Node doesn't get upset about unhandled rejection
   abortPromise.then(null, () => /* noop */ void 0);
 
+  let gracefulShutdownPromise: PromiseOrDirect<void>;
+  let forcefulShutdownPromise: PromiseOrDirect<void>;
+
   // This is a representation of us that can be interacted with externally
   const workerPool: WorkerPool = {
     // "otpool" - "one time pool"
@@ -746,22 +750,17 @@ export function _runTaskList(
         logger.error(
           `gracefulShutdown called when forcefulShutdown is already in progress`,
         );
-        return;
+        return forcefulShutdownPromise;
       }
       if (workerPool._shuttingDown) {
         logger.error(
           `gracefulShutdown called when gracefulShutdown is already in progress`,
         );
-        return;
+        return gracefulShutdownPromise;
       }
+
       workerPool._shuttingDown = true;
-
-      const abortTimer = setTimeout(() => {
-        abortController.abort();
-      }, gracefulShutdownAbortTimeout);
-      abortTimer.unref();
-
-      return middleware.run(
+      gracefulShutdownPromise = middleware.run(
         "poolGracefulShutdown",
         { ctx: compiledSharedOptions, workerPool, message },
         async ({ message }) => {
@@ -870,6 +869,13 @@ export function _runTaskList(
           }
         },
       );
+
+      const abortTimer = setTimeout(() => {
+        abortController.abort();
+      }, gracefulShutdownAbortTimeout);
+      abortTimer.unref();
+
+      return gracefulShutdownPromise;
     },
 
     /**
@@ -880,13 +886,14 @@ export function _runTaskList(
         logger.error(
           `forcefulShutdown called when forcefulShutdown is already in progress`,
         );
-        return;
+        return forcefulShutdownPromise;
       }
-      return middleware.run(
+
+      workerPool._forcefulShuttingDown = true;
+      forcefulShutdownPromise = middleware.run(
         "poolForcefulShutdown",
         { ctx: compiledSharedOptions, workerPool: this, message },
         async ({ message }) => {
-          workerPool._forcefulShuttingDown = true;
           events.emit("pool:forcefulShutdown", {
             pool: workerPool,
             workerPool,
@@ -968,6 +975,8 @@ export function _runTaskList(
           }
         },
       );
+
+      return forcefulShutdownPromise;
     },
 
     promise,
