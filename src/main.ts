@@ -659,8 +659,7 @@ export function _runTaskList(
       allWorkerPools.splice(idx, 1);
 
       try {
-        const result = onTerminate?.();
-        promise.resolve(result);
+        await onTerminate?.();
       } catch (e) {
         errors.push(coerceError(e));
       }
@@ -673,6 +672,8 @@ export function _runTaskList(
             "Errors occurred whilst terminating queue",
           ),
         );
+      } else {
+        promise.resolve();
       }
 
       if (unregisterSignalHandlers) {
