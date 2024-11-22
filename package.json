@@ -49,10 +49,11 @@
   "homepage": "https://github.com/graphile/worker#readme",
   "dependencies": {
     "@graphile/logger": "^0.2.0",
+    "@tsconfig/node18": "^18.2.4",
     "@types/debug": "^4.1.10",
     "@types/pg": "^8.10.5",
     "cosmiconfig": "^8.3.6",
-    "graphile-config": "^0.0.1-beta.4",
+    "graphile-config": "^0.0.1-beta.11",
     "json5": "^2.2.3",
     "pg": "^8.11.3",
     "tslib": "^2.6.2",

@@ -3,7 +3,7 @@ import { EventEmitter } from "events";
 import { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
-import deferred from "./deferred";
+import defer from "./deferred";
 import {
   makeWithPgClientFromClient,
   makeWithPgClientFromPool,
@@ -20,6 +20,7 @@ import {
   WorkerPoolOptions,
 } from "./interfaces";
 import {
+  coerceError,
   CompiledSharedOptions,
   makeEnhancedWithPgClient,
   processSharedOptions,
@@ -34,6 +35,7 @@ import { makeNewWorker } from "./worker";
 
 const ENABLE_DANGEROUS_LOGS =
   process.env.GRAPHILE_ENABLE_DANGEROUS_LOGS === "1";
+const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
 
 // Wait at most 60 seconds between connection attempts for LISTEN.
 const MAX_DELAY = 60 * 1000;
@@ -152,7 +154,7 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
       _shuttingDownGracefully = true;
     }
 
-    logger.error(
+    logger.info(
       `Received '${signal}'; attempting global graceful shutdown... (all termination signals will be ignored for the next 5 seconds)`,
     );
     const switchTimeout = setTimeout(switchToForcefulHandler, 5000);
@@ -166,7 +168,7 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
       clearTimeout(switchTimeout);
       process.removeListener(signal, gracefulHandler);
       if (!_shuttingDownForcefully) {
-        logger.error(
+        logger.info(
           `Global graceful shutdown complete; killing self via ${signal}`,
         );
         process.kill(process.pid, signal);
@@ -216,7 +218,7 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
   process.stderr.on("error", stdioErrorHandler);
   _releaseSignalHandlers = () => {
     if (_shuttingDownGracefully || _shuttingDownForcefully) {
-      logger.warn(`Not unregistering signal handlers as we're shutting down`);
+      logger.debug(`Not unregistering signal handlers as we're shutting down`);
       return;
     }
 
@@ -285,7 +287,9 @@ export function runTaskListInternal(
         await changeListener.release();
       } catch (e) {
         logger.error(
-          `Error occurred whilst releasing listening client: ${e.message}`,
+          `Error occurred whilst releasing listening client: ${
+            coerceError(e).message
+          }`,
           { error: e },
         );
       }
@@ -359,7 +363,7 @@ export function runTaskListInternal(
 
   const listenForChanges = (
     err: Error | undefined,
-    client: PoolClient,
+    maybeClient: PoolClient | undefined,
     releaseClient: () => void,
   ) => {
     if (!workerPool._active) {
@@ -369,7 +373,7 @@ export function runTaskListInternal(
     }
 
     const reconnectWithExponentialBackoff = (err: Error) => {
-      events.emit("pool:listen:error", { workerPool, client, error: err });
+      events.emit("pool:listen:error", { workerPool, error: err });
 
       attempts++;
 
@@ -396,11 +400,17 @@ export function runTaskListInternal(
       }, delay);
     };
 
-    if (err) {
+    if (err || !maybeClient) {
       // Try again
-      reconnectWithExponentialBackoff(err);
+      reconnectWithExponentialBackoff(
+        err ??
+          new Error(
+            `This should never happen, this error only exists to satisfy TypeScript`,
+          ),
+      );
       return;
     }
+    const client = maybeClient;
 
     //----------------------------------------
 
@@ -413,9 +423,10 @@ export function runTaskListInternal(
       try {
         release();
       } catch (e) {
-        logger.error(`Error occurred releasing client: ${e.stack}`, {
-          error: e,
-        });
+        logger.error(
+          `Error occurred releasing client: ${coerceError(e).stack}`,
+          { error: e },
+        );
       }
 
       reconnectWithExponentialBackoff(e);
@@ -463,22 +474,24 @@ export function runTaskListInternal(
       }
     }
 
-    function release() {
+    async function release() {
       // No need to call changeListener.release() because the client errored
       changeListener = null;
       client.removeListener("notification", handleNotification);
       // TODO: ideally we'd only stop handling errors once all pending queries are complete; but either way we shouldn't try again!
       client.removeListener("error", onErrorReleaseClientAndTryAgain);
       events.emit("pool:listen:release", { workerPool, client });
-      return client
-        .query('UNLISTEN "jobs:insert"; UNLISTEN "worker:migrate";')
-        .catch((error) => {
-          /* ignore errors */
-          logger.error(`Error occurred attempting to UNLISTEN: ${error}`, {
-            error,
-          });
-        })
-        .then(() => releaseClient());
+      try {
+        await client.query(
+          'UNLISTEN "jobs:insert"; UNLISTEN "worker:migrate";',
+        );
+      } catch (error) {
+        /* ignore errors */
+        logger.error(`Error occurred attempting to UNLISTEN: ${error}`, {
+          error,
+        });
+      }
+      return releaseClient();
     }
 
     // On error, release this client and try again
@@ -498,11 +511,13 @@ export function runTaskListInternal(
 
     const supportedTaskNames = Object.keys(tasks);
 
-    logger.info(
-      `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
-        "', '",
-      )}')`,
-    );
+    if (!NO_LOG_SUCCESS) {
+      logger.info(
+        `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
+          "', '",
+        )}')`,
+      );
+    }
   };
 
   // Create a client dedicated to listening for new jobs.
@@ -557,7 +572,7 @@ export function _runTaskList(
     unregisterSignalHandlers = registerSignalHandlers(logger, events);
   }
 
-  const promise = deferred();
+  const promise = defer();
 
   function deactivate() {
     if (workerPool._active) {
@@ -714,10 +729,11 @@ export function _runTaskList(
           workerPool,
           error: e,
         });
-        logger.error(`Error occurred during graceful shutdown: ${e.message}`, {
+        const message = coerceError(e).message;
+        logger.error(`Error occurred during graceful shutdown: ${message}`, {
           error: e,
         });
-        return this.forcefulShutdown(e.message);
+        return this.forcefulShutdown(message);
       }
       terminate();
     },
@@ -790,9 +806,11 @@ export function _runTaskList(
           workerPool,
           error: e,
         });
-        logger.error(`Error occurred during forceful shutdown: ${e.message}`, {
-          error: e,
-        });
+        const error = coerceError(e);
+        logger.error(
+          `Error occurred during forceful shutdown: ${error.message}`,
+          { error: e },
+        );
       }
       terminate();
     },

@@ -2,15 +2,13 @@
   "ts-node": {
     "experimentalResolver": true
   },
+  "extends": "@tsconfig/node18/tsconfig.json",
   "compilerOptions": {
     "rootDir": "src",
     "declarationDir": "./dist",
     "outDir": "./dist",
     "declaration": true,
     "allowJs": false,
-    "target": "es2020",
-    "module": "node16",
-    "moduleResolution": "node16",
     "sourceMap": true,
     "pretty": true,
     "importHelpers": true,
@@ -20,8 +18,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUnusedParameters": false,
     "noUnusedLocals": false,
-    "preserveWatchOutput": true,
-    "lib": ["es2020", "dom"]
+    "preserveWatchOutput": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

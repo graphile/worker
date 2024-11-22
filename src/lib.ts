@@ -300,7 +300,17 @@ export async function assertPool(
     pgPool = _rawOptions.pgPool;
     if (pgPool.listeners("error").length === 0) {
       console.warn(
-        `Your pool doesn't have error handlers! See: https://err.red/wpeh`,
+        `Your pool doesn't have error handlers! See: https://err.red/wpeh?v=${encodeURIComponent(
+          version,
+        )}`,
+      );
+      installErrorHandlers(compiledSharedOptions, releasers, pgPool);
+    }
+    if (pgPool.listeners("connect").length === 0) {
+      console.warn(
+        `Your pool doesn't have all of the error handlers! See: https://err.red/wpeh?v=${encodeURIComponent(
+          version,
+        )}&method=connect`,
       );
       installErrorHandlers(compiledSharedOptions, releasers, pgPool);
     }
@@ -400,7 +410,7 @@ export async function withReleasers<T>(
       try {
         await releasers[i]();
       } catch (e) {
-        firstError = firstError || e;
+        firstError ??= coerceError(e);
       }
     }
     if (firstError) {
@@ -530,7 +540,8 @@ export function makeEnhancedWithPgClient(
     for (let attempts = 0; attempts < MAX_RETRIES; attempts++) {
       try {
         return await withPgClient(...args);
-      } catch (e) {
+      } catch (rawE) {
+        const e = coerceError(rawE);
         const retryable = RETRYABLE_ERROR_CODES.find(
           ({ code }) => code === e.code,
         );
@@ -551,3 +562,20 @@ export function makeEnhancedWithPgClient(
 
 export const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+export function coerceError(err: unknown): Error & { code?: unknown } {
+  if (err instanceof Error) {
+    return err;
+  } else {
+    const message =
+      typeof err === "object" && err !== null && "message" in err
+        ? String(err.message)
+        : "An error occurred";
+    return new Error(message, { cause: err });
+  }
+}
+
+export function isPromiseLike<T>(v: PromiseLike<T> | T): v is PromiseLike<T> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return v != null && typeof (v as any).then === "function";
+}

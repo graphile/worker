@@ -2326,6 +2326,11 @@
   resolved "https://registry.yarnpkg.com/@tsconfig/node16/-/node16-1.0.4.tgz#0b92dcc0cc1c81f6f306a381f28e31b1a56536e9"
   integrity sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==
 
+"@tsconfig/node18@^18.2.4":
+  version "18.2.4"
+  resolved "https://registry.yarnpkg.com/@tsconfig/node18/-/node18-18.2.4.tgz#094efbdd70f697d37c09f34067bf41bc4a828ae3"
+  integrity sha512-5xxU8vVs9/FNcvm3gE07fPbn9tl6tqGGWA9tSlwsUEkBxtRnTsNmwrV8gasZ9F/EobaSv9+nu8AxUKccw77JpQ==
+
 "@types/babel__core@^7.0.0", "@types/babel__core@^7.1.7":
   version "7.20.2"
   resolved "https://registry.yarnpkg.com/@types/babel__core/-/babel__core-7.20.2.tgz#215db4f4a35d710256579784a548907237728756"
@@ -6350,10 +6355,10 @@ graphemer@^1.4.0:
   resolved "https://registry.yarnpkg.com/graphemer/-/graphemer-1.4.0.tgz#fb2f1d55e0e3a1849aeffc90c4fa0dd53a0e66c6"
   integrity sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==
 
-graphile-config@^0.0.1-beta.4:
-  version "0.0.1-beta.4"
-  resolved "https://registry.yarnpkg.com/graphile-config/-/graphile-config-0.0.1-beta.4.tgz#9c5d2b018a628c7ed931134e4258adb8aa3e94f0"
-  integrity sha512-9JWXMcrHNHMGMHdlzoOR75OwmvTxYdquYYkx0zoHol0Tkh8KcDxWdF9+tQ+l2hBjazMAI6R14jztRK4EM5bY3A==
+graphile-config@^0.0.1-beta.4, graphile-config@^0.0.1-beta.11:
+  version "0.0.1-beta.11"
+  resolved "https://registry.yarnpkg.com/graphile-config/-/graphile-config-0.0.1-beta.11.tgz#4bd2ffd1fee6834f2e5dedc64016e7a3a9eda151"
+  integrity sha512-+2QLPpihQQvSYd6sSXcDrwHMMSygUrK41qWhak7u3vsXj2AGwVwl+kVvlBwuoovaoUPDsGF8zy5IevTAMgzg5Q==
   dependencies:
     "@types/interpret" "^1.1.1"
     "@types/node" "^20.5.7"

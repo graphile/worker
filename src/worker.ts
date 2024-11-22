@@ -13,9 +13,11 @@ import {
   WorkerPool,
   WorkerSharedOptions,
 } from "./interfaces";
-import { CompiledSharedOptions } from "./lib";
+import { coerceError, CompiledSharedOptions } from "./lib";
 import { completeJob } from "./sql/completeJob";
 import { failJob } from "./sql/failJob";
+
+const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
 
 export function makeNewWorker(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
@@ -182,7 +184,8 @@ export function makeNewWorker(
       } else {
         events.emit("worker:getJob:empty", { worker });
       }
-    } catch (err) {
+    } catch (rawErr) {
+      const err = coerceError(rawErr);
       events.emit("worker:getJob:error", { worker, error: err });
       if (continuous) {
         contiguousErrors++;
@@ -250,7 +253,7 @@ export function makeNewWorker(
         });
         result = await task(job.payload, helpers);
       } catch (error) {
-        err = error;
+        err = coerceError(error);
       }
       const durationRaw = process.hrtime(startTimestamp);
       const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
@@ -281,7 +284,7 @@ export function makeNewWorker(
             // Create a "partial" error for the batch
             err = new Error(
               `Batch failures:\n${batchJobErrors
-                .map((e) => (e as Error).message ?? String(e))
+                .map((e) => (e as Error)?.message ?? String(e))
                 .join("\n")}`,
             );
           }
@@ -358,7 +361,7 @@ export function makeNewWorker(
             "Error occurred in event emitter for 'job:success'; this is an issue in your application code and you should fix it",
           );
         }
-        if (!process.env.NO_LOG_SUCCESS) {
+        if (!NO_LOG_SUCCESS) {
           logger.info(
             `Completed task ${job.id} (${
               job.task_identifier
@@ -393,11 +396,12 @@ export function makeNewWorker(
       }
 
       const when = err ? `after failure '${err.message}'` : "after success";
+      const coerced = coerceError(fatalError);
       logger.error(
-        `Failed to release job '${job.id}' ${when}; committing seppuku\n${fatalError.message}`,
+        `Failed to release job '${job.id}' ${when}; committing seppuku\n${coerced.message}`,
         { fatalError, job },
       );
-      workerDeferred.reject(fatalError);
+      workerDeferred.reject(coerced);
       release();
       return;
     } finally {

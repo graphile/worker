@@ -14,6 +14,8 @@ import {
 
 const options: WorkerSharedOptions = {};
 
+const MAX_MIGRATION_NUMBER = 18;
+
 test("migration installs schema; second migration does no harm", async () => {
   await withPgClient(async (pgClient) => {
     await pgClient.query(
@@ -40,7 +42,7 @@ test("migration installs schema; second migration does no harm", async () => {
     const { rows: migrationRows } = await pgClient.query(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations order by id asc`,
     );
-    expect(migrationRows).toHaveLength(18);
+    expect(migrationRows).toHaveLength(MAX_MIGRATION_NUMBER);
     const migration = migrationRows[0];
     expect(migration.id).toEqual(1);
 
@@ -90,8 +92,9 @@ test("multiple concurrent installs of the schema is fine", async () => {
         );
       }
     } finally {
-      await Promise.allSettled(promises);
+      const results = await Promise.allSettled(promises);
       await Promise.allSettled(clients.map((c) => c.release()));
+      expect(results.every((r) => r.status === "fulfilled")).toBeTruthy();
     }
   });
   await withPgClient(async (pgClient) => {
@@ -99,7 +102,7 @@ test("multiple concurrent installs of the schema is fine", async () => {
     const { rows: migrationRows } = await pgClient.query(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations order by id asc`,
     );
-    expect(migrationRows).toHaveLength(18);
+    expect(migrationRows).toHaveLength(MAX_MIGRATION_NUMBER);
     const migration = migrationRows[0];
     expect(migration.id).toEqual(1);
 
@@ -147,7 +150,7 @@ insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations (id) values (1);
     const { rows: migrationRows } = await pgClient.query(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations order by id asc`,
     );
-    expect(migrationRows.length).toBeGreaterThanOrEqual(18);
+    expect(migrationRows.length).toBeGreaterThanOrEqual(MAX_MIGRATION_NUMBER);
     const migration2 = migrationRows[1];
     expect(migration2.id).toEqual(2);
     expect(migration2.breaking).toEqual(false);
@@ -208,7 +211,7 @@ test("aborts if database is more up to date than current worker", async () => {
     await expect(
       migrate(compiledSharedOptions, pgClient),
     ).rejects.toThrowErrorMatchingInlineSnapshot(
-      `"Database is using Graphile Worker schema revision 999999 which includes breaking migration 999999, but the currently running worker only supports up to revision 18. It would be unsafe to continue; please ensure all versions of Graphile Worker are compatible."`,
+      `"Database is using Graphile Worker schema revision 999999 which includes breaking migration 999999, but the currently running worker only supports up to revision ${MAX_MIGRATION_NUMBER}. It would be unsafe to continue; please ensure all versions of Graphile Worker are compatible."`,
     );
   });
 });
