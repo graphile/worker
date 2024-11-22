@@ -333,19 +333,19 @@ export const runCron = (
     }
 
     const start = new Date();
-    events.emit("cron:starting", { cron: this, start });
+    events.emit("cron:starting", { cron, start });
 
     // We must backfill BEFORE scheduling any new jobs otherwise backfill won't
     // work due to known_crontabs.last_execution having been updated.
     await registerAndBackfillItems(
-      { pgPool, events, cron: this },
+      { pgPool, events, cron },
       escapedWorkerSchema,
       parsedCronItems,
       new Date(+start),
       useNodeTime,
     );
 
-    events.emit("cron:started", { cron: this, start });
+    events.emit("cron:started", { cron, start });
 
     if (!cron._active) {
       return stop();
@@ -406,7 +406,7 @@ export const runCron = (
             },
           );
           events.emit("cron:prematureTimer", {
-            cron: this,
+            cron,
             currentTimestamp,
             expectedTimestamp,
           });
@@ -422,7 +422,7 @@ export const runCron = (
             )}s behind)`,
           );
           events.emit("cron:overdueTimer", {
-            cron: this,
+            cron,
             currentTimestamp,
             expectedTimestamp,
           });
@@ -444,7 +444,7 @@ export const runCron = (
         // Finally actually run the jobs.
         if (jobsAndIdentifiers.length) {
           events.emit("cron:schedule", {
-            cron: this,
+            cron,
             timestamp: expectedTimestamp,
             jobsAndIdentifiers,
           });
@@ -456,7 +456,7 @@ export const runCron = (
             useNodeTime,
           );
           events.emit("cron:scheduled", {
-            cron: this,
+            cron,
             timestamp: expectedTimestamp,
             jobsAndIdentifiers,
           });
