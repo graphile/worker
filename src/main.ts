@@ -584,8 +584,6 @@ export function _runTaskList(
   }
 
   const abortController = new AbortController();
-  // TODO: user-passed abortSignal should trigger our controller to abort
-
   const abortSignal = abortController.signal;
   const abortPromise = new Promise<void>((_resolve, reject) => {
     abortSignal.addEventListener("abort", () => {

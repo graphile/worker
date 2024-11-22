@@ -739,7 +739,7 @@ export interface WorkerOptions extends WorkerSharedOptions {
    */
   workerId?: string;
 
-  abortSignal?: AbortSignal;
+  abortSignal: AbortSignal;
 
   workerPool: WorkerPool;
 
