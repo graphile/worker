@@ -35,6 +35,7 @@ import { makeNewWorker } from "./worker";
 
 const ENABLE_DANGEROUS_LOGS =
   process.env.GRAPHILE_ENABLE_DANGEROUS_LOGS === "1";
+const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
 
 // Wait at most 60 seconds between connection attempts for LISTEN.
 const MAX_DELAY = 60 * 1000;
@@ -153,7 +154,7 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
       _shuttingDownGracefully = true;
     }
 
-    logger.error(
+    logger.info(
       `Received '${signal}'; attempting global graceful shutdown... (all termination signals will be ignored for the next 5 seconds)`,
     );
     const switchTimeout = setTimeout(switchToForcefulHandler, 5000);
@@ -167,7 +168,7 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
       clearTimeout(switchTimeout);
       process.removeListener(signal, gracefulHandler);
       if (!_shuttingDownForcefully) {
-        logger.error(
+        logger.info(
           `Global graceful shutdown complete; killing self via ${signal}`,
         );
         process.kill(process.pid, signal);
@@ -217,7 +218,7 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
   process.stderr.on("error", stdioErrorHandler);
   _releaseSignalHandlers = () => {
     if (_shuttingDownGracefully || _shuttingDownForcefully) {
-      logger.warn(`Not unregistering signal handlers as we're shutting down`);
+      logger.debug(`Not unregistering signal handlers as we're shutting down`);
       return;
     }
 
@@ -502,11 +503,13 @@ export function runTaskListInternal(
 
     const supportedTaskNames = Object.keys(tasks);
 
-    logger.info(
-      `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
-        "', '",
-      )}')`,
-    );
+    if (!NO_LOG_SUCCESS) {
+      logger.info(
+        `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
+          "', '",
+        )}')`,
+      );
+    }
   };
 
   // Create a client dedicated to listening for new jobs.
