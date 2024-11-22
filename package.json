@@ -14,7 +14,7 @@
     "prettier:check": "prettier --cache --ignore-path .eslintignore --check '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
     "test": "yarn prepack && yarn depcheck && yarn test:setupdb && yarn test:only",
     "test:setupdb": "./scripts/setup_template_db.sh",
-    "test:only": "node --experimental-vm-modules node_modules/.bin/jest",
+    "test:only": "NO_LOG_SUCCESS=1 node --experimental-vm-modules node_modules/.bin/jest",
     "depcheck": "depcheck --ignores='graphile-worker,faktory-worker,@google-cloud/tasks,bullmq,jest-environment-node,@docusaurus/*,@fortawesome/*,@mdx-js/*,@types/jest,clsx,eslint_d,graphile,juice,postcss-nested,prism-react-renderer,react,react-dom,svgo,ts-node,@types/debug,tslib'",
     "db:dump": "./scripts/dump_db",
     "perfTest": "cd perfTest && node ./run.js",
