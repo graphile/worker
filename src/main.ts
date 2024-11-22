@@ -1282,12 +1282,24 @@ export function _runTaskList(
     workerPool._workers.push(worker);
     const remove = () => {
       if (continuous && workerPool._active && !workerPool._shuttingDown) {
+        // TODO: user should choose how to handle this, maybe via a middleware:
+        // - graceful shutdown (implemented)
+        // - forceful shutdown (probably best after a delay)
+        // - boot up a replacement worker
+        /* middleware.run("poolWorkerPrematureExit", {}, () => { */
         logger.error(
           `Worker exited, but pool is in continuous mode, is active, and is not shutting down... Did something go wrong?`,
         );
+        _finErrors.push(
+          new Error(`Worker ${worker.workerId} exited unexpectedly`),
+        );
+        workerPool.gracefulShutdown(
+          "Something went wrong, one of the workers exited prematurely. Shutting down.",
+        );
+        /* }) */
       }
       workerPool._workers.splice(workerPool._workers.indexOf(worker), 1);
-      if (!continuous && workerPool._workers.length === 0) {
+      if (workerPool._workers.length === 0) {
         if (!workerPool._shuttingDown) {
           workerPool.gracefulShutdown(
             "'Run once' mode processed all available jobs and is now exiting",
