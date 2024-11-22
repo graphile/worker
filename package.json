@@ -84,7 +84,7 @@
     "eslint_d": "^13.0.0",
     "graphile": "^5.0.0-beta.16",
     "jest": "^26.0.0",
-    "jest-time-helpers": "0.1.0",
+    "jest-time-helpers": "0.1.1",
     "juice": "5.2.0",
     "pg-connection-string": "^2.6.2",
     "postcss-nested": "^6.0.1",

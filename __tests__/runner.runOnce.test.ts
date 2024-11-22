@@ -10,6 +10,7 @@ import {
   databaseDetails,
   getJobs,
   makeSelectionOfJobs,
+  reset,
   sleep,
   sleepUntil,
   withPgPool,
@@ -92,10 +93,13 @@ test("at least a connectionString, a pgPool, the DATABASE_URL or PGDATABASE envv
 });
 
 test("connectionString and a pgPool cannot provided a the same time", async () => {
+  const pgPool = new Pool();
+  pgPool.on("error", () => {});
+  pgPool.on("connect", () => {});
   const options: RunnerOptions = {
     taskList: { task: () => {} },
     connectionString: databaseDetails!.TEST_CONNECTION_STRING,
-    pgPool: new Pool(),
+    pgPool,
   };
   await runOnceErrorAssertion(
     options,
@@ -215,6 +219,7 @@ test("gracefulShutdown", async () =>
         },
       },
     };
+    await reset(pgPool, options);
     utils = await makeWorkerUtils(options);
     await utils.addJob("job1", { id: "test sleep" });
     expect(_allWorkerPools).toHaveLength(0);
