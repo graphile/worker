@@ -125,9 +125,11 @@ export async function migrate(
       const {
         rows: [row],
       } = await event.client.query(
-        `select current_setting('server_version_num') as server_version_num,
-        (select id from ${escapedWorkerSchema}.migrations order by id desc limit 1) as id,
-        (select id from ${escapedWorkerSchema}.migrations where breaking is true order by id desc limit 1) as biggest_breaking_id;`,
+        `\
+select current_setting('server_version_num') as server_version_num,
+(select id from ${escapedWorkerSchema}.migrations order by id desc limit 1) as id,
+(select id from ${escapedWorkerSchema}.migrations where breaking is true order by id desc limit 1) as biggest_breaking_id;
+`,
       );
 
       latestMigration = row.id;
