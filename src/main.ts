@@ -1,3 +1,4 @@
+import * as assert from "assert";
 import { randomBytes } from "crypto";
 import { EventEmitter } from "events";
 import { Notification, Pool, PoolClient } from "pg";
@@ -594,34 +595,34 @@ export function _runTaskList(
 
   function deactivate() {
     if (!deactivatePromise) {
-      deactivatePromise = (async () => {
-        if (workerPool._active) {
-          workerPool._active = false;
-          const errors: Error[] = [];
-          try {
-            await localQueue?.release();
-          } catch (rawE) {
-            const e = coerceError(rawE);
-            errors.push(e);
-            // Log but continue regardless
-            logger.error(`Releasing local queue failed: ${e}`, { error: rawE });
-          }
-          try {
-            // Note: this runs regardless of success of the above
-            await onDeactivate?.();
-          } catch (rawE) {
-            const e = coerceError(rawE);
-            errors.push(e);
-            // Log but continue regardless
-            logger.error(`onDeactivate raised an error: ${e}`, { error: rawE });
-          }
+      assert.equal(workerPool._active, true);
+      workerPool._active = false;
 
-          if (errors.length > 0) {
-            throw new AggregateError(
-              errors,
-              "Errors occurred whilst deactivating queue",
-            );
-          }
+      deactivatePromise = (async () => {
+        const errors: Error[] = [];
+        try {
+          await localQueue?.release();
+        } catch (rawE) {
+          const e = coerceError(rawE);
+          errors.push(e);
+          // Log but continue regardless
+          logger.error(`Releasing local queue failed: ${e}`, { error: rawE });
+        }
+        try {
+          // Note: this runs regardless of success of the above
+          await onDeactivate?.();
+        } catch (rawE) {
+          const e = coerceError(rawE);
+          errors.push(e);
+          // Log but continue regardless
+          logger.error(`onDeactivate raised an error: ${e}`, { error: rawE });
+        }
+
+        if (errors.length > 0) {
+          throw new AggregateError(
+            errors,
+            "Errors occurred whilst deactivating queue",
+          );
         }
       })();
     }
@@ -1085,8 +1086,16 @@ export function _runTaskList(
         )
       : null;
   const getJob: GetJobFunction = localQueue
-    ? localQueue.getJob // Already bound
+    ? async (workerId, flagsToSkip) => {
+        if (!workerPool._active) {
+          return undefined;
+        }
+        return localQueue.getJob(workerId, flagsToSkip);
+      }
     : async (_workerId, flagsToSkip) => {
+        if (!workerPool._active) {
+          return undefined;
+        }
         const jobs = await baseGetJob(
           compiledSharedOptions,
           withPgClient,
