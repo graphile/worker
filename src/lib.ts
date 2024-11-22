@@ -300,7 +300,17 @@ export async function assertPool(
     pgPool = _rawOptions.pgPool;
     if (pgPool.listeners("error").length === 0) {
       console.warn(
-        `Your pool doesn't have error handlers! See: https://err.red/wpeh`,
+        `Your pool doesn't have error handlers! See: https://err.red/wpeh?v=${encodeURIComponent(
+          version,
+        )}`,
+      );
+      installErrorHandlers(compiledSharedOptions, releasers, pgPool);
+    }
+    if (pgPool.listeners("connect").length === 0) {
+      console.warn(
+        `Your pool doesn't have all of the error handlers! See: https://err.red/wpeh?v=${encodeURIComponent(
+          version,
+        )}&method=connect`,
       );
       installErrorHandlers(compiledSharedOptions, releasers, pgPool);
     }
