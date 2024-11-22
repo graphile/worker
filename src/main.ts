@@ -585,6 +585,13 @@ export function _runTaskList(
 
   const abortController = new AbortController();
   const abortSignal = abortController.signal;
+  const abortPromise = new Promise<void>((_resolve, reject) => {
+    abortSignal.addEventListener("abort", () => {
+      reject(abortSignal.reason);
+    });
+  });
+  // Make sure Node doesn't get upset about unhandled rejection
+  abortPromise.then(null, () => /* noop */ void 0);
 
   // This is a representation of us that can be interacted with externally
   const workerPool: WorkerPool = {
@@ -598,7 +605,8 @@ export function _runTaskList(
       return concurrency === 1 ? this._workers[0] ?? null : null;
     },
     abortSignal,
-    release: async () => {
+    abortPromise,
+    release() {
       logger.error(
         "DEPRECATED: You are calling `workerPool.release()`; please use `workerPool.gracefulShutdown()` instead.",
       );
@@ -848,6 +856,7 @@ export function _runTaskList(
       withPgClient,
       continuous,
       abortSignal,
+      abortPromise,
       workerPool,
       autostart,
       workerId,

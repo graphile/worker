@@ -225,10 +225,12 @@ export function makeJobHelpers(
   {
     withPgClient,
     abortSignal,
+    abortPromise,
     logger: overrideLogger,
   }: {
     withPgClient: EnhancedWithPgClient;
-    abortSignal: AbortSignal | undefined;
+    abortSignal: AbortSignal;
+    abortPromise: Promise<void>;
     logger?: Logger;
   },
 ): JobHelpers {
@@ -240,6 +242,7 @@ export function makeJobHelpers(
   });
   const helpers: JobHelpers = {
     abortSignal,
+    abortPromise,
     job,
     getQueueName(queueId = job.job_queue_id) {
       return getQueueName(compiledSharedOptions, withPgClient, queueId);

@@ -1,10 +1,20 @@
 import { Pool } from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "../src/config";
-import { RunnerOptions } from "../src/interfaces";
+import { Job, RunnerOptions, WorkerUtils } from "../src/interfaces";
+import { _allWorkerPools } from "../src/main";
 import { WorkerPreset } from "../src/preset";
 import { runOnce } from "../src/runner";
-import { databaseDetails, withPgPool } from "./helpers";
+import { makeWorkerUtils } from "../src/workerUtils";
+import {
+  databaseDetails,
+  getJobs,
+  makeSelectionOfJobs,
+  reset,
+  sleep,
+  sleepUntil,
+  withPgPool,
+} from "./helpers";
 
 delete process.env.DATABASE_URL;
 delete process.env.PGDATABASE;
@@ -83,10 +93,13 @@ test("at least a connectionString, a pgPool, the DATABASE_URL or PGDATABASE envv
 });
 
 test("connectionString and a pgPool cannot provided a the same time", async () => {
+  const pgPool = new Pool();
+  pgPool.on("error", () => {});
+  pgPool.on("connect", () => {});
   const options: RunnerOptions = {
     taskList: { task: () => {} },
     connectionString: databaseDetails!.TEST_CONNECTION_STRING,
-    pgPool: new Pool(),
+    pgPool,
   };
   await runOnceErrorAssertion(
     options,
@@ -140,4 +153,93 @@ test("providing just a pgPool is possible", async () =>
     };
     expect.assertions(0);
     await runOnce(options);
+  }));
+
+let utils: WorkerUtils | null = null;
+afterEach(async () => {
+  await utils?.release();
+  utils = null;
+});
+
+test("runs all available tasks and then exits", async () =>
+  withPgPool(async (pgPool) => {
+    const options: RunnerOptions = {
+      taskList: { job1: () => {}, job2: () => {}, job3: () => {} },
+      pgPool: pgPool,
+      useNodeTime: true,
+    };
+    utils = await makeWorkerUtils(options);
+    await utils.addJob("job1", { id: "PRE_SELECTION_1" });
+    await utils.addJob("job2", { id: "PRE_SELECTION_2" });
+    await utils.addJob("job3", { id: "PRE_SELECTION_3" });
+    const unavailableJobs = Object.values(
+      await makeSelectionOfJobs(utils, pgPool),
+    );
+    await utils.addJob("job1", { id: "POST_SELECTION_1" });
+    await utils.addJob("job2", { id: "POST_SELECTION_2" });
+    await utils.addJob("job3", { id: "POST_SELECTION_3" });
+    {
+      const jobs = await getJobs(pgPool);
+      expect(jobs).toHaveLength(unavailableJobs.length + 6);
+    }
+    await runOnce(options);
+    {
+      const unavailableJobIds = unavailableJobs.map((j) => j.id);
+      let jobs!: Job[];
+      for (let attempts = 0; attempts < 10; attempts++) {
+        jobs = await getJobs(pgPool);
+        if (jobs.length === unavailableJobs.length) {
+          break;
+        } else {
+          await sleep(attempts * 50);
+        }
+      }
+      expect(jobs).toHaveLength(unavailableJobs.length);
+      expect(
+        jobs.filter((j) => !unavailableJobIds.includes(j.id)),
+      ).toHaveLength(0);
+    }
+  }));
+
+test("gracefulShutdown", async () =>
+  withPgPool(async (pgPool) => {
+    let jobStarted = false;
+    const options: RunnerOptions = {
+      taskList: {
+        job1(payload, helpers) {
+          jobStarted = true;
+          return Promise.race([sleep(100000, true), helpers.abortPromise]);
+        },
+      },
+      pgPool,
+      preset: {
+        worker: {
+          gracefulShutdownAbortTimeout: 20,
+          useNodeTime: true,
+        },
+      },
+    };
+    await reset(pgPool, options);
+    utils = await makeWorkerUtils(options);
+    await utils.addJob("job1", { id: "test sleep" });
+    expect(_allWorkerPools).toHaveLength(0);
+    const promise = runOnce(options);
+    await sleepUntil(() => _allWorkerPools.length === 1);
+    expect(_allWorkerPools).toHaveLength(1);
+    const pool = _allWorkerPools[0];
+    await sleepUntil(() => jobStarted);
+    await pool.gracefulShutdown();
+    await promise;
+    let jobs: Job[] = [];
+    for (let attempts = 0; attempts < 10; attempts++) {
+      jobs = await getJobs(pgPool);
+      if (jobs[0]?.last_error) {
+        break;
+      } else {
+        await sleep(25 * attempts);
+      }
+    }
+    expect(jobs).toHaveLength(1);
+    const [job] = jobs;
+    expect(job.last_error).toBeTruthy();
   }));

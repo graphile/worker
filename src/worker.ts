@@ -24,6 +24,7 @@ export function makeNewWorker(
     withPgClient: EnhancedWithPgClient;
     continuous: boolean;
     abortSignal: AbortSignal;
+    abortPromise: Promise<void>;
     workerPool: WorkerPool;
     autostart?: boolean;
     workerId?: string;
@@ -35,6 +36,7 @@ export function makeNewWorker(
     withPgClient,
     continuous,
     abortSignal,
+    abortPromise,
     workerPool,
     autostart = true,
     workerId = `worker-${randomBytes(9).toString("hex")}`,
@@ -244,6 +246,7 @@ export function makeNewWorker(
           withPgClient,
           logger,
           abortSignal,
+          abortPromise,
         });
         result = await task(job.payload, helpers);
       } catch (error) {

@@ -36,9 +36,13 @@ Each task function is passed two arguments:
     shouldn't need this
   - `getQueueName()` &mdash; get the name of the queue the job is in (may or may
     not return a promise - recommend you always `await` it)
-  - `abortSignal` &mdash; could be an `AbortSignal` or `undefined`; if set, use
-    this to abort your task early on graceful shutdown (can be passed to a
-    number of asynchronous Node.js methods)
+  - `abortSignal` &mdash; could be an `AbortSignal`, or `undefined` if not
+    supported by this release of worker; if set, use this to abort your task
+    early on graceful shutdown (can be passed to a number of asynchronous
+    Node.js methods)
+  - `abortPromise` &mdash; if present, a promise that will reject when
+    `abortSignal` aborts; convenient for exiting your task when the abortSignal
+    fires: `Promise.race([abortPromise, doYourThing()])`
   - `withPgClient` &mdash; a helper to use to get a database client
   - `query(sql, values)` &mdash; a convenience wrapper for
     `withPgClient(pgClient => pgClient.query(sql, values))`

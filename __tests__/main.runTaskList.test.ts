@@ -2,11 +2,12 @@
 import { Pool } from "pg";
 
 import deferred, { Deferred } from "../src/deferred";
-import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
+import { Job, Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
 import { runTaskList } from "../src/main";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   expectJobCount,
+  getJobs,
   reset,
   sleep,
   sleepUntil,
@@ -99,4 +100,36 @@ test("doesn't bail on deprecated `debug` function", () =>
         (jobPromise as Deferred).resolve();
       }
     }
+  }));
+
+test("gracefulShutdown", async () =>
+  withPgPool(async (pgPool) => {
+    let jobStarted = false;
+    const tasks: TaskList = {
+      job1(payload, helpers) {
+        jobStarted = true;
+        return Promise.race([sleep(100000, true), helpers.abortPromise]);
+      },
+    };
+    const workerPool = runTaskList(
+      { concurrency: 3, gracefulShutdownAbortTimeout: 20, useNodeTime: true },
+      tasks,
+      pgPool,
+    );
+    await addJob(pgPool);
+    await sleepUntil(() => jobStarted);
+    await workerPool.gracefulShutdown();
+    await workerPool.promise;
+    let jobs: Job[] = [];
+    for (let attempts = 0; attempts < 10; attempts++) {
+      jobs = await getJobs(pgPool);
+      if (jobs[0]?.last_error) {
+        break;
+      } else {
+        await sleep(25 * attempts);
+      }
+    }
+    expect(jobs).toHaveLength(1);
+    const [job] = jobs;
+    expect(job.last_error).toBeTruthy();
   }));

@@ -101,14 +101,16 @@ export async function withPgPool<T>(
   cb: (pool: pg.Pool) => Promise<T>,
 ): Promise<T> {
   const { TEST_CONNECTION_STRING } = databaseDetails!;
-  const pool = new pg.Pool({
+  const pgPool = new pg.Pool({
     connectionString: TEST_CONNECTION_STRING,
     max: 100,
   });
+  pgPool.on("error", () => {});
+  pgPool.on("connect", () => {});
   try {
-    return await cb(pool);
+    return await cb(pgPool);
   } finally {
-    pool.end();
+    pgPool.end();
   }
 }
 
@@ -298,14 +300,22 @@ export function makeMockJob(taskIdentifier: string): Job {
 
 export async function makeSelectionOfJobs(
   utils: WorkerUtils,
-  pgClient: pg.PoolClient,
+  pgClient: pg.PoolClient | pg.Pool,
 ) {
   const future = new Date(Date.now() + 60 * 60 * 1000);
-  const failedJob: DbJob = await utils.addJob("job3", { a: 1, runAt: future });
-  const regularJob1 = await utils.addJob("job3", { a: 2, runAt: future });
-  const lockedJob: DbJob = await utils.addJob("job3", { a: 3, runAt: future });
-  const regularJob2 = await utils.addJob("job3", { a: 4, runAt: future });
-  const untouchedJob = await utils.addJob("job3", { a: 5, runAt: future });
+  const failedJob: DbJob = await utils.addJob(
+    "job3",
+    { a: 1 },
+    { runAt: future },
+  );
+  const regularJob1 = await utils.addJob("job3", { a: 2 }, { runAt: future });
+  const lockedJob: DbJob = await utils.addJob(
+    "job3",
+    { a: 3 },
+    { runAt: future },
+  );
+  const regularJob2 = await utils.addJob("job3", { a: 4 }, { runAt: future });
+  const untouchedJob = await utils.addJob("job3", { a: 5 }, { runAt: future });
   const {
     rows: [lockedJobUpdate],
   } = await pgClient.query<DbJob>(
