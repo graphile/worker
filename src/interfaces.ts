@@ -517,7 +517,9 @@ export interface WorkerPool {
   /** @deprecated Use gracefulShutdown instead */
   release: () => PromiseOrDirect<void>;
   gracefulShutdown: (message?: string) => PromiseOrDirect<void>;
-  forcefulShutdown: (message: string) => PromiseOrDirect<void>;
+  forcefulShutdown: (message: string) => PromiseOrDirect<{
+    forceFailedJobs: readonly Job[];
+  }>;
   promise: Promise<void>;
   /** Fires 'abort' when all running jobs should stop because worker is shutting down. @experimental */
   abortSignal: AbortSignal;

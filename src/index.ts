@@ -372,11 +372,11 @@ declare global {
 
       poolGracefulShutdown(
         event: GraphileWorker.PoolGracefulShutdownEvent,
-      ): Promise<void>;
+      ): ReturnType<WorkerPool["gracefulShutdown"]>;
 
       poolForcefulShutdown(
         event: GraphileWorker.PoolForcefulShutdownEvent,
-      ): Promise<void>;
+      ): ReturnType<WorkerPool["forcefulShutdown"]>;
     }
 
     interface WorkerHooks {
