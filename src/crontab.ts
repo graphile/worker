@@ -21,6 +21,7 @@ import {
   CronItemOptions,
   ParsedCronItem,
 } from "./interfaces";
+import { coerceError } from "./lib";
 
 /**
  * Returns a period of time in milliseconds representing the time phrase given.
@@ -179,7 +180,9 @@ const parseCrontabPayload = (
     return JSON5.parse(payloadString);
   } catch (e) {
     throw new Error(
-      `Failed to parse JSON5 payload on line ${lineNumber} of crontab: ${e.message}`,
+      `Failed to parse JSON5 payload on line ${lineNumber} of crontab: ${
+        coerceError(e).message
+      }`,
     );
   }
 };

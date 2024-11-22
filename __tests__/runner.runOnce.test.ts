@@ -2,6 +2,7 @@ import { Pool } from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "../src/config";
 import { Job, RunnerOptions, WorkerUtils } from "../src/interfaces";
+import { coerceError } from "../src/lib";
 import { _allWorkerPools } from "../src/main";
 import { WorkerPreset } from "../src/preset";
 import { runOnce } from "../src/runner";
@@ -55,7 +56,8 @@ async function runOnceErrorAssertion(
   expect.assertions(1);
   try {
     await runOnce(options);
-  } catch (e) {
+  } catch (rawE) {
+    const e = coerceError(rawE);
     expect(e.message).toMatch(message);
   }
 }

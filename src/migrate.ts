@@ -2,7 +2,12 @@ import { PoolClient } from "pg";
 
 import { migrations } from "./generated/sql";
 import { WorkerSharedOptions, Writeable } from "./interfaces";
-import { BREAKING_MIGRATIONS, CompiledSharedOptions, sleep } from "./lib";
+import {
+  BREAKING_MIGRATIONS,
+  coerceError,
+  CompiledSharedOptions,
+  sleep,
+} from "./lib";
 
 function checkPostgresVersion(versionString: string) {
   const postgresVersion = parseInt(versionString, 10);
@@ -86,7 +91,8 @@ export async function runMigration(
       JSON.stringify({ migrationNumber, breaking }),
     ]);
     await event.client.query("commit");
-  } catch (error) {
+  } catch (rawError) {
+    const error = coerceError(rawError);
     await event.client.query("rollback");
     await hooks.process("migrationError", { ...event, error });
     if (!migrationInsertComplete && error.code === "23505") {
@@ -128,12 +134,14 @@ export async function migrate(
       latestBreakingMigration = row.biggest_breaking_id;
       event.postgresVersion = checkPostgresVersion(row.server_version_num);
       break;
-    } catch (e) {
+    } catch (rawE) {
+      const e = coerceError(rawE);
       if (attempts === 0 && (e.code === "42P01" || e.code === "42703")) {
         try {
           await installSchema(compiledSharedOptions, event);
           break;
-        } catch (e2) {
+        } catch (rawE2) {
+          const e2 = coerceError(rawE2);
           if (e2.code === "23505") {
             // Another instance installed this concurrently? Go around again.
           } else {

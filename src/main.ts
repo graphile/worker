@@ -20,6 +20,7 @@ import {
   WorkerPoolOptions,
 } from "./interfaces";
 import {
+  coerceError,
   CompiledSharedOptions,
   makeEnhancedWithPgClient,
   processSharedOptions,
@@ -285,7 +286,9 @@ export function runTaskListInternal(
         await changeListener.release();
       } catch (e) {
         logger.error(
-          `Error occurred whilst releasing listening client: ${e.message}`,
+          `Error occurred whilst releasing listening client: ${
+            coerceError(e).message
+          }`,
           { error: e },
         );
       }
@@ -413,9 +416,10 @@ export function runTaskListInternal(
       try {
         release();
       } catch (e) {
-        logger.error(`Error occurred releasing client: ${e.stack}`, {
-          error: e,
-        });
+        logger.error(
+          `Error occurred releasing client: ${coerceError(e).stack}`,
+          { error: e },
+        );
       }
 
       reconnectWithExponentialBackoff(e);
@@ -714,10 +718,11 @@ export function _runTaskList(
           workerPool,
           error: e,
         });
-        logger.error(`Error occurred during graceful shutdown: ${e.message}`, {
+        const message = coerceError(e).message;
+        logger.error(`Error occurred during graceful shutdown: ${message}`, {
           error: e,
         });
-        return this.forcefulShutdown(e.message);
+        return this.forcefulShutdown(message);
       }
       terminate();
     },
@@ -790,9 +795,11 @@ export function _runTaskList(
           workerPool,
           error: e,
         });
-        logger.error(`Error occurred during forceful shutdown: ${e.message}`, {
-          error: e,
-        });
+        const error = coerceError(e);
+        logger.error(
+          `Error occurred during forceful shutdown: ${error.message}`,
+          { error: e },
+        );
       }
       terminate();
     },

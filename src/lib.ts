@@ -400,7 +400,7 @@ export async function withReleasers<T>(
       try {
         await releasers[i]();
       } catch (e) {
-        firstError = firstError || e;
+        firstError ??= coerceError(e);
       }
     }
     if (firstError) {
@@ -530,7 +530,8 @@ export function makeEnhancedWithPgClient(
     for (let attempts = 0; attempts < MAX_RETRIES; attempts++) {
       try {
         return await withPgClient(...args);
-      } catch (e) {
+      } catch (rawE) {
+        const e = coerceError(rawE);
         const retryable = RETRYABLE_ERROR_CODES.find(
           ({ code }) => code === e.code,
         );
@@ -551,3 +552,15 @@ export function makeEnhancedWithPgClient(
 
 export const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+export function coerceError(err: unknown): Error & { code?: unknown } {
+  if (err instanceof Error) {
+    return err;
+  } else {
+    const message =
+      typeof err === "object" && err !== null && "message" in err
+        ? String(err.message)
+        : "An error occurred";
+    return new Error(message, { cause: err });
+  }
+}

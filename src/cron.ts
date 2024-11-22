@@ -16,7 +16,12 @@ import {
   TimestampDigest,
   WorkerEvents,
 } from "./interfaces";
-import { CompiledOptions, CompiledSharedOptions, Releasers } from "./lib";
+import {
+  coerceError,
+  CompiledOptions,
+  CompiledSharedOptions,
+  Releasers,
+} from "./lib";
 
 interface CronRequirements {
   pgPool: Pool;
@@ -475,7 +480,7 @@ export const runCron = (
       } catch (e) {
         // If something goes wrong; abort. The calling code should re-schedule
         // which will re-trigger the backfilling code.
-        return stop(e);
+        return stop(coerceError(e));
       }
     }
 

@@ -2,6 +2,7 @@ import { GraphileConfig } from "graphile-config";
 import { pathToFileURL } from "url";
 
 import { FileDetails, isValidTask } from "../index.js";
+import { coerceError } from "../lib.js";
 import { version } from "../version.js";
 
 const DEFAULT_EXTENSIONS = [".js", ".mjs", ".cjs"];
@@ -74,7 +75,9 @@ export const LoadTaskFromJsPlugin: GraphileConfig.Plugin = {
             );
           }
         } catch (error) {
-          const message = `Error processing '${jsFile.fullPath}': ${error.message}`;
+          const message = `Error processing '${jsFile.fullPath}': ${
+            coerceError(error).message
+          }`;
           throw new Error(message);
         }
       },

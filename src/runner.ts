@@ -8,6 +8,7 @@ import {
   TaskList,
 } from "./interfaces";
 import {
+  coerceError,
   CompiledOptions,
   getUtilsAndReleasersFromOptions,
   Releasers,
@@ -177,7 +178,9 @@ function buildRunner(input: {
         await Promise.all(promises).then(release);
       } catch (error) {
         logger.error(
-          `Error occurred whilst attempting to release runner options: ${error.message}`,
+          `Error occurred whilst attempting to release runner options: ${
+            coerceError(error).message
+          }`,
           { error },
         );
       }

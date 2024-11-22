@@ -13,7 +13,7 @@ import {
   WorkerPool,
   WorkerSharedOptions,
 } from "./interfaces";
-import { CompiledSharedOptions } from "./lib";
+import { coerceError, CompiledSharedOptions } from "./lib";
 import { completeJob } from "./sql/completeJob";
 import { failJob } from "./sql/failJob";
 
@@ -182,7 +182,8 @@ export function makeNewWorker(
       } else {
         events.emit("worker:getJob:empty", { worker });
       }
-    } catch (err) {
+    } catch (rawErr) {
+      const err = coerceError(rawErr);
       events.emit("worker:getJob:error", { worker, error: err });
       if (continuous) {
         contiguousErrors++;
@@ -250,7 +251,7 @@ export function makeNewWorker(
         });
         result = await task(job.payload, helpers);
       } catch (error) {
-        err = error;
+        err = coerceError(error);
       }
       const durationRaw = process.hrtime(startTimestamp);
       const duration = durationRaw[0] * 1e3 + durationRaw[1] * 1e-6;
@@ -393,11 +394,12 @@ export function makeNewWorker(
       }
 
       const when = err ? `after failure '${err.message}'` : "after success";
+      const coerced = coerceError(fatalError);
       logger.error(
-        `Failed to release job '${job.id}' ${when}; committing seppuku\n${fatalError.message}`,
+        `Failed to release job '${job.id}' ${when}; committing seppuku\n${coerced.message}`,
         { fatalError, job },
       );
-      workerDeferred.reject(fatalError);
+      workerDeferred.reject(coerced);
       release();
       return;
     } finally {
