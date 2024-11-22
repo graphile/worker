@@ -39,6 +39,10 @@ Read more:
   output via logging (thanks @wineTGH).
 - Fix race condition when multiple workers attempt to initialise the database at
   the same time
+- `helpers.abortSignal` is no longer typed as `| undefined`. It is still
+  experimental!
+- `helpers.abortPromise` added; will reject when `abortSignal` aborts (useful
+  for `Promise.race()`)
 
 ## v0.16.6
 
