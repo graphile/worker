@@ -4,11 +4,11 @@ export interface Deferred<T = void> extends Promise<T> {
 }
 
 export default function defer<T = void>(): Deferred<T> {
-  let resolve: (result?: T | PromiseLike<T>) => void;
-  let reject: (error: Error) => void;
+  let resolve: Deferred<T>["resolve"];
+  let reject: Deferred<T>["reject"];
   return Object.assign(
     new Promise<T>((_resolve, _reject) => {
-      resolve = _resolve;
+      resolve = _resolve as Deferred<T>["resolve"];
       reject = _reject;
     }),
     // @ts-ignore error TS2454: Variable 'resolve' is used before being assigned.

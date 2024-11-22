@@ -3,7 +3,7 @@ import { EventEmitter } from "events";
 import { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
-import deferred from "./deferred";
+import defer from "./deferred";
 import {
   makeWithPgClientFromClient,
   makeWithPgClientFromPool,
@@ -561,7 +561,7 @@ export function _runTaskList(
     unregisterSignalHandlers = registerSignalHandlers(logger, events);
   }
 
-  const promise = deferred();
+  const promise = defer();
 
   function deactivate() {
     if (workerPool._active) {
