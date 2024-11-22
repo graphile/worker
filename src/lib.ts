@@ -564,3 +564,8 @@ export function coerceError(err: unknown): Error & { code?: unknown } {
     return new Error(message, { cause: err });
   }
 }
+
+export function isPromiseLike<T>(v: PromiseLike<T> | T): v is PromiseLike<T> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return v != null && typeof (v as any).then === "function";
+}
