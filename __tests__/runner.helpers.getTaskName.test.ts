@@ -18,6 +18,8 @@ beforeAll(() => {
     connectionString: databaseDetails!.TEST_CONNECTION_STRING,
     max: JOB_COUNT * 2 + 5,
   });
+  pgPool.on("error", () => {});
+  pgPool.on("connect", () => {});
 });
 afterAll(() => {
   pgPool.end();
