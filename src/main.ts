@@ -363,7 +363,7 @@ export function runTaskListInternal(
 
   const listenForChanges = (
     err: Error | undefined,
-    client: PoolClient,
+    maybeClient: PoolClient | undefined,
     releaseClient: () => void,
   ) => {
     if (!workerPool._active) {
@@ -373,7 +373,7 @@ export function runTaskListInternal(
     }
 
     const reconnectWithExponentialBackoff = (err: Error) => {
-      events.emit("pool:listen:error", { workerPool, client, error: err });
+      events.emit("pool:listen:error", { workerPool, error: err });
 
       attempts++;
 
@@ -400,11 +400,17 @@ export function runTaskListInternal(
       }, delay);
     };
 
-    if (err) {
+    if (err || !maybeClient) {
       // Try again
-      reconnectWithExponentialBackoff(err);
+      reconnectWithExponentialBackoff(
+        err ??
+          new Error(
+            `This should never happen, this error only exists to satisfy TypeScript`,
+          ),
+      );
       return;
     }
+    const client = maybeClient;
 
     //----------------------------------------
 

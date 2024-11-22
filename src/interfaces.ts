@@ -908,7 +908,6 @@ export type WorkerEventMap = {
   "pool:listen:error": {
     workerPool: WorkerPool;
     error: unknown;
-    client: PoolClient;
   };
 
   /**
