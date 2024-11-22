@@ -10,6 +10,12 @@ import { makeMockJob, withPgClient } from "./helpers";
 
 const options: WorkerSharedOptions = {};
 
+const neverAbortController = new AbortController();
+const abortSignal = neverAbortController.signal;
+const abortPromise = new Promise<void>((_, reject) => {
+  abortSignal.addEventListener("abort", reject);
+});
+
 describe("commonjs", () => {
   test("gets tasks from folder", () =>
     withPgClient(async (client) => {
@@ -32,8 +38,8 @@ Array [
           withPgClient: makeEnhancedWithPgClient(
             makeWithPgClientFromClient(client),
           ),
-          abortSignal: undefined,
-          abortPromise: undefined,
+          abortSignal,
+          abortPromise,
         },
       );
       expect(await tasks.wouldyoulike!(helpers.job.payload, helpers)).toEqual(
@@ -69,8 +75,8 @@ Array [
           withPgClient: makeEnhancedWithPgClient(
             makeWithPgClientFromClient(client),
           ),
-          abortSignal: undefined,
-          abortPromise: undefined,
+          abortSignal,
+          abortPromise,
         },
       );
       expect(await tasks.task1!(helpers.job.payload, helpers)).toEqual("hi");
@@ -100,8 +106,8 @@ Array [
           withPgClient: makeEnhancedWithPgClient(
             makeWithPgClientFromClient(client),
           ),
-          abortSignal: undefined,
-          abortPromise: undefined,
+          abortSignal,
+          abortPromise,
         },
       );
       expect(await tasks.task1!(helpers.job.payload, helpers)).toEqual("hi");
@@ -130,8 +136,8 @@ Array [
         withPgClient: makeEnhancedWithPgClient(
           makeWithPgClientFromClient(client),
         ),
-        abortSignal: undefined,
-        abortPromise: undefined,
+        abortSignal,
+        abortPromise,
       });
       expect(await tasks.t1!(helpers.job.payload, helpers)).toEqual(
         "come with me",
@@ -161,8 +167,8 @@ Array [
         withPgClient: makeEnhancedWithPgClient(
           makeWithPgClientFromClient(client),
         ),
-        abortSignal: undefined,
-        abortPromise: undefined,
+        abortSignal,
+        abortPromise,
       });
       expect(await tasks.t1!(helpers.job.payload, helpers)).toEqual(
         "come with me, TS",
@@ -196,8 +202,8 @@ Array [
           withPgClient: makeEnhancedWithPgClient(
             makeWithPgClientFromClient(client),
           ),
-          abortSignal: undefined,
-          abortPromise: undefined,
+          abortSignal,
+          abortPromise,
         },
       );
       expect(await tasks.wouldyoulike!(helpers.job.payload, helpers)).toEqual(
@@ -230,8 +236,8 @@ Array [
           withPgClient: makeEnhancedWithPgClient(
             makeWithPgClientFromClient(client),
           ),
-          abortSignal: undefined,
-          abortPromise: undefined,
+          abortSignal,
+          abortPromise,
         },
       );
       expect(await tasks.task1!(helpers.job.payload, helpers)).toEqual("hi");
@@ -258,8 +264,8 @@ Array [
         withPgClient: makeEnhancedWithPgClient(
           makeWithPgClientFromClient(client),
         ),
-        abortSignal: undefined,
-        abortPromise: undefined,
+        abortSignal,
+        abortPromise,
       });
       expect(await tasks.t1!(helpers.job.payload, helpers)).toEqual(
         "come with me",

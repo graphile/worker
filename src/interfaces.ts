@@ -185,14 +185,14 @@ export interface JobHelpers extends Helpers {
    *
    * @experimental
    */
-  abortSignal: AbortSignal | undefined;
+  abortSignal: AbortSignal;
 
   /**
    * A promise that rejects when the AbortSignal aborts.
    *
    * @experimental
    */
-  abortPromise: Promise<void> | undefined;
+  abortPromise: Promise<void>;
 }
 
 export type CleanupTask =
