@@ -474,22 +474,24 @@ export function runTaskListInternal(
       }
     }
 
-    function release() {
+    async function release() {
       // No need to call changeListener.release() because the client errored
       changeListener = null;
       client.removeListener("notification", handleNotification);
       // TODO: ideally we'd only stop handling errors once all pending queries are complete; but either way we shouldn't try again!
       client.removeListener("error", onErrorReleaseClientAndTryAgain);
       events.emit("pool:listen:release", { workerPool, client });
-      return client
-        .query('UNLISTEN "jobs:insert"; UNLISTEN "worker:migrate";')
-        .catch((error) => {
-          /* ignore errors */
-          logger.error(`Error occurred attempting to UNLISTEN: ${error}`, {
-            error,
-          });
-        })
-        .then(() => releaseClient());
+      try {
+        await client.query(
+          'UNLISTEN "jobs:insert"; UNLISTEN "worker:migrate";',
+        );
+      } catch (error) {
+        /* ignore errors */
+        logger.error(`Error occurred attempting to UNLISTEN: ${error}`, {
+          error,
+        });
+      }
+      return releaseClient();
     }
 
     // On error, release this client and try again
