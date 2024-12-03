@@ -20,6 +20,7 @@ import {
   CronItem,
   CronItemOptions,
   ParsedCronItem,
+  ParsedCronItemOptions,
 } from "./interfaces";
 import { coerceError } from "./lib";
 
@@ -60,7 +61,7 @@ const parseTimePhrase = (timePhrase: string): number => {
 const parseCrontabOptions = (
   lineNumber: number,
   optionsString: string | undefined,
-): { options: CronItemOptions; identifier: string | undefined } => {
+): { options: ParsedCronItemOptions; identifier: string | undefined } => {
   const parsed = optionsString != null ? parse(optionsString) : {};
   let backfillPeriod: number | undefined = undefined;
   let maxAttempts: number | undefined = undefined;
@@ -294,7 +295,7 @@ export const parseCronItem = (
   const {
     match: rawMatch,
     task,
-    options = {} as CronItemOptions,
+    options,
     payload = {},
     identifier = task,
   } = cronItem;
@@ -308,11 +309,24 @@ export const parseCronItem = (
   if (typeof match !== "function") {
     throw new Error("Invalid 'match' configuration");
   }
+
+  let parsedOptions: ParsedCronItemOptions;
+  if (!options) {
+    parsedOptions = { backfillPeriod: 0 };
+  } else if (options.backfillPeriod === undefined) {
+    parsedOptions = { ...options, backfillPeriod: 0 };
+  } else {
+    parsedOptions = {
+      ...options,
+      backfillPeriod: options.backfillPeriod,
+    };
+  }
+
   return {
     [$$isParsed]: true,
     match,
     task,
-    options,
+    options: parsedOptions,
     payload,
     identifier,
   };
