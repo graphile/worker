@@ -11,16 +11,16 @@ time!
 
 ## Development
 
-```sh npm2yarn
-npm install
-npm run watch
+```sh
+yarn install
+yarn run watch
 ```
 
 In another terminal:
 
-```sh npm2yarn
+```sh
 createdb graphile_worker_test
-npm test
+yarn test
 ```
 
 ### Using Docker to develop this module
