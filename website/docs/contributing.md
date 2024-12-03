@@ -68,6 +68,6 @@ docker run -e POSTGRES_HOST_AUTH_METHOD=trust -d -p 5432:5432 postgres:12
 
 then run
 
-```sh npm2yarn
-PGUSER=postgres PGHOST=localhost npm run db:dump
+```sh
+PGUSER=postgres PGHOST=localhost yarn run db:dump
 ```
