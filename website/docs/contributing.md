@@ -11,6 +11,8 @@ time!
 
 ## Development
 
+Graphile worker is developed using yarn 1.x
+
 ```sh
 yarn install
 yarn run watch
@@ -28,32 +30,32 @@ yarn test
 Start the dev db and app in the background
 
 ```sh
-docker-compose up -d
+docker compose up -d
 ```
 
 Run the tests
 
 ```sh
-docker-compose exec app yarn jest -i
+docker compose exec app yarn jest -i
 ```
 
 Reset the test db
 
 ```sh
-cat __tests__/reset-db.sql | docker-compose exec -T db psql -U postgres -v GRAPHILE_WORKER_SCHEMA=graphile_worker graphile_worker_test
+cat __tests__/reset-db.sql | docker compose exec -T db psql -U postgres -v GRAPHILE_WORKER_SCHEMA=graphile_worker graphile_worker_test
 ```
 
 Run the perf tests
 
 ```sh
-docker-compose exec app node ./perfTest/run.js
+docker compose exec app node ./perfTest/run.js
 ```
 
 monitor the container logs
 
 ```sh
-docker-compose logs -f db
-docker-compose logs -f app
+docker compose logs -f db
+docker compose logs -f app
 ```
 
 ### Database migrations
