@@ -11,7 +11,7 @@ time!
 
 ## Development
 
-Graphile worker is developed using yarn 1.x
+Graphile Worker is developed using yarn 1.x
 
 ```sh
 yarn install
