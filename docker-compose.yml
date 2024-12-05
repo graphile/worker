@@ -20,5 +20,9 @@ services:
       - ./sql:/app/sql
       - ./src:/app/src
       - ./perfTest:/app/perfTest
+      - ./website:/app/website
     environment:
-      TEST_CONNECTION_STRING: "postgres://postgres:workerdev@db:5432/graphile_worker_test"
+      PGUSER: "postgres"
+      PGPASSWORD: "workerdev"
+      PGHOST: "db"
+      PGPORT: "5432"
