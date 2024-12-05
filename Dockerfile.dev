@@ -1,5 +1,6 @@
 FROM node:18-alpine
 RUN apk add --no-cache bash
+RUN apk add --no-cache postgresql-client
 
 ENTRYPOINT ["yarn"]
 CMD ["watch"]
@@ -14,8 +15,11 @@ COPY ./sql ./sql
 COPY ./src  ./src
 COPY ./scripts ./scripts
 COPY ./perfTest  ./perfTest
+COPY ./website  ./website
 COPY ./tsconfig.json ./
 COPY ./jest.config.js ./
-
+COPY ./.eslintrc.js ./
+COPY ./.prettierrc.js ./
+COPY ./.eslintignore ./
 
 RUN yarn prepack
