@@ -73,16 +73,21 @@ Graphile Worker similarly is to create a Typescript file that runs functions
 imported from `.`.
 
 ```ts title="src/temp.ts"
-import { run } from ".";
+import { run, WorkerPreset } from ".";
 
 async function main() {
   const runner = await run({
-    connectionString: "postgres:///my_db",
     taskList: {
       hello: async (_, helpers) => {
         helpers.logger.info("Hello, world!");
       },
     },
+    preset: {
+      extends: [WorkerPreset],
+      worker: {
+        connectionString: "postgres:///my_db",
+      }
+    }
   });
 
   await runner.promise;
