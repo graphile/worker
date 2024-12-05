@@ -194,6 +194,12 @@ The `docker-compose.yml` file starts a minimal setup with a `db` container
 containing a Postgres database and an `app` container that is similar to running
 in CLI mode.
 
+To rebuild the docker containers, run:
+
+```sh
+docker compose build
+```
+
 To run the `db` and `app` containers in the backround, run the following:
 
 ```sh
