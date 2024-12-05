@@ -331,7 +331,7 @@ export interface WatchedCronItems {
  */
 export interface CronItemOptions {
   /** How far back (in milliseconds) should we backfill jobs when worker starts? (Only backfills since when the identifier was first used.) */
-  backfillPeriod: number;
+  backfillPeriod?: number;
 
   /** Optionally override the default job max_attempts */
   maxAttempts?: number;
@@ -351,6 +351,10 @@ export interface CronItemOptions {
    * updated. (Default: 'replace')
    */
   jobKeyMode?: "replace" | "preserve_run_at";
+}
+
+export interface ParsedCronItemOptions extends CronItemOptions {
+  backfillPeriod: number;
 }
 
 /**
@@ -419,7 +423,7 @@ export interface ParsedCronItem {
   task: string;
 
   /** Options influencing backfilling and properties of the scheduled job */
-  options: CronItemOptions;
+  options: ParsedCronItemOptions;
 
   /** A payload object to merge into the default cron payload object for the scheduled job */
   payload: { [key: string]: unknown } | null;
