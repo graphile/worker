@@ -69,10 +69,10 @@ See the [CLI documentation](./cli/run.md) for more information about CLI mode.
 
 When Graphile Worker users run in library mode, they use the functions exported
 in `src/index.ts`. The scrappiest thing you can do to run your local version of
-Graphile Worker similarly is to create a file, `src/temp.ts` that runs functions
+Graphile Worker similarly is to create a Typescript file that runs functions
 imported from `.`.
 
-```ts
+```ts title="src/temp.ts"
 import { run } from ".";
 
 async function main() {
