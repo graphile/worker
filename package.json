@@ -6,6 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build:sql": "node scripts/buildSqlModule.mjs",
+    "cli": "node dist/cli.js",
     "website:update": "node scripts/options.mjs",
     "prepack": "rm -Rf dist && npm run build:sql && tsc && chmod +x dist/cli.js",
     "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && npm run build:sql && tsc --watch",
@@ -20,7 +21,7 @@
     "perfTest": "cd perfTest && node ./run.js",
     "preversion": "grep '^### Pending' RELEASE_NOTES.md && echo \"⚠️ Cannot publish with 'Pending' in RELEASE_NOTES ⚠️\" && exit 1 || true",
     "version": "node scripts/postversion.mjs && git add src/version.ts",
-    "website": "cd website && yarn run"
+    "website": "cd website && yarn start"
   },
   "bin": {
     "graphile-worker": "./dist/cli.js"
