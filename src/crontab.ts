@@ -150,9 +150,8 @@ const parseCrontabOptions = (
     }
   });
 
-  if (!backfillPeriod) {
-    backfillPeriod = 0;
-  }
+  // Apply some sensible defaults
+  backfillPeriod ??= 0;
   if (!jobKeyMode && jobKey) {
     jobKeyMode = "replace";
   }

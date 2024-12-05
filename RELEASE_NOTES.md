@@ -43,9 +43,7 @@ Read more:
   experimental!
 - `helpers.abortPromise` added; will reject when `abortSignal` aborts (useful
   for `Promise.race()`)
-- Loosen the CronItem.options.backfillPeriod type. `backfillPeriod` is now
-  optional and defaults to 0 when parsing js objects and when parsing crontab
-  strings.
+- `backfillPeriod` is now marked as optional in TypeScript (defaults to 0).
 
 ## v0.16.6
 
