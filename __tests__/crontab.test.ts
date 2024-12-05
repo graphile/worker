@@ -1,4 +1,4 @@
-import { $$isParsed, CronItemOptions, ParsedCronMatch } from "../src";
+import { CronItemOptions, ParsedCronMatch } from "../src";
 import { parseCronItem, parseCrontab } from "../src/crontab";
 
 // 0...59
@@ -250,7 +250,7 @@ describe("parses JS cron items correctly", () => {
   });
 
   test("validates match strings", () => {
-    const matchString = "foobar";
+    const matchString = "foo";
     expect(() =>
       parseCronItem({
         task: "task",
