@@ -89,15 +89,13 @@ declare global {
        */
       schema?: string;
       /**
-       * The file system path to a directory in which Graphile Worker should look for
-       * task executors.
+       * The path to a directory in which Graphile Worker should look for task executors.
        *
        * @defaultValue `process.cwd() + "/tasks"`
        */
       taskDirectory?: string;
       /**
-       * The file system path to a file in which Graphile Worker should look a crontab
-       * file.
+       * The path to a file in which Graphile Worker should look for crontab schedules.
        *
        * @defaultValue `process.cwd() + "/crontab"`
        */
