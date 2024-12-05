@@ -257,7 +257,7 @@ describe("parses JS cron items correctly", () => {
         match: matchString,
         options: {},
       }),
-    ).toThrowErrorMatchingInlineSnapshot(
+    ).toThrow(
       `"Invalid cron pattern '${matchString}' in parseCronItem call"`,
     );
   });
