@@ -6,7 +6,6 @@
   "main": "dist/index.js",
   "scripts": {
     "build:sql": "node scripts/buildSqlModule.mjs",
-    "cli": "node dist/cli.js",
     "website:update": "node scripts/options.mjs",
     "prepack": "rm -Rf dist && npm run build:sql && tsc && chmod +x dist/cli.js",
     "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && npm run build:sql && tsc --watch",

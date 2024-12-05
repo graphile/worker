@@ -12,10 +12,45 @@ not want your feature in core, and we do not want you to waste your time!
 
 ### Setup
 
-1. Install yarn 1.x via the method of your choice.
+1. Ensure `yarn` is installed (e.g. `npm install -g yarn`).
 2. Fork and clone the (Graphile Worker git
    repository)[https://github.com/graphile/worker]
 3. From the root of your local Graphile Worker repository, run `yarn install`
+
+### Ensure PostgreSQL is running
+
+We assume you have a local PostgreSQL server running in "trust" authentication
+mode. Other options may or may not work - you may need to set `PGHOST`,
+`PGPORT`, `PGUSER`, `PGPASSWORD` and/or similar config variables.
+
+If you don't have such a server, you can use docker to run it locally:
+
+```bash
+# Run a temporary postgres instance on port 6432
+docker run --rm -it -e POSTGRES_HOST_AUTH_METHOD=trust -p 6432:5432 postgres:17
+```
+
+Note that this Docker will keep running until you kill it (e.g. with `Ctrl-C`)
+and thus you will need to continue with a different terminal window.
+
+Be sure to set the required environmental variables for this setup before you
+attempt to run the tests; you will need these for each terminal window that you
+attempt to run the tests from:
+
+```bash
+export PGUSER=postgres
+export PGHOST=127.0.0.1
+export PGPORT=6432
+```
+
+The command `psql postgres` should now work (exit with `Ctrl-D`). We require
+`psql` to install the test fixtures; if you don't have `psql` installed, install
+it using your operating system's package manager or from the
+[PostgreSQL website](https://www.postgresql.org/download/), for example:
+
+```bash
+sudo apt update && sudo apt install postgresql-client
+```
 
 ### Automated Functional Testing
 
@@ -29,16 +64,19 @@ You must have a running Postgres database to run the tests. The test framework
 creates a template database. Each test clones the template database on demand.
 This allows the tests to run in parallel.
 
-For now, the database used for testing must be available at localhost:5432 with
-no username and password. The tests may be updated in the future to support
-arbitrary database connection information.
+Run `yarn test` to run the tests, this will also set up the database.
 
-Run `yarn test:setupdb` to setup the template database.
+:::tip Debugging
 
-Then, you can run `yarn test:only` to run the tests. The tests can be rerun as
-much as you want without rerunning `test:setupdb`.
+If you're having some trouble, you can run the tests in stages.
 
-:::note
+1. Compile the code: `yarn prepack`
+2. Setup the test DB: `yarn test:setupdb`
+3. Run the tests: `yarn test:only`
+
+:::
+
+:::warning Do not create a 'tasks' folder at the root!
 
 If you have any files in `./tasks`, some tests will fail.
 
@@ -46,20 +84,27 @@ If you have any files in `./tasks`, some tests will fail.
 
 ### Running in CLI Mode
 
-When Graphile Worker users run in CLI mode, they run the script defined in
-`package.json` at `bin.graphile-worker`. To run your local version of Graphile
-Worker similarly, compile the package and run `cli.js`.
+When users run the `graphile-worker` command they actually execute the script
+defined in `package.json` under `bin.graphile-worker`, which is `dist/cli.js`
+(corresponding with the `src/cli.ts` source file).
+
+To run your local version of Graphile Worker similarly, run the `dist/cli.js`
+file with `node` directly. It will fail to start if you don't have any tasks, so
+you should create a tasks folder first (but not in the root!):
 
 ```sh
 yarn prepack
-yarn cli -c "postgres:///my_db"
+mkdir -p _LOCAL/tasks
+echo 'module.exports = () => {}' > _LOCAL/tasks/hello.js
+cd _LOCAL
+node ../dist/cli.js -c "postgres:///my_db"
 ```
 
-:::note
+:::tip Keep `dist` up to date with `yarn watch`
 
-The command above will fail to start if you don't have any tasks defined.
-`./tasks/` is included in the .gitignore, so you can add a simple hello world
-task there if you don't have any tasks yet.
+In development it's generally annoying to have to remember to run `yarn prepack`
+before each action. Instead, run `yarn watch` in a different terminal and the
+`dist` folder will stay up to date as you edit the source code.
 
 :::
 
@@ -68,8 +113,8 @@ See the [CLI documentation](./cli/run.md) for more information about CLI mode.
 ### Running in Library Mode
 
 When Graphile Worker users run in library mode, they use the functions exported
-in `src/index.ts`. The scrappiest thing you can do to run your local version of
-Graphile Worker similarly is to create a Typescript file that runs functions
+from `src/index.ts`. The scrappiest thing you can do to run your local version
+of Graphile Worker similarly is to create a Typescript file that runs functions
 imported from `.`.
 
 ```ts title="src/temp.ts"
@@ -86,8 +131,8 @@ async function main() {
       extends: [WorkerPreset],
       worker: {
         connectionString: "postgres:///my_db",
-      }
-    }
+      },
+    },
   });
 
   await runner.promise;
@@ -141,8 +186,11 @@ more information about how linking works, including instructions for unlinking.
 
 ### Docker Compose
 
-Some people run their Graphile Worker development environments in Docker. The
-`docker-compose.yml` file starts a minimal setup with a `db` container
+Some people run their Graphile Worker development environments in Docker
+Compose. If this is you, please contribute back fixes to the setup, because our
+lead maintainer does not use it.
+
+The `docker-compose.yml` file starts a minimal setup with a `db` container
 containing a Postgres database and an `app` container that is similar to running
 in CLI mode.
 
@@ -152,14 +200,16 @@ To run the `db` and `app` containers in the backround, run the following:
 docker compose up -d
 ```
 
-The tests currently rely on a database being available at localhost:5432. Thus,
-you cannot currently run the tests in the Docker Compose setup.
+You can run the tests via:
+
+```sh
+docker compose exec app yarn test
+```
 
 Tail the containers' logs the with the following command:
 
 ```sh
-docker compose logs -f db
-docker compose logs -f app
+docker compose logs -f
 ```
 
 ### Authoring Database Migrations
@@ -167,7 +217,7 @@ docker compose logs -f app
 New database migrations must be accompanied by an updated db dump. Before
 generating a new dump, ensure the following:
 
-1. You have a Postgres db running at localhost:5432.
+1. You have a Postgres running as described above.
 2. You have `pg_dump`, and the version of `pg_dump` is the same major version of
    your Postgres database.
 
@@ -177,10 +227,10 @@ To check your `pg_dump` version, run the following:
 pg_dump --version
 ```
 
-To check the version of Postgres running at localhost:5432, run the following:
+To check your Postgres version, run the following:
 
 ```sh
-psql postgres:///my_db -c "SELECT version();"
+psql postgres:///template1 -c "SELECT version();"
 ```
 
 To update the db dump, run the following command:
@@ -197,6 +247,8 @@ cannot ensure that the development environment works.
 [This comment](https://github.com/graphile/worker/pull/316#issuecomment-1427173046)
 suggests that at least one change needs to be made to support contributing from
 a Windows machine. If you use Windows and want to help here, please do!
+
+One option is to try using the docker-compose setup detailed above.
 
 ## Contributing to the Documentation
 
