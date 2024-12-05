@@ -56,7 +56,7 @@ const argv = yargs
   .number("poll-interval")
   .option("no-prepared-statements", {
     description:
-      "set this flag if you want to disable prepared statements, e.g. for compatibility with pgBouncer",
+      "set this flag if you want to disable prepared statements, e.g. for compatibility with pgBouncer < 1.21.0",
   })
   .boolean("no-prepared-statements")
   .option("config", {

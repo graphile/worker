@@ -57,7 +57,7 @@ Options:
                                 future/retries)         [number] [default: 2000]
       --no-prepared-statements  set this flag if you want to disable prepared
                                 statements, e.g. for compatibility with
-                                pgBouncer             [boolean] [default: false]
+                                pgBouncer < 1.21.0    [boolean] [default: false]
 ```
 
 ## Connection string
