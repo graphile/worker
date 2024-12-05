@@ -310,17 +310,10 @@ export const parseCronItem = (
     throw new Error("Invalid 'match' configuration");
   }
 
-  let parsedOptions: ParsedCronItemOptions;
-  if (!options) {
-    parsedOptions = { backfillPeriod: 0 };
-  } else if (options.backfillPeriod === undefined) {
-    parsedOptions = { ...options, backfillPeriod: 0 };
-  } else {
-    parsedOptions = {
-      ...options,
-      backfillPeriod: options.backfillPeriod,
-    };
-  }
+  const parsedOptions: ParsedCronItemOptions = {
+    ...options,
+    backfillPeriod: options?.backfillPeriod ?? 0,
+  };
 
   return {
     [$$isParsed]: true,

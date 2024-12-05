@@ -326,16 +326,12 @@ export interface WatchedCronItems {
   release: () => void;
 }
 
-export type CronItemOptions = {
-  [key in keyof ParsedCronItemOptions]?: ParsedCronItemOptions[key];
-};
-
 /**
  * a.k.a. `opts`, this allows you to change the behaviour when scheduling a cron task.
  */
-export interface ParsedCronItemOptions {
+export interface CronItemOptions {
   /** How far back (in milliseconds) should we backfill jobs when worker starts? (Only backfills since when the identifier was first used.) */
-  backfillPeriod: number;
+  backfillPeriod?: number;
 
   /** Optionally override the default job max_attempts */
   maxAttempts?: number;
@@ -355,6 +351,10 @@ export interface ParsedCronItemOptions {
    * updated. (Default: 'replace')
    */
   jobKeyMode?: "replace" | "preserve_run_at";
+}
+
+export interface ParsedCronItemOptions extends CronItemOptions {
+  backfillPeriod: number;
 }
 
 /**
