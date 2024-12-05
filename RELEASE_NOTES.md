@@ -43,6 +43,7 @@ Read more:
   experimental!
 - `helpers.abortPromise` added; will reject when `abortSignal` aborts (useful
   for `Promise.race()`)
+- `backfillPeriod` is now marked as optional in TypeScript (defaults to 0).
 
 ## v0.16.6
 
