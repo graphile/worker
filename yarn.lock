@@ -6355,10 +6355,10 @@ graphemer@^1.4.0:
   resolved "https://registry.yarnpkg.com/graphemer/-/graphemer-1.4.0.tgz#fb2f1d55e0e3a1849aeffc90c4fa0dd53a0e66c6"
   integrity sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==
 
-graphile-config@^0.0.1-beta.4, graphile-config@^0.0.1-beta.11:
-  version "0.0.1-beta.11"
-  resolved "https://registry.yarnpkg.com/graphile-config/-/graphile-config-0.0.1-beta.11.tgz#4bd2ffd1fee6834f2e5dedc64016e7a3a9eda151"
-  integrity sha512-+2QLPpihQQvSYd6sSXcDrwHMMSygUrK41qWhak7u3vsXj2AGwVwl+kVvlBwuoovaoUPDsGF8zy5IevTAMgzg5Q==
+graphile-config@^0.0.1-beta.12, graphile-config@^0.0.1-beta.4:
+  version "0.0.1-beta.12"
+  resolved "https://registry.yarnpkg.com/graphile-config/-/graphile-config-0.0.1-beta.12.tgz#e31e12077366f3cbe55708ec20452e5027177627"
+  integrity sha512-th7C2fM29dhra5gCmykWUJQMCAzA6C5W+dF8DZa0BWLImmHnSUK+AO4qPCR6bZKR5JKTW2onZweqP4ZHVLPQFw==
   dependencies:
     "@types/interpret" "^1.1.1"
     "@types/node" "^20.5.7"

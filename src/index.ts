@@ -1,9 +1,5 @@
 import { Logger } from "@graphile/logger";
-import {
-  CallbackOrDescriptor,
-  MiddlewareNext,
-  PluginHook,
-} from "graphile-config";
+import { MiddlewareHandlers, PluginHook } from "graphile-config";
 import type { PoolClient } from "pg";
 
 import { getCronItems } from "./getCronItems";
@@ -322,17 +318,7 @@ declare global {
 
     interface Plugin {
       worker?: {
-        // TODO: replace with the following once we upgrade graphile-config again
-        //   middleware?: MiddlewareHandlers<WorkerMiddleware>
-        middleware?: {
-          [key in keyof WorkerMiddleware]?: CallbackOrDescriptor<
-            WorkerMiddleware[key] extends (
-              ...args: infer UArgs
-            ) => infer UResult
-              ? (next: MiddlewareNext<UResult>, ...args: UArgs) => UResult
-              : never
-          >;
-        };
+        middleware?: MiddlewareHandlers<WorkerMiddleware>;
 
         // TODO: deprecate this, replace with middleware
         hooks?: {
