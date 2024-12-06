@@ -1,4 +1,5 @@
 import * as assert from "assert";
+import EventEmitter from "events";
 import {
   applyHooks,
   AsyncHooks,
@@ -226,7 +227,7 @@ export function processSharedOptions<
         maxResetLockedInterval,
         schema: workerSchema,
         logger,
-        events,
+        events = new EventEmitter(),
       },
       plugins,
     } = resolvedPreset;
