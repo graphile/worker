@@ -66,7 +66,7 @@ declare global {
       /**
        * Maximum number of concurrent connections to Postgres; must be at least
        * `2`. This number can be lower than `concurrentJobs`, however a low
-       * pool size may cause issues - if all your pool clients are busy then no
+       * pool size may cause issues: if all your pool clients are busy then no
        * jobs can be started or released. If in doubt, we recommend setting it
        * to `10` or `concurrentJobs + 2`, whichever is larger. (Note: if your
        * task executors use this pool, then an even larger value may be needed
@@ -103,7 +103,8 @@ declare global {
       taskDirectory?: string;
       /**
        * The path to a file in which Graphile Worker should look for crontab
-       * schedules.
+       * schedules. See: [recurring tasks
+       * (crontab)](https://worker.graphile.org/docs/cron)).
        *
        * @defaultValue `process.cwd() + "/crontab"`
        */
@@ -172,7 +173,7 @@ declare global {
        */
       getQueueNameBatchDelay?: number;
       /**
-       * A Logger instance.
+       * A Logger instance (see [Logger](https://worker.graphile.org/docs/library/logger)).
        */
       logger?: Logger;
       /**

@@ -181,7 +181,7 @@ Here are the options under the `worker` key as defined by
 
 Type: `number | undefined`
 
-Number of jobs to run concurrently on a single worker. Defaults to `1`.
+Number of jobs to run concurrently on a single Graphile Worker instance.
 
 ### worker.connectionString
 
@@ -194,15 +194,17 @@ Database [connection string](/docs/connection-string).
 Type: `string | undefined`
 
 The path to a file in which Graphile Worker should look for crontab schedules.
-Defaults to `${process.cwd()}/crontab`. (see
-[Recurring tasks (crontab)](./cron.md)).
+See: [recurring tasks (crontab)](/docs/cron)).
 
 ### worker.events
 
 Type: `WorkerEvents | undefined`
 
-A Node.js `EventEmitter` that exposes certain events within the runner (see
-[`WorkerEvents`](./worker-events)).
+Provide your own Node.js `EventEmitter` in order to be able to receive events
+(see [`WorkerEvents`](/docs/worker-events)) that occur during Graphile Worker's
+startup. (Without this, Worker will provision its own `EventEmitter`, but you
+can't retrieve it until the promise returned by the API you have called has
+resolved.)
 
 ### worker.fileExtensions
 
@@ -210,7 +212,6 @@ Type: `string[] | undefined`
 
 A list of file extensions (in priority order) that Graphile Worker should
 attempt to import directly when loading task executors from the file system.
-Defaults to `[".js", ".cjs", ".mjs"]`.
 
 ### worker.getQueueNameBatchDelay
 
@@ -218,20 +219,9 @@ Type: `number | undefined`
 
 **Experimental**
 
-The window size in milliseconds in which Graphile Worker batches calls for
-getting a queue name in a job. This batching is done for efficiency. Increase
-this window for greater efficiency. Reduce this window to reduce the latency for
-getting an individual queue name. Defaults to `50`.
-
-### worker.getQueueNameBatchDelay
-
-Type: `number | undefined`
-
-**Experimental**
-
-When getting a queue name in a job, we batch calls for efficiency. By default we
-do this over a 50ms window; increase this for greater efficiency, reduce this to
-reduce the latency for getting an individual queue name.
+The size, in milliseconds, of the time window over which Graphile Worker will
+batch requests to retrieve the queue name of a job. Increase the size of this
+window for greater efficiency, or reduce it to improve latency.
 
 ### worker.gracefulShutdownAbortTimeout
 
@@ -239,31 +229,25 @@ Type: `number | undefined`
 
 How long in milliseconds after a gracefulShutdown is triggered should Graphile
 Worker wait to trigger the AbortController, which should cancel supported
-asynchronous actions? Defaults to `5_000` or 5 seconds.
+asynchronous actions?
 
 ### worker.logger
 
 Type: `Logger<{}> | undefined`
 
-A Logger instance (see [Logger](./library/logger)).
+A Logger instance (see [Logger](/docs/library/logger)).
 
 ### worker.maxPoolSize
 
 Type: `number | undefined`
 
-Maximum number of concurrent connections to Postgres. Must be at least `2`. This
+Maximum number of concurrent connections to Postgres; must be at least `2`. This
 number can be lower than `concurrentJobs`, however a low pool size may cause
-issues: if all your pool clients are busy, then no jobs can be started or
+issues: if all your pool clients are busy then no jobs can be started or
 released. If in doubt, we recommend setting it to `10` or `concurrentJobs + 2`,
-whichever is larger. Defaults to `10`.
-
-:::note
-
-If your task executors use the same pool, then a larger value may be needed for
-optimum performance, depending on the nature of the logic in your task
-executors.
-
-:::
+whichever is larger. (Note: if your task executors use this pool, then an even
+larger value may be needed for optimum performance, depending on the shape of
+your logic.)
 
 ### worker.maxResetLockedInterval
 
@@ -271,9 +255,8 @@ Type: `number | undefined`
 
 **Experimental**
 
-In milliseconds, the upper bound of how long Graphile Worker will wait between
-scans for jobs that have been locked too long. Defaults to `600_000` or 10
-minutes (see [`minResetLockedInterval`](#workerminresetlockedinterval)).
+The upper bound of how long (in milliseconds) Graphile Worker will wait between
+scans for jobs that have been locked too long (see `minResetLockedInterval`).
 
 ### worker.minResetLockedInterval
 
@@ -283,46 +266,39 @@ Type: `number | undefined`
 
 How often should Graphile Worker scan for and release jobs that have been locked
 too long? This is the minimum interval in milliseconds. Graphile Worker will
-choose a time between this and
-[`maxResetLockedInterval`](#workermaxresetlockedinterval). Defaults to `480_000`
-or 8 minutes.
+choose a time between this and `maxResetLockedInterval`.
 
 ### worker.pollInterval
 
 Type: `number | undefined`
 
-Defaults to `2000`.
-
 ### worker.preparedStatements
 
 Type: `boolean | undefined`
 
-Whether Graphile Worker should use prepared statements when querying the
-database. Set to `false` for compatibility with pgBouncer < 1.21.0. Defaults to
-`true`.
+Whether Graphile Worker should use prepared statements. Set `false` if you use
+software (e.g. some Postgres pools) that don't support them.
 
 ### worker.schema
 
 Type: `string | undefined`
 
 The database schema in which Graphile Worker's tables, functions, views, etc are
-located. Database migrations will create or edit things in this schema if
-necessary (see [Database schema](./schema)). Defaults to `graphile_worker`.
+located. Graphile Worker will create or edit things in this schema as necessary.
 
 ### worker.taskDirectory
 
 Type: `string | undefined`
 
 The path to a directory in which Graphile Worker should look for task executors.
-Defaults to `${process.cwd()}/tasks`.
 
 ### worker.useNodeTime
 
 Type: `boolean | undefined`
 
-Set to `true` to use the time as recorded by Node.js rather than PostgreSQL. We
-strongly recommend that you ensure the Node.js and PostgreSQL times are
-synchronized, making this setting moot. Defaults to `false`.
+Set to `true` to use the time as recorded by Node.js rather than PostgreSQL.
+It's strongly recommended that you ensure the Node.js and PostgreSQL times are
+synchronized, making this setting moot.
 
 <!--END:OPTIONS-->
 
