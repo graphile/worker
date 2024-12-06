@@ -37,16 +37,19 @@ declare global {
     interface Tasks {
       /* extend this through declaration merging */
     }
+
     interface MigrateEvent {
       /**
        * The client used to run the migration. Replacing this is not officially
        * supported, but...
        */
       client: PoolClient;
+
       /**
        * The Postgres version number, e.g. 120000 for PostgreSQL 12.0
        */
       readonly postgresVersion: number;
+
       /**
        * Somewhere to store temporary data from plugins, only used during
        * premigrate, postmigrate, prebootstrap and postbootstrap
@@ -63,6 +66,7 @@ declare global {
        * @defaultValue `process.env.DATABASE_URL`
        */
       connectionString?: string;
+
       /**
        * Maximum number of concurrent connections to Postgres; must be at least
        * `2`. This number can be lower than `concurrentJobs`, however a low
@@ -75,10 +79,12 @@ declare global {
        * @defaultValue `10`
        */
       maxPoolSize?: number;
+
       /**
        *
        * @defaultValue `2000` */
       pollInterval?: number;
+
       /**
        * Whether Graphile Worker should use prepared statements. Set `false` if
        * you use software (e.g. some Postgres pools) that don't support them.
@@ -86,6 +92,7 @@ declare global {
        * @defaultValue `true`
        */
       preparedStatements?: boolean;
+
       /**
        * The database schema in which Graphile Worker's tables, functions,
        * views, etc are located. Graphile Worker will create or edit things in
@@ -94,6 +101,7 @@ declare global {
        * @defaultValue `graphile_worker`
        */
       schema?: string;
+
       /**
        * The path to a directory in which Graphile Worker should look for task
        * executors.
@@ -101,6 +109,7 @@ declare global {
        * @defaultValue `process.cwd() + "/tasks"`
        */
       taskDirectory?: string;
+
       /**
        * The path to a file in which Graphile Worker should look for crontab
        * schedules. See: [recurring tasks
@@ -109,6 +118,7 @@ declare global {
        * @defaultValue `process.cwd() + "/crontab"`
        */
       crontabFile?: string;
+
       /**
        * Number of jobs to run concurrently on a single Graphile Worker
        * instance.
@@ -116,6 +126,7 @@ declare global {
        * @defaultValue `1`
        */
       concurrentJobs?: number;
+
       /**
        * A list of file extensions (in priority order) that Graphile Worker
        * should attempt to import directly when loading task executors from the
@@ -124,6 +135,7 @@ declare global {
        * @defaultValue `[".js", ".cjs", ".mjs"]`
        */
       fileExtensions?: string[];
+
       /**
        * How long in milliseconds after a gracefulShutdown is triggered should
        * Graphile Worker wait to trigger the AbortController, which should
@@ -132,6 +144,7 @@ declare global {
        * @defaultValue `5_000`
        */
       gracefulShutdownAbortTimeout?: number;
+
       /**
        * Set to `true` to use the time as recorded by Node.js rather than
        * PostgreSQL. It's strongly recommended that you ensure the Node.js and
@@ -140,6 +153,7 @@ declare global {
        * @defaultValue `false`
        */
       useNodeTime?: boolean;
+
       /**
        * **Experimental**
        *
@@ -151,6 +165,7 @@ declare global {
        * @defaultValue `480_000`
        */
       minResetLockedInterval?: number;
+
       /**
        * **Experimental**
        *
@@ -161,6 +176,7 @@ declare global {
        * @defaultValue `600_000`
        */
       maxResetLockedInterval?: number;
+
       /**
        * **Experimental**
        *
@@ -172,10 +188,12 @@ declare global {
        * @defaultValue `50`
        */
       getQueueNameBatchDelay?: number;
+
       /**
        * A Logger instance (see [Logger](https://worker.graphile.org/docs/library/logger)).
        */
       logger?: Logger;
+
       /**
        * Provide your own Node.js `EventEmitter` in order to be able to receive
        * events (see
@@ -186,6 +204,7 @@ declare global {
        */
       events?: WorkerEvents;
     }
+
     interface Preset {
       worker?: WorkerOptions;
     }
@@ -201,6 +220,7 @@ declare global {
         };
       };
     }
+
     interface WorkerHooks {
       /**
        * Called when Graphile Worker starts up.
@@ -244,11 +264,13 @@ declare global {
          * this task identifier (see `details`), you should set it.
          */
         handler?: Task;
+
         /**
          * The string that will identify this task (inferred from the file
          * path).
          */
         readonly taskIdentifier: string;
+
         /**
          * A list of the files (and associated metadata) that match this task
          * identifier.
