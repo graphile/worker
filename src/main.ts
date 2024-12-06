@@ -32,9 +32,9 @@ import {
 import { LocalQueue } from "./localQueue";
 import { Logger } from "./logger";
 import SIGNALS, { Signal } from "./signals";
-import { completeJobs as baseCompleteJobs } from "./sql/completeJobs";
-import { batchFailJobs as baseFailJobs, failJobs } from "./sql/failJobs";
-import { getJobs as baseGetJobs } from "./sql/getJobs";
+import { batchCompleteJobs } from "./sql/completeJobs";
+import { batchFailJobs, failJobs } from "./sql/failJobs";
+import { batchGetJobs } from "./sql/getJobs";
 import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
 
@@ -1181,7 +1181,7 @@ export function _runTaskList(
         if (!workerPool._active) {
           return undefined;
         }
-        const jobs = await baseGetJobs(
+        const jobs = await batchGetJobs(
           compiledSharedOptions,
           withPgClient,
           tasks,
@@ -1197,7 +1197,7 @@ export function _runTaskList(
       ? batch(
           completeJobBatchDelay,
           (jobs) =>
-            baseCompleteJobs(
+            batchCompleteJobs(
               compiledSharedOptions,
               withPgClient,
               workerPool.id,
@@ -1221,7 +1221,7 @@ export function _runTaskList(
       : {
           release: null,
           fn: (job) =>
-            baseCompleteJobs(
+            batchCompleteJobs(
               compiledSharedOptions,
               withPgClient,
               workerPool.id,
@@ -1235,7 +1235,7 @@ export function _runTaskList(
       ? batch(
           failJobBatchDelay,
           (specs) =>
-            baseFailJobs(
+            batchFailJobs(
               compiledSharedOptions,
               withPgClient,
               workerPool.id,
@@ -1259,7 +1259,7 @@ export function _runTaskList(
       : {
           release: null,
           fn: (spec) =>
-            baseFailJobs(compiledSharedOptions, withPgClient, workerPool.id, [
+            batchFailJobs(compiledSharedOptions, withPgClient, workerPool.id, [
               spec,
             ]),
         }

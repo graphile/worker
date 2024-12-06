@@ -11,7 +11,7 @@ export function isPromise<T>(t: T | Promise<T>): t is Promise<T> {
   );
 }
 
-export async function getJobs(
+export async function batchGetJobs(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: EnhancedWithPgClient,
   tasks: TaskList,
