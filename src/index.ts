@@ -64,7 +64,8 @@ declare global {
        */
       connectionString?: string;
       /**
-       * Maximum number of concurrent connections to Postgres. Must be at least `2`.
+       * Maximum number of concurrent connections to Postgres. Must be at least
+       * `2`.
        *
        * @defaultValue `10`
        */
@@ -74,49 +75,53 @@ declare global {
        * @defaultValue `2000` */
       pollInterval?: number;
       /**
-       * Whether Graphile Worker should use prepared statements. Set `false` if you
-       * use software (e.g. some Postgres pools) that don't support them.
+       * Whether Graphile Worker should use prepared statements. Set `false` if
+       * you use software (e.g. some Postgres pools) that don't support them.
        *
        * @defaultValue `true`
        */
       preparedStatements?: boolean;
       /**
-       * The database schema in which Graphile Worker's tables, functions, views, etc are
-       * located. Graphile Worker will create or edit things in this schema as
-       * necessary.
+       * The database schema in which Graphile Worker's tables, functions,
+       * views, etc are located. Graphile Worker will create or edit things in
+       * this schema as necessary.
        *
        * @defaultValue `graphile_worker`
        */
       schema?: string;
       /**
-       * The path to a directory in which Graphile Worker should look for task executors.
+       * The path to a directory in which Graphile Worker should look for task
+       * executors.
        *
        * @defaultValue `process.cwd() + "/tasks"`
        */
       taskDirectory?: string;
       /**
-       * The path to a file in which Graphile Worker should look for crontab schedules.
+       * The path to a file in which Graphile Worker should look for crontab
+       * schedules.
        *
        * @defaultValue `process.cwd() + "/crontab"`
        */
       crontabFile?: string;
       /**
-       * Number of jobs to run concurrently on a single Graphile Worker instance.
+       * Number of jobs to run concurrently on a single Graphile Worker
+       * instance.
        *
        * @defaultValue `1`
        */
       concurrentJobs?: number;
       /**
-       * A list of file extensions (in priority order) that Graphile Worker should
-       * attempt to import directly when loading task executors from the file system.
+       * A list of file extensions (in priority order) that Graphile Worker
+       * should attempt to import directly when loading task executors from the
+       * file system.
        *
        * @defaultValue `[".js", ".cjs", ".mjs"]`
        */
       fileExtensions?: string[];
       /**
        * How long in milliseconds after a gracefulShutdown is triggered should
-       * Graphile Worker wait to trigger the AbortController, which should cancel
-       * supported asynchronous actions?
+       * Graphile Worker wait to trigger the AbortController, which should
+       * cancel supported asynchronous actions?
        *
        * @defaultValue `5_000`
        */
@@ -132,9 +137,10 @@ declare global {
       /**
        * **Experimental**
        *
-       * How often should Graphile Worker scan for and release jobs that have been
-       * locked too long? This is the minimum interval in milliseconds. Graphile
-       * Worker will choose a time between this and `maxResetLockedInterval`.
+       * How often should Graphile Worker scan for and release jobs that have
+       * been locked too long? This is the minimum interval in milliseconds.
+       * Graphile Worker will choose a time between this and
+       * `maxResetLockedInterval`.
        *
        * @defaultValue `480_000`
        */
@@ -142,8 +148,8 @@ declare global {
       /**
        * **Experimental**
        *
-       * The upper bound of how long (in milliseconds) Graphile Worker will wait
-       * between scans for jobs that have been locked too long (see
+       * The upper bound of how long (in milliseconds) Graphile Worker will
+       * wait between scans for jobs that have been locked too long (see
        * `minResetLockedInterval`).
        *
        * @defaultValue `600_000`
@@ -152,9 +158,10 @@ declare global {
       /**
        * **Experimental**
        *
-       * The size, in milliseconds, of the time window over which Graphile Worker
-       * will batch requests to retrieve the queue name of a job. Increase the size
-       * of this window for greater efficiency, or reduce it to improve latency.
+       * The size, in milliseconds, of the time window over which Graphile
+       * Worker will batch requests to retrieve the queue name of a job.
+       * Increase the size of this window for greater efficiency, or reduce it
+       * to improve latency.
        *
        * @defaultValue `50`
        */
@@ -164,10 +171,11 @@ declare global {
        */
       logger?: Logger;
       /**
-       * Provide your own Node.js `EventEmitter` in order to be able to receive events
-       * that occur during Graphile Worker's startup. (Without this, Worker will
-       * provision its own `EventEmitter`, but you can't retrieve it until the promise
-       * returned by the API you have called has resolved.)
+       * Provide your own Node.js `EventEmitter` in order to be able to receive
+       * events that occur during Graphile Worker's startup. (Without this,
+       * Worker will provision its own `EventEmitter`, but you can't retrieve
+       * it until the promise returned by the API you have called has
+       * resolved.)
        */
       events?: WorkerEvents;
     }
