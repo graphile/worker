@@ -32,7 +32,7 @@ different role, one solution is to explicitly change the owner of the
 
 ## CLI options
 
-The following CLI options are available:
+The following CLI options are available (`graphile-worker --help`):
 
 ```
 Options:
@@ -41,23 +41,26 @@ Options:
   -c, --connection              Database connection string, defaults to the
                                 'DATABASE_URL' envvar                   [string]
   -s, --schema                  The database schema in which Graphile Worker is
-                                (to be) located
-                                           [string] [default: "graphile_worker"]
+                                (to be) located                         [string]
       --schema-only             Just install (or update) the database schema,
                                 then exit             [boolean] [default: false]
       --once                    Run until there are no runnable jobs left, then
                                 exit                  [boolean] [default: false]
       --crontab                 override path to crontab file           [string]
-  -j, --jobs                    number of jobs to run concurrently
-                                                           [number] [default: 1]
-  -m, --max-pool-size           maximum size of the PostgreSQL pool
-                                                          [number] [default: 10]
+  -j, --jobs                    number of jobs to run concurrently      [number]
+  -m, --max-pool-size           maximum size of the PostgreSQL pool     [number]
       --poll-interval           how long to wait between polling for jobs in
                                 milliseconds (for jobs scheduled in the
-                                future/retries)         [number] [default: 2000]
+                                future/retries)                         [number]
       --no-prepared-statements  set this flag if you want to disable prepared
-                                statements, e.g. for compatibility with
-                                pgBouncer             [boolean] [default: false]
+                                statements, e.g. for compatibility with some
+                                external PostgreSQL pools              [boolean]
+  -C, --config                  The path to the config file             [string]
+      --cleanup                 Clean the database, then exit. Accepts a
+                                comma-separated list of cleanup tasks:
+                                GC_TASK_IDENTIFIERS, GC_JOB_QUEUES,
+                                DELETE_PERMAFAILED_JOBS                 [string]
+
 ```
 
 ## Connection string

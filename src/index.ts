@@ -37,16 +37,19 @@ declare global {
     interface Tasks {
       /* extend this through declaration merging */
     }
+
     interface MigrateEvent {
       /**
        * The client used to run the migration. Replacing this is not officially
        * supported, but...
        */
       client: PoolClient;
+
       /**
        * The Postgres version number, e.g. 120000 for PostgreSQL 12.0
        */
       readonly postgresVersion: number;
+
       /**
        * Somewhere to store temporary data from plugins, only used during
        * premigrate, postmigrate, prebootstrap and postbootstrap
@@ -63,10 +66,11 @@ declare global {
        * @defaultValue `process.env.DATABASE_URL`
        */
       connectionString?: string;
+
       /**
        * Maximum number of concurrent connections to Postgres; must be at least
        * `2`. This number can be lower than `concurrentJobs`, however a low
-       * pool size may cause issues - if all your pool clients are busy then no
+       * pool size may cause issues: if all your pool clients are busy then no
        * jobs can be started or released. If in doubt, we recommend setting it
        * to `10` or `concurrentJobs + 2`, whichever is larger. (Note: if your
        * task executors use this pool, then an even larger value may be needed
@@ -75,32 +79,49 @@ declare global {
        * @defaultValue `10`
        */
       maxPoolSize?: number;
+
       /**
        *
        * @defaultValue `2000` */
       pollInterval?: number;
-      /** @defaultValue `true` */
-      preparedStatements?: boolean;
+
       /**
-       * The database schema in which Graphile Worker is (to be) located.
+       * Whether Graphile Worker should use prepared statements. Set `false` if
+       * you use software (e.g. some Postgres pools) that don't support them.
+       *
+       * @defaultValue `true`
+       */
+      preparedStatements?: boolean;
+
+      /**
+       * The database schema in which Graphile Worker's tables, functions,
+       * views, etc are located. Graphile Worker will create or edit things in
+       * this schema as necessary.
        *
        * @defaultValue `graphile_worker`
        */
       schema?: string;
+
       /**
-       * Override path to find tasks
+       * The path to a directory in which Graphile Worker should look for task
+       * executors.
        *
        * @defaultValue `process.cwd() + "/tasks"`
        */
       taskDirectory?: string;
+
       /**
-       * Override path to crontab file.
+       * The path to a file in which Graphile Worker should look for crontab
+       * schedules. See: [recurring tasks
+       * (crontab)](https://worker.graphile.org/docs/cron)).
        *
        * @defaultValue `process.cwd() + "/crontab"`
        */
       crontabFile?: string;
+
       /**
-       * Number of jobs to run concurrently.
+       * Number of jobs to run concurrently on a single Graphile Worker
+       * instance.
        *
        * @defaultValue `1`
        */
@@ -108,64 +129,82 @@ declare global {
 
       /**
        * A list of file extensions (in priority order) that Graphile Worker
-       * should attempt to import directly when loading tasks. Defaults to
-       * `[".js", ".cjs", ".mjs"]`.
+       * should attempt to import directly when loading task executors from the
+       * file system.
+       *
+       * @defaultValue `[".js", ".cjs", ".mjs"]`
        */
       fileExtensions?: string[];
 
       /**
        * How long in milliseconds after a gracefulShutdown is triggered should
-       * we wait to trigger the AbortController, which should cancel supported
-       * asynchronous actions?
+       * Graphile Worker wait to trigger the AbortController, which should
+       * cancel supported asynchronous actions?
        *
-       * @defaultValue `5000`
+       * @defaultValue `5_000`
        */
       gracefulShutdownAbortTimeout?: number;
 
       /**
-       * Set `true` to use the time as recorded by Node.js rather than
+       * Set to `true` to use the time as recorded by Node.js rather than
        * PostgreSQL. It's strongly recommended that you ensure the Node.js and
        * PostgreSQL times are synchronized, making this setting moot.
+       *
+       * @defaultValue `false`
        */
       useNodeTime?: boolean;
 
       /**
        * **Experimental**
        *
-       * How often should we scan for jobs that have been locked too long and
-       * release them? This is the minimum interval, we'll choose a time between
-       * this and `maxResetLockedInterval`.
+       * How often should Graphile Worker scan for and release jobs that have
+       * been locked too long? This is the minimum interval in milliseconds.
+       * Graphile Worker will choose a time between this and
+       * `maxResetLockedInterval`.
+       *
+       * @defaultValue `480_000`
        */
       minResetLockedInterval?: number;
+
       /**
        * **Experimental**
        *
-       * The upper bound of how long we'll wait between scans for jobs that have
-       * been locked too long. See `minResetLockedInterval`.
+       * The upper bound of how long (in milliseconds) Graphile Worker will
+       * wait between scans for jobs that have been locked too long (see
+       * `minResetLockedInterval`).
+       *
+       * @defaultValue `600_000`
        */
       maxResetLockedInterval?: number;
 
       /**
        * **Experimental**
        *
-       * When getting a queue name in a job, we batch calls for efficiency. By
-       * default we do this over a 50ms window; increase this for greater efficiency,
-       * reduce this to reduce the latency for getting an individual queue name.
+       * The size, in milliseconds, of the time window over which Graphile
+       * Worker will batch requests to retrieve the queue name of a job.
+       * Increase the size of this window for greater efficiency, or reduce it
+       * to improve latency.
+       *
+       * @defaultValue `50`
        */
       getQueueNameBatchDelay?: number;
 
       /**
-       * A Logger instance.
+       * A Logger instance (see [Logger](https://worker.graphile.org/docs/library/logger)).
        */
       logger?: Logger;
 
       /**
-       * A Node.js `EventEmitter` that exposes certain events within the runner
-       * (see
-       * [`WorkerEvents`](https://worker.graphile.org/docs/worker-events)).
+       * Provide your own Node.js `EventEmitter` in order to be able to receive
+       * events (see
+       * [`WorkerEvents`](https://worker.graphile.org/docs/worker-events)) that
+       * occur during Graphile Worker's startup. (Without this, Worker will
+       * provision its own `EventEmitter`, but you can't retrieve it until the
+       * promise returned by the API you have called has resolved.)
        */
       events?: WorkerEvents;
     }
+
     interface Preset {
       worker?: WorkerOptions;
     }
@@ -181,6 +220,7 @@ declare global {
         };
       };
     }
+
     interface WorkerHooks {
       /**
        * Called when Graphile Worker starts up.
@@ -224,11 +264,13 @@ declare global {
          * this task identifier (see `details`), you should set it.
          */
         handler?: Task;
+
         /**
          * The string that will identify this task (inferred from the file
          * path).
          */
         readonly taskIdentifier: string;
+
         /**
          * A list of the files (and associated metadata) that match this task
          * identifier.
