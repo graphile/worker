@@ -6,7 +6,7 @@ interface Spec {
   replacementPayload: undefined | unknown[];
 }
 
-export async function failJob(
+export async function batchFailJobs(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: EnhancedWithPgClient,
   poolId: string,

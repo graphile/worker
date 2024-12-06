@@ -33,7 +33,7 @@ import { LocalQueue } from "./localQueue";
 import { Logger } from "./logger";
 import SIGNALS, { Signal } from "./signals";
 import { completeJobs as baseCompleteJobs } from "./sql/completeJobs";
-import { failJob as baseFailJob, failJobs } from "./sql/failJob";
+import { batchFailJobs as baseFailJobs, failJobs } from "./sql/failJobs";
 import { getJobs as baseGetJobs } from "./sql/getJobs";
 import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
@@ -1235,7 +1235,7 @@ export function _runTaskList(
       ? batch(
           failJobBatchDelay,
           (specs) =>
-            baseFailJob(
+            baseFailJobs(
               compiledSharedOptions,
               withPgClient,
               workerPool.id,
@@ -1259,7 +1259,7 @@ export function _runTaskList(
       : {
           release: null,
           fn: (spec) =>
-            baseFailJob(compiledSharedOptions, withPgClient, workerPool.id, [
+            baseFailJobs(compiledSharedOptions, withPgClient, workerPool.id, [
               spec,
             ]),
         }
