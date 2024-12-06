@@ -80,6 +80,7 @@ Here are the options under the `worker` key as defined by
   crontabFile?: string;
   events?: WorkerEvents;
   fileExtensions?: string[];
+  getQueueNameBatchDelay?: number;
   gracefulShutdownAbortTimeout?: number;
   logger?: Logger<{}>;
   maxPoolSize?: number;
@@ -103,7 +104,7 @@ Number of jobs to run concurrently.
 
 Type: `string | undefined`
 
-Database [connection string](./connection-string.md).
+Database [connection string](/docs/connection-string).
 
 ### worker.crontabFile
 
@@ -125,6 +126,16 @@ Type: `string[] | undefined`
 A list of file extensions (in priority order) that Graphile Worker should
 attempt to import directly when loading tasks. Defaults to
 `[".js", ".cjs", ".mjs"]`.
+
+### worker.getQueueNameBatchDelay
+
+Type: `number | undefined`
+
+**Experimental**
+
+When getting a queue name in a job, we batch calls for efficiency. By default we
+do this over a 50ms window; increase this for greater efficiency, reduce this to
+reduce the latency for getting an individual queue name.
 
 ### worker.gracefulShutdownAbortTimeout
 
