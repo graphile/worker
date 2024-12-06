@@ -669,7 +669,8 @@ export interface SharedOptions {
 
   /**
    * Set true if you want to prevent the use of prepared statements; for
-   * example if you wish to use Graphile Worker with pgBouncer < 1.21.0 or similar.
+   * example if you wish to use Graphile Worker with a connection pool
+   * that does not support prepared statements.
    */
   noPreparedStatements?: boolean;
 

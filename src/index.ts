@@ -74,16 +74,16 @@ declare global {
        * @defaultValue `2000` */
       pollInterval?: number;
       /**
-       * Whether Graphile Worker should use prepared statements. Set to `false` for
-       * compatibility with pgBouncer < 1.21.0.
+       * Whether Graphile Worker should use prepared statements. Set `false` if you
+       * use software (e.g. some Postgres pools) that don't support them.
        *
        * @defaultValue `true`
        */
       preparedStatements?: boolean;
       /**
        * The database schema in which Graphile Worker's tables, functions, views, etc are
-       * located. Database migrations will create or edit things in this schema
-       * if necessary.
+       * located. Graphile Worker will create or edit things in this schema as
+       * necessary.
        *
        * @defaultValue `graphile_worker`
        */
@@ -101,7 +101,7 @@ declare global {
        */
       crontabFile?: string;
       /**
-       * Number of jobs to run concurrently on a single worker.
+       * Number of jobs to run concurrently on a single Graphile Worker instance.
        *
        * @defaultValue `1`
        */
@@ -142,7 +142,7 @@ declare global {
       /**
        * **Experimental**
        *
-       * In milliseconds, the upper bound of how long Graphile Worker will wait
+       * The upper bound of how long (in milliseconds) Graphile Worker will wait
        * between scans for jobs that have been locked too long (see
        * `minResetLockedInterval`).
        *
@@ -152,10 +152,9 @@ declare global {
       /**
        * **Experimental**
        *
-       * The window size in milliseconds in which Graphile Worker batches calls for
-       * getting a queue name in a job. This batching is done for efficiency. Increase
-       * this window for greater efficiency. Reduce this window to reduce the
-       * latency for getting an individual queue name.
+       * The size, in milliseconds, of the time window over which Graphile Worker
+       * will batch requests to retrieve the queue name of a job. Increase the size
+       * of this window for greater efficiency, or reduce it to improve latency.
        *
        * @defaultValue `50`
        */
@@ -165,7 +164,10 @@ declare global {
        */
       logger?: Logger;
       /**
-       * A Node.js `EventEmitter` that exposes certain events within the runner.
+       * Provide your own Node.js `EventEmitter` in order to be able to receive events
+       * that occur during Graphile Worker's startup. (Without this, Worker will
+       * provision its own `EventEmitter`, but you can't retrieve it until the promise
+       * returned by the API you have called has resolved.)
        */
       events?: WorkerEvents;
     }
