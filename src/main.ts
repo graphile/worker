@@ -34,7 +34,7 @@ import { Logger } from "./logger";
 import SIGNALS, { Signal } from "./signals";
 import { completeJobs as baseCompleteJobs } from "./sql/completeJobs";
 import { failJob as baseFailJob, failJobs } from "./sql/failJob";
-import { getJob as baseGetJob } from "./sql/getJob";
+import { getJobs as baseGetJobs } from "./sql/getJobs";
 import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
 
@@ -1181,7 +1181,7 @@ export function _runTaskList(
         if (!workerPool._active) {
           return undefined;
         }
-        const jobs = await baseGetJob(
+        const jobs = await baseGetJobs(
           compiledSharedOptions,
           withPgClient,
           tasks,

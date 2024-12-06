@@ -11,7 +11,7 @@ import { MINUTE, SECOND } from "./cronConstants";
 import defer, { Deferred } from "./deferred";
 import { GetJobFunction, Job, TaskList, WorkerPool } from "./interfaces";
 import { coerceError } from "./lib";
-import { getJob as baseGetJob } from "./sql/getJob";
+import { getJobs as baseGetJobs } from "./sql/getJobs";
 import { returnJobs } from "./sql/returnJobs";
 
 const { STARTING, POLLING, WAITING, TTL_EXPIRED, RELEASED } = LocalQueueModes;
@@ -413,7 +413,7 @@ export class LocalQueue {
       this.refetchDelayCounter = 0;
 
       // The ONLY await in this function.
-      const jobs = await baseGetJob(
+      const jobs = await baseGetJobs(
         this.compiledSharedOptions,
         this.withPgClient,
         this.tasks,
@@ -588,7 +588,7 @@ export class LocalQueue {
 
     // Cannot batch if there's flags
     if (flagsToSkip !== null) {
-      const jobsPromise = baseGetJob(
+      const jobsPromise = baseGetJobs(
         this.compiledSharedOptions,
         this.withPgClient,
         this.tasks,
