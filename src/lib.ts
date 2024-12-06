@@ -5,7 +5,7 @@ import {
   AsyncHooks,
   Middleware,
   orderedApply,
-  resolvePresets,
+  resolvePreset,
 } from "graphile-config";
 import { Client, Pool, PoolClient, PoolConfig } from "pg";
 
@@ -204,11 +204,13 @@ export function processSharedOptions<
     | CompiledSharedOptions<T>
     | undefined;
   if (!compiled) {
-    const resolvedPreset = resolvePresets([
-      WorkerPreset,
-      // Explicit options override the preset
-      legacyOptionsToPreset(options),
-    ]) as ResolvedWorkerPreset;
+    const resolvedPreset = resolvePreset({
+      extends: [
+        WorkerPreset,
+        // Explicit options override the preset
+        legacyOptionsToPreset(options),
+      ],
+    }) as ResolvedWorkerPreset;
 
     const middleware = new Middleware<GraphileConfig.WorkerMiddleware>();
 

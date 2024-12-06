@@ -1,8 +1,6 @@
 import { cosmiconfigSync } from "cosmiconfig";
-import EventEmitter from "events";
 
 import { MINUTE, SECOND } from "./cronConstants";
-import type { WorkerEvents } from "./interfaces";
 import { defaultLogger } from "./logger";
 
 const cosmiconfigResult = cosmiconfigSync("graphile-worker").search();
