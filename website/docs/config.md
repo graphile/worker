@@ -3,23 +3,36 @@ title: Configuration
 sidebar_position: 41
 ---
 
-## Configuration in CLI Mode
+## Preset
 
-Graphile Worker in CLI mode does not require a configuration file, but you may
-find that having a configuration file means you don't have to remember all the
-CLI flags each time you run it.
+Graphile Worker's most common options can be configured via a "Graphile Config
+preset". A preset is a JavaScript object containing keys such as `extends` (to
+merge in other presets) and `plugins` (to add plugins). In the case of Graphile
+Worker, a preset also contains the `worker` key which contains settings specific
+to Graphile Worker.
 
-Graphile Worker is configured via a "Graphile Config preset". A preset is a POJO
-(plain old JavaScript object) containing keys such as `extends` (to merge in
-extra presets) and `plugins` (to add plugins). In the case of Graphile Worker, a
-preset POJO also contains the `worker` key which contains Graphile Worker
-settings. In CLI mode, the preset should be the default export of a
+Graphile Worker does not require a dedicated configuration file, but using one
+gives a number of advantages:
+
+- share configuration between library and CLI modes easily
+- share common options between multiple differently configured instances
+- use tooling such as the `graphile` command that uses the configuration file
+  - `graphile config print` prints out your resolved configuration nicely
+    formatted
+  - `graphile config options` details the options that are available for
+    configuration based on the plugins and presets you are using
+- you don't have to remember all the flags each time you run the CLI
+
+We therefore recommend that the preset be the default export of a
 `graphile.config.js` (or `.ts`, `.mjs`, etc.) file.
 
 Here's an example in JavaScript:
 
 ```ts title="graphile.config.js"
+const { WorkerPreset } = require("graphile-worker");
+
 module.exports = {
+  extends: [WorkerPreset],
   worker: {
     connectionString: process.env.DATABASE_URL,
     maxPoolSize: 10,
@@ -36,9 +49,10 @@ module.exports = {
 And an equivalent configuration in TypeScript:
 
 ```ts title="graphile.config.ts"
-import type {} from "graphile-worker";
+import { WorkerPreset } from "graphile-worker";
 
 const preset: GraphileConfig.Preset = {
+  extends: [WorkerPreset],
   worker: {
     connectionString: process.env.DATABASE_URL,
     maxPoolSize: 10,
@@ -54,53 +68,29 @@ const preset: GraphileConfig.Preset = {
 export default preset;
 ```
 
+## CLI mode
+
 The CLI extends the default
 [Worker Preset](https://github.com/graphile/worker/blob/main/src/preset.ts) with
 the preset you provide via a config file, and then further extends it with the
 configuration specified via CLI flags. Thus, CLI flags take precedence over the
 config file preset, which takes precedence over the default Worker Preset.
 
-:::info
-
-Adding the import statement tells TypeScript about the `GraphileConfig` global
-namespace and the properties that
-[Graphile Worker adds](https://github.com/graphile/worker/blob/c70e9db03f6ad292dcdb833714741363bd78937d/src/index.ts#L158)
-to the `Preset` interface. No code from the `graphile-worker` or
-`graphile-config` libraries will be included in the output JavaScript for
-`graphile.config.ts` above. See the TypeScript docs for more info about
-[declaration merging](https://www.typescriptlang.org/docs/handbook/declaration-merging.html)
-and
-[type-only imports](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-8.html#type-only-imports-and-export).
-
-:::
-
-## Configuration in Library Mode
+## Library mode
 
 Many functions exported from the Graphile Worker library accept a Graphile
-Config preset.
+Config preset, including `run()`, `runMigrations()`, `runOnce()`,
+`makeWorkerUtils()`, `quickAddJob()`, and more.
 
-```ts
-const runner = await run({
-  taskDirectory: `${__dirname}/tasks`,
-  preset: {
-    worker: {
-      connectionString: "postgres:///my_db",
-      concurrentJobs: 5,
-    },
-  },
-});
-```
-
-`runMigrations()`, `runOnce()`, `makeWorkerUtils()`, `quickAddJob()`, and more
-functions accept a preset similar to `run()`.
+### Option precedence
 
 We are in the process of transitioning library mode configuration to be done
 primarily with Graphile Config presets. For now, there is overlap between what
 can be configured via the preset and via the direct properties of the options
-object. If a setting is in both the direct property of the options object and in
-the preset, the direct property of the options object takes precedence. In the
-following example, Graphile Worker will use the `postgres:///my_db` connection
-string and will set `concurrency`/`concurrentJobs` to 2.
+object. If a setting is provided by both, the direct property of the options
+object takes precedence over the setting from the preset. In the following
+example, Graphile Worker will use the `postgres:///my_db` connection string and
+will set `concurrency`/`concurrentJobs` to 2.
 
 ```ts
 const runner = await runOnce({
@@ -119,35 +109,32 @@ const runner = await runOnce({
 });
 ```
 
-If you have a TypeScript project that uses Graphile Worker in library mode, we
-recommend putting your custom Graphile Config preset in a `graphile.config.ts`
-file and importing your custom preset wherever you call the Graphile Worker
-library. This allows you to use the `graphile config options` command to show
-you details about your specific preset.
+### Using a configuration file
+
+Though you can define presets inline like above, we strongly advise that you
+keep your configuration in a `graphile.config.js` (or `.ts`, `.mjs`, etc) file
+for the reasons explained [in Preset above](#preset).
 
 ```ts title="graphile.config.ts"
 import { WorkerPreset } from "graphile-worker";
 
-const MyPreset: GraphileConfig.Preset = {
+const preset: GraphileConfig.Preset = {
   extends: [WorkerPreset],
   worker: {
+    taskDirectory: `${__dirname}/tasks`,
     connectionString: "postgres:///my_db",
   },
 };
 
-export default MyPreset;
+export default preset;
 ```
 
 ```ts title="index.ts"
 import { run } from "graphile-worker";
-import MyPreset from "./graphile.config";
+import preset from "./graphile.config";
 
 async function main() {
-  const runner = await run({
-    taskDirectory: `${__dirname}/tasks`,
-    preset: MyPreset,
-  });
-
+  const runner = await run({ preset });
   await runner.promise;
 }
 
