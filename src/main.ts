@@ -32,7 +32,7 @@ import {
 import { LocalQueue } from "./localQueue";
 import { Logger } from "./logger";
 import SIGNALS, { Signal } from "./signals";
-import { completeJob as baseCompleteJob } from "./sql/completeJob";
+import { completeJobs as baseCompleteJobs } from "./sql/completeJobs";
 import { failJob as baseFailJob, failJobs } from "./sql/failJob";
 import { getJob as baseGetJob } from "./sql/getJob";
 import { resetLockedAt } from "./sql/resetLockedAt";
@@ -1197,7 +1197,7 @@ export function _runTaskList(
       ? batch(
           completeJobBatchDelay,
           (jobs) =>
-            baseCompleteJob(
+            baseCompleteJobs(
               compiledSharedOptions,
               withPgClient,
               workerPool.id,
@@ -1221,7 +1221,7 @@ export function _runTaskList(
       : {
           release: null,
           fn: (job) =>
-            baseCompleteJob(
+            baseCompleteJobs(
               compiledSharedOptions,
               withPgClient,
               workerPool.id,

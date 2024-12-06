@@ -3,7 +3,7 @@ import { CompiledSharedOptions } from "../lib";
 
 const manualPrepare = false;
 
-export async function completeJob(
+export async function completeJobs(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: EnhancedWithPgClient,
   poolId: string,
