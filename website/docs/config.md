@@ -104,8 +104,7 @@ Number of jobs to run concurrently.
 
 Type: `string | undefined`
 
-Database
-[connection string](https://worker.graphile.org/docs/connection-string).
+Database [connection string](/docs/connection-string).
 
 ### worker.crontabFile
 
@@ -118,7 +117,7 @@ Override path to crontab file.
 Type: `WorkerEvents | undefined`
 
 A Node.js `EventEmitter` that exposes certain events within the runner (see
-[`WorkerEvents`](https://worker.graphile.org/docs/worker-events)).
+[`WorkerEvents`](/docs/worker-events)).
 
 ### worker.fileExtensions
 

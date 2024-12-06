@@ -39,7 +39,10 @@ const i = output.stdout.indexOf(SEARCH);
 if (i < 0) {
   throw new Error("Worker heading not found!");
 }
-const optionsMd = output.stdout.slice(i + SEARCH.length).trim();
+const optionsMd = output.stdout
+  .slice(i + SEARCH.length)
+  .trim()
+  .replace(/\(https:\/\/worker\.graphile\.org\//g, "(/");
 
 // Load the config.md doc file and replace the part between the comment tags
 const configMd = await fs.readFile("website/docs/config.md", "utf8");
