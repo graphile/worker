@@ -58,13 +58,19 @@ declare global {
   namespace GraphileConfig {
     interface WorkerOptions {
       /**
-       * Database connection string.
+       * Database [connection string](https://worker.graphile.org/docs/connection-string).
        *
        * @defaultValue `process.env.DATABASE_URL`
        */
       connectionString?: string;
       /**
-       * Maximum number of concurrent connections to Postgres
+       * Maximum number of concurrent connections to Postgres; must be at least
+       * `2`. This number can be lower than `concurrentJobs`, however a low
+       * pool size may cause issues - if all your pool clients are busy then no
+       * jobs can be started or released. If in doubt, we recommend setting it
+       * to `10` or `concurrentJobs + 2`, whichever is larger. (Note: if your
+       * task executors use this pool, then an even larger value may be needed
+       * for optimum performance, depending on the shape of your logic.)
        *
        * @defaultValue `10`
        */
@@ -153,6 +159,11 @@ declare global {
        */
       logger?: Logger;
 
+      /**
+       * A Node.js `EventEmitter` that exposes certain events within the runner
+       * (see
+       * [`WorkerEvents`](https://worker.graphile.org/docs/worker-events)).
+       */
       events?: WorkerEvents;
     }
     interface Preset {
