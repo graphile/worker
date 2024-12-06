@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import type { EventEmitter } from "events";
 import type { Stats } from "fs";
-import { AsyncHooks } from "graphile-config";
+import { AsyncHooks, Middleware } from "graphile-config";
 import type {
   Notification,
   Pool,
@@ -15,6 +15,7 @@ import type {
   Release,
   ResolvedWorkerPreset,
 } from "./lib";
+import { LocalQueue } from "./localQueue";
 import type { Logger } from "./logger";
 import type { Signal } from "./signals";
 
@@ -515,10 +516,14 @@ export interface Worker {
 
 export interface WorkerPool {
   id: string;
+  /** Encourage `n` workers to look for jobs _right now_, cancelling the delay timers. */
+  nudge(n: number): void;
   /** @deprecated Use gracefulShutdown instead */
-  release: () => Promise<void>;
-  gracefulShutdown: (message?: string) => Promise<void>;
-  forcefulShutdown: (message: string) => Promise<void>;
+  release: () => PromiseOrDirect<void>;
+  gracefulShutdown: (message?: string) => PromiseOrDirect<void>;
+  forcefulShutdown: (message: string) => PromiseOrDirect<{
+    forceFailedJobs: readonly Job[];
+  }>;
   promise: Promise<void>;
   /** Fires 'abort' when all running jobs should stop because worker is shutting down. @experimental */
   abortSignal: AbortSignal;
@@ -526,6 +531,8 @@ export interface WorkerPool {
   abortPromise: Promise<void>;
   /** @internal */
   _shuttingDown: boolean;
+  /** @internal */
+  _forcefulShuttingDown: boolean;
   /** @internal */
   _active: boolean;
   /** @internal */
@@ -933,6 +940,15 @@ export type WorkerEventMap = {
   };
 
   /**
+   * When a worker pool fails to complete/fail a job
+   */
+  "pool:fatalError": {
+    workerPool: WorkerPool;
+    error: unknown;
+    action: string;
+  };
+
+  /**
    * When a worker pool is released
    */
   "pool:release": {
@@ -1009,6 +1025,73 @@ export type WorkerEventMap = {
     /** @deprecated Use workerPool for consistency */
     pool: WorkerPool;
     workerPool: WorkerPool;
+  };
+
+  /**
+   * When a local queue is created
+   */
+  "localQueue:init": {
+    localQueue: LocalQueue;
+  };
+
+  /**
+   * When a local queue enters 'polling' mode
+   */
+  "localQueue:setMode": {
+    localQueue: LocalQueue;
+    oldMode: LocalQueueMode;
+    newMode: Exclude<LocalQueueMode, typeof LocalQueueModes.STARTING>;
+  };
+
+  /**
+   * Too few jobs were fetched from the DB, so the local queue is going to
+   * sleep.
+   */
+  "localQueue:refetchDelay:start": {
+    localQueue: LocalQueue;
+    /** The number of jobs that were fetched */
+    jobCount: number;
+    /** We needed this number or fewer jobs to trigger */
+    threshold: number;
+    /** How long we should delay for */
+    delayMs: number;
+    /** If we receive this number of nudges, we will abort the delay */
+    abortThreshold: number;
+  };
+
+  /**
+   * Too many nudges happened whilst the local queue was asleep, and it has
+   * been awoken early to deal with the rush!
+   */
+  "localQueue:refetchDelay:abort": {
+    localQueue: LocalQueue;
+    /** How many nudges did we receive during the delay */
+    count: number;
+    /** How many nudges did we need to receive for the abort */
+    abortThreshold: number;
+  };
+
+  /**
+   * The refetchDelay terminated normally.
+   */
+  "localQueue:refetchDelay:expired": {
+    localQueue: LocalQueue;
+  };
+
+  /**
+   * The refetchDelay terminated normally.
+   */
+  "localQueue:getJobs:complete": {
+    localQueue: LocalQueue;
+    jobs: Job[];
+  };
+
+  /**
+   * The refetchDelay terminated normally.
+   */
+  "localQueue:returnJobs": {
+    localQueue: LocalQueue;
+    jobs: Job[];
   };
 
   /**
@@ -1225,20 +1308,40 @@ export interface FileDetails {
 
 export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
 
-export interface WorkerPluginContext {
+// The options available before we connect to the database
+export interface WorkerPluginBaseContext {
   version: string;
-  maxMigrationNumber: number;
-  breakingMigrationNumbers: number[];
-  events: WorkerEvents;
-  logger: Logger;
+  resolvedPreset: ResolvedWorkerPreset;
   workerSchema: string;
   escapedWorkerSchema: string;
-  /** @internal */
-  _rawOptions: SharedOptions;
+  events: WorkerEvents;
+  logger: Logger;
+}
+// Once we've connected to the DB, we know more
+export interface WorkerPluginContext extends WorkerPluginBaseContext {
   hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
-  resolvedPreset: ResolvedWorkerPreset;
+  middleware: Middleware<GraphileConfig.WorkerMiddleware>;
+  maxMigrationNumber: number;
+  breakingMigrationNumbers: number[];
 }
 export type GetJobFunction = (
   workerId: string,
   flagsToSkip: string[] | null,
-) => Promise<Job | undefined>;
+) => PromiseOrDirect<Job | undefined>;
+
+export type CompleteJobFunction = (job: DbJob) => void;
+export type FailJobFunction = (spec: {
+  job: DbJob;
+  message: string;
+  replacementPayload: undefined | unknown[];
+}) => void;
+
+export const LocalQueueModes = {
+  STARTING: "STARTING",
+  POLLING: "POLLING",
+  WAITING: "WAITING",
+  TTL_EXPIRED: "TTL_EXPIRED",
+  RELEASED: "RELEASED",
+} as const;
+
+export type LocalQueueMode = keyof typeof LocalQueueModes;

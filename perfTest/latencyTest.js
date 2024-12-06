@@ -9,10 +9,7 @@ const preset = require("./graphile.config.js");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** @type {import('../dist/index.js').WorkerPoolOptions} */
-const options = {
-  concurrency: 1,
-  preset,
-};
+const options = { preset };
 
 async function main() {
   const pgPool = new Pool({ connectionString: process.env.PERF_DATABASE_URL });

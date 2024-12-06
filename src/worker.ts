@@ -4,7 +4,9 @@ import { randomBytes } from "crypto";
 import deferred from "./deferred";
 import { makeJobHelpers } from "./helpers";
 import {
+  CompleteJobFunction,
   EnhancedWithPgClient,
+  FailJobFunction,
   GetJobFunction,
   Job,
   PromiseOrDirect,
@@ -14,8 +16,6 @@ import {
   WorkerSharedOptions,
 } from "./interfaces";
 import { coerceError, CompiledSharedOptions } from "./lib";
-import { completeJob } from "./sql/completeJob";
-import { failJob } from "./sql/failJob";
 
 const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
 
@@ -31,6 +31,8 @@ export function makeNewWorker(
     autostart?: boolean;
     workerId?: string;
     getJob: GetJobFunction;
+    completeJob: CompleteJobFunction;
+    failJob: FailJobFunction;
   },
 ): Worker {
   const {
@@ -43,6 +45,8 @@ export function makeNewWorker(
     autostart = true,
     workerId = `worker-${randomBytes(9).toString("hex")}`,
     getJob,
+    completeJob,
+    failJob,
   } = params;
   const {
     events,
@@ -342,17 +346,15 @@ export function makeNewWorker(
           }`,
           { failure: true, job, error: err, duration },
         );
-        await failJob(
-          compiledSharedOptions,
-          withPgClient,
-          workerPool.id,
+        failJob({
           job,
           message,
           // "Batch jobs": copy through only the unsuccessful parts of the payload
-          batchJobFailedPayloads.length > 0
-            ? batchJobFailedPayloads
-            : undefined,
-        );
+          replacementPayload:
+            batchJobFailedPayloads.length > 0
+              ? batchJobFailedPayloads
+              : undefined,
+        });
       } else {
         try {
           events.emit("job:success", { worker, job });
@@ -374,12 +376,7 @@ export function makeNewWorker(
           );
         }
 
-        await completeJob(
-          compiledSharedOptions,
-          withPgClient,
-          workerPool.id,
-          job,
-        );
+        completeJob(job);
       }
       events.emit("job:complete", { worker, job, error: err });
     } catch (fatalError) {

@@ -1,6 +1,8 @@
 import { cosmiconfigSync } from "cosmiconfig";
+import EventEmitter from "events";
 
 import { MINUTE, SECOND } from "./cronConstants";
+import type { WorkerEvents } from "./interfaces";
 import { defaultLogger } from "./logger";
 
 const cosmiconfigResult = cosmiconfigSync("graphile-worker").search();
@@ -34,6 +36,7 @@ export const makeWorkerPresetWorkerOptions = () =>
     maxResetLockedInterval: 10 * MINUTE,
     gracefulShutdownAbortTimeout: 5 * SECOND,
     useNodeTime: false,
+    events: new EventEmitter() as WorkerEvents,
   } satisfies GraphileConfig.WorkerOptions);
 
 function enforceStringOrUndefined(
