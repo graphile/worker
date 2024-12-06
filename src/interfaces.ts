@@ -134,7 +134,7 @@ export type AddJobsFunction = <TSpecs extends readonly AddJobsJobSpec[]>(
 
 export interface Helpers {
   /**
-   * A Logger instance.
+   * A `Logger` instance.
    */
   logger: Logger;
 
@@ -145,30 +145,30 @@ export interface Helpers {
   withPgClient: WithPgClient;
 
   /**
-   * Adds a job into our queue.
+   * Adds a job into the Graphile Worker queue.
    */
   addJob: AddJobFunction;
 
   /**
-   * Adds multiple jobs into our queue.
+   * Adds multiple jobs into the Graphile Worker queue.
    */
   addJobs: AddJobsFunction;
 }
 
 export interface JobHelpers extends Helpers {
   /**
-   * A Logger instance, scoped to this job.
+   * A `Logger` instance, scoped to this job.
    */
   logger: Logger;
 
   /**
-   * The currently executing job.
+   * The whole, currently executing job.
    */
   job: Job;
 
   /**
-   * Get the queue name of the give queue ID (or the currently executing job if
-   * no queue id is specified).
+   * Get the queue name of the given queue ID (or of the currently executing job
+   * if no queue ID is specified).
    */
   getQueueName(queueId?: number | null): PromiseOrDirect<string | null>;
 
@@ -181,7 +181,8 @@ export interface JobHelpers extends Helpers {
   ): Promise<QueryResult<R>>;
 
   /**
-   * An AbortSignal that will be triggered when the job should exit.
+   * A Node `AbortSignal` that will be triggered when the job should exit. It is
+   * used, for example, for a graceful shutdown request.
    *
    * @experimental
    */

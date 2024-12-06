@@ -87,7 +87,7 @@ the extension) joined with `/` characters:
 How the file is loaded as a task executor will depend on the specific file and
 the plugins you have loaded.
 
-## Loading JavaScript task executors
+## Loading JavaScript files
 
 With the default preset, Graphile Worker will load `.js`, `.cjs` and `.mjs`
 files as task executors using the `import()` function. If the file is a CommonJS
@@ -100,7 +100,7 @@ at the source code of
 [`LoadTaskFromJsPlugin.ts`](https://github.com/graphile/worker/blob/main/src/plugins/LoadTaskFromJsPlugin.ts)
 for inspiration.
 
-### Loading TypeScript task executors
+### Loading TypeScript files
 
 :::tip
 
@@ -154,9 +154,9 @@ Worker will see this as success. All other exit codes are seen as failure.
 ### Environment variables
 
 - `GRAPHILE_WORKER_PAYLOAD_FORMAT` &mdash; the encoding that Graphile Worker
-  used to pass the payload to the binary. Currently this will always be the
-  string `json`, but you should check this before processing the payload in case
-  the format changes.
+  used to pass the payload to the binary. Currently this will be the string
+  `json`, but you should check this before processing the payload in case the
+  format changes.
 - `GRAPHILE_WORKER_TASK_IDENTIFIER` &mdash; the identifier for the task this
   file represents (useful if you want multiple task identifiers to be served by
   the same binary file, e.g. via symlinks)
@@ -191,15 +191,19 @@ promises &mdash; i.e. the successful entries will be removed.
 
 ### `helpers.abortPromise`
 
+**Experimental**
+
 This is a promise that will reject when [`abortSignal`](#helpersabortsignal)
 aborts. This makes it convenient for exiting your task when the abortSignal
 fires: `Promise.race([abortPromise, doYourAsyncThing()])`.
 
 ### `helpers.abortSignal`
 
-This is a Node `AbortSignal`. Use this to be notified that you should abort your
-task early due to a graceful shutdown request. `AbortSignal`s can be passed to a
-number of asynchronous Node.js methods like
+**Experimental**
+
+This is a Node `AbortSignal` that will be triggered when the job should exit
+early. It is used, for example, for a graceful shutdown request. `AbortSignal`s
+can be passed to a number of asynchronous Node.js methods like
 [`http.request()`](https://nodejs.org/api/http.html#httprequesturl-options-callback).
 
 ### `helpers.addJob()`
@@ -212,17 +216,17 @@ See [`addJobs`](/library/add-job.md#add-jobs).
 
 ### `helpers.getQueueName()`
 
-Get the name of the queue the job is in, or the queue name of the provided queue
-ID. This function may or may not return a promise. We recommend that you always
-`await` it.
+Get the queue name of the given queue ID (or of the currently executing job if
+no queue ID is specified). This function may or may not return a promise. We
+recommend that you always `await` it.
 
 ### `helpers.job`
 
-The whole job, including `uuid`, `attempts`, etc.
+The whole, currently executing job, including `uuid`, `attempts`, etc.
 
 ### `helpers.logger`
 
-See [Logger](./library/logger)
+A logger instance scoped to this job. See [Logger](./library/logger)
 
 ### `helpers.query()`
 
