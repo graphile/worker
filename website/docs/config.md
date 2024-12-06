@@ -163,6 +163,7 @@ Here are the options under the `worker` key as defined by
   crontabFile?: string;
   events?: WorkerEvents;
   fileExtensions?: string[];
+  getQueueNameBatchDelay?: number;
   gracefulShutdownAbortTimeout?: number;
   logger?: Logger<{}>;
   maxPoolSize?: number;
@@ -186,7 +187,7 @@ Number of jobs to run concurrently on a single worker. Defaults to `1`.
 
 Type: `string | undefined`
 
-Database [connection string](./connection-string.md).
+Database [connection string](/docs/connection-string).
 
 ### worker.crontabFile
 
@@ -221,6 +222,16 @@ The window size in milliseconds in which Graphile Worker batches calls for
 getting a queue name in a job. This batching is done for efficiency. Increase
 this window for greater efficiency. Reduce this window to reduce the latency for
 getting an individual queue name. Defaults to `50`.
+
+### worker.getQueueNameBatchDelay
+
+Type: `number | undefined`
+
+**Experimental**
+
+When getting a queue name in a job, we batch calls for efficiency. By default we
+do this over a 50ms window; increase this for greater efficiency, reduce this to
+reduce the latency for getting an individual queue name.
 
 ### worker.gracefulShutdownAbortTimeout
 
