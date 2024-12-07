@@ -118,9 +118,10 @@ one way is to do the following:
    `NODE_OPTIONS="--loader ts-node/esm"` set.
 
 ```ts title="Example graphile.config.ts"
-import type {} from "graphile-worker";
+import { WorkerPreset } from "graphile-worker";
 
 const preset: GraphileConfig.Preset = {
+  extends: [WorkerPreset],
   worker: {
     connectionString: process.env.DATABASE_URL,
     concurrentJobs: 5,
