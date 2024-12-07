@@ -55,12 +55,14 @@ const { STARTING, POLLING, WAITING, TTL_EXPIRED, RELEASED } = LocalQueueModes;
  *
  * When jobs are fetched:
  *
- * - if no jobs were returned then it will wait `pollInterval` ms and then
- *   fetch again.
  * - if fewer than `Math.ceil(Math.min(localQueueRefetchDelay.threshold, localQueueSize))`
  *   jobs were returned then a refetch delay will be set (if configured).
- * - if jobs are returned from a POLLING mode fetch then the queue immediately
- *   enters WAITING mode.
+ * - if jobs were returned then it will supply as many as possible to any
+ *   waiting workers (`workerQueue`)
+ * - if all workers are busy and jobs still remain it will store them to
+ *   `jobQueue` and immediately enter WAITING mode
+ * - otherwise (if no jobs remain: `jobQueue` is empty) we'll wait
+ *   `pollInterval` ms and then fetch again.
  *
  * When a "new job" notification is received, once any required refetch delay
  * has expired (or immediately if it has already expired) the timer will be
@@ -96,30 +98,123 @@ const { STARTING, POLLING, WAITING, TTL_EXPIRED, RELEASED } = LocalQueueModes;
  *
  * Triggered on shutdown.
  */
-
 export class LocalQueue {
+  /**
+   * The configured time (in milliseconds) that a job may sit unclaimed in the
+   * local queue before being returned to the database.
+   */
   readonly ttl: number;
+
+  /**
+   * The time interval (in milliseconds) between fetch requests when in
+   * `POLLING` mode.
+   */
   readonly pollInterval: number;
+
+  /**
+   * The jobs that have been pulled from the database that are waiting for a
+   * worker to claim them. Once claimed, a job will be removed from this list.
+   * This should be empty in POLLING and TTL_EXPIRED modes.
+   */
+
   readonly jobQueue: Job[] = [];
+  /**
+   * Workers waiting for jobs are represented by deferred promises in this
+   * list. When a job becomes available, first it attempts to satisfy one of
+   * these from the workerQueue, and only if this is empty does it then add the
+   * job to the `jobQueue`.
+   */
   readonly workerQueue: Deferred<Job>[] = [];
+
+  /**
+   * Are we currently fetching jobs from the DB? Prevents double-fetches.
+   */
   fetchInProgress = false;
+
+  /**
+   * When we enter WAITING mode (i.e. there are jobs in `jobQueue`), we set up
+   * this timer. When the timer fires, we will release any remaining jobs in
+   * jobQueue back to the database (and enter TTL_EXPIRED mode). Note: all jobs
+   * are fetched at once, and no further jobs are fetched, so the TTL for all
+   * jobs will expire at the same time - we'll only return to POLLING mode once
+   * all jobs have been executed.
+   */
   ttlExpiredTimer: NodeJS.Timeout | null = null;
+
+  /**
+   * The timer associated with the next fetch poll (see also `pollInterval`).
+   */
   fetchTimer: NodeJS.Timeout | null = null;
-  // Set true to fetch immediately after a fetch completes; typically only used
-  // when the queue is pulsed during a fetch.
+
+  /**
+   * Should we fetch again once the current fetch is complete? This is
+   * generally used to indicate that we received a "new job" notification (the
+   * queue is "pulsed") whilst we were already fetching, so our fetch may not
+   * have included that job.
+   */
   fetchAgain = false;
+
+  /**
+   * The mode that the queue is in; must only be changed via `setMode`, which
+   * itself must only be called by the `setMode*()` methods.
+   */
   public readonly mode: LocalQueueMode = STARTING;
-  /** The promise that resolves/rejects when the queue is disposed of */
+
+  /**
+   * The promise that resolves/rejects when the local queue has been released.
+   * Will not resolve until all locally queued jobs have been returned to the
+   * pool (or may reject if this process fails) and all active fetches and
+   * other background tasks are complete. This is important, otherwise we might
+   * release the pg.Pool that we're using before jobs are returned to the
+   * database, which would be something we couldn't recover from!
+   *
+   * If it rejects, may reject with a regular Error or an AggregateError
+   * representing multiple failures.
+   */
   private _finPromise = defer();
+
+  /**
+   * Errors that occurred causing the shutdown or during the shutdown of this
+   * local queue instance.
+   */
   private errors: Error[] = [];
-  /** A count of the number of "background" processes such as fetching or returning jobs */
+
+  /**
+   * A count of the number of "background" processes such as fetching or
+   * returning jobs such that we can avoid exiting until all background tasks
+   * have completed.
+   */
   private backgroundCount = 0;
 
-  /** If `localQueueRefetchDelay` is configured; set this true if the fetch resulted in a queue size lower than the threshold. */
+  /**
+   * If `localQueueRefetchDelay` is configured; set this true if the fetch
+   * resulted in a queue size lower than the threshold.
+   */
   private refetchDelayActive = false;
+
+  /**
+   * If true, when the refetch delay expires in POLLING mode (or when we next
+   * enter POLLING mode after it expires), immediately trigger a fetch. If
+   * false, just wait for the regular POLLING timeouts.
+   */
   private refetchDelayFetchOnComplete = false;
+
+  /** The timer tracking when the refetch delay has expired. */
   private refetchDelayTimer: NodeJS.Timeout | null = null;
+
+  /**
+   * The number of new jobs received during the fetch or the resulting refetch
+   * delay; see also `refetchDelayAbortThreshold`.
+   */
   private refetchDelayCounter: number = 0;
+
+  /**
+   * A random number between 0 and either
+   * `preset.worker.localQueue.refetchDelay.maxAbortThreshold` or
+   * `5*preset.worker.localQueue.size`; when we've been informed of this many
+   * jobs via pulse(), we must abort the refetch delay and trigger an immediate
+   * fetch.
+   */
   private refetchDelayAbortThreshold: number = Infinity;
 
   constructor(
@@ -127,7 +222,12 @@ export class LocalQueue {
     private readonly tasks: TaskList,
     private readonly withPgClient: EnhancedWithPgClient,
     public readonly workerPool: WorkerPool,
+    /** How many jobs to fetch at once */
     private readonly getJobBatchSize: number,
+    /**
+     * If false, exit once the DB seems to have been exhausted of jobs, even if
+     * for just a moment. (I.e. `runOnce()`)
+     */
     private readonly continuous: boolean,
   ) {
     this.ttl =
@@ -148,9 +248,13 @@ export class LocalQueue {
     compiledSharedOptions.events.emit("localQueue:init", {
       localQueue: this,
     });
+    // Immediately enter polling mode.
     this.setModePolling();
   }
 
+  /**
+   * Only call this from `setMode*()` helpers.
+   */
   private setMode(
     newMode: Exclude<LocalQueueMode, typeof LocalQueueModes.STARTING>,
   ) {
@@ -164,9 +268,15 @@ export class LocalQueue {
     });
   }
 
+  /**
+   * Called when the LocalQueue is completely finished and released: no
+   * background tasks, no jobs in job queue. Resolves (or rejects)
+   * `_finPromise`.
+   */
   private fin() {
     assert.equal(this.mode, "RELEASED");
     assert.equal(this.backgroundCount, 0);
+    assert.equal(this.jobQueue.length, 0);
     if (this.errors.length === 1) {
       this._finPromise.reject(this.errors[0]);
     } else if (this.errors.length > 1) {
@@ -191,15 +301,17 @@ export class LocalQueue {
         this.fin();
       }
     } else {
+      // If we're not shutting down, view this as a temporary error (but give
+      // Benjie a wrist slap anyway).
       this.compiledSharedOptions.logger.error(
-        `Backgrounding should never yield errors when the queue is not RELEASED`,
+        `GraphileWorkerInternalError<cd483429-3372-42f0-bcf6-c78e045c760d>: Backgrounding should never yield errors when the queue is not RELEASED`,
         { error: e },
       );
     }
   };
 
   /**
-   * For promises that happen in the background, but that we want to ensure are
+   * Track promises that happen in the background, but that we want to ensure are
    * handled before we release the queue (so that the database pool isn't
    * released too early).
    *
