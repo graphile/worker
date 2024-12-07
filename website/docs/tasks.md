@@ -244,8 +244,7 @@ This is a convenience wrapper for
 
 `withPgClient` gets a `pgClient` from the pool that Graphile Worker uses. It
 calls `await callback(pgClient)`, and finally releases the client and returns
-the result of `callback`. This workflow can make testing your tasks easier by
-making it easier to mock `pgClient`.
+the result of `callback`. This workflow can make testing your tasks easier.
 
 Example:
 
