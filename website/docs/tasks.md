@@ -151,6 +151,11 @@ the file with the relevant environment variables and pass in the payload
 according to the encoding. If the executable exits with code `0` then Graphile
 Worker will see this as success. All other exit codes are seen as failure.
 
+This feature is added via the
+[LoadTaskFromExecutableFilePlugin plugin](https://github.com/graphile/worker/blob/main/src/plugins/LoadTaskFromExecutableFilePlugin.ts)
+in the default
+[Worker Preset](https://github.com/graphile/worker/blob/main/src/preset.ts).
+
 ### Environment variables
 
 - `GRAPHILE_WORKER_PAYLOAD_FORMAT` &mdash; the encoding that Graphile Worker
@@ -201,9 +206,9 @@ fires: `Promise.race([abortPromise, doYourAsyncThing()])`.
 
 **Experimental**
 
-This is a Node `AbortSignal` that will be triggered when the job should exit
-early. It is used, for example, for a graceful shutdown request. `AbortSignal`s
-can be passed to a number of asynchronous Node.js methods like
+This is a `AbortSignal` that will be triggered when the job should exit early.
+It is used, for example, for a graceful shutdown request. `AbortSignal`s can be
+passed to a number of asynchronous Node.js methods like
 [`http.request()`](https://nodejs.org/api/http.html#httprequesturl-options-callback).
 
 ### `helpers.addJob()`
@@ -236,9 +241,10 @@ This is a convenience wrapper for
 
 ### `helpers.withPgClient()`
 
-`withPgClient` gets a `pgClient` from the pool, calls
-`await callback(pgClient)`, and finally releases the client and returns the
-result of `callback`. This workflow can make testing your tasks easier.
+`withPgClient` gets a `pgClient` from the pool that Graphile Worker uses. It
+calls `await callback(pgClient)`, and finally releases the client and returns
+the result of `callback`. This workflow can make testing your tasks easier by
+making it easier to mock `pgClient`.
 
 Example:
 

@@ -181,8 +181,8 @@ export interface JobHelpers extends Helpers {
   ): Promise<QueryResult<R>>;
 
   /**
-   * A Node `AbortSignal` that will be triggered when the job should exit. It is
-   * used, for example, for a graceful shutdown request.
+   * An `AbortSignal` that will be triggered when the job should exit. It is used,
+   * for example, for a graceful shutdown request.
    *
    * @experimental
    */
