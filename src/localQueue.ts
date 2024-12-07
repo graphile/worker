@@ -10,7 +10,7 @@ import {
 import { MINUTE, SECOND } from "./cronConstants";
 import defer, { Deferred } from "./deferred";
 import { GetJobFunction, Job, TaskList, WorkerPool } from "./interfaces";
-import { coerceError } from "./lib";
+import { coerceError, sleep } from "./lib";
 import { batchGetJobs } from "./sql/getJobs";
 import { returnJobs } from "./sql/returnJobs";
 
@@ -346,6 +346,7 @@ export class LocalQueue {
       "Cannot enter polling mode when job queue isn't empty",
     );
 
+    // There's no jobs, so there's no need for ttlExpired timer any more.
     if (this.ttlExpiredTimer) {
       clearTimeout(this.ttlExpiredTimer);
       this.ttlExpiredTimer = null;
@@ -353,12 +354,15 @@ export class LocalQueue {
 
     this.setMode(POLLING);
 
+    // This won't necessarily fetch, it will respect refetchDelay
     this.fetch();
   }
 
-  private setModeWaiting() {
-    // Can only enter WAITING mode from POLLING mode.
-    assert.equal(this.mode, POLLING);
+  private setModeWaiting(causedByErrorHandling = false) {
+    if (!causedByErrorHandling) {
+      // Can only enter WAITING mode from POLLING mode.
+      assert.equal(this.mode, POLLING);
+    }
     assert.ok(
       !this.fetchTimer,
       "Cannot enter waiting mode when a fetch is scheduled",
@@ -366,6 +370,11 @@ export class LocalQueue {
     assert.ok(
       !this.fetchInProgress,
       "Cannot enter waiting mode when fetch is in progress",
+    );
+    assert.equal(
+      this.workerQueue.length,
+      0,
+      "Cannot enter waiting mode when the worker queue is not empty",
     );
     assert.notEqual(
       this.jobQueue.length,
@@ -379,12 +388,10 @@ export class LocalQueue {
 
     this.setMode(WAITING);
 
-    this.ttlExpiredTimer = setTimeout(() => {
-      this.setModeTtlExpired();
-    }, this.ttl);
+    this.ttlExpiredTimer = setTimeout(this.setModeTtlExpired, this.ttl);
   }
 
-  private setModeTtlExpired() {
+  private setModeTtlExpired = () => {
     // Can only enter TTL_EXPIRED mode from WAITING mode.
     assert.equal(this.mode, WAITING);
     assert.ok(
@@ -410,7 +417,7 @@ export class LocalQueue {
 
     // Return jobs to the pool
     this.returnJobs();
-  }
+  };
 
   private returnJobs() {
     const l = this.jobQueue.length;
@@ -418,10 +425,80 @@ export class LocalQueue {
       return;
     }
     const jobsToReturn = this.jobQueue.splice(0, l);
+
     this.compiledSharedOptions.events.emit("localQueue:returnJobs", {
       localQueue: this,
       jobs: jobsToReturn,
     });
+
+    let attempts = 1;
+    let initialError: Error;
+    const MAX_ATTEMPTS = 20;
+    const onError = (e: unknown): void | Promise<void> => {
+      if (attempts === 1) {
+        initialError = coerceError(e);
+      }
+
+      this.compiledSharedOptions.logger.error(
+        `Failed to return jobs from local queue to database queue (attempt ${attempts}/${MAX_ATTEMPTS})`,
+        { error: e, attempts, maxAttempts: MAX_ATTEMPTS },
+      );
+
+      // NOTE: the mode now may not be the mode that we were in when
+      // returnJobs was called. An error happened... we need to deal with
+      // this error gracefully.
+      switch (this.mode) {
+        case "RELEASED": {
+          throw new Error(
+            `Error occurred whilst returning jobs from local queue to database queue: ${initialError.message}`,
+          );
+        }
+
+        // NOTE: considered doing `this.receivedJobs(jobsToReturn)`; but I
+        // simply trying to release them again seems safer and more correct.
+        default: {
+          if (attempts < MAX_ATTEMPTS) {
+            /** Minimum delay between attempts (milliseconds); can actually be half this due to jitter */
+            const minDelay = 200;
+            /** Maximum delay between attempts (milliseconds) - can actually be 1.5x this due to jitter */
+            const maxDelay = 30_000; // Maximum delay in milliseconds
+            /** `multiplier ^ attempts` */
+            const multiplier = 1.5;
+            /** Prevent the thundering herd problem by offsetting randomly */
+            const jitter = Math.random();
+            const delay =
+              Math.min(
+                minDelay * Math.pow(multiplier, attempts - 1),
+                maxDelay,
+              ) *
+              (0.5 + jitter);
+
+            // Be sure to increment attempts to avoid infinite loop!
+            ++attempts;
+            return sleep(delay).then(() =>
+              returnJobs(
+                this.compiledSharedOptions,
+                this.withPgClient,
+                this.workerPool.id,
+                jobsToReturn,
+              ).then(noop, onError),
+            );
+          } else {
+            // TODO: is this the correct way to handle this? Are we allowed to
+            // trigger shut down internally?
+            this.release();
+            // Now we're in release mode, throwing the error will be tracked
+            // automatically by `this.background()`
+            throw new Error(
+              `Error occurred whilst returning jobs from local queue to database queue; aborting after ${attempts} attempts. Initial error: ${initialError.message}`,
+            );
+          }
+        }
+      }
+    };
+
+    // NOTE: the `this.background` call covers all of the re-attempts via
+    // `onError` above, since `onError` returns the next promise each time.
     this.background(
       returnJobs(
         this.compiledSharedOptions,
@@ -429,23 +506,8 @@ export class LocalQueue {
         this.workerPool.id,
         jobsToReturn,
       ).then(
-        () => {},
-        (e) => {
-          if (this.mode === "RELEASED") {
-            throw new Error(
-              `Error occurred whilst returning jobs from local queue to database queue: ${
-                coerceError(e).message
-              }`,
-            );
-          } else {
-            // Return the jobs to the queue; MUST NOT HAPPEN IN RELEASED MODE.
-            this.receivedJobs(jobsToReturn);
-            this.compiledSharedOptions.logger.error(
-              `Failed to return jobs from local queue to database queue`,
-              { error: e },
-            );
-          }
-        },
+        noop, // No action necessary on success
+        onError,
       ),
     );
   }
@@ -799,3 +861,5 @@ export class LocalQueue {
     }
   }
 }
+
+function noop() {}
