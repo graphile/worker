@@ -129,8 +129,8 @@ declare global {
 
       /**
        * A list of file extensions (in priority order) that Graphile Worker
-       * should attempt to import directly when loading task executors from the
-       * file system.
+       * should attempt to import as Node modules when loading task executors from
+       * the file system.
        *
        * @defaultValue `[".js", ".cjs", ".mjs"]`
        */

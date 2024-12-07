@@ -177,6 +177,10 @@ Here are the options under the `worker` key as defined by
 }
 ```
 
+See the
+[Graphile Worker source](https://github.com/jcgsville/worker/blob/85c36ac4e684a3a782fc528dca95c8ba6177fa8a/src/config.ts#L13)
+for the default `worker` options set by the default Worker Preset.
+
 ### worker.concurrentJobs
 
 Type: `number | undefined`
@@ -211,7 +215,8 @@ resolved.)
 Type: `string[] | undefined`
 
 A list of file extensions (in priority order) that Graphile Worker should
-attempt to import directly when loading task executors from the file system.
+attempt to import as Node modules when loading task executors from the file
+system.
 
 ### worker.getQueueNameBatchDelay
 
