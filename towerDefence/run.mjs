@@ -55,6 +55,8 @@ const spawnOptions = {
 };
 
 const pgPool = new pg.Pool({ connectionString: process.env.PERF_DATABASE_URL });
+pgPool.on("error", () => {});
+pgPool.on("connect", (client) => void client.on("error", () => {}));
 
 const GENERAL_JOBS_PER_SECOND = 15000;
 const GENERAL_JOBS_PER_MILLISECOND = GENERAL_JOBS_PER_SECOND / 1000;
