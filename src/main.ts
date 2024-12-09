@@ -1292,7 +1292,7 @@ export function _runTaskList(
         }
   ) as { release: (() => void) | null; fn: FailJobFunction };
 
-  for (let i = 0; i < concurrency; i++) {
+  const createNewWorkerInPool = () => {
     const worker = makeNewWorker(compiledSharedOptions, {
       tasks,
       withPgClient,
@@ -1308,24 +1308,48 @@ export function _runTaskList(
     });
     workerPool._workers.push(worker);
     const remove = () => {
+      // Remove worker from the pool
+      workerPool._workers.splice(workerPool._workers.indexOf(worker), 1);
       if (continuous && workerPool._active && !workerPool._shuttingDown) {
-        // TODO: user should choose how to handle this, maybe via a middleware:
-        // - graceful shutdown (implemented)
-        // - forceful shutdown (probably best after a delay)
-        // - boot up a replacement worker
-        /* middleware.run("poolWorkerPrematureExit", {}, () => { */
         logger.error(
           `Worker exited, but pool is in continuous mode, is active, and is not shutting down... Did something go wrong?`,
         );
-        _finErrors.push(
-          new Error(`Worker ${worker.workerId} exited unexpectedly`),
-        );
-        workerPool.gracefulShutdown(
-          "Something went wrong, one of the workers exited prematurely. Shutting down.",
-        );
-        /* }) */
+        try {
+          let called = false;
+          const replaceWithNewWorker = () => {
+            if (called) {
+              // Ignore additional calls
+              return;
+            }
+            called = true;
+            createNewWorkerInPool();
+          };
+
+          // Allows user to choose how to handle this; for example:
+          // - graceful shutdown (default behavior)
+          // - forceful shutdown (probably best after a delay?)
+          // - boot up a replacement worker via `createNewWorker`
+          middleware.runSync(
+            "poolWorkerPrematureExit",
+            {
+              ctx: compiledSharedOptions,
+              workerPool,
+              worker,
+              replaceWithNewWorker,
+            },
+            () => {
+              throw new Error(`Worker ${worker.workerId} exited unexpectedly`);
+            },
+          );
+        } catch (e) {
+          if (!workerPool._shuttingDown) {
+            _finErrors.push(coerceError(e));
+            workerPool.gracefulShutdown(
+              "Something went wrong, one of the workers exited prematurely. Shutting down.",
+            );
+          }
+        }
       }
-      workerPool._workers.splice(workerPool._workers.indexOf(worker), 1);
       if (workerPool._workers.length === 0) {
         if (!workerPool._shuttingDown) {
           workerPool.gracefulShutdown(
@@ -1344,9 +1368,12 @@ export function _runTaskList(
         logger.error(`Worker exited with error: ${error}`, { error });
       },
     );
-  }
+    return worker;
+  };
 
-  // TODO: handle when a worker shuts down (spawn a new one)
+  for (let i = 0; i < concurrency; i++) {
+    createNewWorkerInPool();
+  }
 
   return workerPool;
 }

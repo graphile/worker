@@ -93,6 +93,13 @@ declare global {
       workerPool: WorkerPool;
       message: string;
     }
+
+    interface PoolWorkerPrematureExitEvent {
+      ctx: WorkerPluginContext;
+      workerPool: WorkerPool;
+      worker: Worker;
+      replaceWithNewWorker(): void;
+    }
   }
 
   namespace GraphileConfig {
@@ -363,6 +370,10 @@ declare global {
       poolForcefulShutdown(
         event: GraphileWorker.PoolForcefulShutdownEvent,
       ): ReturnType<WorkerPool["forcefulShutdown"]>;
+
+      poolWorkerPrematureExit(
+        event: GraphileWorker.PoolWorkerPrematureExitEvent,
+      ): void;
     }
 
     interface WorkerHooks {
