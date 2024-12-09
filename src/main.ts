@@ -557,6 +557,7 @@ export function _runTaskList(
     onTerminate?: () => Promise<void> | void;
   },
 ): WorkerPool {
+  const ctx = compiledSharedOptions;
   const {
     resolvedPreset: {
       worker: {
@@ -799,7 +800,7 @@ export function _runTaskList(
       workerPool._shuttingDown = true;
       gracefulShutdownPromise = middleware.run(
         "poolGracefulShutdown",
-        { ctx: compiledSharedOptions, workerPool, message },
+        { ctx, workerPool, message },
         async ({ message }) => {
           events.emit("pool:gracefulShutdown", {
             pool: workerPool,
@@ -960,7 +961,7 @@ export function _runTaskList(
       workerPool._forcefulShuttingDown = true;
       forcefulShutdownPromise = middleware.run(
         "poolForcefulShutdown",
-        { ctx: compiledSharedOptions, workerPool: this, message },
+        { ctx, workerPool, message },
         async ({ message }) => {
           events.emit("pool:forcefulShutdown", {
             pool: workerPool,
@@ -1314,6 +1315,7 @@ export function _runTaskList(
         logger.error(
           `Worker exited, but pool is in continuous mode, is active, and is not shutting down... Did something go wrong?`,
         );
+
         try {
           let called = false;
           const replaceWithNewWorker = () => {
@@ -1331,12 +1333,7 @@ export function _runTaskList(
           // - boot up a replacement worker via `createNewWorker`
           middleware.runSync(
             "poolWorkerPrematureExit",
-            {
-              ctx: compiledSharedOptions,
-              workerPool,
-              worker,
-              replaceWithNewWorker,
-            },
+            { ctx, workerPool, worker, replaceWithNewWorker },
             () => {
               throw new Error(`Worker ${worker.workerId} exited unexpectedly`);
             },
