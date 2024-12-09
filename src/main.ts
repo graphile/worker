@@ -653,9 +653,7 @@ export function _runTaskList(
         // Log but continue regardless
         logger.error(
           `Releasing complete job batcher failed: ${releaseCompleteJobResult.reason}`,
-          {
-            error: releaseCompleteJobResult.reason,
-          },
+          { error: releaseCompleteJobResult.reason },
         );
       }
       if (releaseFailJobResult.status === "rejected") {
@@ -665,9 +663,7 @@ export function _runTaskList(
         // Log but continue regardless
         logger.error(
           `Releasing failed job batcher failed: ${releaseFailJobResult.reason}`,
-          {
-            error: releaseFailJobResult.reason,
-          },
+          { error: releaseFailJobResult.reason },
         );
       }
 
