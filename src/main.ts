@@ -1224,11 +1224,13 @@ export function _runTaskList(
                 .join("', '")}':\n${String(error)}`,
               { fatalError: error, jobs },
             );
-            // This is the reason for shutdown
-            _finErrors.push(coerceError(error));
-            workerPool.gracefulShutdown(
-              `Could not completeJobs; queue is in an inconsistent state; aborting.`,
-            );
+            if (!_shuttingDownGracefully && !_shuttingDownForcefully) {
+              // This is the reason for shutdown
+              _finErrors.push(coerceError(error));
+              workerPool.gracefulShutdown(
+                `Could not completeJobs; queue is in an inconsistent state; aborting.`,
+              );
+            }
           },
           BATCH_RETRY_OPTIONS,
         )
@@ -1268,11 +1270,13 @@ export function _runTaskList(
                 .join("', '")}':\n${String(error)}`,
               { fatalError: error, specs },
             );
-            // This is the reason for shutdown
-            _finErrors.push(coerceError(error));
-            workerPool.gracefulShutdown(
-              `Could not failJobs; queue is in an inconsistent state; aborting.`,
-            );
+            if (!_shuttingDownGracefully && !_shuttingDownForcefully) {
+              // This is the reason for shutdown
+              _finErrors.push(coerceError(error));
+              workerPool.gracefulShutdown(
+                `Could not failJobs; queue is in an inconsistent state; aborting.`,
+              );
+            }
           },
           BATCH_RETRY_OPTIONS,
         )
