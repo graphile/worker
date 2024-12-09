@@ -1350,7 +1350,9 @@ export function _runTaskList(
       if (workerPool._workers.length === 0) {
         if (!workerPool._shuttingDown) {
           workerPool.gracefulShutdown(
-            "'Run once' mode processed all available jobs and is now exiting",
+            continuous
+              ? "There are no remaining workers; exiting"
+              : "'Run once' mode processed all available jobs and is now exiting",
           );
         }
       }
