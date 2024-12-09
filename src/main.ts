@@ -845,26 +845,30 @@ export function _runTaskList(
               }
             }
             if (!this._forcefulShuttingDown && jobsToRelease.length > 0) {
-              const workerIds = workers.map((worker) => worker.workerId);
-              logger.debug(
-                `Releasing the jobs ${jobsToRelease
-                  .map((j) => j.id)
-                  .join()} (workers: ${workerIds.join(", ")})`,
-                {
-                  jobs: jobsToRelease,
-                  workerIds,
-                },
-              );
-              const cancelledJobs = await failJobs(
-                compiledSharedOptions,
-                withPgClient,
-                workerPool.id,
-                jobsToRelease,
-                message,
-              );
-              logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
-                cancelledJobs,
-              });
+              try {
+                const workerIds = workers.map((worker) => worker.workerId);
+                logger.debug(
+                  `Releasing the jobs ${jobsToRelease
+                    .map((j) => j.id)
+                    .join()} (workers: ${workerIds.join(", ")})`,
+                  {
+                    jobs: jobsToRelease,
+                    workerIds,
+                  },
+                );
+                const cancelledJobs = await failJobs(
+                  compiledSharedOptions,
+                  withPgClient,
+                  workerPool.id,
+                  jobsToRelease,
+                  message,
+                );
+                logger.debug(`Cancelled ${cancelledJobs.length} jobs`, {
+                  cancelledJobs,
+                });
+              } catch (e) {
+                gracefulShutdownErrors.push(coerceError(e));
+              }
             }
 
             if (this._forcefulShuttingDown) {
