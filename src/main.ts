@@ -1227,7 +1227,7 @@ export function _runTaskList(
                 .join("', '")}':\n${String(error)}`,
               { fatalError: error, jobs },
             );
-            if (!_shuttingDownGracefully && !_shuttingDownForcefully) {
+            if (!workerPool._shuttingDown) {
               // This is the reason for shutdown
               _finErrors.push(coerceError(error));
               workerPool.gracefulShutdown(
@@ -1273,7 +1273,7 @@ export function _runTaskList(
                 .join("', '")}':\n${String(error)}`,
               { fatalError: error, specs },
             );
-            if (!_shuttingDownGracefully && !_shuttingDownForcefully) {
+            if (!workerPool._shuttingDown) {
               // This is the reason for shutdown
               _finErrors.push(coerceError(error));
               workerPool.gracefulShutdown(
