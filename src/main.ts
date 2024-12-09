@@ -956,7 +956,7 @@ export function _runTaskList(
           });
           try {
             logger.debug(`Attempting forceful shutdown`);
-            const timeout = new Promise((_resolve, reject) => {
+            const timeout = new Promise<void>((_resolve, reject) => {
               const t = setTimeout(
                 () => reject(new Error("Timed out")),
                 5000 /* TODO: make configurable */,
@@ -976,17 +976,17 @@ export function _runTaskList(
             const workers = [...workerPool._workers];
 
             // Remove all the workers - we're shutting them down manually
-            const workerPromises = workers.map((worker) =>
+            const workerReleasePromises = workers.map((worker) => {
               // Note force=true means that this completes immediately _except_
               // it still calls the `stopWorker` async hook, so we must still
               // handle a timeout.
-              Promise.race([worker.release(true), timeout]),
-            );
+              return Promise.race([worker.release(true), timeout]);
+            });
             // Ignore the results, we're shutting down anyway
             const [deactivateResult, ...workerReleaseResults] =
               await Promise.allSettled([
                 deactiveateOrTimeout,
-                ...workerPromises,
+                ...workerReleasePromises,
               ]);
             if (deactivateResult.status === "rejected") {
               // Log but continue regardless
