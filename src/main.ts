@@ -4,7 +4,7 @@ import { EventEmitter } from "events";
 import { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
-import defer from "./deferred";
+import defer, { Deferred } from "./deferred";
 import {
   makeWithPgClientFromClient,
   makeWithPgClientFromPool,
@@ -23,10 +23,13 @@ import {
   WorkerPoolOptions,
 } from "./interfaces";
 import {
+  calculateDelay,
   coerceError,
   CompiledSharedOptions,
   makeEnhancedWithPgClient,
   processSharedOptions,
+  RetryOptions,
+  sleep,
   tryParseJson,
 } from "./lib";
 import { LocalQueue } from "./localQueue";
@@ -37,6 +40,13 @@ import { batchFailJobs, failJobs } from "./sql/failJobs";
 import { batchGetJobs } from "./sql/getJobs";
 import { resetLockedAt } from "./sql/resetLockedAt";
 import { makeNewWorker } from "./worker";
+
+const BATCH_RETRY_OPTIONS: RetryOptions = {
+  maxAttempts: 20,
+  minDelay: 200,
+  maxDelay: 30_000,
+  multiplier: 1.5,
+};
 
 const ENABLE_DANGEROUS_LOGS =
   process.env.GRAPHILE_ENABLE_DANGEROUS_LOGS === "1";
@@ -1086,9 +1096,7 @@ export function _runTaskList(
               workerPool,
             });
             logger.debug("Forceful shutdown complete");
-            return {
-              forceFailedJobs,
-            };
+            return { forceFailedJobs };
           } catch (e) {
             events.emit("pool:forcefulShutdown:error", {
               pool: workerPool,
@@ -1195,6 +1203,7 @@ export function _runTaskList(
   const { release: releaseCompleteJob, fn: completeJob } = (
     completeJobBatchDelay >= 0
       ? batch(
+          "completeJobs",
           completeJobBatchDelay,
           (jobs) =>
             batchCompleteJobs(
@@ -1217,6 +1226,7 @@ export function _runTaskList(
             );
             workerPool.gracefulShutdown();
           },
+          BATCH_RETRY_OPTIONS,
         )
       : {
           release: null,
@@ -1233,6 +1243,7 @@ export function _runTaskList(
   const { release: releaseFailJob, fn: failJob } = (
     failJobBatchDelay >= 0
       ? batch(
+          "failJobs",
           failJobBatchDelay,
           (specs) =>
             batchFailJobs(
@@ -1255,6 +1266,7 @@ export function _runTaskList(
             );
             workerPool.gracefulShutdown();
           },
+          BATCH_RETRY_OPTIONS,
         )
       : {
           release: null,
@@ -1359,16 +1371,21 @@ export const runTaskListOnce = (
   return pool;
 };
 
+/**
+ * On error we'll retry according to retryOptions.
+ */
 function batch<TSpec, TResult>(
+  opName: string,
   delay: number,
-  callback: (specs: ReadonlyArray<TSpec>) => Promise<TResult>,
+  rawCallback: (specs: ReadonlyArray<TSpec>) => Promise<TResult>,
   errorHandler: (
     error: unknown,
     specs: ReadonlyArray<TSpec>,
   ) => void | Promise<void>,
+  retryOptions?: RetryOptions,
 ): {
   release(): void | Promise<void>;
-  fn: (spec: TSpec) => void;
+  fn: (spec: TSpec) => void | Promise<void>;
 } {
   let pending = 0;
   let releasing = false;
@@ -1384,7 +1401,84 @@ function batch<TSpec, TResult>(
     }
   };
   const promise = defer();
+
+  let backpressure: Deferred<void> | null = null;
+  function holdup() {
+    if (!backpressure) {
+      incrementPending();
+      backpressure = defer();
+    }
+  }
+  function allgood() {
+    if (backpressure) {
+      backpressure.resolve();
+      // Bump a tick to give the things held up by backpressure a chance to register.
+      process.nextTick(decrementPending);
+    }
+  }
+
+  const callback = retryOptions
+    ? async (specs: ReadonlyArray<TSpec>): Promise<TResult> => {
+        let lastError: Error | undefined;
+        for (
+          let previousAttempts = 0;
+          previousAttempts < retryOptions.maxAttempts;
+          previousAttempts++
+        ) {
+          if (previousAttempts > 0) {
+            const delay = calculateDelay(previousAttempts - 1, retryOptions);
+            console.error(
+              `${opName}: attempt ${previousAttempts}/${
+                retryOptions.maxAttempts
+              } failed; retrying after ${delay.toFixed(
+                0,
+              )}ms. Error: ${lastError}`,
+            );
+            await sleep(delay);
+          }
+          try {
+            const result = await rawCallback(specs);
+            // We succeeded - remove backpressure.
+            allgood();
+            return result;
+          } catch (e) {
+            // Tell other callers to wait until we're successful again (i.e. apply backpressure)
+            holdup();
+            lastError = coerceError(e);
+            throw e;
+          }
+        }
+        throw (
+          lastError ??
+          new Error(`Failed after ${retryOptions.maxAttempts} attempts`)
+        );
+      }
+    : rawCallback;
+
   let currentBatch: TSpec[] | null = null;
+  function handleSpec(spec: TSpec) {
+    if (released) {
+      throw new Error(
+        "This batcher has been released, and so no more calls can be made.",
+      );
+    }
+    if (currentBatch !== null) {
+      currentBatch.push(spec);
+    } else {
+      const specs = [spec];
+      currentBatch = specs;
+      incrementPending();
+      setTimeout(() => {
+        currentBatch = null;
+        callback(specs).then(decrementPending, (error) => {
+          decrementPending();
+          errorHandler(error, specs);
+          allgood();
+        });
+      }, delay);
+    }
+    return;
+  }
   return {
     async release() {
       if (releasing) {
@@ -1398,26 +1492,11 @@ function batch<TSpec, TResult>(
       await promise;
     },
     fn(spec) {
-      if (released) {
-        throw new Error(
-          "This batcher has been released, and so no more calls can be made.",
-        );
-      }
-      if (currentBatch !== null) {
-        currentBatch.push(spec);
+      if (backpressure) {
+        return backpressure.then(() => handleSpec(spec));
       } else {
-        const specs = [spec];
-        currentBatch = specs;
-        incrementPending();
-        setTimeout(() => {
-          currentBatch = null;
-          callback(specs).then(decrementPending, (error) => {
-            decrementPending();
-            errorHandler(error, specs);
-          });
-        }, delay);
+        return handleSpec(spec);
       }
-      return;
     },
   };
 }

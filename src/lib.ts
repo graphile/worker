@@ -597,3 +597,27 @@ export function isPromiseLike<T>(v: PromiseLike<T> | T): v is PromiseLike<T> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return v != null && typeof (v as any).then === "function";
 }
+
+export interface RetryOptions {
+  maxAttempts: number;
+  /** Minimum delay between attempts (milliseconds); can actually be half this due to jitter */
+  minDelay: number;
+  /** Maximum delay between attempts (milliseconds) - can actually be 1.5x this due to jitter */
+  maxDelay: number;
+  /** `multiplier ^ attempts` */
+  multiplier: number;
+}
+
+export function calculateDelay(
+  previousAttempts: number,
+  retryOptions: RetryOptions,
+) {
+  const { minDelay = 200, maxDelay = 30_000, multiplier = 1.5 } = retryOptions;
+  /** Prevent the thundering herd problem by offsetting randomly */
+  const jitter = Math.random();
+
+  return (
+    Math.min(minDelay * Math.pow(multiplier, previousAttempts), maxDelay) *
+    (0.5 + jitter)
+  );
+}

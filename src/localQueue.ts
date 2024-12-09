@@ -10,9 +10,16 @@ import {
 import { MINUTE, SECOND } from "./cronConstants";
 import defer, { Deferred } from "./deferred";
 import { GetJobFunction, Job, TaskList, WorkerPool } from "./interfaces";
-import { coerceError, sleep } from "./lib";
+import { calculateDelay, coerceError, RetryOptions, sleep } from "./lib";
 import { batchGetJobs } from "./sql/getJobs";
 import { returnJobs } from "./sql/returnJobs";
+
+const RETURN_JOBS_RETRY_OPTIONS: RetryOptions = {
+  maxAttempts: 20,
+  minDelay: 200,
+  maxDelay: 30_000,
+  multiplier: 1.5,
+};
 
 const { STARTING, POLLING, WAITING, TTL_EXPIRED, RELEASED } = LocalQueueModes;
 
@@ -433,15 +440,19 @@ export class LocalQueue {
 
     let attempts = 1;
     let initialError: Error;
-    const MAX_ATTEMPTS = 20;
+    const { maxAttempts } = RETURN_JOBS_RETRY_OPTIONS;
     const onError = (e: unknown): void | Promise<void> => {
       if (attempts === 1) {
         initialError = coerceError(e);
       }
 
       this.compiledSharedOptions.logger.error(
-        `Failed to return jobs from local queue to database queue (attempt ${attempts}/${MAX_ATTEMPTS})`,
-        { error: e, attempts, maxAttempts: MAX_ATTEMPTS },
+        `Failed to return jobs from local queue to database queue (attempt ${attempts}/${maxAttempts})`,
+        {
+          error: e,
+          attempts,
+          returnJobsRetryOptions: RETURN_JOBS_RETRY_OPTIONS,
+        },
       );
 
       // NOTE: the mode now may not be the mode that we were in when
@@ -457,21 +468,11 @@ export class LocalQueue {
         // NOTE: considered doing `this.receivedJobs(jobsToReturn)`; but I
         // simply trying to release them again seems safer and more correct.
         default: {
-          if (attempts < MAX_ATTEMPTS) {
-            /** Minimum delay between attempts (milliseconds); can actually be half this due to jitter */
-            const minDelay = 200;
-            /** Maximum delay between attempts (milliseconds) - can actually be 1.5x this due to jitter */
-            const maxDelay = 30_000; // Maximum delay in milliseconds
-            /** `multiplier ^ attempts` */
-            const multiplier = 1.5;
-            /** Prevent the thundering herd problem by offsetting randomly */
-            const jitter = Math.random();
-            const delay =
-              Math.min(
-                minDelay * Math.pow(multiplier, attempts - 1),
-                maxDelay,
-              ) *
-              (0.5 + jitter);
+          if (attempts < maxAttempts) {
+            const delay = calculateDelay(
+              attempts - 1,
+              RETURN_JOBS_RETRY_OPTIONS,
+            );
 
             // Be sure to increment attempts to avoid infinite loop!
             ++attempts;
