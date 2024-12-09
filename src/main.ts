@@ -953,6 +953,9 @@ export function _runTaskList(
         );
         return forcefulShutdownPromise!;
       }
+      if (!workerPool._shuttingDown) {
+        Promise.resolve(this.gracefulShutdown()).then(null, () => {});
+      }
 
       workerPool._forcefulShuttingDown = true;
       forcefulShutdownPromise = middleware.run(
