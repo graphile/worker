@@ -4,7 +4,9 @@ import { execSync, spawn } from "child_process";
 import pg from "pg";
 
 import { makeWorkerUtils } from "../dist/index.js";
-import { PARALLELISM } from "./graphile.config.mjs";
+import config, { PARALLELISM } from "./graphile.config.mjs";
+
+const CONCURRENCY = config.worker?.concurrentJobs ?? 1;
 
 const STUCK_JOB_COUNT = 0;
 const WAVES = [
@@ -48,17 +50,19 @@ const execOptions = {
   stdio: ["ignore", "ignore", "inherit"],
 };
 
-/** @type {import("child_process").CommonSpawnOptions} */
+/** @type {import("child_process").SpawnOptions} */
 const spawnOptions = {
   env,
   stdio: ["ignore", "inherit", "inherit"],
+  detached: false,
 };
 
 const pgPool = new pg.Pool({ connectionString: process.env.PERF_DATABASE_URL });
 pgPool.on("error", () => {});
 pgPool.on("connect", (client) => void client.on("error", () => {}));
 
-const GENERAL_JOBS_PER_SECOND = 15000;
+//const GENERAL_JOBS_PER_SECOND = 15000;
+const GENERAL_JOBS_PER_SECOND = CONCURRENCY * PARALLELISM * (1000 / 250);
 const GENERAL_JOBS_PER_MILLISECOND = GENERAL_JOBS_PER_SECOND / 1000;
 
 /** @type {(jobBatches: number[], sleepDuration?: number) => (workerUtils: import("../dist/interfaces.js").WorkerUtils) => Promise<void>} */
