@@ -535,11 +535,11 @@ export function tryParseJson<T = object>(
 
 /** @see {@link https://www.postgresql.org/docs/current/mvcc-serialization-failure-handling.html} */
 const RETRYABLE_ERROR_CODES = [
-  { code: "40001", backoffMS: 50 }, // serialization_failure
-  { code: "40P01", backoffMS: 50 }, // deadlock_detected
-  { code: "57P03", backoffMS: 3000 }, // cannot_connect_now
-  { code: "EHOSTUNREACH", backoffMS: 3000 }, // no connection to the server
-  { code: "ETIMEDOUT", backoffMS: 3000 }, // timeout
+  { code: "40001", minDelay: 50, maxDelay: 5_000 }, // serialization_failure
+  { code: "40P01", minDelay: 50, maxDelay: 5_000 }, // deadlock_detected
+  { code: "57P03", minDelay: 3000, maxDelay: 120_000 }, // cannot_connect_now
+  { code: "EHOSTUNREACH", minDelay: 3000, maxDelay: 120_000 }, // no connection to the server
+  { code: "ETIMEDOUT", minDelay: 3000, maxDelay: 120_000 }, // timeout
 ];
 const MAX_RETRIES = 100;
 
@@ -565,8 +565,14 @@ export function makeEnhancedWithPgClient(
         );
         if (retryable) {
           lastError = e;
+          const delay = calculateDelay(attempts, {
+            maxAttempts: MAX_RETRIES,
+            minDelay: retryable.minDelay,
+            maxDelay: retryable.maxDelay,
+            multiplier: 1.5,
+          });
           // Try again in backoffMS
-          await sleep(retryable.backoffMS * Math.sqrt(attempts + 1));
+          await sleep(delay);
         } else {
           throw e;
         }
