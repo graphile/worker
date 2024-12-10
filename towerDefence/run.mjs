@@ -7,6 +7,8 @@ import { makeWorkerUtils } from "../dist/index.js";
 import config, { PARALLELISM } from "./graphile.config.mjs";
 
 const CONCURRENCY = config.worker?.concurrentJobs ?? 1;
+/** How long each individual task sleeps for */
+const SLEEP_TIME = 50;
 
 const STUCK_JOB_COUNT = 0;
 const WAVES = [
@@ -61,8 +63,6 @@ const pgPool = new pg.Pool({ connectionString: process.env.PERF_DATABASE_URL });
 pgPool.on("error", () => {});
 pgPool.on("connect", (client) => void client.on("error", () => {}));
 
-const SLEEP_TIME = 20;
-
 //const GENERAL_JOBS_PER_SECOND = 15000;
 const GENERAL_JOBS_PER_SECOND = Math.min(
   15000,
@@ -71,7 +71,7 @@ const GENERAL_JOBS_PER_SECOND = Math.min(
 const GENERAL_JOBS_PER_MILLISECOND = GENERAL_JOBS_PER_SECOND / 1000;
 
 /** @type {(jobBatches: number[], sleepDuration?: number) => (workerUtils: import("../dist/interfaces.js").WorkerUtils) => Promise<void>} */
-function makeWave(jobBatches, sleepDuration = -1) {
+function makeWave(jobBatches, extraSleepDuration = -1) {
   return async (workerUtils) => {
     let totalCount = 0;
     let start = Date.now();
@@ -92,6 +92,9 @@ function makeWave(jobBatches, sleepDuration = -1) {
         });
       }
       await workerUtils.addJobs(jobs);
+      const sleepDuration =
+        Math.floor((jobCount * SLEEP_TIME) / (CONCURRENCY * PARALLELISM)) +
+        extraSleepDuration;
       if (sleepDuration >= 0) {
         await sleep(sleepDuration);
       }
