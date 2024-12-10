@@ -1,5 +1,5 @@
 import { CronItemOptions, ParsedCronMatch } from "../src";
-import { parseCrontab } from "../src/crontab";
+import { parseCronItem, parseCrontab } from "../src/crontab";
 
 // 0...59
 const ALL_MINUTES = Array.from(Array(60).keys());
@@ -235,5 +235,28 @@ describe("gives error on syntax error", () => {
     ).toThrowErrorMatchingInlineSnapshot(
       `"Failed to parse JSON5 payload on line 1 of crontab: JSON5: invalid character '=' at 1:13"`,
     );
+  });
+});
+
+describe("parses JS cron items correctly", () => {
+  test("defaults backfillPeriod to 0", () => {
+    expect(
+      parseCronItem({
+        task: "task",
+        match: "* * * * *",
+        options: {},
+      }).options.backfillPeriod,
+    ).toEqual(0);
+  });
+
+  test("validates match strings", () => {
+    const matchString = "foo";
+    expect(() =>
+      parseCronItem({
+        task: "task",
+        match: matchString,
+        options: {},
+      }),
+    ).toThrow(`Invalid cron pattern '${matchString}' in parseCronItem call`);
   });
 });

@@ -1,12 +1,37 @@
 #!/usr/bin/env zx
+// @ts-check
 import "zx/globals";
+
 import * as fs from "fs/promises";
 
-// Create a symlink so `import "graphile-worker"` works
-await $`ln -s .. node_modules/graphile-worker || true`;
+await $`yarn link`;
+
+// Create a temporary instance so we can read the options
+const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "gwdu-"));
+const prev = process.cwd();
+cd(tmp);
+await $`yarn link graphile-worker`;
+await $`yarn add typescript graphile`;
+await fs.writeFile(
+  `graphile.config.ts`,
+  `\
+import type {} from "graphile-worker";
+
+const preset: GraphileConfig.Preset = {
+  worker: {},
+};
+
+export default preset;
+`,
+);
 
 // Get the markdown output for options
 const output = await $`graphile config options`;
+
+// Go back and destroy our tempdir
+cd(prev);
+// Remove our temporary directory
+await fs.rm(tmp, { recursive: true, force: true });
 
 // Crop it down to only include the stuff under the worker header
 const SEARCH = "\n## worker\n";
@@ -14,7 +39,10 @@ const i = output.stdout.indexOf(SEARCH);
 if (i < 0) {
   throw new Error("Worker heading not found!");
 }
-const optionsMd = output.stdout.slice(i + SEARCH.length).trim();
+const optionsMd = output.stdout
+  .slice(i + SEARCH.length)
+  .trim()
+  .replace(/\(https:\/\/worker\.graphile\.org\//g, "(/");
 
 // Load the config.md doc file and replace the part between the comment tags
 const configMd = await fs.readFile("website/docs/config.md", "utf8");

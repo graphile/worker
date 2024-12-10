@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build:sql": "node scripts/buildSqlModule.mjs",
-    "website:update": "node scripts/options.mjs",
+    "website:update": "yarn prepack && node scripts/options.mjs",
     "prepack": "rm -Rf dist && npm run build:sql && tsc && chmod +x dist/cli.js",
     "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && npm run build:sql && tsc --watch",
     "lint": "yarn prettier:check && eslint --ext .js,.jsx,.ts,.tsx,.graphql .",
@@ -21,7 +21,9 @@
     "towerDefence": "cd towerDefence && node ./run.mjs",
     "preversion": "grep '^### Pending' RELEASE_NOTES.md && echo \"⚠️ Cannot publish with 'Pending' in RELEASE_NOTES ⚠️\" && exit 1 || true",
     "version": "node scripts/postversion.mjs && git add src/version.ts",
-    "website": "cd website && yarn run"
+    "website": "cd website && yarn run",
+    "website:start": "yarn website start",
+    "website:deploy": "yarn website deploy"
   },
   "bin": {
     "graphile-worker": "./dist/cli.js"
@@ -105,7 +107,8 @@
     "sql"
   ],
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=14.0.0",
+    "yarn": "^1.22.22"
   },
   "browserslist": {
     "production": [

@@ -135,7 +135,7 @@ export type AddJobsFunction = <TSpecs extends readonly AddJobsJobSpec[]>(
 
 export interface Helpers {
   /**
-   * A Logger instance.
+   * A `Logger` instance.
    */
   logger: Logger;
 
@@ -146,30 +146,30 @@ export interface Helpers {
   withPgClient: WithPgClient;
 
   /**
-   * Adds a job into our queue.
+   * Adds a job into the Graphile Worker queue.
    */
   addJob: AddJobFunction;
 
   /**
-   * Adds multiple jobs into our queue.
+   * Adds multiple jobs into the Graphile Worker queue.
    */
   addJobs: AddJobsFunction;
 }
 
 export interface JobHelpers extends Helpers {
   /**
-   * A Logger instance, scoped to this job.
+   * A `Logger` instance, scoped to this job.
    */
   logger: Logger;
 
   /**
-   * The currently executing job.
+   * The whole, currently executing job.
    */
   job: Job;
 
   /**
-   * Get the queue name of the give queue ID (or the currently executing job if
-   * no queue id is specified).
+   * Get the queue name of the given queue ID (or of the currently executing job
+   * if no queue ID is specified).
    */
   getQueueName(queueId?: number | null): PromiseOrDirect<string | null>;
 
@@ -182,7 +182,8 @@ export interface JobHelpers extends Helpers {
   ): Promise<QueryResult<R>>;
 
   /**
-   * An AbortSignal that will be triggered when the job should exit.
+   * An `AbortSignal` that will be triggered when the job should exit. It is used,
+   * for example, for a graceful shutdown request.
    *
    * @experimental
    */
@@ -332,7 +333,7 @@ export interface WatchedCronItems {
  */
 export interface CronItemOptions {
   /** How far back (in milliseconds) should we backfill jobs when worker starts? (Only backfills since when the identifier was first used.) */
-  backfillPeriod: number;
+  backfillPeriod?: number;
 
   /** Optionally override the default job max_attempts */
   maxAttempts?: number;
@@ -352,6 +353,10 @@ export interface CronItemOptions {
    * updated. (Default: 'replace')
    */
   jobKeyMode?: "replace" | "preserve_run_at";
+}
+
+export interface ParsedCronItemOptions extends CronItemOptions {
+  backfillPeriod: number;
 }
 
 /**
@@ -420,7 +425,7 @@ export interface ParsedCronItem {
   task: string;
 
   /** Options influencing backfilling and properties of the scheduled job */
-  options: CronItemOptions;
+  options: ParsedCronItemOptions;
 
   /** A payload object to merge into the default cron payload object for the scheduled job */
   payload: { [key: string]: unknown } | null;
@@ -672,7 +677,8 @@ export interface SharedOptions {
 
   /**
    * Set true if you want to prevent the use of prepared statements; for
-   * example if you wish to use Graphile Worker with pgBouncer or similar.
+   * example if you wish to use Graphile Worker with a connection pool that
+   * does not support prepared statements.
    */
   noPreparedStatements?: boolean;
 
