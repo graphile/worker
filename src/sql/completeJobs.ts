@@ -1,11 +1,11 @@
-import { DbJob, EnhancedWithPgClient } from "../interfaces";
+import { DbJob, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
 const manualPrepare = false;
 
 export async function batchCompleteJobs(
   compiledSharedOptions: CompiledSharedOptions,
-  withPgClient: EnhancedWithPgClient,
+  withPgClient: WithPgClient,
   poolId: string,
   jobs: ReadonlyArray<DbJob>,
 ): Promise<void> {
@@ -27,9 +27,8 @@ export async function batchCompleteJobs(
     }
   }
 
-  // TODO: retry logic, in case of server connection interruption
   if (jobIdsWithQueue.length > 0) {
-    await withPgClient.withRetries((client) =>
+    await withPgClient((client) =>
       client.query({
         text: `\
 with j as (
@@ -50,7 +49,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
     );
   }
   if (jobIdsWithoutQueue.length === 1) {
-    await withPgClient.withRetries((client) =>
+    await withPgClient((client) =>
       client.query({
         text: `\
 delete from ${escapedWorkerSchema}._private_jobs as jobs
@@ -61,7 +60,7 @@ where id = $1::bigint`,
     );
   } else if (jobIdsWithoutQueue.length > 1) {
     if (manualPrepare) {
-      await withPgClient.withRetries((client) =>
+      await withPgClient((client) =>
         client.query({
           text: `\
 prepare gwcj (bigint) as delete from ${escapedWorkerSchema}._private_jobs where id = $1;
@@ -70,7 +69,7 @@ deallocate gwcj;`,
         }),
       );
     } else {
-      await withPgClient.withRetries((client) =>
+      await withPgClient((client) =>
         client.query({
           text: `\
 delete from ${escapedWorkerSchema}._private_jobs as jobs

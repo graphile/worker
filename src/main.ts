@@ -1212,7 +1212,7 @@ export function _runTaskList(
           (jobs) =>
             batchCompleteJobs(
               compiledSharedOptions,
-              withPgClient,
+              withPgClient, // batch handles retries and adds backpressure
               workerPool.id,
               jobs,
             ),
@@ -1243,7 +1243,7 @@ export function _runTaskList(
           fn: (job) =>
             batchCompleteJobs(
               compiledSharedOptions,
-              withPgClient,
+              withPgClient.withRetries,
               workerPool.id,
               [job],
             ),
@@ -1258,7 +1258,7 @@ export function _runTaskList(
           (specs) =>
             batchFailJobs(
               compiledSharedOptions,
-              withPgClient,
+              withPgClient, // batch handles retries and adds backpressure
               workerPool.id,
               specs,
             ),
@@ -1287,9 +1287,12 @@ export function _runTaskList(
       : {
           release: null,
           fn: (spec) =>
-            batchFailJobs(compiledSharedOptions, withPgClient, workerPool.id, [
-              spec,
-            ]),
+            batchFailJobs(
+              compiledSharedOptions,
+              withPgClient.withRetries,
+              workerPool.id,
+              [spec],
+            ),
         }
   ) as { release: (() => void) | null; fn: FailJobFunction };
 

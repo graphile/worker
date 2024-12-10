@@ -39,9 +39,7 @@ export interface WithPgClient {
 
 export interface EnhancedWithPgClient extends WithPgClient {
   /** **Experimental**; see https://github.com/graphile/worker/issues/387 */
-  withRetries: <T = void>(
-    callback: (pgClient: PoolClient) => Promise<T>,
-  ) => Promise<T>;
+  withRetries: WithPgClient;
 }
 
 /**

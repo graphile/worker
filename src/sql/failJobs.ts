@@ -1,4 +1,4 @@
-import { DbJob, EnhancedWithPgClient } from "../interfaces";
+import { DbJob, EnhancedWithPgClient, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 interface Spec {
   job: DbJob;
@@ -8,7 +8,7 @@ interface Spec {
 
 export async function batchFailJobs(
   compiledSharedOptions: CompiledSharedOptions,
-  withPgClient: EnhancedWithPgClient,
+  withPgClient: WithPgClient,
   poolId: string,
   specs: ReadonlyArray<Spec>,
 ): Promise<void> {
@@ -31,9 +31,8 @@ export async function batchFailJobs(
     }
   }
 
-  // TODO: retry logic, in case of server connection interruption
   if (specsWithQueues.length > 0) {
-    await withPgClient.withRetries((client) =>
+    await withPgClient((client) =>
       client.query({
         text: `\
 with j as (
@@ -67,7 +66,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $1::text;`,
     );
   }
   if (specsWithoutQueues.length > 0) {
-    await withPgClient.withRetries((client) =>
+    await withPgClient((client) =>
       client.query({
         text: `\
 update ${escapedWorkerSchema}._private_jobs as jobs
@@ -110,7 +109,6 @@ export async function failJobs(
     },
   } = compiledSharedOptions;
 
-  // TODO: retry logic, in case of server connection interruption
   const { rows: failedJobs } = await withPgClient.withRetries((client) =>
     client.query<DbJob>({
       text: `\
