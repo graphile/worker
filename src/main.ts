@@ -28,6 +28,7 @@ import {
   CompiledSharedOptions,
   makeEnhancedWithPgClient,
   processSharedOptions,
+  RETRYABLE_ERROR_CODES,
   RetryOptions,
   sleep,
   tryParseJson,
@@ -1463,20 +1464,26 @@ function batch<TSpec, TResult>(
 
   const callback = retryOptions
     ? async (specs: ReadonlyArray<TSpec>): Promise<TResult> => {
-        let lastError: Error | undefined;
+        let lastError: ReturnType<typeof coerceError> | undefined;
         for (
           let previousAttempts = 0;
           previousAttempts < retryOptions.maxAttempts;
           previousAttempts++
         ) {
           if (previousAttempts > 0) {
-            const delay = calculateDelay(previousAttempts - 1, retryOptions);
+            const code = lastError?.code as string;
+            const retryable = RETRYABLE_ERROR_CODES[code];
+            const delay = calculateDelay(previousAttempts - 1, {
+              ...retryOptions,
+              // NOTE: `retryable` might be undefined, in which case `retryOptions` wins
+              ...retryable,
+            });
             console.error(
               `${opName}: attempt ${previousAttempts}/${
                 retryOptions.maxAttempts
-              } failed; retrying after ${delay.toFixed(
-                0,
-              )}ms. Error: ${lastError}`,
+              } failed${
+                code ? ` with code ${JSON.stringify(code)}` : ``
+              }; retrying after ${delay.toFixed(0)}ms. Error: ${lastError}`,
             );
             await sleep(delay);
           }
