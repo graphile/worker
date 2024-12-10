@@ -61,8 +61,13 @@ const pgPool = new pg.Pool({ connectionString: process.env.PERF_DATABASE_URL });
 pgPool.on("error", () => {});
 pgPool.on("connect", (client) => void client.on("error", () => {}));
 
+const SLEEP_TIME = 20;
+
 //const GENERAL_JOBS_PER_SECOND = 15000;
-const GENERAL_JOBS_PER_SECOND = CONCURRENCY * PARALLELISM * (1000 / 250);
+const GENERAL_JOBS_PER_SECOND = Math.min(
+  15000,
+  CONCURRENCY * PARALLELISM * (1000 / (SLEEP_TIME + 0.1)),
+);
 const GENERAL_JOBS_PER_MILLISECOND = GENERAL_JOBS_PER_SECOND / 1000;
 
 /** @type {(jobBatches: number[], sleepDuration?: number) => (workerUtils: import("../dist/interfaces.js").WorkerUtils) => Promise<void>} */
@@ -81,6 +86,7 @@ function makeWave(jobBatches, sleepDuration = -1) {
           identifier: taskIdentifier,
           payload: {
             id: i,
+            sleepTime: SLEEP_TIME,
           },
           runAt: NOW,
         });
