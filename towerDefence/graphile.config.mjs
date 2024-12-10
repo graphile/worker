@@ -115,6 +115,8 @@ const TowerDefenceResultPlugin = {
   },
 };
 
+const localQueueSize = CONCURRENT_JOBS + 1;
+
 /** @type {GraphileConfig.Preset} */
 const preset = {
   // extends: [WorkerProPreset],
@@ -134,9 +136,10 @@ const preset = {
 
     pollInterval: 2000,
     localQueue: {
-      size: CONCURRENT_JOBS + 1,
+      size: localQueueSize,
       refetchDelay: {
         durationMs: 1000,
+        threshold: localQueueSize - 1,
         maxAbortThreshold: CONCURRENT_JOBS * PARALLELISM,
       },
     },
