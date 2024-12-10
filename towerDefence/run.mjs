@@ -4,9 +4,9 @@ import { execSync, spawn } from "child_process";
 import pg from "pg";
 
 import { makeWorkerUtils } from "../dist/index.js";
+import { PARALLELISM } from "./graphile.config.mjs";
 
 const STUCK_JOB_COUNT = 0;
-const PARALLELISM = 10;
 const WAVES = [
   makeWave([1]),
   makeWave(new Array(1000).fill(1), 10),

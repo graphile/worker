@@ -6,6 +6,7 @@
 // import { WorkerProPreset } from "../graphile-pro-worker/dist/index.js";
 
 const CONCURRENT_JOBS = 10;
+export const PARALLELISM = 10;
 
 const stats = {
   fetches: 0,
@@ -136,7 +137,7 @@ const preset = {
       size: CONCURRENT_JOBS + 1,
       refetchDelay: {
         durationMs: 1000,
-        maxAbortThreshold: CONCURRENT_JOBS * 10,
+        maxAbortThreshold: CONCURRENT_JOBS * PARALLELISM,
       },
     },
     completeJobBatchDelay: 0,
