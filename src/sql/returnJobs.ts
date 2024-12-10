@@ -1,9 +1,9 @@
-import { DbJob, EnhancedWithPgClient } from "../interfaces";
+import { DbJob, WithPgClient } from "../interfaces";
 import { CompiledSharedOptions } from "../lib";
 
 export async function returnJobs(
   compiledSharedOptions: CompiledSharedOptions,
-  withPgClient: EnhancedWithPgClient,
+  withPgClient: WithPgClient,
   poolId: string,
   jobs: ReadonlyArray<DbJob>,
 ): Promise<void> {
@@ -27,7 +27,7 @@ export async function returnJobs(
   }
 
   if (jobsWithQueues.length > 0) {
-    await withPgClient.withRetries((client) =>
+    await withPgClient((client) =>
       client.query({
         text: `\
 with j as (
@@ -50,7 +50,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $1::text;`,
     );
   }
   if (jobsWithoutQueues.length > 0) {
-    await withPgClient.withRetries((client) =>
+    await withPgClient((client) =>
       client.query({
         text: `\
 update ${escapedWorkerSchema}._private_jobs as jobs

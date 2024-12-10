@@ -10,7 +10,13 @@ import {
 import { MINUTE, SECOND } from "./cronConstants";
 import defer, { Deferred } from "./deferred";
 import { GetJobFunction, Job, TaskList, WorkerPool } from "./interfaces";
-import { calculateDelay, coerceError, RetryOptions, sleep } from "./lib";
+import {
+  calculateDelay,
+  coerceError,
+  RETRYABLE_ERROR_CODES,
+  RetryOptions,
+  sleep,
+} from "./lib";
 import { batchGetJobs } from "./sql/getJobs";
 import { returnJobs } from "./sql/returnJobs";
 
@@ -442,8 +448,9 @@ export class LocalQueue {
     let initialError: Error;
     const { maxAttempts } = RETURN_JOBS_RETRY_OPTIONS;
     const onError = (e: unknown): void | Promise<void> => {
+      const lastError = coerceError(e);
       if (attempts === 1) {
-        initialError = coerceError(e);
+        initialError = lastError;
       }
 
       this.compiledSharedOptions.logger.error(
@@ -469,17 +476,20 @@ export class LocalQueue {
         // simply trying to release them again seems safer and more correct.
         default: {
           if (attempts < maxAttempts) {
-            const delay = calculateDelay(
-              attempts - 1,
-              RETURN_JOBS_RETRY_OPTIONS,
-            );
+            const code = lastError?.code as string;
+            const retryable = RETRYABLE_ERROR_CODES[code];
+            const delay = calculateDelay(attempts - 1, {
+              ...RETURN_JOBS_RETRY_OPTIONS,
+              // NOTE: `retryable` might be undefined, in which case `RETURN_JOBS_RETRY_OPTIONS` wins
+              ...retryable,
+            });
 
             // Be sure to increment attempts to avoid infinite loop!
             ++attempts;
             return sleep(delay).then(() =>
               returnJobs(
                 this.compiledSharedOptions,
-                this.withPgClient,
+                this.withPgClient, // We'll handle the retries via onError
                 this.workerPool.id,
                 jobsToReturn,
               ).then(noop, onError),
@@ -503,7 +513,7 @@ export class LocalQueue {
     this.background(
       returnJobs(
         this.compiledSharedOptions,
-        this.withPgClient,
+        this.withPgClient, // We'll handle the retries via onError
         this.workerPool.id,
         jobsToReturn,
       ).then(
