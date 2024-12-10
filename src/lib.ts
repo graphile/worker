@@ -534,13 +534,20 @@ export function tryParseJson<T = object>(
 }
 
 /** @see {@link https://www.postgresql.org/docs/current/mvcc-serialization-failure-handling.html} */
-const RETRYABLE_ERROR_CODES = [
-  { code: "40001", minDelay: 50, maxDelay: 5_000 }, // serialization_failure
-  { code: "40P01", minDelay: 50, maxDelay: 5_000 }, // deadlock_detected
-  { code: "57P03", minDelay: 3000, maxDelay: 120_000 }, // cannot_connect_now
-  { code: "EHOSTUNREACH", minDelay: 3000, maxDelay: 120_000 }, // no connection to the server
-  { code: "ETIMEDOUT", minDelay: 3000, maxDelay: 120_000 }, // timeout
-];
+export const RETRYABLE_ERROR_CODES: Record<
+  string,
+  Omit<RetryOptions, "maxAttempts" | "multiplier"> | undefined
+> = {
+  // @ts-ignore
+  __proto__: null,
+
+  "40001": { minDelay: 50, maxDelay: 5_000 }, // serialization_failure
+  "40P01": { minDelay: 50, maxDelay: 5_000 }, // deadlock_detected
+  "57P03": { minDelay: 3000, maxDelay: 120_000 }, // cannot_connect_now
+  EHOSTUNREACH: { minDelay: 3000, maxDelay: 120_000 }, // no connection to the server
+  ETIMEDOUT: { minDelay: 3000, maxDelay: 120_000 }, // timeout
+};
+
 const MAX_RETRIES = 100;
 
 export function makeEnhancedWithPgClient(
@@ -560,9 +567,7 @@ export function makeEnhancedWithPgClient(
         return await withPgClient(...args);
       } catch (rawE) {
         const e = coerceError(rawE);
-        const retryable = RETRYABLE_ERROR_CODES.find(
-          ({ code }) => code === e.code,
-        );
+        const retryable = RETRYABLE_ERROR_CODES[e.code as string];
         if (retryable) {
           lastError = e;
           const delay = calculateDelay(attempts, {
