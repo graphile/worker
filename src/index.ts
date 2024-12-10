@@ -48,15 +48,18 @@ declare global {
     }
     interface BootstrapEvent {
       ctx: WorkerPluginContext;
+
       /**
        * The client used to perform the bootstrap. Replacing this is not officially
        * supported, but...
        */
       client: PoolClient;
+
       /**
        * The Postgres version number, e.g. 120000 for PostgreSQL 12.0
        */
       readonly postgresVersion: number;
+
       /**
        * Somewhere to store temporary data from plugins, only used during
        * bootstrap and migrate
@@ -66,6 +69,7 @@ declare global {
 
     interface MigrateEvent {
       ctx: WorkerPluginContext;
+
       /**
        * The client used to run the migration. Replacing this is not officially
        * supported, but...
@@ -100,6 +104,14 @@ declare global {
       ctx: WorkerPluginContext;
       workerPool: WorkerPool;
       worker: Worker;
+      /**
+       * Use this to spin up a new Worker in place of the old one that failed.
+       * Generally a Worker fails due to some underlying network or database
+       * issue, and just spinning up a new one in its place may simply mask the
+       * issue, so this is not recommended.
+       *
+       * Only the first call to this method (per event) will have any effect.
+       */
       replaceWithNewWorker(): void;
     }
   }
@@ -250,6 +262,11 @@ declare global {
        */
       events?: WorkerEvents;
 
+      /**
+       * If you're running in high concurrency, you will likely want to reduce
+       * the load on the database by using a local queue to distribute jobs to
+       * workers rather than having each ask the database directly.
+       */
       localQueue?: {
         /**
          * To enable processing jobs in batches, set this to an integer larger
@@ -369,10 +386,12 @@ declare global {
     }
 
     interface Preset {
+      /** Options for Graphile Worker */
       worker?: WorkerOptions;
     }
 
     interface Plugin {
+      /** Plugin hooks and middleware for Graphile Worker */
       worker?: {
         middleware?: MiddlewareHandlers<WorkerMiddleware>;
 
@@ -412,14 +431,28 @@ declare global {
        */
       migrate(event: GraphileWorker.MigrateEvent): PromiseOrDirect<void>;
 
+      /**
+       * Called when performing a graceful shutdown on a WorkerPool.
+       */
       poolGracefulShutdown(
         event: GraphileWorker.PoolGracefulShutdownEvent,
       ): ReturnType<WorkerPool["gracefulShutdown"]>;
 
+      /**
+       * Called when performing a forceful shutdown on a WorkerPool.
+       */
       poolForcefulShutdown(
         event: GraphileWorker.PoolForcefulShutdownEvent,
       ): ReturnType<WorkerPool["forcefulShutdown"]>;
 
+      /**
+       * Called when a Worker inside a WorkerPool exits unexpectedly;
+       * allows user to choose how to handle this; for example:
+       *
+       * - graceful shutdown (default behavior)
+       * - forceful shutdown (probably best after a delay?)
+       * - boot up a replacement worker via `createNewWorker`
+       */
       poolWorkerPrematureExit(
         event: GraphileWorker.PoolWorkerPrematureExitEvent,
       ): void;
