@@ -295,7 +295,9 @@ export class LocalQueue {
     if (this.errors.length === 1) {
       this._finPromise.reject(this.errors[0]);
     } else if (this.errors.length > 1) {
-      this._finPromise.reject(new AggregateError(this.errors));
+      this._finPromise.reject(
+        new AggregateError(this.errors, "Worker did not exit cleanly"),
+      );
     } else {
       this._finPromise.resolve();
     }

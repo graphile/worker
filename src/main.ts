@@ -746,7 +746,12 @@ export function _runTaskList(
     if (_finErrors.length === 1) {
       _finPromise.reject(_finErrors[0]);
     } else if (_finErrors.length > 1) {
-      _finPromise.reject(new AggregateError(_finErrors));
+      _finPromise.reject(
+        new AggregateError(
+          _finErrors,
+          `Worker pool '${workerPool.id}' failed to shut down cleanly`,
+        ),
+      );
     } else {
       _finPromise.resolve();
     }
