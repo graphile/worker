@@ -1169,9 +1169,11 @@ export function _runTaskList(
         },
   };
 
-  _finPromise.finally(() => {
-    events.emit("pool:release", { ctx, pool: workerPool, workerPool });
-  });
+  _finPromise
+    .finally(() => {
+      events.emit("pool:release", { ctx, pool: workerPool, workerPool });
+    })
+    .catch(noop);
 
   abortSignal.addEventListener("abort", () => {
     if (!workerPool._shuttingDown) {
@@ -1574,3 +1576,5 @@ function batch<TSpec, TResult>(
     },
   };
 }
+
+function noop() {}

@@ -199,18 +199,18 @@ function buildRunner(input: {
     }
   };
 
-  workerPool.promise.finally(() => {
+  const wp = workerPool.promise.finally(() => {
     if (running) {
       stop();
     }
   });
-  cron.promise.finally(() => {
+  const cp = cron.promise.finally(() => {
     if (running) {
       stop();
     }
   });
 
-  const promise = Promise.all([cron.promise, workerPool.promise]).then(
+  const promise = Promise.all([cp, wp]).then(
     () => {
       /* noop */
     },
