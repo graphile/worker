@@ -190,6 +190,14 @@ function buildRunner(input: {
       throw new Error("Runner is already stopped");
     }
   };
+  const kill = async () => {
+    if (running) {
+      stop().catch(() => {});
+    }
+    if (workerPool._active) {
+      await workerPool.forcefulShutdown(`Terminated through .kill() command`);
+    }
+  };
 
   workerPool.promise.finally(() => {
     if (running) {
@@ -222,6 +230,7 @@ function buildRunner(input: {
 
   return {
     stop,
+    kill,
     addJob,
     promise,
     events,
