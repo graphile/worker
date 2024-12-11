@@ -19,7 +19,6 @@ import {
   Job,
   RunOnceOptions,
   TaskList,
-  WorkerEventMap,
   WorkerEvents,
   WorkerPool,
   WorkerPoolOptions,
