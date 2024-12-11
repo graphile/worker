@@ -97,7 +97,10 @@ export async function runMigration(
     const error = coerceError(rawError);
     await event.client.query("rollback");
     await hooks.process("migrationError", { ...event, error });
-    if (!migrationInsertComplete && error.code === "23505") {
+    if (
+      !migrationInsertComplete &&
+      CLASH_CODES.includes(error.code as string)
+    ) {
       // Someone else did this migration! Success!
       logger.debug(
         `Some other worker has performed migration ${migrationFile}; continuing.`,
@@ -146,13 +149,13 @@ select current_setting('server_version_num') as server_version_num,
       break;
     } catch (rawE) {
       const e = coerceError(rawE);
-      if (attempts === 0 && (e.code === "42P01" || e.code === "42703")) {
+      if (attempts === 0 && NX_CODES.includes(e.code as string)) {
         try {
           await installSchema(compiledSharedOptions, event);
           break;
         } catch (rawE2) {
           const e2 = coerceError(rawE2);
-          if (e2.code === "23505") {
+          if (CLASH_CODES.includes(e2.code as string)) {
             // Another instance installed this concurrently? Go around again.
           } else {
             throw e2;
@@ -208,3 +211,8 @@ select current_setting('server_version_num') as server_version_num,
     await hooks.process("postmigrate", event);
   });
 }
+
+/** Doesn't exist */
+const NX_CODES = ["42P01", "42703"];
+/** Someone else created */
+const CLASH_CODES = ["23505", "42P06", "42P07", "42710"];
