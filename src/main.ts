@@ -14,6 +14,8 @@ import {
   EnhancedWithPgClient,
   FailJobFunction,
   GetJobFunction,
+  GlobalEventMap,
+  GlobalEvents,
   Job,
   RunOnceOptions,
   TaskList,
@@ -66,7 +68,7 @@ export { allWorkerPools as _allWorkerPools };
  * gracefulShutdown to all the pools' events; we use this event emitter to
  * aggregate these requests.
  */
-const _signalHandlersEventEmitter: WorkerEvents = new EventEmitter();
+const _signalHandlersEventEmitter: GlobalEvents = new EventEmitter();
 
 /**
  * Only register the signal handlers once _globally_.
@@ -88,7 +90,7 @@ let _registeredSignalHandlersCount = 0;
  * future calls will register the events but take no further actions.
  */
 function registerSignalHandlers(
-  logger: Logger,
+  ctx: CompiledSharedOptions,
   events: WorkerEvents,
 ): () => void {
   if (_shuttingDownGracefully || _shuttingDownForcefully) {
@@ -97,13 +99,13 @@ function registerSignalHandlers(
     );
   }
 
-  const gscb = (o: WorkerEventMap["gracefulShutdown"]) =>
-    events.emit("gracefulShutdown", o);
-  const fscb = (o: WorkerEventMap["forcefulShutdown"]) =>
-    events.emit("forcefulShutdown", o);
+  const gscb = (o: GlobalEventMap["gracefulShutdown"]) =>
+    events.emit("gracefulShutdown", { ctx, ...o });
+  const fscb = (o: GlobalEventMap["forcefulShutdown"]) =>
+    events.emit("forcefulShutdown", { ctx, ...o });
 
   if (!_registeredSignalHandlers) {
-    _reallyRegisterSignalHandlers(logger);
+    _reallyRegisterSignalHandlers(ctx.logger);
   }
 
   _registeredSignalHandlersCount++;
@@ -262,6 +264,7 @@ export function runTaskListInternal(
   tasks: TaskList,
   pgPool: Pool,
 ): WorkerPool {
+  const ctx = compiledSharedOptions;
   const {
     events,
     logger,
@@ -329,10 +332,10 @@ export function runTaskListInternal(
         resetLockedAtPromise = undefined;
         if (workerPool._active) {
           const delay = resetLockedDelay();
-          events.emit("resetLocked:success", { workerPool, delay });
+          events.emit("resetLocked:success", { ctx, workerPool, delay });
           resetLockedTimeout = setTimeout(resetLocked, delay);
         } else {
-          events.emit("resetLocked:success", { workerPool, delay: null });
+          events.emit("resetLocked:success", { ctx, workerPool, delay: null });
         }
       },
       (e) => {
@@ -341,6 +344,7 @@ export function runTaskListInternal(
         if (workerPool._active) {
           const delay = resetLockedDelay();
           events.emit("resetLocked:failure", {
+            ctx,
             workerPool,
             error: e,
             delay,
@@ -354,6 +358,7 @@ export function runTaskListInternal(
           );
         } else {
           events.emit("resetLocked:failure", {
+            ctx,
             workerPool,
             error: e,
             delay: null,
@@ -367,7 +372,7 @@ export function runTaskListInternal(
         }
       },
     );
-    events.emit("resetLocked:started", { workerPool });
+    events.emit("resetLocked:started", { ctx, workerPool });
   };
 
   // Reset locked in the first 60 seconds, not immediately because we don't
@@ -389,7 +394,7 @@ export function runTaskListInternal(
     }
 
     const reconnectWithExponentialBackoff = (err: Error) => {
-      events.emit("pool:listen:error", { workerPool, error: err });
+      events.emit("pool:listen:error", { ctx, workerPool, error: err });
 
       attempts++;
 
@@ -411,7 +416,7 @@ export function runTaskListInternal(
 
       reconnectTimeout = setTimeout(() => {
         reconnectTimeout = null;
-        events.emit("pool:listen:connecting", { workerPool, attempts });
+        events.emit("pool:listen:connecting", { ctx, workerPool, attempts });
         pgPool.connect(listenForChanges);
       }, delay);
     };
@@ -451,6 +456,7 @@ export function runTaskListInternal(
     function handleNotification(message: Notification) {
       if (changeListener?.client === client && !workerPool._shuttingDown) {
         events.emit("pool:listen:notification", {
+          ctx,
           workerPool,
           message,
           client,
@@ -495,7 +501,7 @@ export function runTaskListInternal(
       client.removeListener("notification", handleNotification);
       // TODO: ideally we'd only stop handling errors once all pending queries are complete; but either way we shouldn't try again!
       client.removeListener("error", onErrorReleaseClientAndTryAgain);
-      events.emit("pool:listen:release", { workerPool, client });
+      events.emit("pool:listen:release", { ctx, workerPool, client });
       try {
         await client.query(
           'UNLISTEN "jobs:insert"; UNLISTEN "worker:migrate";',
@@ -515,7 +521,7 @@ export function runTaskListInternal(
     //----------------------------------------
 
     changeListener = { client, release };
-    events.emit("pool:listen:success", { workerPool, client });
+    events.emit("pool:listen:success", { ctx, workerPool, client });
     client.on("notification", handleNotification);
 
     // Subscribe to jobs:insert message
@@ -536,7 +542,7 @@ export function runTaskListInternal(
   };
 
   // Create a client dedicated to listening for new jobs.
-  events.emit("pool:listen:connecting", { workerPool, attempts });
+  events.emit("pool:listen:connecting", { ctx, workerPool, attempts });
   pgPool.connect(listenForChanges);
 
   return workerPool;
@@ -598,7 +604,10 @@ export function _runTaskList(
   let unregisterSignalHandlers: (() => void) | undefined = undefined;
   if (!noHandleSignals) {
     // Clean up when certain signals occur
-    unregisterSignalHandlers = registerSignalHandlers(logger, events);
+    unregisterSignalHandlers = registerSignalHandlers(
+      compiledSharedOptions,
+      events,
+    );
   }
 
   /* Errors that should be raised from the workerPool.promise (i.e. _finPromise) */
@@ -804,6 +813,7 @@ export function _runTaskList(
         { ctx, workerPool, message },
         async ({ message }) => {
           events.emit("pool:gracefulShutdown", {
+            ctx,
             pool: workerPool,
             workerPool,
             message,
@@ -836,6 +846,7 @@ export function _runTaskList(
                 const worker = workers[i];
                 const job = worker.getActiveJob();
                 events.emit("pool:gracefulShutdown:workerError", {
+                  ctx,
                   pool: workerPool,
                   workerPool,
                   error: workerReleaseResult.reason,
@@ -902,12 +913,14 @@ export function _runTaskList(
             }
 
             events.emit("pool:gracefulShutdown:complete", {
+              ctx,
               pool: workerPool,
               workerPool,
             });
             logger.debug("Graceful shutdown complete");
           } catch (e) {
             events.emit("pool:gracefulShutdown:error", {
+              ctx,
               pool: workerPool,
               workerPool,
               error: e,
@@ -965,6 +978,7 @@ export function _runTaskList(
         { ctx, workerPool, message },
         async ({ message }) => {
           events.emit("pool:forcefulShutdown", {
+            ctx,
             pool: workerPool,
             workerPool,
             message,
@@ -1097,6 +1111,7 @@ export function _runTaskList(
             }
 
             events.emit("pool:forcefulShutdown:complete", {
+              ctx,
               pool: workerPool,
               workerPool,
             });
@@ -1104,6 +1119,7 @@ export function _runTaskList(
             return { forceFailedJobs };
           } catch (e) {
             events.emit("pool:forcefulShutdown:error", {
+              ctx,
               pool: workerPool,
               workerPool,
               error: e,
@@ -1149,7 +1165,7 @@ export function _runTaskList(
   };
 
   _finPromise.finally(() => {
-    events.emit("pool:release", { pool: workerPool, workerPool });
+    events.emit("pool:release", { ctx, pool: workerPool, workerPool });
   });
 
   abortSignal.addEventListener("abort", () => {
@@ -1160,7 +1176,7 @@ export function _runTaskList(
 
   // Ensure that during a forced shutdown we get cleaned up too
   allWorkerPools.push(workerPool);
-  events.emit("pool:create", { workerPool });
+  events.emit("pool:create", { ctx, workerPool });
 
   // Spawn our workers; they can share clients from the pool.
   const workerId =
@@ -1219,6 +1235,7 @@ export function _runTaskList(
             ),
           (error, jobs) => {
             events.emit("pool:fatalError", {
+              ctx,
               error,
               workerPool,
               action: "completeJob",
@@ -1265,6 +1282,7 @@ export function _runTaskList(
             ),
           (error, specs) => {
             events.emit("pool:fatalError", {
+              ctx,
               error,
               workerPool,
               action: "failJob",

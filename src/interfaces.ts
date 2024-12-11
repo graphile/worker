@@ -900,23 +900,32 @@ export type WorkerEventMap = {
   /**
    * When a worker pool is created
    */
-  "pool:create": { workerPool: WorkerPool };
+  "pool:create": { ctx: WorkerPluginContext; workerPool: WorkerPool };
 
   /**
    * When a worker pool attempts to connect to PG ready to issue a LISTEN
    * statement
    */
-  "pool:listen:connecting": { workerPool: WorkerPool; attempts: number };
+  "pool:listen:connecting": {
+    ctx: WorkerPluginContext;
+    workerPool: WorkerPool;
+    attempts: number;
+  };
 
   /**
    * When a worker pool starts listening for jobs via PG LISTEN
    */
-  "pool:listen:success": { workerPool: WorkerPool; client: PoolClient };
+  "pool:listen:success": {
+    ctx: WorkerPluginContext;
+    workerPool: WorkerPool;
+    client: PoolClient;
+  };
 
   /**
    * When a worker pool faces an error on their PG LISTEN client
    */
   "pool:listen:error": {
+    ctx: WorkerPluginContext;
     workerPool: WorkerPool;
     error: unknown;
   };
@@ -925,6 +934,7 @@ export type WorkerEventMap = {
    * When a worker pool receives a notification
    */
   "pool:listen:notification": {
+    ctx: WorkerPluginContext;
     workerPool: WorkerPool;
     message: Notification;
     client: PoolClient;
@@ -934,6 +944,7 @@ export type WorkerEventMap = {
    * When a worker pool listening client is no longer available
    */
   "pool:listen:release": {
+    ctx: WorkerPluginContext;
     workerPool: WorkerPool;
     /** If you use this client, be careful to handle errors - it may be in an invalid state (errored, disconnected, etc). */
     client: PoolClient;
@@ -943,6 +954,7 @@ export type WorkerEventMap = {
    * When a worker pool fails to complete/fail a job
    */
   "pool:fatalError": {
+    ctx: WorkerPluginContext;
     workerPool: WorkerPool;
     error: unknown;
     action: string;
@@ -952,6 +964,7 @@ export type WorkerEventMap = {
    * When a worker pool is released
    */
   "pool:release": {
+    ctx: WorkerPluginContext;
     /** @deprecated Use workerPool for consistency */
     pool: WorkerPool;
     workerPool: WorkerPool;
@@ -961,6 +974,7 @@ export type WorkerEventMap = {
    * When a worker pool starts a graceful shutdown
    */
   "pool:gracefulShutdown": {
+    ctx: WorkerPluginContext;
     /** @deprecated Use workerPool for consistency */
     pool: WorkerPool;
     workerPool: WorkerPool;
@@ -971,6 +985,7 @@ export type WorkerEventMap = {
    * When a worker pool graceful shutdown throws an error
    */
   "pool:gracefulShutdown:error": {
+    ctx: WorkerPluginContext;
     /** @deprecated Use workerPool for consistency */
     pool: WorkerPool;
     workerPool: WorkerPool;
@@ -982,6 +997,7 @@ export type WorkerEventMap = {
    * throws an error from release()
    */
   "pool:gracefulShutdown:workerError": {
+    ctx: WorkerPluginContext;
     /** @deprecated Use workerPool for consistency */
     pool: WorkerPool;
     workerPool: WorkerPool;
@@ -993,6 +1009,7 @@ export type WorkerEventMap = {
    * When a worker pool graceful shutdown throws an error
    */
   "pool:gracefulShutdown:complete": {
+    ctx: WorkerPluginContext;
     /** @deprecated Use workerPool for consistency */
     pool: WorkerPool;
     workerPool: WorkerPool;
@@ -1002,6 +1019,7 @@ export type WorkerEventMap = {
    * When a worker pool starts a forceful shutdown
    */
   "pool:forcefulShutdown": {
+    ctx: WorkerPluginContext;
     /** @deprecated Use workerPool for consistency */
     pool: WorkerPool;
     workerPool: WorkerPool;
@@ -1012,6 +1030,7 @@ export type WorkerEventMap = {
    * When a worker pool forceful shutdown throws an error
    */
   "pool:forcefulShutdown:error": {
+    ctx: WorkerPluginContext;
     /** @deprecated Use workerPool for consistency */
     pool: WorkerPool;
     workerPool: WorkerPool;
@@ -1022,6 +1041,7 @@ export type WorkerEventMap = {
    * When a worker pool forceful shutdown throws an error
    */
   "pool:forcefulShutdown:complete": {
+    ctx: WorkerPluginContext;
     /** @deprecated Use workerPool for consistency */
     pool: WorkerPool;
     workerPool: WorkerPool;
@@ -1030,14 +1050,13 @@ export type WorkerEventMap = {
   /**
    * When a local queue is created
    */
-  "localQueue:init": {
-    localQueue: LocalQueue;
-  };
+  "localQueue:init": { ctx: WorkerPluginContext; localQueue: LocalQueue };
 
   /**
    * When a local queue enters 'polling' mode
    */
   "localQueue:setMode": {
+    ctx: WorkerPluginContext;
     localQueue: LocalQueue;
     oldMode: LocalQueueMode;
     newMode: Exclude<LocalQueueMode, typeof LocalQueueModes.STARTING>;
@@ -1048,6 +1067,7 @@ export type WorkerEventMap = {
    * sleep.
    */
   "localQueue:refetchDelay:start": {
+    ctx: WorkerPluginContext;
     localQueue: LocalQueue;
     /** The number of jobs that were fetched */
     jobCount: number;
@@ -1064,6 +1084,7 @@ export type WorkerEventMap = {
    * been awoken early to deal with the rush!
    */
   "localQueue:refetchDelay:abort": {
+    ctx: WorkerPluginContext;
     localQueue: LocalQueue;
     /** How many nudges did we receive during the delay */
     count: number;
@@ -1075,6 +1096,7 @@ export type WorkerEventMap = {
    * The refetchDelay terminated normally.
    */
   "localQueue:refetchDelay:expired": {
+    ctx: WorkerPluginContext;
     localQueue: LocalQueue;
   };
 
@@ -1082,6 +1104,7 @@ export type WorkerEventMap = {
    * The refetchDelay terminated normally.
    */
   "localQueue:getJobs:complete": {
+    ctx: WorkerPluginContext;
     localQueue: LocalQueue;
     jobs: Job[];
   };
@@ -1090,6 +1113,7 @@ export type WorkerEventMap = {
    * The refetchDelay terminated normally.
    */
   "localQueue:returnJobs": {
+    ctx: WorkerPluginContext;
     localQueue: LocalQueue;
     jobs: Job[];
   };
@@ -1097,37 +1121,46 @@ export type WorkerEventMap = {
   /**
    * When a worker is created
    */
-  "worker:create": { worker: Worker; tasks: TaskList };
+  "worker:create": {
+    ctx: WorkerPluginContext;
+    worker: Worker;
+    tasks: TaskList;
+  };
 
   /**
    * When a worker release is requested
    */
-  "worker:release": { worker: Worker };
+  "worker:release": { ctx: WorkerPluginContext; worker: Worker };
 
   /**
    * When a worker stops (normally after a release)
    */
-  "worker:stop": { worker: Worker; error?: unknown };
+  "worker:stop": { ctx: WorkerPluginContext; worker: Worker; error?: unknown };
 
   /**
    * When a worker is about to ask the database for a job to execute
    */
-  "worker:getJob:start": { worker: Worker };
+  "worker:getJob:start": { ctx: WorkerPluginContext; worker: Worker };
 
   /**
    * When a worker calls get_job but there are no available jobs
    */
-  "worker:getJob:error": { worker: Worker; error: unknown };
+  "worker:getJob:error": {
+    ctx: WorkerPluginContext;
+    worker: Worker;
+    error: unknown;
+  };
 
   /**
    * When a worker calls get_job but there are no available jobs
    */
-  "worker:getJob:empty": { worker: Worker };
+  "worker:getJob:empty": { ctx: WorkerPluginContext; worker: Worker };
 
   /**
    * When a worker is created
    */
   "worker:fatalError": {
+    ctx: WorkerPluginContext;
     worker: Worker;
     error: unknown;
     jobError: unknown | null;
@@ -1136,17 +1169,18 @@ export type WorkerEventMap = {
   /**
    * When a job is retrieved by get_job
    */
-  "job:start": { worker: Worker; job: Job };
+  "job:start": { ctx: WorkerPluginContext; worker: Worker; job: Job };
 
   /**
    * When a job completes successfully
    */
-  "job:success": { worker: Worker; job: Job };
+  "job:success": { ctx: WorkerPluginContext; worker: Worker; job: Job };
 
   /**
    * When a job throws an error
    */
   "job:error": {
+    ctx: WorkerPluginContext;
     worker: Worker;
     job: Job;
     error: unknown;
@@ -1157,6 +1191,7 @@ export type WorkerEventMap = {
    * When a job fails permanently (emitted after job:error when appropriate)
    */
   "job:failed": {
+    ctx: WorkerPluginContext;
     worker: Worker;
     job: Job;
     error: unknown;
@@ -1167,16 +1202,22 @@ export type WorkerEventMap = {
    * When a job has finished executing and the result (success or failure) has
    * been written back to the database
    */
-  "job:complete": { worker: Worker; job: Job; error: unknown };
+  "job:complete": {
+    ctx: WorkerPluginContext;
+    worker: Worker;
+    job: Job;
+    error: unknown;
+  };
 
   /** **Experimental** When the cron starts working (before backfilling) */
-  "cron:starting": { cron: Cron; start: Date };
+  "cron:starting": { ctx: WorkerPluginContext; cron: Cron; start: Date };
 
   /** **Experimental** When the cron starts working (after backfilling completes) */
-  "cron:started": { cron: Cron; start: Date };
+  "cron:started": { ctx: WorkerPluginContext; cron: Cron; start: Date };
 
   /** **Experimental** When a number of jobs need backfilling for a particular timestamp. */
   "cron:backfill": {
+    ctx: WorkerPluginContext;
     cron: Cron;
     itemsToBackfill: JobAndCronIdentifierWithDetails[];
     timestamp: string;
@@ -1187,6 +1228,7 @@ export type WorkerEventMap = {
    * clock was adjusted) and we try again a little later.
    */
   "cron:prematureTimer": {
+    ctx: WorkerPluginContext;
     cron: Cron;
     currentTimestamp: number;
     expectedTimestamp: number;
@@ -1198,6 +1240,7 @@ export type WorkerEventMap = {
    * went to sleep) and we need to catch up.
    */
   "cron:overdueTimer": {
+    ctx: WorkerPluginContext;
     cron: Cron;
     currentTimestamp: number;
     expectedTimestamp: number;
@@ -1209,6 +1252,7 @@ export type WorkerEventMap = {
    * database write.)
    */
   "cron:schedule": {
+    ctx: WorkerPluginContext;
     cron: Cron;
     timestamp: number;
     jobsAndIdentifiers: JobAndCronIdentifier[];
@@ -1220,6 +1264,7 @@ export type WorkerEventMap = {
    * database write.)
    */
   "cron:scheduled": {
+    ctx: WorkerPluginContext;
     cron: Cron;
     timestamp: number;
     jobsAndIdentifiers: JobAndCronIdentifier[];
@@ -1230,6 +1275,7 @@ export type WorkerEventMap = {
    * (currently every 8-10 minutes)
    */
   "resetLocked:started": {
+    ctx: WorkerPluginContext;
     /** @internal Not sure this'll stay on pool */
     workerPool: WorkerPool;
   };
@@ -1239,6 +1285,7 @@ export type WorkerEventMap = {
    * successfully.
    */
   "resetLocked:success": {
+    ctx: WorkerPluginContext;
     /**
      * The number of milliseconds until resetLocked runs again (or null if we
      * won't because the pool is exiting)
@@ -1253,6 +1300,7 @@ export type WorkerEventMap = {
    * **Experimental** When the `resetLocked` process has failed.
    */
   "resetLocked:failure": {
+    ctx: WorkerPluginContext;
     error: Error;
 
     /**
@@ -1268,20 +1316,34 @@ export type WorkerEventMap = {
   /**
    * When the runner is terminated by a signal
    */
+  gracefulShutdown: { ctx: WorkerPluginContext; signal: Signal };
+
+  /**
+   * When the runner is terminated by a signal _again_ after 5 seconds
+   */
+  forcefulShutdown: { ctx: WorkerPluginContext; signal: Signal };
+
+  /**
+   * When the runner is stopped
+   */
+  stop: { ctx: WorkerPluginContext };
+};
+
+export type WorkerEvents = TypedEventEmitter<WorkerEventMap>;
+
+export type GlobalEventMap = {
+  /**
+   * When the runner is terminated by a signal
+   */
   gracefulShutdown: { signal: Signal };
 
   /**
    * When the runner is terminated by a signal _again_ after 5 seconds
    */
   forcefulShutdown: { signal: Signal };
-
-  /**
-   * When the runner is stopped
-   */
-  stop: Record<string, never>;
 };
 
-export type WorkerEvents = TypedEventEmitter<WorkerEventMap>;
+export type GlobalEvents = TypedEventEmitter<GlobalEventMap>;
 
 /**
  * The digest of a timestamp into the component parts that a cron schedule cares about.

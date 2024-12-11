@@ -6,6 +6,7 @@ import {
   Runner,
   RunnerOptions,
   TaskList,
+  WorkerPluginContext,
 } from "./interfaces";
 import {
   coerceError,
@@ -149,6 +150,7 @@ function buildRunner(input: {
   release: () => PromiseOrDirect<void>;
 }): Runner {
   const { compiledOptions, taskList, parsedCronItems, release } = input;
+  const ctx: WorkerPluginContext = compiledOptions;
   const { events, pgPool, releasers, addJob, logger } = compiledOptions;
 
   const cron = runCron(compiledOptions, parsedCronItems, { pgPool, events });
@@ -166,7 +168,7 @@ function buildRunner(input: {
     compiledOptions.logger.debug("Runner stopping");
     if (running) {
       running = false;
-      events.emit("stop", {});
+      events.emit("stop", { ctx });
       try {
         const promises: Array<PromiseOrDirect<void>> = [];
         if (cron._active) {

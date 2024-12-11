@@ -259,6 +259,7 @@ export class LocalQueue {
       );
     }
     compiledSharedOptions.events.emit("localQueue:init", {
+      ctx: compiledSharedOptions,
       localQueue: this,
     });
     // Immediately enter polling mode.
@@ -275,6 +276,7 @@ export class LocalQueue {
     // Override the 'readonly'
     (this.mode as LocalQueueMode) = newMode;
     this.compiledSharedOptions.events.emit("localQueue:setMode", {
+      ctx: this.compiledSharedOptions,
       localQueue: this,
       oldMode,
       newMode,
@@ -440,6 +442,7 @@ export class LocalQueue {
     const jobsToReturn = this.jobQueue.splice(0, l);
 
     this.compiledSharedOptions.events.emit("localQueue:returnJobs", {
+      ctx: this.compiledSharedOptions,
       localQueue: this,
       jobs: jobsToReturn,
     });
@@ -609,6 +612,7 @@ export class LocalQueue {
       );
 
       this.compiledSharedOptions.events.emit("localQueue:getJobs:complete", {
+        ctx: this.compiledSharedOptions,
         localQueue: this,
         jobs,
       });
@@ -669,6 +673,7 @@ export class LocalQueue {
         refetchDelayMs,
       );
       this.compiledSharedOptions.events.emit("localQueue:refetchDelay:start", {
+        ctx: this.compiledSharedOptions,
         localQueue: this,
         jobCount,
         threshold: refetchDelayOptions?.threshold ?? 0,
@@ -714,6 +719,7 @@ export class LocalQueue {
       this.refetchDelayFetchOnComplete = true;
 
       this.compiledSharedOptions.events.emit("localQueue:refetchDelay:abort", {
+        ctx: this.compiledSharedOptions,
         localQueue: this,
         count: this.refetchDelayCounter,
         abortThreshold: this.refetchDelayAbortThreshold,
@@ -722,6 +728,7 @@ export class LocalQueue {
       this.compiledSharedOptions.events.emit(
         "localQueue:refetchDelay:expired",
         {
+          ctx: this.compiledSharedOptions,
           localQueue: this,
         },
       );
