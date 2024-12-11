@@ -182,16 +182,18 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
       allWorkerPools.map((pool) =>
         pool.gracefulShutdown(`Graceful worker shutdown due to ${signal}`),
       ),
-    ).finally(() => {
-      clearTimeout(switchTimeout);
-      process.removeListener(signal, gracefulHandler);
-      if (!_shuttingDownForcefully) {
-        logger.info(
-          `Global graceful shutdown complete; killing self via ${signal}`,
-        );
-        process.kill(process.pid, signal);
-      }
-    });
+    )
+      .finally(() => {
+        clearTimeout(switchTimeout);
+        process.removeListener(signal, gracefulHandler);
+        if (!_shuttingDownForcefully) {
+          logger.info(
+            `Global graceful shutdown complete; killing self via ${signal}`,
+          );
+          process.kill(process.pid, signal);
+        }
+      })
+      .catch(noop);
   };
   const forcefulHandler = function (signal: Signal) {
     if (_shuttingDownForcefully) {
@@ -213,14 +215,16 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
       allWorkerPools.map((pool) =>
         pool.forcefulShutdown(`Forced worker shutdown due to ${signal}`),
       ),
-    ).finally(() => {
-      removeForcefulHandler();
-      clearTimeout(removeTimeout);
-      logger.error(
-        `Global forceful shutdown completed; killing self via ${signal}`,
-      );
-      process.kill(process.pid, signal);
-    });
+    )
+      .finally(() => {
+        removeForcefulHandler();
+        clearTimeout(removeTimeout);
+        logger.error(
+          `Global forceful shutdown completed; killing self via ${signal}`,
+        );
+        process.kill(process.pid, signal);
+      })
+      .catch(noop);
   };
 
   logger.debug(
