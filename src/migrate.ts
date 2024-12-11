@@ -34,25 +34,27 @@ export async function installSchema(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
   event: GraphileWorker.MigrateEvent,
 ) {
-  const { hooks, escapedWorkerSchema } = compiledSharedOptions;
+  const { hooks, escapedWorkerSchema, middleware } = compiledSharedOptions;
 
   (event as Writeable<GraphileWorker.MigrateEvent>).postgresVersion =
     await fetchAndCheckPostgresVersion(event.client);
-  await hooks.process("prebootstrap", event);
-  // Change to this query should be reflected in website/docs/schema.md
-  await event.client.query(`
-    create schema if not exists ${escapedWorkerSchema};
-    create table if not exists ${escapedWorkerSchema}.migrations(
-      id int primary key,
-      ts timestamptz default now() not null
+  await middleware.run("bootstrap", event, async (event) => {
+    await hooks.process("prebootstrap", event);
+    // Change to this query should be reflected in website/docs/schema.md
+    await event.client.query(`\
+create schema if not exists ${escapedWorkerSchema};
+create table if not exists ${escapedWorkerSchema}.migrations(
+  id int primary key,
+  ts timestamptz default now() not null
+);
+alter table ${escapedWorkerSchema}.migrations add column if not exists breaking boolean not null default false;
+`);
+    await event.client.query(
+      `update ${escapedWorkerSchema}.migrations set breaking = true where id = any($1::int[])`,
+      [BREAKING_MIGRATIONS],
     );
-    alter table ${escapedWorkerSchema}.migrations add column if not exists breaking boolean not null default false;
-  `);
-  await event.client.query(
-    `update ${escapedWorkerSchema}.migrations set breaking = true where id = any($1::int[])`,
-    [BREAKING_MIGRATIONS],
-  );
-  await hooks.process("postbootstrap", event);
+    await hooks.process("postbootstrap", event);
+  });
 }
 
 /** @internal */
@@ -95,7 +97,10 @@ export async function runMigration(
     const error = coerceError(rawError);
     await event.client.query("rollback");
     await hooks.process("migrationError", { ...event, error });
-    if (!migrationInsertComplete && error.code === "23505") {
+    if (
+      !migrationInsertComplete &&
+      CLASH_CODES.includes(error.code as string)
+    ) {
       // Someone else did this migration! Success!
       logger.debug(
         `Some other worker has performed migration ${migrationFile}; continuing.`,
@@ -116,10 +121,16 @@ export async function migrate(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
   client: PoolClient,
 ) {
-  const { escapedWorkerSchema, hooks, logger } = compiledSharedOptions;
+  const { escapedWorkerSchema, hooks, logger, middleware } =
+    compiledSharedOptions;
   let latestMigration: number | null = null;
   let latestBreakingMigration: number | null = null;
-  const event = { client, postgresVersion: 0, scratchpad: Object.create(null) };
+  const event = {
+    ctx: compiledSharedOptions,
+    client,
+    postgresVersion: 0,
+    scratchpad: Object.create(null),
+  };
   for (let attempts = 0; attempts < 2; attempts++) {
     try {
       const {
@@ -138,13 +149,13 @@ select current_setting('server_version_num') as server_version_num,
       break;
     } catch (rawE) {
       const e = coerceError(rawE);
-      if (attempts === 0 && (e.code === "42P01" || e.code === "42703")) {
+      if (attempts === 0 && NX_CODES.includes(e.code as string)) {
         try {
           await installSchema(compiledSharedOptions, event);
           break;
         } catch (rawE2) {
           const e2 = coerceError(rawE2);
-          if (e2.code === "23505") {
+          if (CLASH_CODES.includes(e2.code as string)) {
             // Another instance installed this concurrently? Go around again.
           } else {
             throw e2;
@@ -159,40 +170,49 @@ select current_setting('server_version_num') as server_version_num,
     await sleep(400 + Math.random() * 200);
   }
 
-  await hooks.process("premigrate", event);
+  await middleware.run("migrate", event, async (event) => {
+    await hooks.process("premigrate", event);
 
-  const migrationFiles = Object.keys(migrations) as (keyof typeof migrations)[];
-  let highestMigration = 0;
-  let migrated = false;
-  for (const migrationFile of migrationFiles) {
-    const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
-    if (migrationNumber > highestMigration) {
-      highestMigration = migrationNumber;
+    const migrationFiles = Object.keys(
+      migrations,
+    ) as (keyof typeof migrations)[];
+    let highestMigration = 0;
+    let migrated = false;
+    for (const migrationFile of migrationFiles) {
+      const migrationNumber = parseInt(migrationFile.slice(0, 6), 10);
+      if (migrationNumber > highestMigration) {
+        highestMigration = migrationNumber;
+      }
+      if (latestMigration == null || migrationNumber > latestMigration) {
+        migrated = true;
+        await runMigration(
+          compiledSharedOptions,
+          event,
+          migrationFile,
+          migrationNumber,
+        );
+      }
     }
-    if (latestMigration == null || migrationNumber > latestMigration) {
-      migrated = true;
-      await runMigration(
-        compiledSharedOptions,
-        event,
-        migrationFile,
-        migrationNumber,
+
+    if (migrated) {
+      logger.debug(`Migrations complete`);
+    }
+
+    if (latestBreakingMigration && highestMigration < latestBreakingMigration) {
+      process.exitCode = 57;
+      throw new Error(
+        `Database is using Graphile Worker schema revision ${latestMigration} which includes breaking migration ${latestBreakingMigration}, but the currently running worker only supports up to revision ${highestMigration}. It would be unsafe to continue; please ensure all versions of Graphile Worker are compatible.`,
+      );
+    } else if (latestMigration && highestMigration < latestMigration) {
+      logger.warn(
+        `Database is using Graphile Worker schema revision ${latestMigration}, but the currently running worker only supports up to revision ${highestMigration} which may or may not be compatible. Please ensure all versions of Graphile Worker you're running are compatible, or use Worker Pro which will perform this check for you. Attempting to continue regardless.`,
       );
     }
-  }
-
-  if (migrated) {
-    logger.debug(`Migrations complete`);
-  }
-
-  if (latestBreakingMigration && highestMigration < latestBreakingMigration) {
-    process.exitCode = 57;
-    throw new Error(
-      `Database is using Graphile Worker schema revision ${latestMigration} which includes breaking migration ${latestBreakingMigration}, but the currently running worker only supports up to revision ${highestMigration}. It would be unsafe to continue; please ensure all versions of Graphile Worker are compatible.`,
-    );
-  } else if (latestMigration && highestMigration < latestMigration) {
-    logger.warn(
-      `Database is using Graphile Worker schema revision ${latestMigration}, but the currently running worker only supports up to revision ${highestMigration} which may or may not be compatible. Please ensure all versions of Graphile Worker you're running are compatible, or use Worker Pro which will perform this check for you. Attempting to continue regardless.`,
-    );
-  }
-  await hooks.process("postmigrate", event);
+    await hooks.process("postmigrate", event);
+  });
 }
+
+/** Doesn't exist */
+const NX_CODES = ["42P01", "42703"];
+/** Someone else created */
+const CLASH_CODES = ["23505", "42P06", "42P07", "42710"];

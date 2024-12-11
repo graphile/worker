@@ -179,6 +179,7 @@ async function scheduleCronJobs(
  * performs backfilling on any crontab tasks that need it.
  */
 async function registerAndBackfillItems(
+  ctx: CompiledSharedOptions,
   { pgPool, events, cron }: { pgPool: Pool; events: WorkerEvents; cron: Cron },
   escapedWorkerSchema: string,
   parsedCronItems: ParsedCronItem[],
@@ -261,6 +262,7 @@ async function registerAndBackfillItems(
         // At this time it's not expected that backfilling will be sufficiently
         // expensive to justify optimising this further.
         events.emit("cron:backfill", {
+          ctx,
           cron,
           itemsToBackfill,
           timestamp: ts,
@@ -338,11 +340,13 @@ export const runCron = (
     }
 
     const start = new Date();
-    events.emit("cron:starting", { cron, start });
+    const ctx = compiledSharedOptions;
+    events.emit("cron:starting", { ctx, cron, start });
 
     // We must backfill BEFORE scheduling any new jobs otherwise backfill won't
     // work due to known_crontabs.last_execution having been updated.
     await registerAndBackfillItems(
+      ctx,
       { pgPool, events, cron },
       escapedWorkerSchema,
       parsedCronItems,
@@ -350,7 +354,7 @@ export const runCron = (
       useNodeTime,
     );
 
-    events.emit("cron:started", { cron, start });
+    events.emit("cron:started", { ctx, cron, start });
 
     if (!cron._active) {
       return stop();
@@ -411,6 +415,7 @@ export const runCron = (
             },
           );
           events.emit("cron:prematureTimer", {
+            ctx,
             cron,
             currentTimestamp,
             expectedTimestamp,
@@ -427,6 +432,7 @@ export const runCron = (
             )}s behind)`,
           );
           events.emit("cron:overdueTimer", {
+            ctx,
             cron,
             currentTimestamp,
             expectedTimestamp,
@@ -449,6 +455,7 @@ export const runCron = (
         // Finally actually run the jobs.
         if (jobsAndIdentifiers.length) {
           events.emit("cron:schedule", {
+            ctx,
             cron,
             timestamp: expectedTimestamp,
             jobsAndIdentifiers,
@@ -461,6 +468,7 @@ export const runCron = (
             useNodeTime,
           );
           events.emit("cron:scheduled", {
+            ctx,
             cron,
             timestamp: expectedTimestamp,
             jobsAndIdentifiers,

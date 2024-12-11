@@ -1,6 +1,12 @@
 import * as assert from "assert";
-import { EventEmitter } from "events";
-import { applyHooks, AsyncHooks, resolvePresets } from "graphile-config";
+import EventEmitter from "events";
+import {
+  applyHooks,
+  AsyncHooks,
+  Middleware,
+  orderedApply,
+  resolvePreset,
+} from "graphile-config";
 import { Client, Pool, PoolClient, PoolConfig } from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "./config";
@@ -15,13 +21,13 @@ import {
   RunOnceOptions,
   SharedOptions,
   WithPgClient,
-  WorkerEvents,
   WorkerOptions,
+  WorkerPluginBaseContext,
   WorkerPluginContext,
   WorkerSharedOptions,
   WorkerUtilsOptions,
 } from "./interfaces";
-import { Logger, LogScope } from "./logger";
+import { LogScope } from "./logger";
 import { migrate } from "./migrate";
 import { WorkerPreset } from "./preset";
 import { version } from "./version";
@@ -46,24 +52,14 @@ export type ResolvedWorkerPreset = GraphileConfig.ResolvedPreset & {
 };
 
 // NOTE: when you add things here, you may also want to add them to WorkerPluginContext
-export interface CompiledSharedOptions<
-  T extends SharedOptions = SharedOptions,
-> {
-  version: string;
-  maxMigrationNumber: number;
-  breakingMigrationNumbers: number[];
-  events: WorkerEvents;
-  logger: Logger;
-  workerSchema: string;
-  escapedWorkerSchema: string;
+export interface CompiledSharedOptions<T extends SharedOptions = SharedOptions>
+  extends WorkerPluginContext {
   /**
    * DO NOT USE THIS! As we move over to presets this will be removed.
    *
    * @internal
    */
   _rawOptions: T;
-  resolvedPreset: ResolvedWorkerPreset;
-  hooks: AsyncHooks<GraphileConfig.WorkerHooks>;
 }
 
 interface ProcessSharedOptionsSettings {
@@ -208,11 +204,24 @@ export function processSharedOptions<
     | CompiledSharedOptions<T>
     | undefined;
   if (!compiled) {
-    const resolvedPreset = resolvePresets([
-      WorkerPreset,
-      // Explicit options override the preset
-      legacyOptionsToPreset(options),
-    ]) as ResolvedWorkerPreset;
+    const resolvedPreset = resolvePreset({
+      extends: [
+        WorkerPreset,
+        // Explicit options override the preset
+        legacyOptionsToPreset(options),
+      ],
+    }) as ResolvedWorkerPreset;
+
+    const middleware = new Middleware<GraphileConfig.WorkerMiddleware>();
+
+    orderedApply(
+      resolvedPreset.plugins,
+      (plugin) => plugin.worker?.middleware,
+      (name, fn, _plugin) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        middleware.register(name, fn as any);
+      },
+    );
 
     const {
       worker: {
@@ -222,50 +231,59 @@ export function processSharedOptions<
         logger,
         events = new EventEmitter(),
       },
+      plugins,
     } = resolvedPreset;
-
     const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
-    if (
-      !Number.isFinite(minResetLockedInterval) ||
-      !Number.isFinite(maxResetLockedInterval) ||
-      minResetLockedInterval < 1 ||
-      maxResetLockedInterval < minResetLockedInterval
-    ) {
-      throw new Error(
-        `Invalid values for minResetLockedInterval (${minResetLockedInterval})/maxResetLockedInterval (${maxResetLockedInterval})`,
-      );
-    }
-    const hooks = new AsyncHooks<GraphileConfig.WorkerHooks>();
-    compiled = {
+
+    const ctx: WorkerPluginBaseContext = {
       version,
-      maxMigrationNumber: MAX_MIGRATION_NUMBER,
-      breakingMigrationNumbers: BREAKING_MIGRATIONS,
-      events,
-      logger,
+      resolvedPreset,
       workerSchema,
       escapedWorkerSchema,
-      _rawOptions: options,
-      hooks,
-      resolvedPreset,
+      events,
+      logger,
     };
-    applyHooks(
-      resolvedPreset.plugins,
-      (p) => p.worker?.hooks,
-      (name, fn, plugin) => {
-        const context: WorkerPluginContext = compiled!;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const cb = ((...args: any[]) => fn(context, ...args)) as any;
-        cb.displayName = `${plugin.name}_hook_${name}`;
-        hooks.hook(name, cb);
-      },
-    );
-    _sharedOptionsCache.set(options, compiled);
-    Promise.resolve(hooks.process("init")).catch((error) => {
-      logger.error(
-        `One of the plugins you are using raised an error during 'init'; but errors during 'init' are currently ignored. Continuing. Error: ${error}`,
-        { error },
+
+    compiled = middleware.run("init", { ctx }, () => {
+      if (
+        !Number.isFinite(minResetLockedInterval) ||
+        !Number.isFinite(maxResetLockedInterval) ||
+        minResetLockedInterval < 1 ||
+        maxResetLockedInterval < minResetLockedInterval
+      ) {
+        throw new Error(
+          `Invalid values for minResetLockedInterval (${minResetLockedInterval})/maxResetLockedInterval (${maxResetLockedInterval})`,
+        );
+      }
+      const hooks = new AsyncHooks<GraphileConfig.WorkerHooks>();
+      const compiled: CompiledSharedOptions<T> = Object.assign(ctx, {
+        hooks,
+        middleware,
+        maxMigrationNumber: MAX_MIGRATION_NUMBER,
+        breakingMigrationNumbers: BREAKING_MIGRATIONS,
+        _rawOptions: options,
+      });
+      applyHooks(
+        plugins,
+        (p) => p.worker?.hooks,
+        (name, fn, plugin) => {
+          const context: WorkerPluginContext = compiled!;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const cb = ((...args: any[]) => fn(context, ...args)) as any;
+          cb.displayName = `${plugin.name}_hook_${name}`;
+          hooks.hook(name, cb);
+        },
       );
-    });
+      _sharedOptionsCache.set(options, compiled);
+      // 'init' hook is deprecated; use middleware instead.
+      Promise.resolve(hooks.process("init")).catch((error) => {
+        logger.error(
+          `One of the plugins you are using raised an error during 'init'; but errors during 'init' are currently ignored. Continuing. Error: ${error}`,
+          { error },
+        );
+      });
+      return compiled;
+    }) as CompiledSharedOptions<T>;
   }
   if (scope) {
     return {
@@ -516,13 +534,20 @@ export function tryParseJson<T = object>(
 }
 
 /** @see {@link https://www.postgresql.org/docs/current/mvcc-serialization-failure-handling.html} */
-const RETRYABLE_ERROR_CODES = [
-  { code: "40001", backoffMS: 50 }, // serialization_failure
-  { code: "40P01", backoffMS: 50 }, // deadlock_detected
-  { code: "57P03", backoffMS: 3000 }, // cannot_connect_now
-  { code: "EHOSTUNREACH", backoffMS: 3000 }, // no connection to the server
-  { code: "ETIMEDOUT", backoffMS: 3000 }, // timeout
-];
+export const RETRYABLE_ERROR_CODES: Record<
+  string,
+  Omit<RetryOptions, "maxAttempts" | "multiplier"> | undefined
+> = {
+  // @ts-ignore
+  __proto__: null,
+
+  "40001": { minDelay: 50, maxDelay: 5_000 }, // serialization_failure
+  "40P01": { minDelay: 50, maxDelay: 5_000 }, // deadlock_detected
+  "57P03": { minDelay: 3000, maxDelay: 120_000 }, // cannot_connect_now
+  EHOSTUNREACH: { minDelay: 3000, maxDelay: 120_000 }, // no connection to the server
+  ETIMEDOUT: { minDelay: 3000, maxDelay: 120_000 }, // timeout
+};
+
 const MAX_RETRIES = 100;
 
 export function makeEnhancedWithPgClient(
@@ -542,13 +567,17 @@ export function makeEnhancedWithPgClient(
         return await withPgClient(...args);
       } catch (rawE) {
         const e = coerceError(rawE);
-        const retryable = RETRYABLE_ERROR_CODES.find(
-          ({ code }) => code === e.code,
-        );
+        const retryable = RETRYABLE_ERROR_CODES[e.code as string];
         if (retryable) {
           lastError = e;
+          const delay = calculateDelay(attempts, {
+            maxAttempts: MAX_RETRIES,
+            minDelay: retryable.minDelay,
+            maxDelay: retryable.maxDelay,
+            multiplier: 1.5,
+          });
           // Try again in backoffMS
-          await sleep(retryable.backoffMS * Math.sqrt(attempts + 1));
+          await sleep(delay);
         } else {
           throw e;
         }
@@ -578,4 +607,28 @@ export function coerceError(err: unknown): Error & { code?: unknown } {
 export function isPromiseLike<T>(v: PromiseLike<T> | T): v is PromiseLike<T> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return v != null && typeof (v as any).then === "function";
+}
+
+export interface RetryOptions {
+  maxAttempts: number;
+  /** Minimum delay between attempts (milliseconds); can actually be half this due to jitter */
+  minDelay: number;
+  /** Maximum delay between attempts (milliseconds) - can actually be 1.5x this due to jitter */
+  maxDelay: number;
+  /** `multiplier ^ attempts` */
+  multiplier: number;
+}
+
+export function calculateDelay(
+  previousAttempts: number,
+  retryOptions: RetryOptions,
+) {
+  const { minDelay = 200, maxDelay = 30_000, multiplier = 1.5 } = retryOptions;
+  /** Prevent the thundering herd problem by offsetting randomly */
+  const jitter = Math.random();
+
+  return (
+    Math.min(minDelay * Math.pow(multiplier, previousAttempts), maxDelay) *
+    (0.5 + jitter)
+  );
 }
