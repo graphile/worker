@@ -95,6 +95,13 @@ A `WorkerUtils` instance has the following methods:
 
 ## `addJobAdhoc()`
 
+:::info
+
+This was called `quickAddJob()` in Graphile Worker up until v0.16.x, but was
+renamed to `addJobAdHoc()` in v0.17.
+
+:::
+
 ```ts
 function addJobAdhoc(options: WorkerUtilsOptions, ...addJobArgs): Promise<Job>;
 ```
