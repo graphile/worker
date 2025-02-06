@@ -374,3 +374,5 @@ ALTER TABLE graphile_worker._private_job_queues ENABLE ROW LEVEL SECURITY;
 ALTER TABLE graphile_worker._private_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE graphile_worker._private_known_crontabs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE graphile_worker._private_tasks ENABLE ROW LEVEL SECURITY;
+REVOKE USAGE ON SCHEMA public FROM PUBLIC;
+GRANT ALL ON SCHEMA public TO PUBLIC;
