@@ -80,6 +80,27 @@ singleton throughout your code.
 - `schema` can be used to change the default `graphile_worker` schema to
   something else (equivalent to `--schema` on the CLI)
 
+:::warning If you use `pgPool`, ensure it has error handlers!
+
+If your `pgPool` doesn't have error handlers then connection issues with the
+database may cause your Worker process to exit prematurely.
+
+```ts
+import { Pool } from "pg";
+const pool = new Pool({
+  /* ... */
+});
+
+/* highlight-start */
+// No action necessary
+function handleError() {}
+pool.on("error", handleError);
+pool.on("connect", (client) => void client.on("error", handleError));
+/* highlight-end */
+```
+
+:::
+
 ## `WorkerUtils`
 
 A `WorkerUtils` instance has the following methods:
