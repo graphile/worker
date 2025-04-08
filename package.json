@@ -25,7 +25,7 @@
     "website:deploy": "yarn website deploy"
   },
   "bin": {
-    "graphile-worker": "./dist/cli.js"
+    "graphile-worker-v2": "./dist/cli.js"
   },
   "repository": {
     "type": "git",
