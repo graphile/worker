@@ -143,5 +143,35 @@ Array [
     "task": "with_key_and_mode",
     Symbol(isParsed): true,
   },
+  Object {
+    "identifier": "nested/task",
+    "match": [Function],
+    "options": Object {
+      "backfillPeriod": 0,
+      "jobKey": "my_key",
+      "jobKeyMode": "preserve_run_at",
+      "maxAttempts": undefined,
+      "priority": undefined,
+      "queueName": undefined,
+    },
+    "payload": null,
+    "task": "nested/task",
+    Symbol(isParsed): true,
+  },
+  Object {
+    "identifier": "nested/folder/task",
+    "match": [Function],
+    "options": Object {
+      "backfillPeriod": 0,
+      "jobKey": "my_key",
+      "jobKeyMode": "preserve_run_at",
+      "maxAttempts": undefined,
+      "priority": undefined,
+      "queueName": undefined,
+    },
+    "payload": null,
+    "task": "nested/folder/task",
+    Symbol(isParsed): true,
+  },
 ]
 `;
