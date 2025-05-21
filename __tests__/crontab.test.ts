@@ -44,6 +44,8 @@ test("parses crontab file correctly", () => {
     *     *      *       *       *      lots_of_spaces     
 * * * * * with_key ?jobKey=my_key
 * * * * * with_key_and_mode ?jobKey=my_key&jobKeyMode=preserve_run_at
+* * * * * nested/task ?jobKey=my_key&jobKeyMode=preserve_run_at
+* * * * * nested/folder/task ?jobKey=my_key&jobKeyMode=preserve_run_at
 `;
   const parsed = parseCrontab(exampleCrontab);
 
@@ -173,6 +175,20 @@ test("parses crontab file correctly", () => {
   });
   expect(parsed[8].payload).toEqual(null);
 
+  expect(parsed[9].task).toEqual("nested/task");
+  expect(parsed[9].identifier).toEqual("nested/task");
+  const parsedCronMatch9 = (parsed[9].match as any)
+    .parsedCronMatch as ParsedCronMatch;
+  expect(parsedCronMatch9.minutes).toEqual(ALL_MINUTES);
+  expect(parsedCronMatch9.hours).toEqual(ALL_HOURS);
+
+  expect(parsed[10].task).toEqual("nested/folder/task");
+  expect(parsed[10].identifier).toEqual("nested/folder/task");
+  const parsedCronMatch10 = (parsed[10].match as any)
+    .parsedCronMatch as ParsedCronMatch;
+  expect(parsedCronMatch10.minutes).toEqual(ALL_MINUTES);
+  expect(parsedCronMatch10.hours).toEqual(ALL_HOURS);
+  
   expect(parsed).toMatchSnapshot();
 });
 
