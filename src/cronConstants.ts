@@ -28,7 +28,7 @@ export const CRONTAB_WILDCARD = /^\*(?:\/([0-9]+))?$/;
 // The command from the crontab line
 /** Splits the command from the crontab line into the task, options and payload. */
 export const CRONTAB_COMMAND =
-  /^([_a-zA-Z][_a-zA-Z0-9:\/_-]*)(?:\s+\?([^\s]+))?(?:\s+(\{.*\}))?$/
+  /^([_a-zA-Z][_a-zA-Z0-9:/_-]*)(?:\s+\?([^\s]+))?(?:\s+(\{.*\}))?$/;
 
 // Crontab command options
 /** Matches the id=UID option, capturing the unique identifier */

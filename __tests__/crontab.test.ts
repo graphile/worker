@@ -188,7 +188,7 @@ test("parses crontab file correctly", () => {
     .parsedCronMatch as ParsedCronMatch;
   expect(parsedCronMatch10.minutes).toEqual(ALL_MINUTES);
   expect(parsedCronMatch10.hours).toEqual(ALL_HOURS);
-  
+
   expect(parsed).toMatchSnapshot();
 });
 
