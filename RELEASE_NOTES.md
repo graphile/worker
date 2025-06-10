@@ -44,6 +44,8 @@ Read more:
 - `helpers.abortPromise` added; will reject when `abortSignal` aborts (useful
   for `Promise.race()`)
 - `backfillPeriod` is now marked as optional in TypeScript (defaults to 0).
+- Support for loading tasks from nested folders in crontab.
+  - (`* * * * * nested/folder/task ?jobKey=my_key&jobKeyMode=preserve_run_at`)
 
 ## v0.16.6
 
