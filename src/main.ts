@@ -1207,6 +1207,16 @@ export function _runTaskList(
           workerPool,
           localQueueSize,
           continuous,
+          function onMajorError(e) {
+            if (_shuttingDownForcefully) {
+              // Already shutting down, ignore
+            } else if (_shuttingDownGracefully) {
+              // workerPool.forcefulShutdown(String(e));
+              // Already shutting down, ignore
+            } else {
+              workerPool.gracefulShutdown(String(e));
+            }
+          },
         )
       : null;
   const getJob: GetJobFunction = localQueue

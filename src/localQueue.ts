@@ -242,6 +242,7 @@ export class LocalQueue {
      * for just a moment. (I.e. `runOnce()`)
      */
     private readonly continuous: boolean,
+    private readonly onMajorError: (e: unknown) => void,
   ) {
     this.ttl =
       compiledSharedOptions.resolvedPreset.worker.localQueue?.ttl ?? 5 * MINUTE;
@@ -477,10 +478,18 @@ export class LocalQueue {
           );
         }
 
-        // NOTE: considered doing `this.receivedJobs(jobsToReturn)`; but I
+        // NOTE: considered doing `this.receivedJobs(jobsToReturn)`; but
         // simply trying to release them again seems safer and more correct.
         default: {
-          if (attempts < maxAttempts) {
+          if (attempts >= maxAttempts) {
+            this.onMajorError(
+              new Error(
+                `Error occurred whilst returning jobs from local queue to database queue; raising major error after ${attempts} (>= ${maxAttempts}) attempts (should trigger shutdown). Initial error: ${initialError.message}`,
+                { cause: initialError },
+              ),
+            );
+          }
+          {
             const code = lastError?.code as string;
             const retryable = RETRYABLE_ERROR_CODES[code];
             const delay = calculateDelay(attempts - 1, {
@@ -498,15 +507,6 @@ export class LocalQueue {
                 this.workerPool.id,
                 jobsToReturn,
               ).then(noop, onError),
-            );
-          } else {
-            // TODO: is this the correct way to handle this? Are we allowed to
-            // trigger shut down internally?
-            this.release();
-            // Now we're in release mode, throwing the error will be tracked
-            // automatically by `this.background()`
-            throw new Error(
-              `Error occurred whilst returning jobs from local queue to database queue; aborting after ${attempts} attempts. Initial error: ${initialError.message}`,
             );
           }
         }
