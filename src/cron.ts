@@ -117,13 +117,15 @@ async function scheduleCronJobs(
   jobsAndIdentifiers: JobAndCronIdentifier[],
   ts: string,
   useNodeTime: boolean,
+  workerSchema: string,
+  preparedStatements: boolean,
 ) {
   // TODO: refactor this to use `add_jobs`
 
   // Note that `identifier` is guaranteed to be unique for every record
   // in `specs`.
-  await pgPool.query(
-    `
+  await pgPool.query({
+    text: `
       with specs as (
         select
           index,
@@ -166,26 +168,45 @@ async function scheduleCronJobs(
       inner join locks on (locks.identifier = specs.identifier)
       order by specs.index asc
     `,
-    [
+    values: [
       JSON.stringify(jobsAndIdentifiers),
       ts,
       useNodeTime ? new Date().toISOString() : null,
     ],
-  );
+    name: !preparedStatements
+      ? undefined
+      : `cron${useNodeTime ? "N" : ""}/${workerSchema}`,
+  });
 }
 
 /**
  * Marks any previously unknown crontab identifiers as now being known. Then
  * performs backfilling on any crontab tasks that need it.
  */
-async function registerAndBackfillItems(
-  ctx: CompiledSharedOptions,
-  { pgPool, events, cron }: { pgPool: Pool; events: WorkerEvents; cron: Cron },
-  escapedWorkerSchema: string,
-  parsedCronItems: ParsedCronItem[],
-  startTime: Date,
-  useNodeTime: boolean,
-) {
+async function registerAndBackfillItems(details: {
+  ctx: CompiledSharedOptions;
+  pgPool: Pool;
+  events: WorkerEvents;
+  cron: Cron;
+  workerSchema: string;
+  preparedStatements: boolean;
+  escapedWorkerSchema: string;
+  parsedCronItems: ParsedCronItem[];
+  startTime: Date;
+  useNodeTime: boolean;
+}) {
+  const {
+    ctx,
+    pgPool,
+    events,
+    cron,
+    workerSchema,
+    preparedStatements,
+    escapedWorkerSchema,
+    parsedCronItems,
+    startTime,
+    useNodeTime,
+  } = details;
   // First, scan the DB to get our starting point.
   const { rows } = await pgPool.query<KnownCrontab>(
     `SELECT * FROM ${escapedWorkerSchema}._private_known_crontabs as known_crontabs`,
@@ -273,6 +294,8 @@ async function registerAndBackfillItems(
           itemsToBackfill,
           ts,
           useNodeTime,
+          workerSchema,
+          preparedStatements,
         );
       }
 
@@ -305,9 +328,10 @@ export const runCron = (
   const {
     logger,
     escapedWorkerSchema,
+    workerSchema,
     events,
     resolvedPreset: {
-      worker: { useNodeTime },
+      worker: { useNodeTime, preparedStatements = true },
     },
   } = compiledSharedOptions;
 
@@ -345,14 +369,18 @@ export const runCron = (
 
     // We must backfill BEFORE scheduling any new jobs otherwise backfill won't
     // work due to known_crontabs.last_execution having been updated.
-    await registerAndBackfillItems(
+    await registerAndBackfillItems({
       ctx,
-      { pgPool, events, cron },
+      pgPool,
+      events,
+      cron,
+      workerSchema,
+      preparedStatements,
       escapedWorkerSchema,
       parsedCronItems,
-      new Date(+start),
+      startTime: new Date(+start),
       useNodeTime,
-    );
+    });
 
     events.emit("cron:started", { ctx, cron, start });
 
@@ -466,6 +494,8 @@ export const runCron = (
             jobsAndIdentifiers,
             ts,
             useNodeTime,
+            workerSchema,
+            preparedStatements,
           );
           events.emit("cron:scheduled", {
             ctx,
