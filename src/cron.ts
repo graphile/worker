@@ -17,16 +17,26 @@ import {
   WorkerEvents,
 } from "./interfaces";
 import {
+  calculateDelay,
   coerceError,
   CompiledOptions,
   CompiledSharedOptions,
   Releasers,
+  RetryOptions,
+  sleep,
 } from "./lib";
 
 interface CronRequirements {
   pgPool: Pool;
   events: WorkerEvents;
 }
+
+const CRON_RETRY: RetryOptions = {
+  maxAttempts: Infinity,
+  minDelay: 200,
+  maxDelay: 60_000,
+  multiplier: 1.5,
+};
 
 /**
  * This function looks through all the cron items we have (e.g. from our
@@ -117,13 +127,15 @@ async function scheduleCronJobs(
   jobsAndIdentifiers: JobAndCronIdentifier[],
   ts: string,
   useNodeTime: boolean,
+  workerSchema: string,
+  preparedStatements: boolean,
 ) {
   // TODO: refactor this to use `add_jobs`
 
   // Note that `identifier` is guaranteed to be unique for every record
   // in `specs`.
-  await pgPool.query(
-    `
+  await pgPool.query({
+    text: `
       with specs as (
         select
           index,
@@ -166,26 +178,45 @@ async function scheduleCronJobs(
       inner join locks on (locks.identifier = specs.identifier)
       order by specs.index asc
     `,
-    [
+    values: [
       JSON.stringify(jobsAndIdentifiers),
       ts,
       useNodeTime ? new Date().toISOString() : null,
     ],
-  );
+    name: !preparedStatements
+      ? undefined
+      : `cron${useNodeTime ? "N" : ""}/${workerSchema}`,
+  });
 }
 
 /**
  * Marks any previously unknown crontab identifiers as now being known. Then
  * performs backfilling on any crontab tasks that need it.
  */
-async function registerAndBackfillItems(
-  ctx: CompiledSharedOptions,
-  { pgPool, events, cron }: { pgPool: Pool; events: WorkerEvents; cron: Cron },
-  escapedWorkerSchema: string,
-  parsedCronItems: ParsedCronItem[],
-  startTime: Date,
-  useNodeTime: boolean,
-) {
+async function registerAndBackfillItems(details: {
+  ctx: CompiledSharedOptions;
+  pgPool: Pool;
+  events: WorkerEvents;
+  cron: Cron;
+  workerSchema: string;
+  preparedStatements: boolean;
+  escapedWorkerSchema: string;
+  parsedCronItems: ParsedCronItem[];
+  startTime: Date;
+  useNodeTime: boolean;
+}) {
+  const {
+    ctx,
+    pgPool,
+    events,
+    cron,
+    workerSchema,
+    preparedStatements,
+    escapedWorkerSchema,
+    parsedCronItems,
+    startTime,
+    useNodeTime,
+  } = details;
   // First, scan the DB to get our starting point.
   const { rows } = await pgPool.query<KnownCrontab>(
     `SELECT * FROM ${escapedWorkerSchema}._private_known_crontabs as known_crontabs`,
@@ -273,6 +304,8 @@ async function registerAndBackfillItems(
           itemsToBackfill,
           ts,
           useNodeTime,
+          workerSchema,
+          preparedStatements,
         );
       }
 
@@ -305,9 +338,10 @@ export const runCron = (
   const {
     logger,
     escapedWorkerSchema,
+    workerSchema,
     events,
     resolvedPreset: {
-      worker: { useNodeTime },
+      worker: { useNodeTime, preparedStatements = true },
     },
   } = compiledSharedOptions;
 
@@ -323,7 +357,7 @@ export const runCron = (
     if (!stopCalled) {
       stopCalled = true;
       if (e) {
-        promise.reject(e);
+        promise.reject(coerceError(e));
       } else {
         promise.resolve();
       }
@@ -332,6 +366,17 @@ export const runCron = (
         "Graphile Worker internal bug in src/cron.ts: calling `stop()` more than once shouldn't be possible. Please report this.",
       );
     }
+  }
+
+  let attempts = 0;
+  function restartCronAfterDelay(error: Error) {
+    ++attempts;
+    const delay = calculateDelay(attempts - 1, CRON_RETRY);
+    logger.error(
+      `Cron hit an error; restarting in ${delay}ms (attempt ${attempts}): ${error}`,
+      { error, attempts },
+    );
+    sleep(delay).then(cronMain).catch(restartCronAfterDelay);
   }
 
   async function cronMain() {
@@ -345,14 +390,18 @@ export const runCron = (
 
     // We must backfill BEFORE scheduling any new jobs otherwise backfill won't
     // work due to known_crontabs.last_execution having been updated.
-    await registerAndBackfillItems(
+    await registerAndBackfillItems({
       ctx,
-      { pgPool, events, cron },
+      pgPool,
+      events,
+      cron,
+      workerSchema,
+      preparedStatements,
       escapedWorkerSchema,
       parsedCronItems,
-      new Date(+start),
+      startTime: new Date(+start),
       useNodeTime,
-    );
+    });
 
     events.emit("cron:started", { ctx, cron, start });
 
@@ -383,6 +432,8 @@ export const runCron = (
         if (!cron._active) {
           return stop();
         }
+        // Healthy!
+        attempts = 0;
 
         // THIS MUST COME BEFORE nextTimestamp IS MUTATED
         const digest = digestTimestamp(nextTimestamp);
@@ -466,6 +517,8 @@ export const runCron = (
             jobsAndIdentifiers,
             ts,
             useNodeTime,
+            workerSchema,
+            preparedStatements,
           );
           events.emit("cron:scheduled", {
             ctx,
@@ -486,9 +539,10 @@ export const runCron = (
         // timestamps on error).
         scheduleNextLoop();
       } catch (e) {
-        // If something goes wrong; abort. The calling code should re-schedule
-        // which will re-trigger the backfilling code.
-        return stop(coerceError(e));
+        // If something goes wrong; abort the current loop and restart cron
+        // after an exponential back-off. This is essential because we need to
+        // re-trigger the backfilling code.
+        return restartCronAfterDelay(coerceError(e));
       }
     }
 
@@ -510,7 +564,7 @@ export const runCron = (
     promise,
   };
 
-  cronMain().catch(stop);
+  cronMain().catch(restartCronAfterDelay);
 
   return cron;
 };
