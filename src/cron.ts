@@ -17,16 +17,26 @@ import {
   WorkerEvents,
 } from "./interfaces";
 import {
+  calculateDelay,
   coerceError,
   CompiledOptions,
   CompiledSharedOptions,
   Releasers,
+  RetryOptions,
+  sleep,
 } from "./lib";
 
 interface CronRequirements {
   pgPool: Pool;
   events: WorkerEvents;
 }
+
+const CRON_RETRY: RetryOptions = {
+  maxAttempts: Infinity,
+  minDelay: 200,
+  maxDelay: 60_000,
+  multiplier: 1.5,
+};
 
 /**
  * This function looks through all the cron items we have (e.g. from our
@@ -347,7 +357,7 @@ export const runCron = (
     if (!stopCalled) {
       stopCalled = true;
       if (e) {
-        promise.reject(e);
+        promise.reject(coerceError(e));
       } else {
         promise.resolve();
       }
@@ -356,6 +366,17 @@ export const runCron = (
         "Graphile Worker internal bug in src/cron.ts: calling `stop()` more than once shouldn't be possible. Please report this.",
       );
     }
+  }
+
+  let attempts = 0;
+  function restartCronAfterDelay(error: Error) {
+    ++attempts;
+    const delay = calculateDelay(attempts - 1, CRON_RETRY);
+    logger.error(
+      `Cron hit an error; restarting in ${delay}ms (attempt ${attempts}): ${error}`,
+      { error, attempts },
+    );
+    sleep(delay).then(cronMain).catch(restartCronAfterDelay);
   }
 
   async function cronMain() {
@@ -411,6 +432,8 @@ export const runCron = (
         if (!cron._active) {
           return stop();
         }
+        // Healthy!
+        attempts = 0;
 
         // THIS MUST COME BEFORE nextTimestamp IS MUTATED
         const digest = digestTimestamp(nextTimestamp);
@@ -516,9 +539,10 @@ export const runCron = (
         // timestamps on error).
         scheduleNextLoop();
       } catch (e) {
-        // If something goes wrong; abort. The calling code should re-schedule
-        // which will re-trigger the backfilling code.
-        return stop(coerceError(e));
+        // If something goes wrong; abort the current loop and restart cron
+        // after an exponential back-off. This is essential because we need to
+        // re-trigger the backfilling code.
+        return restartCronAfterDelay(coerceError(e));
       }
     }
 
@@ -540,7 +564,7 @@ export const runCron = (
     promise,
   };
 
-  cronMain().catch(stop);
+  cronMain().catch(restartCronAfterDelay);
 
   return cron;
 };
