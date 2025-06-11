@@ -14,7 +14,7 @@ import {
 
 const options: WorkerSharedOptions = {};
 
-const MAX_MIGRATION_NUMBER = 18;
+const MAX_MIGRATION_NUMBER = 19;
 
 test("migration installs schema; second migration does no harm", async () => {
   await withPgClient(async (pgClient) => {
@@ -238,6 +238,7 @@ test("throws helpful error message in migration 11", async () => {
 
     // Manually run the first 10 migrations
     const event = {
+      ctx: compiledSharedOptions,
       client: pgClient,
       postgresVersion: 120000, // TODO: use the actual postgres version
       scratchpad: Object.create(null),

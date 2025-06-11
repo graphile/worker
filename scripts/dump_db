@@ -6,6 +6,7 @@ dropuser graphile_worker_role || true
 psql template1 -c "CREATE USER graphile_worker_role WITH SUPERUSER PASSWORD 'password';"
 createdb graphile_worker_dump -O graphile_worker_role
 PGUSER=graphile_worker_role PGPASSWORD=password PGHOST=127.0.0.1 ts-node src/cli.ts -c postgres:///graphile_worker_dump --schema-only
-pg_dump --schema-only --no-owner graphile_worker_dump | sed -e '/^--/d' -e '/^\s*$/d' -e '/^SET /d' -e 's/EXECUTE FUNCTION/EXECUTE PROCEDURE/g' > __tests__/schema.sql
+pg_dump --schema-only --no-owner graphile_worker_dump | sed -E -e '/^--/d' -e '/^\s*$/d' -e '/^SET /d' -e 's/EXECUTE FUNCTION/EXECUTE PROCEDURE/g' -e '/^(REVOKE|GRANT) .* ON SCHEMA public (FROM|TO) PUBLIC;$/d' > __tests__/schema.sql
+pg_dump --data-only --no-owner graphile_worker_dump --table=graphile_worker.migrations --table=graphile_worker._private_pro_migrations | sed -E -e '/^--/d' -e '/^\s*$/d' -e 's/\b2[0-9]{3}-[0-9]{2}-[0-9]{2}\s[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{1,6}\+[0-9]+/1970-01-01 00:00:00.000000+00/g'  -e '/^SET /d' >> __tests__/schema.sql
 dropdb graphile_worker_dump
 dropuser graphile_worker_role

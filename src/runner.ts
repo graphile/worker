@@ -6,6 +6,7 @@ import {
   Runner,
   RunnerOptions,
   TaskList,
+  WorkerPluginContext,
 } from "./interfaces";
 import {
   coerceError,
@@ -149,6 +150,7 @@ function buildRunner(input: {
   release: () => PromiseOrDirect<void>;
 }): Runner {
   const { compiledOptions, taskList, parsedCronItems, release } = input;
+  const ctx: WorkerPluginContext = compiledOptions;
   const { events, pgPool, releasers, addJob, logger } = compiledOptions;
 
   const cron = runCron(compiledOptions, parsedCronItems, { pgPool, events });
@@ -166,7 +168,7 @@ function buildRunner(input: {
     compiledOptions.logger.debug("Runner stopping");
     if (running) {
       running = false;
-      events.emit("stop", {});
+      events.emit("stop", { ctx });
       try {
         const promises: Array<PromiseOrDirect<void>> = [];
         if (cron._active) {
@@ -188,19 +190,27 @@ function buildRunner(input: {
       throw new Error("Runner is already stopped");
     }
   };
+  const kill = async () => {
+    if (running) {
+      stop().catch(() => {});
+    }
+    if (workerPool._active) {
+      await workerPool.forcefulShutdown(`Terminated through .kill() command`);
+    }
+  };
 
-  workerPool.promise.finally(() => {
+  const wp = workerPool.promise.finally(() => {
     if (running) {
       stop();
     }
   });
-  cron.promise.finally(() => {
+  const cp = cron.promise.finally(() => {
     if (running) {
       stop();
     }
   });
 
-  const promise = Promise.all([cron.promise, workerPool.promise]).then(
+  const promise = Promise.all([cp, wp]).then(
     () => {
       /* noop */
     },
@@ -220,6 +230,7 @@ function buildRunner(input: {
 
   return {
     stop,
+    kill,
     addJob,
     promise,
     events,
