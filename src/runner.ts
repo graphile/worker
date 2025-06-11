@@ -164,8 +164,10 @@ function buildRunner(input: {
   });
 
   let running = true;
-  const stop = async () => {
-    compiledOptions.logger.debug("Runner stopping");
+  const stop = async (reason: string | null, itsFine = reason === null) => {
+    compiledOptions.logger[itsFine ? "debug" : "warn"](
+      `Runner stopping${reason ? ` (reason: ${reason})` : ""}`,
+    );
     if (running) {
       running = false;
       events.emit("stop", { ctx });
@@ -190,25 +192,19 @@ function buildRunner(input: {
       throw new Error("Runner is already stopped");
     }
   };
-  const kill = async () => {
-    if (running) {
-      stop().catch(() => {});
-    }
-    if (workerPool._active) {
-      await workerPool.forcefulShutdown(`Terminated through .kill() command`);
-    }
-  };
 
-  const wp = workerPool.promise.finally(() => {
-    if (running) {
-      stop();
-    }
-  });
-  const cp = cron.promise.finally(() => {
-    if (running) {
-      stop();
-    }
-  });
+  const wp = workerPool.promise
+    .then(
+      () => (running ? stop("worker pool exited cleanly", true) : void 0),
+      (e) => (running ? stop(`worker pool exited with error: ${e}`) : void 0),
+    )
+    .catch(noop);
+  const cp = cron.promise
+    .then(
+      () => (running ? stop("cron exited cleanly", true) : void 0),
+      (e) => (running ? stop(`cron exited with error: ${e}`) : void 0),
+    )
+    .catch(noop);
 
   const promise = Promise.all([cp, wp]).then(
     () => {
@@ -217,7 +213,7 @@ function buildRunner(input: {
     async (error) => {
       if (running) {
         logger.error(`Stopping worker due to an error: ${error}`, { error });
-        await stop();
+        await stop(String(error));
       } else {
         logger.error(
           `Error occurred, but worker is already stopping: ${error}`,
@@ -229,10 +225,22 @@ function buildRunner(input: {
   );
 
   return {
-    stop,
-    kill,
+    // It's fine - the user told us to exit
+    stop: (reason) => stop(reason ?? null, true),
+    async kill(reason?: string) {
+      if (running) {
+        stop(`runner.kill() called${reason ? `: ${reason}` : ""}`).catch(noop);
+      }
+      if (workerPool._active) {
+        await workerPool.forcefulShutdown(`Terminated through .kill() command`);
+      }
+    },
     addJob,
     promise,
     events,
   };
+}
+
+function noop() {
+  /* NOOP */
 }
