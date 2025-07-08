@@ -1,9 +1,9 @@
 import Link from "@docusaurus/Link";
 import styles from "@site/src/components/Sponsor/styles.module.css";
+import FallbackAvatar from "@site/static/img/avatar.svg";
 import clsx from "clsx";
 import React, { useContext } from "react";
 
-import FallbackAvatar from "@site/static/img/avatar.svg";
 import { SponsorContext } from "../../contexts/sponsor";
 
 export default function Sponsor({
