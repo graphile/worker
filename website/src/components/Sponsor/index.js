@@ -35,6 +35,24 @@ export default function Sponsor({
   const level = useContext(SponsorContext);
   const showAvatar = level === "featured" || level === "leaders";
 
+  function Avatar({ src }) {
+    return src ? (
+      <img className={styles.avatar} src={src} />
+    ) : (
+      <FallbackAvatar className={styles.avatar} />
+    );
+  }
+
+  function LinkTo({ href }) {
+    return href ? (
+      <Link className={styles.name} to={href}>
+        {name}
+      </Link>
+    ) : (
+      <div className={styles.name}>{name}</div>
+    );
+  }
+
   return (
     <div
       className={clsx(
@@ -50,7 +68,7 @@ export default function Sponsor({
         <Avatar src={avatar ? "https://www.graphile.org" + avatar : null} />
       ) : null}
 
-      <LinkTo href={href} name={name} />
+      <LinkTo href={href} />
     </div>
   );
 }
