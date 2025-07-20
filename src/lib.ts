@@ -1,3 +1,5 @@
+import type { PgPool } from "@graphile/pg-core";
+import { ident } from "@graphile/pg-core";
 import * as assert from "assert";
 import EventEmitter from "events";
 import {
@@ -7,7 +9,6 @@ import {
   orderedApply,
   resolvePreset,
 } from "graphile-config";
-import { Client, Pool, PoolClient, PoolConfig } from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "./config";
 import { migrations } from "./generated/sql";
@@ -89,6 +90,10 @@ function legacyOptionsToPreset(options: SomeOptions): GraphileConfig.Preset {
   assert.ok(
     !options.taskList || !options.taskDirectory,
     "Exactly one of either `taskDirectory` or `taskList` should be set",
+  );
+  assert.ok(
+    !options.pgPool || !options.connectionString,
+    "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
   );
   const preset = {
     extends: [] as GraphileConfig.Preset[],
@@ -233,7 +238,7 @@ export function processSharedOptions<
       },
       plugins,
     } = resolvedPreset;
-    const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
+    const escapedWorkerSchema = ident(workerSchema);
 
     const ctx: WorkerPluginBaseContext = {
       version,
@@ -300,113 +305,50 @@ export type Releasers = Array<() => void | Promise<void>>;
 export async function assertPool(
   compiledSharedOptions: CompiledSharedOptions,
   releasers: Releasers,
-): Promise<Pool> {
-  const {
-    resolvedPreset: {
-      worker: { maxPoolSize, connectionString },
-    },
-    _rawOptions,
-  } = compiledSharedOptions;
-  assert.ok(
-    // NOTE: we explicitly want `_rawOptions.connectionString` here - we don't
-    // mind if `connectionString` is set as part of the preset.
-    !_rawOptions.pgPool || !_rawOptions.connectionString,
-    "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
-  );
-  let pgPool: Pool;
-  if (_rawOptions.pgPool) {
-    pgPool = _rawOptions.pgPool;
-    if (pgPool.listeners("error").length === 0) {
-      console.warn(
-        `Your pool doesn't have error handlers! See: https://err.red/wpeh?v=${encodeURIComponent(
-          version,
-        )}`,
+): Promise<PgPool> {
+  const { _rawOptions, resolvedPreset, logger } = compiledSharedOptions;
+
+  let pgPool = _rawOptions.pgPool;
+  let shouldReleasePool = false;
+
+  if (!pgPool) {
+    // Try to create a pool from connection string or env vars
+    const connectionString = resolvedPreset.worker.connectionString;
+    const hasPgEnvVars = process.env.PGDATABASE || process.env.DATABASE_URL;
+
+    if (!connectionString && !hasPgEnvVars) {
+      throw new Error(
+        "You must either specify `pgPool` or `connectionString`, or you must make the `DATABASE_URL` or `PG*` environmental variables available.",
       );
-      installErrorHandlers(compiledSharedOptions, releasers, pgPool);
     }
-    if (pgPool.listeners("connect").length === 0) {
-      console.warn(
-        `Your pool doesn't have all of the error handlers! See: https://err.red/wpeh?v=${encodeURIComponent(
-          version,
-        )}&method=connect`,
+
+    // Try to dynamically import the adapter
+    try {
+      const adapterModule = await import("@graphile/pg-adapter-node-postgres");
+      const { createNodePostgresPool } = adapterModule;
+
+      // Use connectionString if available, otherwise let pg use env vars
+      pgPool = await createNodePostgresPool(
+        connectionString ? { connectionString } : {},
       );
-      installErrorHandlers(compiledSharedOptions, releasers, pgPool);
+      shouldReleasePool = true;
+
+      logger.debug(
+        "Created PgPool using @graphile/pg-adapter-node-postgres. Consider creating the pool yourself for better control.",
+      );
+    } catch (error) {
+      throw new Error(
+        "A PgPool instance must be provided via the 'pgPool' option. To use a connection string, please install '@graphile/pg-adapter-node-postgres' and 'pg' packages.",
+      );
     }
-  } else if (connectionString) {
-    pgPool = makeNewPool(compiledSharedOptions, releasers, {
-      connectionString,
-      max: maxPoolSize,
-    });
-  } else if (process.env.PGDATABASE) {
-    pgPool = makeNewPool(compiledSharedOptions, releasers, {
-      /* Pool automatically pulls settings from envvars */
-      max: maxPoolSize,
-    });
-  } else {
-    throw new Error(
-      "You must either specify `pgPool` or `connectionString`, or you must make the `DATABASE_URL` or `PG*` environmental variables available.",
-    );
+  }
+
+  // Only register cleanup if we created the pool
+  if (shouldReleasePool) {
+    releasers.push(() => pgPool.end());
   }
 
   return pgPool;
-}
-
-function makeNewPool(
-  compiledSharedOptions: CompiledSharedOptions,
-  releasers: Releasers,
-  poolOptions: PoolConfig,
-) {
-  const pgPool = new Pool(poolOptions);
-  releasers.push(() => {
-    pgPool.end();
-  });
-  installErrorHandlers(compiledSharedOptions, releasers, pgPool);
-  return pgPool;
-}
-
-function installErrorHandlers(
-  compiledSharedOptions: CompiledSharedOptions,
-  releasers: Releasers,
-  pgPool: Pool,
-) {
-  const { logger } = compiledSharedOptions;
-  const handlePoolError = (err: Error) => {
-    /*
-     * This handler is required so that client connection errors on clients
-     * that are alive but not checked out don't bring the server down (via
-     * `unhandledError`).
-     *
-     * `pg` will automatically terminate the client and remove it from the
-     * pool, so we don't actually need to take any action here, just ensure
-     * that the event listener is registered.
-     */
-    logger.error(`PostgreSQL idle client generated error: ${err.message}`, {
-      error: err,
-    });
-  };
-  const handleClientError = (err: Error) => {
-    /*
-     * This handler is required so that client connection errors on clients
-     * that are checked out of the pool don't bring the server down (via
-     * `unhandledError`).
-     *
-     * `pg` will automatically raise the error from the client the next time it
-     * attempts a query, so we don't actually need to take any action here,
-     * just ensure that the event listener is registered.
-     */
-    logger.error(`PostgreSQL active client generated error: ${err.message}`, {
-      error: err,
-    });
-  };
-  pgPool.on("error", handlePoolError);
-  const handlePoolConnect = (client: PoolClient) => {
-    client.on("error", handleClientError);
-  };
-  pgPool.on("connect", handlePoolConnect);
-  releasers.push(() => {
-    pgPool.removeListener("error", handlePoolError);
-    pgPool.removeListener("connect", handlePoolConnect);
-  });
 }
 
 export type Release = () => PromiseOrDirect<void>;
@@ -448,7 +390,7 @@ export async function withReleasers<T>(
 }
 
 interface ProcessOptionsExtensions {
-  pgPool: Pool;
+  pgPool: PgPool;
   withPgClient: EnhancedWithPgClient;
   addJob: AddJobFunction;
   addJobs: AddJobsFunction;
@@ -484,13 +426,12 @@ export const getUtilsAndReleasersFromOptions = async (
     releasers,
     release,
   ): Promise<CompiledOptionsAndRelease> {
-    const pgPool: Pool = await assertPool(compiledSharedOptions, releasers);
-    // @ts-ignore
-    const max = pgPool?.options?.max || 10;
-    if (max < concurrency) {
+    const pgPool: PgPool = await assertPool(compiledSharedOptions, releasers);
+    const poolSize = pgPool.getPoolSize();
+    if (poolSize < concurrency) {
       logger.warn(
-        `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`,
-        { max, concurrency },
+        `WARNING: having pool size (${poolSize}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`,
+        { poolSize, concurrency },
       );
     }
 

@@ -14,7 +14,6 @@ export async function batchFailJobs(
 ): Promise<void> {
   const {
     escapedWorkerSchema,
-    workerSchema,
     resolvedPreset: {
       worker: { preparedStatements },
     },
@@ -33,8 +32,8 @@ export async function batchFailJobs(
 
   if (specsWithQueues.length > 0) {
     await withPgClient((client) =>
-      client.query({
-        text: `\
+      client.execute(
+        `\
 with j as (
 update ${escapedWorkerSchema}._private_jobs as jobs
 set
@@ -51,7 +50,7 @@ update ${escapedWorkerSchema}._private_job_queues as job_queues
 set locked_by = null, locked_at = null
 from j
 where job_queues.id = j.job_queue_id and job_queues.locked_by = $1::text;`,
-        values: [
+        [
           poolId,
           JSON.stringify(
             specsWithQueues.map(({ job, message, replacementPayload }) => ({
@@ -61,14 +60,14 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $1::text;`,
             })),
           ),
         ],
-        name: !preparedStatements ? undefined : `fail_job_q/${workerSchema}`,
-      }),
+        { prepare: preparedStatements },
+      ),
     );
   }
   if (specsWithoutQueues.length > 0) {
     await withPgClient((client) =>
-      client.query({
-        text: `\
+      client.execute(
+        `\
 update ${escapedWorkerSchema}._private_jobs as jobs
 set
 last_error = (el->>'message'),
@@ -78,7 +77,7 @@ locked_at = null,
 payload = coalesce(el->'payload', jobs.payload)
 from json_array_elements($2::json) as els(el)
 where id = (el->>'jobId')::bigint and locked_by = $1::text;`,
-        values: [
+        [
           poolId,
           JSON.stringify(
             specsWithoutQueues.map(({ job, message, replacementPayload }) => ({
@@ -88,8 +87,8 @@ where id = (el->>'jobId')::bigint and locked_by = $1::text;`,
             })),
           ),
         ],
-        name: !preparedStatements ? undefined : `fail_job/${workerSchema}`,
-      }),
+        { prepare: preparedStatements },
+      ),
     );
   }
 }
@@ -103,15 +102,14 @@ export async function failJobs(
 ): Promise<DbJob[]> {
   const {
     escapedWorkerSchema,
-    workerSchema,
     resolvedPreset: {
       worker: { preparedStatements },
     },
   } = compiledSharedOptions;
 
   const { rows: failedJobs } = await withPgClient.withRetries((client) =>
-    client.query<DbJob>({
-      text: `\
+    client.query<DbJob>(
+      `\
 with j as (
 update ${escapedWorkerSchema}._private_jobs as jobs
 set
@@ -128,9 +126,9 @@ from j
 where job_queues.id = j.job_queue_id and job_queues.locked_by = $3::text
 )
 select * from j;`,
-      values: [jobs.map((job) => job.id), message, poolId],
-      name: !preparedStatements ? undefined : `fail_jobs/${workerSchema}`,
-    }),
+      [jobs.map((job) => job.id), message, poolId],
+      { prepare: preparedStatements },
+    ),
   );
   return failedJobs;
 }

@@ -1,5 +1,5 @@
+import type { PgPool } from "@graphile/pg-core";
 import * as assert from "assert";
-import { Pool } from "pg";
 
 import { parseCrontab } from "./crontab";
 import defer from "./deferred";
@@ -27,7 +27,7 @@ import {
 } from "./lib";
 
 interface CronRequirements {
-  pgPool: Pool;
+  pgPool: PgPool;
   events: WorkerEvents;
 }
 
@@ -122,7 +122,7 @@ function makeJobForItem(
  * automatically.
  */
 async function scheduleCronJobs(
-  pgPool: Pool,
+  pgPool: PgPool,
   escapedWorkerSchema: string,
   jobsAndIdentifiers: JobAndCronIdentifier[],
   ts: string,
@@ -134,8 +134,8 @@ async function scheduleCronJobs(
 
   // Note that `identifier` is guaranteed to be unique for every record
   // in `specs`.
-  await pgPool.query({
-    text: `
+  await pgPool.query(
+    `
       with specs as (
         select
           index,
@@ -178,15 +178,13 @@ async function scheduleCronJobs(
       inner join locks on (locks.identifier = specs.identifier)
       order by specs.index asc
     `,
-    values: [
+    [
       JSON.stringify(jobsAndIdentifiers),
       ts,
       useNodeTime ? new Date().toISOString() : null,
     ],
-    name: !preparedStatements
-      ? undefined
-      : `cron${useNodeTime ? "N" : ""}/${workerSchema}`,
-  });
+    { prepare: preparedStatements },
+  );
 }
 
 /**
@@ -195,7 +193,7 @@ async function scheduleCronJobs(
  */
 async function registerAndBackfillItems(details: {
   ctx: CompiledSharedOptions;
-  pgPool: Pool;
+  pgPool: PgPool;
   events: WorkerEvents;
   cron: Cron;
   workerSchema: string;

@@ -1,6 +1,6 @@
-const { Pool } = require("pg");
-
-const pgPool = new Pool({ connectionString: process.env.PERF_DATABASE_URL });
+const {
+  createNodePostgresPool,
+} = require("@graphile/pg-adapter-node-postgres");
 
 const jobCount = parseInt(process.argv[2], 10) || 1;
 const taskIdentifier = process.argv[3] || "log_if_999";
@@ -11,8 +11,11 @@ if (!taskIdentifier.match(/^[a-zA-Z0-9_]+$/)) {
 }
 
 async function main() {
+  const pgPool = await createNodePostgresPool({
+    connectionString: process.env.PERF_DATABASE_URL,
+  });
   if (taskIdentifier === "stuck") {
-    await pgPool.query(
+    await pgPool.execute(
       `\
 do $$
 begin
@@ -43,7 +46,7 @@ $$ language plpgsql;`,
       const jobsSlice = jobs.splice(0, 1000000);
       const jobsString = JSON.stringify(jobsSlice);
       console.log(`Adding ${jobsSlice.length} jobs`);
-      await pgPool.query(
+      await pgPool.execute(
         `select 1 from graphile_worker.add_jobs(array(select json_populate_recordset(null::graphile_worker.job_spec, $1::json)));`,
         [jobsString],
       );
@@ -52,7 +55,7 @@ $$ language plpgsql;`,
     console.timeEnd("Adding jobs");
   }
 
-  pgPool.end();
+  await pgPool.end();
 }
 
 main().catch((e) => {

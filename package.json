@@ -52,16 +52,18 @@
   "homepage": "https://github.com/graphile/worker#readme",
   "dependencies": {
     "@graphile/logger": "^0.2.0",
+    "@graphile/pg-core": "https://pkg.pr.new/leo91000/graphile_pg/@graphile/pg-core@1",
     "@types/debug": "^4.1.10",
-    "@types/pg": "^8.10.5",
     "cosmiconfig": "^8.3.6",
     "graphile-config": "^0.0.1-beta.16",
     "json5": "^2.2.3",
-    "pg": "^8.11.3",
     "tslib": "^2.6.2",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "@graphile/pg-adapter-node-postgres": "https://pkg.pr.new/leo91000/graphile_pg/@graphile/pg-adapter-node-postgres@1",
+    "@types/pg": "^8.6.0",
+    "pg": "^8.7.1",
     "@docusaurus/core": "2.4.3",
     "@docusaurus/module-type-aliases": "2.4.3",
     "@docusaurus/preset-classic": "2.4.3",
@@ -121,5 +123,6 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

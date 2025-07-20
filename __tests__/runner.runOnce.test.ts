@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { createNodePostgresPool } from "@graphile/pg-adapter-node-postgres";
 
 import { makeWorkerPresetWorkerOptions } from "../src/config";
 import { Job, RunnerOptions, WorkerUtils } from "../src/interfaces";
@@ -95,9 +95,9 @@ test("at least a connectionString, a pgPool, the DATABASE_URL or PGDATABASE envv
 });
 
 test("connectionString and a pgPool cannot provided a the same time", async () => {
-  const pgPool = new Pool();
-  pgPool.on("error", () => {});
-  pgPool.on("connect", () => {});
+  const pgPool = await createNodePostgresPool({
+    connectionString: databaseDetails!.TEST_CONNECTION_STRING,
+  });
   const options: RunnerOptions = {
     taskList: { task: () => {} },
     connectionString: databaseDetails!.TEST_CONNECTION_STRING,
@@ -107,6 +107,7 @@ test("connectionString and a pgPool cannot provided a the same time", async () =
     options,
     "Both `pgPool` and `connectionString` are set, at most one of these options should be provided",
   );
+  await pgPool.end();
 });
 
 test("providing just a DATABASE_URL is possible", async () => {

@@ -1,4 +1,4 @@
-import { Pool, PoolClient } from "pg";
+import type { PgClient, PgPool } from "@graphile/pg-core";
 
 import defer, { Deferred } from "./deferred";
 import {
@@ -28,7 +28,7 @@ export function makeAddJob(
   } = compiledSharedOptions;
   return (identifier, payload, spec = {}) => {
     return withPgClient(async (pgClient) => {
-      const { rows } = await pgClient.query(
+      const { rows } = await pgClient.query<Job>(
         `
         select * from ${escapedWorkerSchema}.add_job(
           identifier => $1::text,
@@ -270,21 +270,12 @@ export function makeJobHelpers(
   return helpers;
 }
 
-export function makeWithPgClientFromPool(pgPool: Pool) {
-  return async function withPgClientFromPool<T>(
-    callback: (pgClient: PoolClient) => Promise<T>,
-  ) {
-    const client = await pgPool.connect();
-    try {
-      return await callback(client);
-    } finally {
-      await client.release();
-    }
-  };
+export function makeWithPgClientFromPool(pgPool: PgPool) {
+  return pgPool.withPgClient;
 }
 
-export function makeWithPgClientFromClient(pgClient: PoolClient) {
-  return async <T>(callback: (pgClient: PoolClient) => Promise<T>) => {
+export function makeWithPgClientFromClient(pgClient: PgClient) {
+  return async <T>(callback: (pgClient: PgClient) => Promise<T>) => {
     return callback(pgClient);
   };
 }

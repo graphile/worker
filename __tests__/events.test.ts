@@ -1,5 +1,5 @@
+import type { PgPool } from "@graphile/pg-core";
 import { EventEmitter } from "events";
-import { Pool } from "pg";
 
 import { run } from "../src";
 import deferred, { Deferred } from "../src/deferred";
@@ -37,8 +37,8 @@ const EVENTS = [
   "stop",
 ];
 
-const addJob = (pgPool: Pool, id?: string | number) =>
-  pgPool.query(
+const addJob = (pgPool: PgPool, id?: string | number) =>
+  pgPool.execute(
     `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', json_build_object('id', $1::text), 'serial')`,
     [String(id != null ? id : Math.random())],
   );

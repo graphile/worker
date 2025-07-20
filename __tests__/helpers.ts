@@ -1,3 +1,6 @@
+import { createNodePostgresPool } from "@graphile/pg-adapter-node-postgres";
+import type { PgClient, PgPool } from "@graphile/pg-core";
+import { ident } from "@graphile/pg-core";
 import { randomBytes } from "crypto";
 import { EventEmitter } from "events";
 import {
@@ -56,7 +59,7 @@ async function createTestDatabase() {
     const client = new pg.Client({ connectionString: `postgres:///template1` });
     await client.connect();
     await client.query(
-      `create database ${pg.Client.prototype.escapeIdentifier(
+      `create database ${ident(
         PGDATABASE,
       )} with template = graphile_worker_testtemplate;`,
     );
@@ -67,9 +70,7 @@ async function createTestDatabase() {
   async function release() {
     const client = new pg.Client({ connectionString: `postgres:///template1` });
     await client.connect();
-    await client.query(
-      `drop database ${pg.Client.prototype.escapeIdentifier(PGDATABASE)};`,
-    );
+    await client.query(`drop database ${ident(PGDATABASE)};`);
     await client.end();
   }
 
@@ -94,23 +95,20 @@ afterAll(async () => {
 
 export const GRAPHILE_WORKER_SCHEMA =
   process.env.GRAPHILE_WORKER_SCHEMA || "graphile_worker";
-export const ESCAPED_GRAPHILE_WORKER_SCHEMA =
-  pg.Client.prototype.escapeIdentifier(GRAPHILE_WORKER_SCHEMA);
+export const ESCAPED_GRAPHILE_WORKER_SCHEMA = ident(GRAPHILE_WORKER_SCHEMA);
 
 export async function withPgPool<T>(
-  cb: (pool: pg.Pool) => Promise<T>,
+  cb: (pool: PgPool) => Promise<T>,
 ): Promise<T> {
   const { TEST_CONNECTION_STRING } = databaseDetails!;
-  const pgPool = new pg.Pool({
+  const pgPool = await createNodePostgresPool({
     connectionString: TEST_CONNECTION_STRING,
     max: 100,
   });
-  pgPool.on("error", () => {});
-  pgPool.on("connect", () => {});
   try {
     return await cb(pgPool);
   } finally {
-    pgPool.end();
+    await pgPool.end();
   }
 }
 
@@ -122,42 +120,40 @@ afterEach(() => {
 
 export async function withPgClient<T>(
   cb: (
-    client: pg.PoolClient,
+    client: PgClient,
     extra: {
       TEST_CONNECTION_STRING: string;
     },
   ) => Promise<T>,
 ): Promise<T> {
   return withPgPool(async (pool) => {
-    const client = await pool.connect();
-    try {
+    return pool.withPgClient(async (client) => {
       return await cb(client, databaseDetails!);
-    } finally {
-      client.release();
-    }
+    });
   });
 }
 
 export async function withTransaction<T>(
-  cb: (client: pg.PoolClient) => Promise<T>,
+  cb: (client: PgClient) => Promise<T>,
   closeCommand = "rollback",
 ): Promise<T> {
   return withPgClient(async (client) => {
-    await client.query("begin");
+    await client.execute("begin");
     try {
       return await cb(client);
     } finally {
-      await client.query(closeCommand);
+      await client.execute(closeCommand);
     }
   });
 }
 
-function isPoolClient(o: pg.Pool | pg.PoolClient): o is pg.PoolClient {
-  return "release" in o && typeof o.release === "function";
+function isPgClient(o: PgPool | PgClient): o is PgClient {
+  // PgClient doesn't have withPgClient method
+  return !("withPgClient" in o);
 }
 
 export async function reset(
-  pgPoolOrClient: pg.Pool | pg.PoolClient,
+  pgPoolOrClient: PgPool | PgClient,
   options: WorkerPoolOptions,
 ) {
   const promise = _reset(pgPoolOrClient, options);
@@ -178,22 +174,19 @@ export async function reset(
 }
 
 async function _reset(
-  pgPoolOrClient: pg.Pool | pg.PoolClient,
+  pgPoolOrClient: PgPool | PgClient,
   options: WorkerPoolOptions,
 ) {
-  await pgPoolOrClient.query(
+  await pgPoolOrClient.execute(
     `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
   );
   const compiledSharedOptions = processSharedOptions(options);
-  if (isPoolClient(pgPoolOrClient)) {
+  if (isPgClient(pgPoolOrClient)) {
     await migrate(compiledSharedOptions, pgPoolOrClient);
   } else {
-    const client = await pgPoolOrClient.connect();
-    try {
+    await pgPoolOrClient.withPgClient(async (client) => {
       await migrate(compiledSharedOptions, client);
-    } finally {
-      client.release();
-    }
+    });
   }
 }
 
@@ -204,13 +197,11 @@ async function _reset(
  * use `expectJobCount()` which will try multiple times to give time for
  * multiple clients to synchronize.
  */
-export async function jobCount(pgClient: pg.PoolClient): Promise<number> {
+export async function jobCount(pgClient: PgClient): Promise<number> {
   return _jobCount(pgClient);
 }
 
-async function _jobCount(
-  pgPoolOrClient: pg.Pool | pg.PoolClient,
-): Promise<number> {
+async function _jobCount(pgPoolOrClient: PgPool | PgClient): Promise<number> {
   const {
     rows: [row],
   } = await pgPoolOrClient.query(
@@ -219,7 +210,7 @@ async function _jobCount(
   return row ? row.count || 0 : 0;
 }
 
-export async function getKnown(pgPool: pg.Pool) {
+export async function getKnown(pgPool: PgPool) {
   const { rows } = await pgPool.query<KnownCrontab>(
     `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_known_crontabs as known_crontabs order by known_since asc, identifier asc`,
   );
@@ -227,7 +218,7 @@ export async function getKnown(pgPool: pg.Pool) {
 }
 
 export async function getJobs(
-  pgClient: pg.Pool | pg.PoolClient,
+  pgClient: PgPool | PgClient,
   extra: {
     where?: string;
     values?: any[];
@@ -254,7 +245,7 @@ order by jobs.id asc`,
   return rows;
 }
 
-export async function getJobQueues(pgClient: pg.Pool | pg.PoolClient) {
+export async function getJobQueues(pgClient: PgPool | PgClient) {
   const { rows } = await pgClient.query<{
     id: number;
     queue_name: string;
@@ -300,7 +291,7 @@ export function makeMockJob(taskIdentifier: string): Job {
 
 export async function makeSelectionOfJobs(
   utils: WorkerUtils,
-  pgClient: pg.PoolClient | pg.Pool,
+  pgClient: PgClient | PgPool,
 ) {
   const future = new Date(Date.now() + 60 * 60 * 1000);
   const failedJob: DbJob = await utils.addJob(
@@ -373,7 +364,7 @@ export class EventMonitor {
 }
 
 export function withOptions<T>(
-  callback: (options: RunnerOptions & { pgPool: pg.Pool }) => Promise<T>,
+  callback: (options: RunnerOptions & { pgPool: PgPool }) => Promise<T>,
 ) {
   return withPgPool((pgPool) =>
     callback({
@@ -397,7 +388,7 @@ export async function expectJobCount(
   // NOTE: if you have a pgClient then you shouldn't need to
   // use this - just call `jobCount()` directly since you're
   // in the same client
-  pool: pg.Pool,
+  pool: PgPool,
   expectedCount: number,
 ) {
   let count: number = Infinity;

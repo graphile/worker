@@ -1,6 +1,8 @@
 // @ts-check
 const assert = require("assert");
-const { Pool } = require("pg");
+const {
+  createNodePostgresPool,
+} = require("@graphile/pg-adapter-node-postgres");
 const { runTaskList } = require("../dist/main");
 const { default: deferred } = require("../dist/deferred");
 const preset = require("./graphile.config.js");
@@ -12,7 +14,9 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const options = { preset };
 
 async function main() {
-  const pgPool = new Pool({ connectionString: process.env.PERF_DATABASE_URL });
+  const pgPool = await createNodePostgresPool({
+    connectionString: process.env.PERF_DATABASE_URL,
+  });
   const startTimes = {};
   let latencies = [];
   const deferreds = {};
@@ -28,7 +32,7 @@ async function main() {
   const workerPool = runTaskList(options, tasks, pgPool);
 
   // Warm up
-  await pgPool.query(
+  await pgPool.execute(
     `select graphile_worker.add_job('latency', json_build_object('id', -i)) from generate_series(1, 100) i`,
   );
   await forEmptyQueue(pgPool);
@@ -43,20 +47,17 @@ async function main() {
   const SAMPLES = 1000;
 
   {
-    const client = await pgPool.connect();
-    try {
+    await pgPool.withPgClient(async (client) => {
       for (let id = 0; id < SAMPLES; id++) {
         deferreds[id] = deferred();
         startTimes[id] = process.hrtime();
-        await client.query(
+        await client.execute(
           `select graphile_worker.add_job('latency', json_build_object('id', $1::int))`,
           [id],
         );
         await deferreds[id];
       }
-    } finally {
-      await client.release();
-    }
+    });
   }
 
   await forEmptyQueue(pgPool);
@@ -89,7 +90,7 @@ main().catch((e) => {
   process.exit(1);
 });
 
-/** @type {(pgPool: Pool) => Promise<void>} */
+/** @type {(pgPool: import("@graphile/pg-core").PgPool) => Promise<void>} */
 async function forEmptyQueue(pgPool) {
   let remaining;
   do {

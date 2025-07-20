@@ -1,4 +1,3 @@
-import { PoolClient } from "pg";
 
 import { WorkerSharedOptions } from "../src";
 import { migrations } from "../src/generated/sql";
@@ -18,7 +17,7 @@ const MAX_MIGRATION_NUMBER = 19;
 
 test("migration installs schema; second migration does no harm", async () => {
   await withPgClient(async (pgClient) => {
-    await pgClient.query(
+    await pgClient.execute(
       `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
     );
   });
@@ -47,7 +46,7 @@ test("migration installs schema; second migration does no harm", async () => {
     expect(migration.id).toEqual(1);
 
     // Assert job schema files have been created (we're asserting no error is thrown)
-    await pgClient.query(
+    await pgClient.execute(
       `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('assert_jobs_work')`,
     );
     {
@@ -70,32 +69,24 @@ test("migration installs schema; second migration does no harm", async () => {
 
 test("multiple concurrent installs of the schema is fine", async () => {
   await withPgClient(async (pgClient) => {
-    await pgClient.query(
+    await pgClient.execute(
       `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
     );
   });
   await withPgPool(async (pool) => {
     const COUNT = 20;
-    const clients: PoolClient[] = [];
     const promises: Promise<void>[] = [];
-    try {
-      for (let i = 0; i < COUNT; i++) {
-        clients.push(await pool.connect());
-      }
-      for (let i = 0; i < COUNT; i++) {
-        promises.push(
-          (async () => {
-            // Perform migration
-            const compiledSharedOptions = processSharedOptions(options);
-            await migrate(compiledSharedOptions, clients[i]);
-          })(),
-        );
-      }
-    } finally {
-      const results = await Promise.allSettled(promises);
-      await Promise.allSettled(clients.map((c) => c.release()));
-      expect(results.every((r) => r.status === "fulfilled")).toBeTruthy();
+    for (let i = 0; i < COUNT; i++) {
+      promises.push(
+        pool.withPgClient(async (pgClient) => {
+          // Perform migration
+          const compiledSharedOptions = processSharedOptions(options);
+          await migrate(compiledSharedOptions, pgClient);
+        }),
+      );
     }
+    const results = await Promise.allSettled(promises);
+    expect(results.every((r) => r.status === "fulfilled")).toBeTruthy();
   });
   await withPgClient(async (pgClient) => {
     // Assert migrations table exists and has relevant entries
@@ -107,7 +98,7 @@ test("multiple concurrent installs of the schema is fine", async () => {
     expect(migration.id).toEqual(1);
 
     // Assert job schema files have been created (we're asserting no error is thrown)
-    await pgClient.query(
+    await pgClient.execute(
       `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('assert_jobs_work')`,
     );
     {
@@ -120,7 +111,7 @@ test("multiple concurrent installs of the schema is fine", async () => {
 
 test("migration can take over from pre-existing migrations table", async () => {
   await withPgClient(async (pgClient) => {
-    await pgClient.query(
+    await pgClient.execute(
       `\
 drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;
 create schema if not exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA};
@@ -131,7 +122,7 @@ create table if not exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations(
 insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations (id) values (1);
 `,
     );
-    await pgClient.query(
+    await pgClient.execute(
       migrations["000001.sql"].replace(
         /:GRAPHILE_WORKER_SCHEMA/g,
         ESCAPED_GRAPHILE_WORKER_SCHEMA,
@@ -159,7 +150,7 @@ insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations (id) values (1);
     expect(migration11.breaking).toEqual(true);
 
     // Assert job schema files have been created (we're asserting no error is thrown)
-    await pgClient.query(
+    await pgClient.execute(
       `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('assert_jobs_work')`,
     );
     {
@@ -182,7 +173,7 @@ insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations (id) values (1);
 
 test("aborts if database is more up to date than current worker", async () => {
   await withPgClient(async (pgClient) => {
-    await pgClient.query(
+    await pgClient.execute(
       `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
     );
   });
@@ -204,7 +195,7 @@ test("aborts if database is more up to date than current worker", async () => {
     await migrate(compiledSharedOptions, pgClient);
 
     // Insert a more up to date migration
-    await pgClient.query(
+    await pgClient.execute(
       `insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations (id, ts, breaking) values (999999, '2023-10-19T10:31:00Z', true);`,
     );
 
@@ -218,7 +209,7 @@ test("aborts if database is more up to date than current worker", async () => {
 
 test("throws helpful error message in migration 11", async () => {
   await withPgClient(async (pgClient) => {
-    await pgClient.query(
+    await pgClient.execute(
       `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
     );
   });
@@ -261,10 +252,10 @@ test("throws helpful error message in migration 11", async () => {
     }
 
     // Lock a job
-    await pgClient.query(
+    await pgClient.execute(
       `select ${compiledSharedOptions.escapedWorkerSchema}.add_job('lock_me', '{}');`,
     );
-    await pgClient.query(
+    await pgClient.execute(
       `update ${compiledSharedOptions.escapedWorkerSchema}.jobs set locked_at = now(), locked_by = 'test_runner';`,
     );
 

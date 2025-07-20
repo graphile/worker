@@ -1,5 +1,8 @@
-const { Pool } = require("pg");
+const {
+  createNodePostgresPool,
+} = require("@graphile/pg-adapter-node-postgres");
 const { parse } = require("pg-connection-string");
+const { ident } = require("@graphile/pg-core");
 
 if (!process.env.PERF_DATABASE_URL) {
   throw new Error(
@@ -9,24 +12,23 @@ if (!process.env.PERF_DATABASE_URL) {
 const config = parse(process.env.PERF_DATABASE_URL);
 // don't connect to the provided db, or we can't drop it
 
-const pgPool = new Pool({ ...config, database: "template1" });
-
 async function main() {
-  const pgClient = await pgPool.connect();
-  const dbName = pgClient.escapeIdentifier(config.database);
-  console.log(`Recreating database ${config.database}`);
+  const pgPool = await createNodePostgresPool({
+    ...config,
+    database: "template1",
+  });
+  await pgPool.withPgClient(async (pgClient) => {
+    const dbName = ident(config.database);
+    console.log(`Recreating database ${config.database}`);
 
-  try {
-    await pgClient.query(`drop database if exists ${dbName};`);
-    await pgClient.query(`create database ${dbName};`);
-  } finally {
-    pgClient.release();
-  }
+    await pgClient.execute(`drop database if exists ${dbName};`);
+    await pgClient.execute(`create database ${dbName};`);
+  });
+
+  await pgPool.end();
 }
 
-main()
-  .then(() => pgPool.end())
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

@@ -1,4 +1,4 @@
-import * as JSON5 from "json5";
+import JSON5 from "json5";
 import { parse } from "querystring";
 
 import {

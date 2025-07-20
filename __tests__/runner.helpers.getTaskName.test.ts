@@ -1,4 +1,5 @@
-import { Pool, PoolClient } from "pg";
+import { createNodePostgresPool } from "@graphile/pg-adapter-node-postgres";
+import type { PgPool } from "@graphile/pg-core";
 
 import { DbJobSpec, Runner, RunnerOptions } from "../src/interfaces";
 import { run } from "../src/runner";
@@ -9,20 +10,18 @@ import {
   withPgClient,
 } from "./helpers";
 
-let pgPool!: Pool;
+let pgPool!: PgPool;
 let runner: Runner | null = null;
 
 const JOB_COUNT = 10;
-beforeAll(() => {
-  pgPool = new Pool({
+beforeAll(async () => {
+  pgPool = await createNodePostgresPool({
     connectionString: databaseDetails!.TEST_CONNECTION_STRING,
     max: JOB_COUNT * 2 + 5,
   });
-  pgPool.on("error", () => {});
-  pgPool.on("connect", () => {});
 });
-afterAll(() => {
-  pgPool.end();
+afterAll(async () => {
+  await pgPool.end();
 });
 
 afterEach(async () => {
@@ -54,12 +53,15 @@ test("getTaskName works as expected", async () => {
 
   // Warmup pool
   {
-    const promises: Promise<PoolClient>[] = [];
+    const promises: Promise<void>[] = [];
     for (let i = 0; i < JOB_COUNT * 2 + 1; i++) {
-      promises.push(pgPool.connect());
+      promises.push(
+        pgPool.withPgClient(async () => {
+          // Just connect and immediately release
+        }),
+      );
     }
-    const clients = await Promise.all(promises);
-    clients.forEach((client) => client.release());
+    await Promise.all(promises);
   }
 
   // First set of tests
@@ -76,7 +78,7 @@ test("getTaskName works as expected", async () => {
       });
     }
     await withPgClient((client) =>
-      client.query(
+      client.execute(
         `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_jobs((select array_agg(r) from json_populate_recordset(null::${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_spec, $1::json) r))`,
         [JSON.stringify(jobSpecs)],
       ),
@@ -112,7 +114,7 @@ test("getTaskName works as expected", async () => {
       });
     }
     await withPgClient((client) =>
-      client.query(
+      client.execute(
         `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_jobs((select array_agg(r) from json_populate_recordset(null::${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_spec, $1::json) r))`,
         [JSON.stringify(jobSpecs)],
       ),
@@ -148,7 +150,7 @@ test("getTaskName works as expected", async () => {
       });
     }
     await withPgClient((client) =>
-      client.query(
+      client.execute(
         `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_jobs((select array_agg(r) from json_populate_recordset(null::${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_spec, $1::json) r))`,
         [JSON.stringify(jobSpecs)],
       ),

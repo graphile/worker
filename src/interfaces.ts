@@ -1,14 +1,20 @@
 /* eslint-disable @typescript-eslint/ban-types */
+import type {
+  MaybeRow,
+  PgClient,
+  PgPool,
+  PgQueryResult,
+} from "@graphile/pg-core";
 import type { EventEmitter } from "events";
 import type { Stats } from "fs";
 import { AsyncHooks, Middleware } from "graphile-config";
-import type {
-  Notification,
-  Pool,
-  PoolClient,
-  QueryResult,
-  QueryResultRow,
-} from "pg";
+
+// Notification interface compatible with pg's Notification
+export interface Notification {
+  processId: number;
+  channel: string;
+  payload?: string | null;
+}
 
 import type {
   CompiledSharedOptions,
@@ -34,7 +40,7 @@ import type { Signal } from "./signals";
  */
 
 export interface WithPgClient {
-  <T = void>(callback: (pgClient: PoolClient) => Promise<T>): Promise<T>;
+  <T = void>(callback: (pgClient: PgClient) => Promise<T>): Promise<T>;
 }
 
 export interface EnhancedWithPgClient extends WithPgClient {
@@ -174,10 +180,10 @@ export interface JobHelpers extends Helpers {
   /**
    * A shorthand for running an SQL query within the job.
    */
-  query<R extends QueryResultRow>(
+  query<R extends MaybeRow>(
     queryText: string,
     values?: unknown[],
-  ): Promise<QueryResult<R>>;
+  ): Promise<PgQueryResult<R>>;
 
   /**
    * An `AbortSignal` that will be triggered when the job should exit. It is used,
@@ -672,9 +678,9 @@ export interface SharedOptions {
   maxPoolSize?: number;
 
   /**
-   * A pg.Pool instance to use instead of the `connectionString`
+   * A PgPool instance to use instead of the `connectionString`
    */
-  pgPool?: Pool;
+  pgPool?: PgPool;
 
   /**
    * Set true if you want to prevent the use of prepared statements; for
@@ -912,7 +918,6 @@ export type WorkerEventMap = {
   "pool:listen:connecting": {
     ctx: WorkerPluginContext;
     workerPool: WorkerPool;
-    attempts: number;
   };
 
   /**
@@ -921,7 +926,6 @@ export type WorkerEventMap = {
   "pool:listen:success": {
     ctx: WorkerPluginContext;
     workerPool: WorkerPool;
-    client: PoolClient;
   };
 
   /**
@@ -940,7 +944,6 @@ export type WorkerEventMap = {
     ctx: WorkerPluginContext;
     workerPool: WorkerPool;
     message: Notification;
-    client: PoolClient;
   };
 
   /**
@@ -950,7 +953,7 @@ export type WorkerEventMap = {
     ctx: WorkerPluginContext;
     workerPool: WorkerPool;
     /** If you use this client, be careful to handle errors - it may be in an invalid state (errored, disconnected, etc). */
-    client: PoolClient;
+    client: PgClient;
   };
 
   /**

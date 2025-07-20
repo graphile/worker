@@ -1,5 +1,5 @@
 // See also main.runTaskListOnce.test.ts
-import { Pool } from "pg";
+import type { PgPool } from "@graphile/pg-core";
 
 import deferred, { Deferred } from "../src/deferred";
 import { Job, Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
@@ -14,8 +14,8 @@ import {
   withPgPool,
 } from "./helpers";
 
-const addJob = (pgPool: Pool, id?: string | number) =>
-  pgPool.query(
+const addJob = (pgPool: PgPool, id?: string | number) =>
+  pgPool.execute(
     `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', json_build_object('id', $1::text), 'serial')`,
     [String(id != null ? id : Math.random())],
   );
