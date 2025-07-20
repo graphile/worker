@@ -15,7 +15,7 @@ let runner: Runner | null = null;
 
 const JOB_COUNT = 10;
 beforeAll(async () => {
-  pgPool = await createNodePostgresPool({
+  pgPool = createNodePostgresPool({
     connectionString: databaseDetails!.TEST_CONNECTION_STRING,
     max: JOB_COUNT * 2 + 5,
   });

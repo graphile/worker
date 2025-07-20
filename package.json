@@ -52,7 +52,7 @@
   "homepage": "https://github.com/graphile/worker#readme",
   "dependencies": {
     "@graphile/logger": "^0.2.0",
-    "@graphile/pg-core": "https://pkg.pr.new/leo91000/graphile_pg/@graphile/pg-core@1",
+    "@graphile/pg-core": "https://pkg.pr.new/leo91000/graphile_pg/@graphile/pg-core@f37250e9c4aaa77ddcea5c8262ff5a780ef21fab",
     "@types/debug": "^4.1.10",
     "cosmiconfig": "^8.3.6",
     "graphile-config": "^0.0.1-beta.16",
@@ -61,7 +61,7 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "@graphile/pg-adapter-node-postgres": "https://pkg.pr.new/leo91000/graphile_pg/@graphile/pg-adapter-node-postgres@1",
+    "@graphile/pg-adapter-node-postgres": "https://pkg.pr.new/leo91000/graphile_pg/@graphile/pg-adapter-node-postgres@f37250e9c4aaa77ddcea5c8262ff5a780ef21fab",
     "@types/pg": "^8.6.0",
     "pg": "^8.7.1",
     "@docusaurus/core": "2.4.3",

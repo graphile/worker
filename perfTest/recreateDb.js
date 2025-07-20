@@ -13,7 +13,7 @@ const config = parse(process.env.PERF_DATABASE_URL);
 // don't connect to the provided db, or we can't drop it
 
 async function main() {
-  const pgPool = await createNodePostgresPool({
+  const pgPool = createNodePostgresPool({
     ...config,
     database: "template1",
   });

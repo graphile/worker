@@ -11,7 +11,7 @@ if (!taskIdentifier.match(/^[a-zA-Z0-9_]+$/)) {
 }
 
 async function main() {
-  const pgPool = await createNodePostgresPool({
+  const pgPool = createNodePostgresPool({
     connectionString: process.env.PERF_DATABASE_URL,
   });
   if (taskIdentifier === "stuck") {

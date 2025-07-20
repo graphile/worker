@@ -59,8 +59,6 @@ const spawnOptions = {
   detached: false,
 };
 
-let pgPool;
-
 //const GENERAL_JOBS_PER_SECOND = 15000;
 const GENERAL_JOBS_PER_SECOND = Math.min(
   15000,
@@ -141,7 +139,7 @@ const time = async (cb) => {
 };
 
 async function main() {
-  pgPool = await createNodePostgresPool({
+  const pgPool = createNodePostgresPool({
     connectionString: process.env.PERF_DATABASE_URL,
   });
   

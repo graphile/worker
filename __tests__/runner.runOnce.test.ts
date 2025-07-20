@@ -95,7 +95,7 @@ test("at least a connectionString, a pgPool, the DATABASE_URL or PGDATABASE envv
 });
 
 test("connectionString and a pgPool cannot provided a the same time", async () => {
-  const pgPool = await createNodePostgresPool({
+  const pgPool = createNodePostgresPool({
     connectionString: databaseDetails!.TEST_CONNECTION_STRING,
   });
   const options: RunnerOptions = {

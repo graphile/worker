@@ -1,4 +1,3 @@
-
 import { WorkerSharedOptions } from "../src";
 import { migrations } from "../src/generated/sql";
 import { processSharedOptions } from "../src/lib";

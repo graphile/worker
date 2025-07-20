@@ -22,7 +22,6 @@ export async function batchGetJobs(
   const batchSize = parseInt(String(rawBatchSize), 10) || 1;
   const {
     escapedWorkerSchema,
-    workerSchema,
     resolvedPreset: {
       worker: { preparedStatements, useNodeTime },
     },

@@ -14,7 +14,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const options = { preset };
 
 async function main() {
-  const pgPool = await createNodePostgresPool({
+  const pgPool = createNodePostgresPool({
     connectionString: process.env.PERF_DATABASE_URL,
   });
   const startTimes = {};

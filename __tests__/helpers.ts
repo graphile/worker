@@ -101,7 +101,7 @@ export async function withPgPool<T>(
   cb: (pool: PgPool) => Promise<T>,
 ): Promise<T> {
   const { TEST_CONNECTION_STRING } = databaseDetails!;
-  const pgPool = await createNodePostgresPool({
+  const pgPool = createNodePostgresPool({
     connectionString: TEST_CONNECTION_STRING,
     max: 100,
   });

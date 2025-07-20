@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { loadConfig } from "graphile-config/load";
-import * as yargs from "yargs";
+import yargs from "yargs";
 
 import { assertCleanupTasks, cleanup } from "./cleanup";
 import { getCronItemsInternal } from "./getCronItems";

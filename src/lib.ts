@@ -328,7 +328,7 @@ export async function assertPool(
       const { createNodePostgresPool } = adapterModule;
 
       // Use connectionString if available, otherwise let pg use env vars
-      pgPool = await createNodePostgresPool(
+      pgPool = createNodePostgresPool(
         connectionString ? { connectionString } : {},
       );
       shouldReleasePool = true;
@@ -344,8 +344,12 @@ export async function assertPool(
   }
 
   // Only register cleanup if we created the pool
-  if (shouldReleasePool) {
+  if (shouldReleasePool && pgPool) {
     releasers.push(() => pgPool.end());
+  }
+
+  if (!pgPool) {
+    throw new Error("Failed to create or obtain pgPool");
   }
 
   return pgPool;
