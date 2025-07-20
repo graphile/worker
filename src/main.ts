@@ -1,7 +1,7 @@
+import type { PgClient, PgPool } from "@graphile/pg-core";
 import * as assert from "assert";
 import { randomBytes } from "crypto";
 import { EventEmitter } from "events";
-import { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
 import defer, { Deferred } from "./deferred";
@@ -55,7 +55,6 @@ const ENABLE_DANGEROUS_LOGS =
 const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
 
 // Wait at most 60 seconds between connection attempts for LISTEN.
-const MAX_DELAY = 60 * 1000;
 
 const allWorkerPools: Array<WorkerPool> = [];
 
@@ -256,7 +255,7 @@ function _reallyRegisterSignalHandlers(logger: Logger) {
 export function runTaskList(
   rawOptions: WorkerPoolOptions,
   tasks: TaskList,
-  pgPool: Pool,
+  pgPool: PgPool,
 ): WorkerPool {
   const compiledSharedOptions = processSharedOptions(rawOptions);
   return runTaskListInternal(compiledSharedOptions, tasks, pgPool);
@@ -265,7 +264,7 @@ export function runTaskList(
 export function runTaskListInternal(
   compiledSharedOptions: CompiledSharedOptions<WorkerPoolOptions>,
   tasks: TaskList,
-  pgPool: Pool,
+  pgPool: PgPool,
 ): WorkerPool {
   const ctx = compiledSharedOptions;
   const {
@@ -288,25 +287,18 @@ export function runTaskListInternal(
         clearTimeout(resetLockedTimeout);
         resetLockedTimeout = null;
       }
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-        reconnectTimeout = null;
-      }
       return unlistenForChanges();
     },
   });
 
-  let attempts = 0;
-  let reconnectTimeout: NodeJS.Timeout | null = null;
   let changeListener: {
-    client: PoolClient;
-    release: () => Promise<void>;
+    unlisten: () => Promise<void>;
   } | null = null;
 
   const unlistenForChanges = async () => {
     if (changeListener) {
       try {
-        await changeListener.release();
+        await changeListener.unlisten();
       } catch (e) {
         logger.error(
           `Error occurred whilst releasing listening client: ${
@@ -315,6 +307,7 @@ export function runTaskListInternal(
           { error: e },
         );
       }
+      changeListener = null;
     }
   };
 
@@ -385,168 +378,103 @@ export function runTaskListInternal(
     Math.random() * Math.min(60000, maxResetLockedInterval),
   );
 
-  const listenForChanges = (
-    err: Error | undefined,
-    maybeClient: PoolClient | undefined,
-    releaseClient: () => void,
-  ) => {
+  const listenForChanges = async () => {
     if (!workerPool._active) {
-      // We were released, release this new client and abort
-      releaseClient?.();
       return;
     }
 
-    const reconnectWithExponentialBackoff = (err: Error) => {
-      events.emit("pool:listen:error", { ctx, workerPool, error: err });
-
-      attempts++;
-
-      // When figuring the next delay we want exponential back-off, but we also
-      // want to avoid the thundering herd problem. For now, we'll add some
-      // randomness to it via the `jitter` variable, this variable is
-      // deliberately weighted towards the higher end of the duration.
-      const jitter = 0.5 + Math.sqrt(Math.random()) / 2;
-
-      // Backoff (ms): 136, 370, 1005, 2730, 7421, 20172, 54832
-      const delay = Math.ceil(
-        jitter * Math.min(MAX_DELAY, 50 * Math.exp(attempts)),
-      );
-
-      logger.error(
-        `Error with notify listener (trying again in ${delay}ms): ${err.message}`,
-        { error: err },
-      );
-
-      reconnectTimeout = setTimeout(() => {
-        reconnectTimeout = null;
-        events.emit("pool:listen:connecting", { ctx, workerPool, attempts });
-        pgPool.connect(listenForChanges);
-      }, delay);
-    };
-
-    if (err || !maybeClient) {
-      // Try again
-      reconnectWithExponentialBackoff(
-        err ??
-          new Error(
-            `This should never happen, this error only exists to satisfy TypeScript`,
-          ),
-      );
-      return;
-    }
-    const client = maybeClient;
-
-    //----------------------------------------
-
-    let errorHandled = false;
-    function onErrorReleaseClientAndTryAgain(e: Error) {
-      if (errorHandled) {
-        return;
-      }
-      errorHandled = true;
-      try {
-        release();
-      } catch (e) {
-        logger.error(
-          `Error occurred releasing client: ${coerceError(e).stack}`,
-          { error: e },
-        );
-      }
-
-      reconnectWithExponentialBackoff(e);
-    }
-
-    function handleNotification(message: Notification) {
-      if (changeListener?.client === client && !workerPool._shuttingDown) {
-        events.emit("pool:listen:notification", {
-          ctx,
-          workerPool,
-          message,
-          client,
-        });
-        switch (message.channel) {
-          case "jobs:insert": {
-            const payload = tryParseJson<{
-              count: number;
-            }>(message.payload);
-            const n = payload?.count ?? 1;
+    try {
+      // Set up LISTEN for jobs:insert
+      const { unlisten: unlistenJobs } = await pgPool.listen(
+        "jobs:insert",
+        (payload) => {
+          if (!workerPool._shuttingDown) {
+            events.emit("pool:listen:notification", {
+              ctx,
+              workerPool,
+              message: {
+                processId: 0,
+                channel: "jobs:insert",
+                payload,
+              },
+            });
+            const parsedPayload = tryParseJson<{ count: number }>(payload);
+            const n = parsedPayload?.count ?? 1;
             if (n > 0) {
               workerPool.nudge(n);
             }
-            break;
           }
-          case "worker:migrate": {
-            const payload = tryParseJson<{
+        },
+        (error) => {
+          events.emit("pool:listen:error", { ctx, workerPool, error });
+          logger.error(`Error with jobs:insert listener: ${error.message}`, {
+            error,
+          });
+        },
+      );
+
+      // Set up LISTEN for worker:migrate
+      const { unlisten: unlistenMigrate } = await pgPool.listen(
+        "worker:migrate",
+        (payload) => {
+          if (!workerPool._shuttingDown) {
+            events.emit("pool:listen:notification", {
+              ctx,
+              workerPool,
+              message: {
+                processId: 0,
+                channel: "worker:migrate",
+                payload,
+              },
+            });
+            const parsedPayload = tryParseJson<{
               migrationNumber?: number;
               breaking?: boolean;
-            }>(message.payload);
-            if (payload?.breaking) {
+            }>(payload);
+            if (parsedPayload?.breaking) {
               logger.warn(
-                `Graphile Worker detected breaking migration to database schema revision '${payload?.migrationNumber}'; it would be unsafe to continue, so shutting down...`,
+                `Graphile Worker detected breaking migration to database schema revision '${parsedPayload?.migrationNumber}'; it would be unsafe to continue, so shutting down...`,
               );
               process.exitCode = 57;
               workerPool.gracefulShutdown();
             }
-            break;
           }
-          default: {
-            logger.debug(
-              `Received NOTIFY message on channel '${message.channel}'`,
-            );
-          }
-        }
-      }
-    }
-
-    async function release() {
-      // No need to call changeListener.release() because the client errored
-      changeListener = null;
-      client.removeListener("notification", handleNotification);
-      // TODO: ideally we'd only stop handling errors once all pending queries are complete; but either way we shouldn't try again!
-      client.removeListener("error", onErrorReleaseClientAndTryAgain);
-      events.emit("pool:listen:release", { ctx, workerPool, client });
-      try {
-        await client.query(
-          'UNLISTEN "jobs:insert"; UNLISTEN "worker:migrate";',
-        );
-      } catch (error) {
-        /* ignore errors */
-        logger.error(`Error occurred attempting to UNLISTEN: ${error}`, {
-          error,
-        });
-      }
-      return releaseClient();
-    }
-
-    // On error, release this client and try again
-    client.on("error", onErrorReleaseClientAndTryAgain);
-
-    //----------------------------------------
-
-    changeListener = { client, release };
-    events.emit("pool:listen:success", { ctx, workerPool, client });
-    client.on("notification", handleNotification);
-
-    // Subscribe to jobs:insert message
-    client.query('LISTEN "jobs:insert"; LISTEN "worker:migrate";').then(() => {
-      // Successful listen; reset attempts
-      attempts = 0;
-    }, onErrorReleaseClientAndTryAgain);
-
-    const supportedTaskNames = Object.keys(tasks);
-
-    if (!NO_LOG_SUCCESS) {
-      logger.info(
-        `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
-          "', '",
-        )}')`,
+        },
+        (error) => {
+          events.emit("pool:listen:error", { ctx, workerPool, error });
+          logger.error(`Error with worker:migrate listener: ${error.message}`, {
+            error,
+          });
+        },
       );
+
+      changeListener = {
+        async unlisten() {
+          await Promise.all([unlistenJobs(), unlistenMigrate()]);
+        },
+      };
+
+      events.emit("pool:listen:success", { ctx, workerPool });
+
+      const supportedTaskNames = Object.keys(tasks);
+      if (!NO_LOG_SUCCESS) {
+        logger.info(
+          `Worker connected and looking for jobs... (task names: '${supportedTaskNames.join(
+            "', '",
+          )}')`,
+        );
+      }
+    } catch (err) {
+      events.emit("pool:listen:error", { ctx, workerPool, error: err });
+      logger.error(`Failed to set up listeners: ${coerceError(err).message}`, {
+        error: err,
+      });
     }
   };
 
-  // Create a client dedicated to listening for new jobs.
-  events.emit("pool:listen:connecting", { ctx, workerPool, attempts });
-  pgPool.connect(listenForChanges);
+  // Create listeners for new jobs using the adapter interface
+  events.emit("pool:listen:connecting", { ctx, workerPool });
+  listenForChanges();
 
   return workerPool;
 }
@@ -1422,7 +1350,7 @@ export function _runTaskList(
 export const runTaskListOnce = (
   options: RunOnceOptions,
   tasks: TaskList,
-  client: PoolClient,
+  client: PgClient,
 ) => {
   const withPgClient = makeEnhancedWithPgClient(
     makeWithPgClientFromClient(client),

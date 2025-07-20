@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // @ts-check
+import { createNodePostgresPool } from "@graphile/pg-adapter-node-postgres";
 import { execSync, spawn } from "child_process";
-import pg from "pg";
 
 import { makeWorkerUtils } from "../dist/index.js";
 import config, { PARALLELISM } from "./graphile.config.mjs";
@@ -58,10 +58,6 @@ const spawnOptions = {
   stdio: ["ignore", "inherit", "inherit"],
   detached: false,
 };
-
-const pgPool = new pg.Pool({ connectionString: process.env.PERF_DATABASE_URL });
-pgPool.on("error", () => {});
-pgPool.on("connect", (client) => void client.on("error", () => {}));
 
 //const GENERAL_JOBS_PER_SECOND = 15000;
 const GENERAL_JOBS_PER_SECOND = Math.min(
@@ -143,6 +139,10 @@ const time = async (cb) => {
 };
 
 async function main() {
+  const pgPool = createNodePostgresPool({
+    connectionString: process.env.PERF_DATABASE_URL,
+  });
+  
   console.log("Building");
   execSync("yarn prepack", execOptions);
 
@@ -219,6 +219,7 @@ async function main() {
 
   await allDone;
 
+  await pgPool.end();
   console.log("Exiting");
 }
 

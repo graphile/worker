@@ -22,7 +22,6 @@ export async function batchGetJobs(
   const batchSize = parseInt(String(rawBatchSize), 10) || 1;
   const {
     escapedWorkerSchema,
-    workerSchema,
     resolvedPreset: {
       worker: { preparedStatements, useNodeTime },
     },
@@ -179,18 +178,8 @@ with j as (
     ...(hasFlags ? [flagsToSkip!] : []),
     ...(useNodeTime ? [new Date().toISOString()] : []),
   ];
-  const name = !preparedStatements
-    ? undefined
-    : `get_job${batchSize === 1 ? "" : batchSize}${hasFlags ? "F" : ""}${
-        useNodeTime ? "N" : ""
-      }/${workerSchema}`;
-
   const { rows } = await withPgClient.withRetries((client) =>
-    client.query<DbJob>({
-      text,
-      values,
-      name,
-    }),
+    client.query<DbJob>(text, values, { prepare: preparedStatements }),
   );
   return rows.map((jobRow) =>
     Object.assign(jobRow, {

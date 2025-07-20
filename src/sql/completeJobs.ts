@@ -11,7 +11,6 @@ export async function batchCompleteJobs(
 ): Promise<void> {
   const {
     escapedWorkerSchema,
-    workerSchema,
     resolvedPreset: {
       worker: { preparedStatements },
     },
@@ -29,8 +28,8 @@ export async function batchCompleteJobs(
 
   if (jobIdsWithQueue.length > 0) {
     await withPgClient((client) =>
-      client.query({
-        text: `\
+      client.execute(
+        `\
 with j as (
 delete from ${escapedWorkerSchema}._private_jobs as jobs
 using unnest($1::bigint[]) n(n)
@@ -41,45 +40,41 @@ update ${escapedWorkerSchema}._private_job_queues as job_queues
 set locked_by = null, locked_at = null
 from j
 where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
-        values: [jobIdsWithQueue, poolId],
-        name: !preparedStatements
-          ? undefined
-          : `complete_job_q/${workerSchema}`,
-      }),
+        [jobIdsWithQueue, poolId],
+        { prepare: preparedStatements },
+      ),
     );
   }
   if (jobIdsWithoutQueue.length === 1) {
     await withPgClient((client) =>
-      client.query({
-        text: `\
+      client.execute(
+        `\
 delete from ${escapedWorkerSchema}._private_jobs as jobs
 where id = $1::bigint`,
-        values: [jobIdsWithoutQueue[0]],
-        name: !preparedStatements ? undefined : `complete_job/${workerSchema}`,
-      }),
+        [jobIdsWithoutQueue[0]],
+        { prepare: preparedStatements },
+      ),
     );
   } else if (jobIdsWithoutQueue.length > 1) {
     if (manualPrepare) {
       await withPgClient((client) =>
-        client.query({
-          text: `\
+        client.execute(
+          `\
 prepare gwcj (bigint) as delete from ${escapedWorkerSchema}._private_jobs where id = $1;
 ${jobIdsWithoutQueue.map((id) => `execute gwcj(${id});`).join("\n")}
 deallocate gwcj;`,
-        }),
+        ),
       );
     } else {
       await withPgClient((client) =>
-        client.query({
-          text: `\
+        client.execute(
+          `\
 delete from ${escapedWorkerSchema}._private_jobs as jobs
 using unnest($1::bigint[]) n(n)
 where id = n`,
-          values: [jobIdsWithoutQueue],
-          name: !preparedStatements
-            ? undefined
-            : `complete_jobs/${workerSchema}`,
-        }),
+          [jobIdsWithoutQueue],
+          { prepare: preparedStatements },
+        ),
       );
     }
   }

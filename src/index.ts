@@ -1,6 +1,6 @@
 import { Logger } from "@graphile/logger";
+import type { PgClient } from "@graphile/pg-core";
 import { MiddlewareHandlers, PluginHook } from "graphile-config";
-import type { PoolClient } from "pg";
 
 import { getCronItems } from "./getCronItems";
 import { getTasks } from "./getTasks";
@@ -53,7 +53,7 @@ declare global {
        * The client used to perform the bootstrap. Replacing this is not officially
        * supported, but...
        */
-      client: PoolClient;
+      client: PgClient;
 
       /**
        * The Postgres version number, e.g. 120000 for PostgreSQL 12.0
@@ -74,7 +74,7 @@ declare global {
        * The client used to run the migration. Replacing this is not officially
        * supported, but...
        */
-      client: PoolClient;
+      client: PgClient;
 
       /**
        * The Postgres version number, e.g. 120000 for PostgreSQL 12.0

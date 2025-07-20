@@ -1,4 +1,4 @@
-import { PoolClient } from "pg";
+import type { PgClient } from "@graphile/pg-core";
 
 import { migrations } from "./generated/sql";
 import { WorkerSharedOptions, Writeable } from "./interfaces";
@@ -20,7 +20,7 @@ function checkPostgresVersion(versionString: string) {
   return postgresVersion;
 }
 
-async function fetchAndCheckPostgresVersion(client: PoolClient) {
+async function fetchAndCheckPostgresVersion(client: PgClient) {
   const {
     rows: [row],
   } = await client.query(
@@ -80,14 +80,12 @@ export async function runMigration(
   await event.client.query("begin");
   try {
     // Must come first so we can detect concurrent migration
-    await event.client.query({
-      text: `insert into ${escapedWorkerSchema}.migrations (id, breaking) values ($1, $2)`,
-      values: [migrationNumber, breaking],
-    });
+    await event.client.query(
+      `insert into ${escapedWorkerSchema}.migrations (id, breaking) values ($1, $2)`,
+      [migrationNumber, breaking],
+    );
     migrationInsertComplete = true;
-    await event.client.query({
-      text,
-    });
+    await event.client.query(text);
     await event.client.query("select pg_notify($1, $2)", [
       "worker:migrate",
       JSON.stringify({ migrationNumber, breaking }),
@@ -119,7 +117,7 @@ export async function runMigration(
 /** @internal */
 export async function migrate(
   compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
-  client: PoolClient,
+  client: PgClient,
 ) {
   const { escapedWorkerSchema, hooks, logger, middleware } =
     compiledSharedOptions;

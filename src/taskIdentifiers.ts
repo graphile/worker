@@ -42,14 +42,14 @@ export function getTaskDetails(
     cache.lastStr = str;
     cache.lastDigest = (async () => {
       const { rows } = await withPgClient.withRetries(async (client) => {
-        await client.query({
-          text: `insert into ${escapedWorkerSchema}._private_tasks as tasks (identifier) select unnest($1::text[]) on conflict do nothing`,
-          values: [supportedTaskNames],
-        });
-        return client.query<{ id: number; identifier: string }>({
-          text: `select id, identifier from ${escapedWorkerSchema}._private_tasks as tasks where identifier = any($1::text[])`,
-          values: [supportedTaskNames],
-        });
+        await client.query(
+          `insert into ${escapedWorkerSchema}._private_tasks as tasks (identifier) select unnest($1::text[]) on conflict do nothing`,
+          [supportedTaskNames],
+        );
+        return client.query<{ id: number; identifier: string }>(
+          `select id, identifier from ${escapedWorkerSchema}._private_tasks as tasks where identifier = any($1::text[])`,
+          [supportedTaskNames],
+        );
       });
 
       const supportedTaskIdentifierByTaskId = Object.create(null);
