@@ -19,11 +19,8 @@ const TierList = [
               Graphile Sponsors page
             </Link>{" "}
           </li>
-          <li>
-            Your name among those randomly featured in the PostGraphile CLI
-          </li>
           <li>Post job opportunities to our Discord community</li>
-          <li>PostGraphile stickers</li>
+          <li>Graphile Worker stickers</li>
           <li>Access to the #supporter-lounge on Discord</li>
           <li>
             The warm feeling from knowing you’re supporting Open Source Software
@@ -46,7 +43,10 @@ const TierList = [
             Access to <strong>private security announcements</strong>
           </li>
           <li>
-            Free access to <strong>PostGraphile V4 Pro</strong>
+            Free access to{" "}
+            <strong>
+              <Link to="/pricing">Worker Pro</Link>
+            </strong>
           </li>
           <li>
             Access to{" "}
@@ -59,12 +59,8 @@ const TierList = [
             including this one
           </li>
           <li>
-            Your name <strong>more frequently featured</strong> in the
-            PostGraphile CLI
-          </li>
-          <li>
             The warm feeling that comes from knowing you’re making a difference
-            to PostGraphile’s development and sustainability
+            to Graphile Worker’s development and sustainability
           </li>
         </ul>
       </>
@@ -92,10 +88,6 @@ const TierList = [
             our websites
           </li>
           <li>
-            Your name <strong>even more frequently featured</strong> in the
-            PostGraphile CLI
-          </li>
-          <li>
             Access to <strong>#vip-lounge</strong> on Discord
           </li>
           <li>
@@ -107,7 +99,7 @@ const TierList = [
           <li>
             The warm feeling that comes from knowing{" "}
             <strong>
-              you’re making a significant difference to PostGraphile’s
+              you’re making a significant difference to Graphile Worker’s
               development and sustainability
             </strong>
           </li>
