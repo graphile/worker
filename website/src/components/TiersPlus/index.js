@@ -19,8 +19,8 @@ const TierList = [
         <div className={styles.description}>
           Access development support for Graphile projects through the Private
           Advisor tier, giving your organization access to the knowledge and
-          experience of the Graphile team for any issues you have with{" "}
-          PostGraphile, Grafast and the wider Graphile suite, and other tools in
+          experience of the Graphile team for any issues you have with Graphile
+          Worker, PostGraphile and the wider Graphile suite, and other tools in
           the ecosystem such as TypeScript, SQL, Node.js, GraphQL and more. If
           you’re running any of the Graphile tools, you won’t find anyone more
           qualified to help.
@@ -44,7 +44,7 @@ const TierList = [
           <li>
             The warm feeling that comes from knowing{" "}
             <strong>
-              you’re making a significant difference to PostGraphile’s
+              you’re making a significant difference to Graphile Worker’s
               development and sustainability
             </strong>
           </li>
