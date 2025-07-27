@@ -345,7 +345,7 @@ export async function assertPool(
 
   // Only register cleanup if we created the pool
   if (shouldReleasePool && pgPool) {
-    releasers.push(() => pgPool.end());
+    releasers.push(() => pgPool!.end());
   }
 
   if (!pgPool) {

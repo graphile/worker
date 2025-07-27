@@ -147,9 +147,8 @@ export async function withTransaction<T>(
   });
 }
 
-function isPgClient(o: PgPool | PgClient): o is PgClient {
-  // PgClient doesn't have withPgClient method
-  return !("withPgClient" in o);
+function isPgPool(o: PgPool | PgClient): o is PgPool {
+  return "withPgClient" in o;
 }
 
 export async function reset(
@@ -181,7 +180,7 @@ async function _reset(
     `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
   );
   const compiledSharedOptions = processSharedOptions(options);
-  if (isPgClient(pgPoolOrClient)) {
+  if (!isPgPool(pgPoolOrClient)) {
     await migrate(compiledSharedOptions, pgPoolOrClient);
   } else {
     await pgPoolOrClient.withPgClient(async (client) => {
