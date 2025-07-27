@@ -86,7 +86,10 @@ function stripUndefined<T extends object>(
   ) as T;
 }
 
-function argvToPreset(inArgv: Awaited<typeof argv>): GraphileConfig.Preset {
+type MaybeAwaited<T> = T extends Promise<infer U> ? U : T;
+type Args = MaybeAwaited<typeof argv>;
+
+function argvToPreset(inArgv: Args): GraphileConfig.Preset {
   return {
     worker: stripUndefined({
       connectionString: inArgv["connection"],
@@ -101,16 +104,17 @@ function argvToPreset(inArgv: Awaited<typeof argv>): GraphileConfig.Preset {
 }
 
 async function main() {
-  const userPreset = await loadConfig(argv.config);
-  const ONCE = argv.once;
-  const SCHEMA_ONLY = argv["schema-only"];
-  const CLEANUP = argv.cleanup as string | string[] | undefined;
+  const parsedArgv = await argv;
+  const userPreset = await loadConfig(parsedArgv.config);
+  const ONCE = parsedArgv.once;
+  const SCHEMA_ONLY = parsedArgv["schema-only"];
+  const CLEANUP = parsedArgv.cleanup as string | string[] | undefined;
 
   if (SCHEMA_ONLY && ONCE) {
     throw new Error("Cannot specify both --once and --schema-only");
   }
 
-  const argvPreset = argvToPreset(argv);
+  const argvPreset = argvToPreset(parsedArgv);
 
   const [compiledOptions, release] = await getUtilsAndReleasersFromOptions({
     preset: {
