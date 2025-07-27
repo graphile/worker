@@ -15,7 +15,7 @@ async function main() {
     connectionString: process.env.PERF_DATABASE_URL,
   });
   if (taskIdentifier === "stuck") {
-    await pgPool.execute(
+    await pgPool.query(
       `\
 do $$
 begin
@@ -46,7 +46,7 @@ $$ language plpgsql;`,
       const jobsSlice = jobs.splice(0, 1000000);
       const jobsString = JSON.stringify(jobsSlice);
       console.log(`Adding ${jobsSlice.length} jobs`);
-      await pgPool.execute(
+      await pgPool.query(
         `select 1 from graphile_worker.add_jobs(array(select json_populate_recordset(null::graphile_worker.job_spec, $1::json)));`,
         [jobsString],
       );

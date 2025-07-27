@@ -15,7 +15,7 @@ import {
 } from "./helpers";
 
 const addJob = (pgPool: PgPool, id?: string | number) =>
-  pgPool.execute(
+  pgPool.query(
     `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', json_build_object('id', $1::text), 'serial')`,
     [String(id != null ? id : Math.random())],
   );

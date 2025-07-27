@@ -32,7 +32,7 @@ export async function batchFailJobs(
 
   if (specsWithQueues.length > 0) {
     await withPgClient((client) =>
-      client.execute(
+      client.query(
         `\
 with j as (
 update ${escapedWorkerSchema}._private_jobs as jobs
@@ -66,7 +66,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $1::text;`,
   }
   if (specsWithoutQueues.length > 0) {
     await withPgClient((client) =>
-      client.execute(
+      client.query(
         `\
 update ${escapedWorkerSchema}._private_jobs as jobs
 set

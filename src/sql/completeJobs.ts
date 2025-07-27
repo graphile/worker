@@ -28,7 +28,7 @@ export async function batchCompleteJobs(
 
   if (jobIdsWithQueue.length > 0) {
     await withPgClient((client) =>
-      client.execute(
+      client.query(
         `\
 with j as (
 delete from ${escapedWorkerSchema}._private_jobs as jobs
@@ -47,7 +47,7 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $2::text;`,
   }
   if (jobIdsWithoutQueue.length === 1) {
     await withPgClient((client) =>
-      client.execute(
+      client.query(
         `\
 delete from ${escapedWorkerSchema}._private_jobs as jobs
 where id = $1::bigint`,
@@ -58,7 +58,7 @@ where id = $1::bigint`,
   } else if (jobIdsWithoutQueue.length > 1) {
     if (manualPrepare) {
       await withPgClient((client) =>
-        client.execute(
+        client.query(
           `\
 prepare gwcj (bigint) as delete from ${escapedWorkerSchema}._private_jobs where id = $1;
 ${jobIdsWithoutQueue.map((id) => `execute gwcj(${id});`).join("\n")}
@@ -67,7 +67,7 @@ deallocate gwcj;`,
       );
     } else {
       await withPgClient((client) =>
-        client.execute(
+        client.query(
           `\
 delete from ${escapedWorkerSchema}._private_jobs as jobs
 using unnest($1::bigint[]) n(n)

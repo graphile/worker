@@ -16,7 +16,7 @@ const MAX_MIGRATION_NUMBER = 19;
 
 test("migration installs schema; second migration does no harm", async () => {
   await withPgClient(async (pgClient) => {
-    await pgClient.execute(
+    await pgClient.query(
       `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
     );
   });
@@ -45,7 +45,7 @@ test("migration installs schema; second migration does no harm", async () => {
     expect(migration.id).toEqual(1);
 
     // Assert job schema files have been created (we're asserting no error is thrown)
-    await pgClient.execute(
+    await pgClient.query(
       `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('assert_jobs_work')`,
     );
     {
@@ -68,7 +68,7 @@ test("migration installs schema; second migration does no harm", async () => {
 
 test("multiple concurrent installs of the schema is fine", async () => {
   await withPgClient(async (pgClient) => {
-    await pgClient.execute(
+    await pgClient.query(
       `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
     );
   });
@@ -97,7 +97,7 @@ test("multiple concurrent installs of the schema is fine", async () => {
     expect(migration.id).toEqual(1);
 
     // Assert job schema files have been created (we're asserting no error is thrown)
-    await pgClient.execute(
+    await pgClient.query(
       `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('assert_jobs_work')`,
     );
     {
@@ -110,7 +110,7 @@ test("multiple concurrent installs of the schema is fine", async () => {
 
 test("migration can take over from pre-existing migrations table", async () => {
   await withPgClient(async (pgClient) => {
-    await pgClient.execute(
+    await pgClient.query(
       `\
 drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;
 create schema if not exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA};
@@ -121,7 +121,7 @@ create table if not exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations(
 insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations (id) values (1);
 `,
     );
-    await pgClient.execute(
+    await pgClient.query(
       migrations["000001.sql"].replace(
         /:GRAPHILE_WORKER_SCHEMA/g,
         ESCAPED_GRAPHILE_WORKER_SCHEMA,
@@ -149,7 +149,7 @@ insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations (id) values (1);
     expect(migration11.breaking).toEqual(true);
 
     // Assert job schema files have been created (we're asserting no error is thrown)
-    await pgClient.execute(
+    await pgClient.query(
       `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('assert_jobs_work')`,
     );
     {
@@ -172,7 +172,7 @@ insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations (id) values (1);
 
 test("aborts if database is more up to date than current worker", async () => {
   await withPgClient(async (pgClient) => {
-    await pgClient.execute(
+    await pgClient.query(
       `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
     );
   });
@@ -194,7 +194,7 @@ test("aborts if database is more up to date than current worker", async () => {
     await migrate(compiledSharedOptions, pgClient);
 
     // Insert a more up to date migration
-    await pgClient.execute(
+    await pgClient.query(
       `insert into ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.migrations (id, ts, breaking) values (999999, '2023-10-19T10:31:00Z', true);`,
     );
 
@@ -208,7 +208,7 @@ test("aborts if database is more up to date than current worker", async () => {
 
 test("throws helpful error message in migration 11", async () => {
   await withPgClient(async (pgClient) => {
-    await pgClient.execute(
+    await pgClient.query(
       `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
     );
   });
@@ -251,10 +251,10 @@ test("throws helpful error message in migration 11", async () => {
     }
 
     // Lock a job
-    await pgClient.execute(
+    await pgClient.query(
       `select ${compiledSharedOptions.escapedWorkerSchema}.add_job('lock_me', '{}');`,
     );
-    await pgClient.execute(
+    await pgClient.query(
       `update ${compiledSharedOptions.escapedWorkerSchema}.jobs set locked_at = now(), locked_by = 'test_runner';`,
     );
 

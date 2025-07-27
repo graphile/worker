@@ -32,7 +32,7 @@ async function main() {
   const workerPool = runTaskList(options, tasks, pgPool);
 
   // Warm up
-  await pgPool.execute(
+  await pgPool.query(
     `select graphile_worker.add_job('latency', json_build_object('id', -i)) from generate_series(1, 100) i`,
   );
   await forEmptyQueue(pgPool);
@@ -51,7 +51,7 @@ async function main() {
       for (let id = 0; id < SAMPLES; id++) {
         deferreds[id] = deferred();
         startTimes[id] = process.hrtime();
-        await client.execute(
+        await client.query(
           `select graphile_worker.add_job('latency', json_build_object('id', $1::int))`,
           [id],
         );

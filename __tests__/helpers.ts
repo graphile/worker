@@ -138,11 +138,11 @@ export async function withTransaction<T>(
   closeCommand = "rollback",
 ): Promise<T> {
   return withPgClient(async (client) => {
-    await client.execute("begin");
+    await client.query("begin");
     try {
       return await cb(client);
     } finally {
-      await client.execute(closeCommand);
+      await client.query(closeCommand);
     }
   });
 }
@@ -177,7 +177,7 @@ async function _reset(
   pgPoolOrClient: PgPool | PgClient,
   options: WorkerPoolOptions,
 ) {
-  await pgPoolOrClient.execute(
+  await pgPoolOrClient.query(
     `drop schema if exists ${ESCAPED_GRAPHILE_WORKER_SCHEMA} cascade;`,
   );
   const compiledSharedOptions = processSharedOptions(options);

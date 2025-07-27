@@ -78,7 +78,7 @@ test("getTaskName works as expected", async () => {
       });
     }
     await withPgClient((client) =>
-      client.execute(
+      client.query(
         `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_jobs((select array_agg(r) from json_populate_recordset(null::${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_spec, $1::json) r))`,
         [JSON.stringify(jobSpecs)],
       ),
@@ -114,7 +114,7 @@ test("getTaskName works as expected", async () => {
       });
     }
     await withPgClient((client) =>
-      client.execute(
+      client.query(
         `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_jobs((select array_agg(r) from json_populate_recordset(null::${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_spec, $1::json) r))`,
         [JSON.stringify(jobSpecs)],
       ),
@@ -150,7 +150,7 @@ test("getTaskName works as expected", async () => {
       });
     }
     await withPgClient((client) =>
-      client.execute(
+      client.query(
         `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_jobs((select array_agg(r) from json_populate_recordset(null::${ESCAPED_GRAPHILE_WORKER_SCHEMA}.job_spec, $1::json) r))`,
         [JSON.stringify(jobSpecs)],
       ),
