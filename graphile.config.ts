@@ -4,7 +4,7 @@ const MyMigrationPlugin: GraphileConfig.Plugin = {
   name: "MyMigrationPlugin",
   worker: {
     middleware: {
-      async migrate(next, event) {
+      async migrate(next, _event) {
         const result = await next();
 
         // Do your stuff here.
