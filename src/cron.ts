@@ -209,7 +209,6 @@ async function registerAndBackfillItems(details: {
   const {
     ctx,
     pgPool,
-    events,
     cron,
     workerSchema,
     preparedStatements,

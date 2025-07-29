@@ -266,7 +266,6 @@ export function runTaskListInternal(
 ): WorkerPool {
   const ctx = compiledSharedOptions;
   const {
-    events,
     logger,
     resolvedPreset: {
       worker: { minResetLockedInterval, maxResetLockedInterval },
@@ -594,7 +593,7 @@ export function _runTaskList(
   } = options;
 
   let autostart = rawAutostart;
-  const { logger, events, middleware } = compiledSharedOptions;
+  const { logger, middleware } = compiledSharedOptions;
 
   if (ENABLE_DANGEROUS_LOGS) {
     logger.debug(

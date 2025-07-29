@@ -50,7 +50,6 @@ export function makeNewWorker(
     failJob,
   } = params;
   const {
-    events,
     resolvedPreset: {
       worker: { pollInterval },
     },
