@@ -4,6 +4,9 @@
   "type": "commonjs",
   "description": "Job queue for PostgreSQL",
   "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "scripts": {
     "build:sql": "node scripts/buildSqlModule.mjs",
     "website:update": "yarn prepack && node scripts/options.mjs",
