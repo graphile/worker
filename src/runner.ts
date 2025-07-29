@@ -13,6 +13,7 @@ import {
   CompiledOptions,
   getUtilsAndReleasersFromOptions,
   Releasers,
+  safeEmit,
   sleep,
 } from "./lib";
 import { _runTaskList, runTaskListInternal } from "./main";
@@ -176,7 +177,7 @@ function buildRunner(input: {
       running = false;
       const promises: Array<PromiseOrDirect<void>> = [];
       // Wrap in async IIFE to capture synchronous errors
-      promises.push((async () => void events.emit("stop", { ctx }))());
+      promises.push((async () => void safeEmit(ctx, "stop", { ctx }))());
       if (cron._active) {
         promises.push((async () => cron.release())());
       }

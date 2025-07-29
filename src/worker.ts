@@ -15,7 +15,7 @@ import {
   WorkerPool,
   WorkerSharedOptions,
 } from "./interfaces";
-import { coerceError, CompiledSharedOptions } from "./lib";
+import { coerceError, CompiledSharedOptions, safeEmit } from "./lib";
 
 const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
 
@@ -50,7 +50,6 @@ export function makeNewWorker(
     failJob,
   } = params;
   const {
-    events,
     resolvedPreset: {
       worker: { pollInterval },
     },
@@ -75,10 +74,10 @@ export function makeNewWorker(
 
   promise.then(
     () => {
-      events.emit("worker:stop", { ctx, worker });
+      safeEmit(ctx, "worker:stop", { ctx, worker });
     },
     (error) => {
-      events.emit("worker:stop", { ctx, worker, error });
+      safeEmit(ctx, "worker:stop", { ctx, worker, error });
     },
   );
   let activeJob: Job | null = null;
@@ -97,7 +96,7 @@ export function makeNewWorker(
   const release = (force = false) => {
     if (active) {
       active = false;
-      events.emit("worker:release", { ctx, worker });
+      safeEmit(ctx, "worker:release", { ctx, worker });
 
       if (cancelDoNext()) {
         workerDeferred.resolve();
@@ -139,7 +138,7 @@ export function makeNewWorker(
         },
   };
 
-  events.emit("worker:create", { ctx, worker, tasks });
+  safeEmit(ctx, "worker:create", { ctx, worker, tasks });
 
   logger.debug(`Spawned`);
 
@@ -179,7 +178,7 @@ export function makeNewWorker(
         flagsToSkip = event.flagsToSkip;
       }
 
-      events.emit("worker:getJob:start", { ctx, worker });
+      safeEmit(ctx, "worker:getJob:start", { ctx, worker });
       const jobRow = await getJob(workerPool.id, flagsToSkip);
 
       // `doNext` cannot be executed concurrently, so we know this is safe.
@@ -187,13 +186,13 @@ export function makeNewWorker(
       activeJob = jobRow && jobRow.id ? jobRow : null;
 
       if (activeJob) {
-        events.emit("job:start", { ctx, worker, job: activeJob });
+        safeEmit(ctx, "job:start", { ctx, worker, job: activeJob });
       } else {
-        events.emit("worker:getJob:empty", { ctx, worker });
+        safeEmit(ctx, "worker:getJob:empty", { ctx, worker });
       }
     } catch (rawErr) {
       const err = coerceError(rawErr);
-      events.emit("worker:getJob:error", { ctx, worker, error: err });
+      safeEmit(ctx, "worker:getJob:error", { ctx, worker, error: err });
       if (continuous) {
         contiguousErrors++;
         logger.debug(
@@ -300,7 +299,7 @@ export function makeNewWorker(
 
       if (err) {
         try {
-          events.emit("job:error", {
+          safeEmit(ctx, "job:error", {
             ctx,
             worker,
             job,
@@ -316,7 +315,7 @@ export function makeNewWorker(
         if (job.attempts >= job.max_attempts) {
           try {
             // Failed forever
-            events.emit("job:failed", {
+            safeEmit(ctx, "job:failed", {
               ctx,
               worker,
               job,
@@ -362,7 +361,7 @@ export function makeNewWorker(
         });
       } else {
         try {
-          events.emit("job:success", { ctx, worker, job });
+          safeEmit(ctx, "job:success", { ctx, worker, job });
         } catch (e) {
           logger.error(
             "Error occurred in event emitter for 'job:success'; this is an issue in your application code and you should fix it",
@@ -383,10 +382,10 @@ export function makeNewWorker(
 
         completeJob(job);
       }
-      events.emit("job:complete", { ctx, worker, job, error: err });
+      safeEmit(ctx, "job:complete", { ctx, worker, job, error: err });
     } catch (fatalError) {
       try {
-        events.emit("worker:fatalError", {
+        safeEmit(ctx, "worker:fatalError", {
           ctx,
           worker,
           error: fatalError,
