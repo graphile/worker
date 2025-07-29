@@ -21,6 +21,7 @@ import {
   RunOnceOptions,
   SharedOptions,
   WithPgClient,
+  WorkerEventMap,
   WorkerOptions,
   WorkerPluginBaseContext,
   WorkerPluginContext,
@@ -631,4 +632,23 @@ export function calculateDelay(
     Math.min(minDelay * Math.pow(multiplier, previousAttempts), maxDelay) *
     (0.5 + jitter)
   );
+}
+
+export function safeEmit<TEvent extends keyof WorkerEventMap>(
+  ctx: WorkerPluginContext,
+  eventName: TEvent,
+  payload: WorkerEventMap[TEvent],
+) {
+  const { events, logger } = ctx;
+  try {
+    events.emit(eventName, payload);
+  } catch (e) {
+    const error = coerceError(e);
+    logger.error(
+      `Emitting ${eventName} raised an error - this should never happen: ${
+        error.stack ?? error
+      }`,
+      { error, eventName, payload },
+    );
+  }
 }
