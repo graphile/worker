@@ -1,20 +1,20 @@
 .tiers {
   display: flex;
   width: 100%;
-  flex-direction: column;
+  flex-direction: row;
 }
 
 .tierRow {
   justify-content: center;
   gap: 2rem;
   display: flex;
-  flex-direction: column;
 }
 
 .tier {
+  position: relative;
   display: flex;
   flex-direction: column;
-  flex: 0 0 75%;
+  flex: 0 0 33%;
   justify-content: flex-start;
   align-items: flex-start;
   font-weight: normal;
@@ -23,6 +23,25 @@
   padding: 1rem;
   border: 2px solid var(--ifm-color-primary-darker);
   border-radius: 12px;
+  &.featured {
+    background-color: #fff4ec;
+    border: 3px solid var(--ifm-color-primary);
+  }
+}
+
+.badge {
+  position: absolute;
+  left: 50%;
+  top: 0%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  border-radius: calc(infinity * 1px);
+  padding: 0.4rem;
+  .featured & {
+    background-color: var(--ifm-color-primary);
+    color: white;
+    font-weight: bold;
+  }
 }
 
 [data-theme="dark"] .tier {
@@ -32,8 +51,8 @@
 .banner {
   display: flex;
   width: 100%;
-  flex: 0 0 33%;
   justify-content: space-between;
+  flex-direction: column;
 }
 
 .info {
@@ -105,38 +124,8 @@
   background-color: var(--ifm-color-primary-lightest);
 }
 
-.borderbutton {
-  composes: button;
-}
-
-.tier:nth-child(n) .borderbutton {
-  background-color: transparent;
-  border: 1px solid var(--ifm-color-primary-darker);
-  color: var(--ifm-color-primary-darker);
-}
-
-.tier:nth-child(n) .borderbutton:hover {
-  border: 1px solid var(--ifm-color-primary-darkest);
-  color: var(--ifm-color-primary-darkest);
-}
-
-[data-theme="dark"] .tier:nth-child(n) .borderbutton {
-  border: 1px solid var(--ifm-color-primary-lightest);
-  color: var(--ifm-color-primary-lightest);
-}
-
-[data-theme="dark"] .tier:nth-child(n) .borderbutton:hover {
-  border: 1px solid var(--ifm-color-primary);
-  color: var(--ifm-color-primary);
-  background-color: transparent;
-}
-
 .button:before {
-  content: "Join on GitHub Sponsors";
-}
-
-.borderbutton:before {
-  content: "Contact for bespoke service";
+  content: "Start Plan";
 }
 
 @media screen and (max-width: 1200px) {
@@ -152,8 +141,5 @@
   }
   .button:before {
     content: "GitHub Sponsors";
-  }
-  .borderbutton:before {
-    content: "Contact";
   }
 }

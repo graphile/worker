@@ -5,26 +5,56 @@ import React from "react";
 
 const TierList = [
   {
-    title: "Private Advisor Offer",
-    tagline: "Development support in your chat server & code repository",
+    title: "Monthly Plan",
+    tagline: "Pay month-to-month with full flexibility",
     pricing: "$999",
-    annual: "$9,999",
     was: "$1,500",
     link: "https://github.com/sponsors/benjie/sponsorships?tier_id=42012",
     buttonText: "",
-    contact: "mailto:team@graphile.com?subject=Private%20Advisor%20enquiry",
-    contactText: "",
+    frequency: "per month",
+    comparison: "",
     description: (
       <>
-        <div className={styles.description}>
-          Access development support for Graphile projects through the Private
-          Advisor tier, giving your organization access to the knowledge and
-          experience of the Graphile team for any issues you have with Graphile
-          Worker, PostGraphile and the wider Graphile suite, and other tools in
-          the ecosystem such as TypeScript, SQL, Node.js, GraphQL and more. If
-          you’re running any of the Graphile tools, you won’t find anyone more
-          qualified to help.
-        </div>
+        <ul>
+          <li>All the benefits of a Featured Sponsor and...</li>
+          <li>One-to-one access to the Graphile team throughout the year </li>
+          <li>
+            <strong>Priority support straight from the maintainer</strong>
+          </li>
+          <li>
+            Add the Graphile team to your chat server for timely responses
+          </li>
+          <li>Add the Graphile team to your GitHub/GitLab organization</li>
+          <li>Reference your code verbatim</li>
+          <li>Calls arranged as required</li>
+          <li>NDA available</li>
+          <li>
+            <strong>Access to discounted consultancy packages</strong>
+          </li>
+          <li>
+            The warm feeling that comes from knowing{" "}
+            <strong>
+              you’re making a significant difference to Graphile Worker’s
+              development and sustainability
+            </strong>
+          </li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    title: "Annual Plan",
+    tagline: "Maximum savings with full year commitment",
+    pricing: "$9,999",
+    was: "$11,988",
+    link: "mailto:team@graphile.com?subject=Private%20Advisor%20enquiry",
+    buttonText: "",
+    frequency: "per year",
+    comparison: "That's just $833.25/month",
+    badge: "Best Value - Save $1,999 ",
+    featured: true,
+    description: (
+      <>
         <ul>
           <li>All the benefits of a Featured Sponsor and...</li>
           <li>One-to-one access to the Graphile team throughout the year </li>
@@ -61,27 +91,26 @@ function Tier({
   buttonText,
   description,
   pricing,
-  annual,
   was,
-  contact,
-  contactText,
+  frequency,
+  comparison,
+  badge,
+  featured,
 }) {
   return (
-    <div className={styles.tier}>
+    <div className={clsx(styles.tier, featured ? styles.featured : null)}>
+      {badge ? <div className={styles.badge}>{badge}</div> : null}
       <div className={styles.banner}>
         <div className={styles.info}>
           <h2 className={styles.title}>{title}</h2>
+          <h3 className={styles.tagline}>{tagline}</h3>
           <h3 className={styles.tagline}>
-            <span className={styles.was}>{was}</span>{" "}
+            <span className={styles.was}>{was}</span>
+            <br />
             <span className={styles.price}>{pricing}</span>&nbsp;
-            <span className={styles.note}>/month</span>
+            <span className={styles.note}>{frequency}</span>
+            <span className={styles.note}>{comparison}</span>
           </h3>
-          <h4 className={styles.tagline}>
-            <span className={styles.note}>
-              or <span className={styles.tagline}>{annual}</span>&nbsp;/year -
-              annual discount applied
-            </span>
-          </h4>
         </div>
         <div className={styles.info}>
           <Link
@@ -90,18 +119,8 @@ function Tier({
           >
             {buttonText}
           </Link>
-          <Link
-            className={clsx(
-              "button button--outline button--lg",
-              styles.borderbutton,
-            )}
-            to={contact}
-          >
-            {contactText}
-          </Link>
         </div>
       </div>
-      <h3 className={styles.tagline}>{tagline}</h3>
       <p>{description}</p>
     </div>
   );
