@@ -1,8 +1,22 @@
-import type {} from "graphile-config";
+import type {} from "graphile-worker";
 
-import type {} from "./dist/index.js";
+const MyMigrationPlugin: GraphileConfig.Plugin = {
+  name: "MyMigrationPlugin",
+  worker: {
+    middleware: {
+      async migrate(next, event) {
+        const result = await next();
+
+        // Do your stuff here.
+
+        return result;
+      },
+    },
+  },
+};
 
 const preset: GraphileConfig.Preset = {
+  plugins: [MyMigrationPlugin],
   worker: {},
 };
 
