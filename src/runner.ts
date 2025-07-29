@@ -13,6 +13,7 @@ import {
   CompiledOptions,
   getUtilsAndReleasersFromOptions,
   Releasers,
+  sleep,
 } from "./lib";
 import { _runTaskList, runTaskListInternal } from "./main";
 
@@ -164,32 +165,37 @@ function buildRunner(input: {
   });
 
   let running = true;
-  const stop = async (reason: string | null, itsFine = reason === null) => {
+  const stop = (
+    reason: string | null,
+    itsFine = reason === null,
+  ): Promise<void> => {
     compiledOptions.logger[itsFine ? "debug" : "warn"](
       `Runner stopping${reason ? ` (reason: ${reason})` : ""}`,
     );
     if (running) {
       running = false;
-      events.emit("stop", { ctx });
-      try {
-        const promises: Array<PromiseOrDirect<void>> = [];
-        if (cron._active) {
-          promises.push(cron.release());
-        }
-        if (workerPool._active) {
-          promises.push(workerPool.gracefulShutdown());
-        }
-        await Promise.all(promises).then(release);
-      } catch (error) {
-        logger.error(
-          `Error occurred whilst attempting to release runner options: ${
-            coerceError(error).message
-          }`,
-          { error },
-        );
+      const promises: Array<PromiseOrDirect<void>> = [];
+      // Wrap in async IIFE to capture synchronous errors
+      promises.push((async () => void events.emit("stop", { ctx }))());
+      if (cron._active) {
+        promises.push((async () => cron.release())());
       }
+      if (workerPool._active) {
+        promises.push((async () => workerPool.gracefulShutdown())());
+      }
+      return Promise.all(promises).then(
+        () => release(),
+        (error) => {
+          logger.error(
+            `Error occurred whilst attempting to release runner options: ${
+              coerceError(error).message
+            }`,
+            { error },
+          );
+        },
+      );
     } else {
-      throw new Error("Runner is already stopped");
+      return Promise.reject(new Error("Runner is already stopped"));
     }
   };
 
@@ -232,7 +238,14 @@ function buildRunner(input: {
         stop(`runner.kill() called${reason ? `: ${reason}` : ""}`).catch(noop);
       }
       if (workerPool._active) {
-        await workerPool.forcefulShutdown(`Terminated through .kill() command`);
+        // `stop()` will already have triggered gracefulShutdown, we'll
+        // go forceful after a short delay
+        await sleep(500);
+        if (workerPool._active) {
+          await workerPool.forcefulShutdown(
+            `Terminated through .kill() command`,
+          );
+        }
       }
     },
     addJob,
