@@ -2,7 +2,7 @@
   "ts-node": {
     "experimentalResolver": true
   },
-  "extends": "@tsconfig/node22/tsconfig.json",
+  "extends": "@tsconfig/node20/tsconfig.json",
   "compilerOptions": {
     "noEmit": true
   }

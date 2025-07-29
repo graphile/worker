@@ -46,6 +46,7 @@ Read more:
 - `backfillPeriod` is now marked as optional in TypeScript (defaults to 0).
 - Support for loading tasks from nested folders in crontab.
   - (`* * * * * nested/folder/task ?jobKey=my_key&jobKeyMode=preserve_run_at`)
+- Node 20.x is now the lowest supported version of Node
 
 ## v0.16.6
 
