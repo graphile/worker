@@ -4,13 +4,6 @@
   },
   "extends": "@tsconfig/node22/tsconfig.json",
   "compilerOptions": {
-    "rootDir": "src",
-    "declarationDir": "./dist",
-    "outDir": "./dist",
-    "declaration": true,
-    "sourceMap": true,
-    "preserveWatchOutput": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+    "noEmit": true
+  }
 }

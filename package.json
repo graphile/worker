@@ -7,8 +7,8 @@
   "scripts": {
     "build:sql": "node scripts/buildSqlModule.mjs",
     "website:update": "yarn prepack && node scripts/options.mjs",
-    "prepack": "rm -Rf dist && npm run build:sql && tsc && chmod +x dist/cli.js",
-    "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && npm run build:sql && tsc --watch",
+    "prepack": "rm -Rf dist && npm run build:sql && tsc -p tsconfig.build.json && chmod +x dist/cli.js",
+    "watch": "mkdir -p dist && touch dist/cli.js && chmod +x dist/cli.js && npm run build:sql && tsc -p tsconfig.build.json --watch",
     "lint": "yarn prettier:check && eslint --ext .js,.jsx,.ts,.tsx,.graphql .",
     "lint:fix": "eslint --ext .js,.jsx,.ts,.tsx,.graphql . --fix; prettier --cache --ignore-path .eslintignore --write '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
     "prettier:check": "prettier --cache --ignore-path .eslintignore --check '**/*.{js,jsx,ts,tsx,graphql,md,json}'",
