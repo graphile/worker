@@ -2,22 +2,13 @@
   "ts-node": {
     "experimentalResolver": true
   },
-  "extends": "@tsconfig/node18/tsconfig.json",
+  "extends": "@tsconfig/node22/tsconfig.json",
   "compilerOptions": {
     "rootDir": "src",
     "declarationDir": "./dist",
     "outDir": "./dist",
     "declaration": true,
-    "allowJs": false,
     "sourceMap": true,
-    "pretty": true,
-    "importHelpers": true,
-    "experimentalDecorators": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUnusedParameters": false,
-    "noUnusedLocals": false,
     "preserveWatchOutput": true
   },
   "include": ["src/**/*"],
