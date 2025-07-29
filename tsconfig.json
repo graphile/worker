@@ -1,6 +1,7 @@
 {
   "ts-node": {
-    "experimentalResolver": true
+    "experimentalResolver": true,
+    "transpileOnly": true
   },
   "extends": "@tsconfig/node20/tsconfig.json",
   "compilerOptions": {
