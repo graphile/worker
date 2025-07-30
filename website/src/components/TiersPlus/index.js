@@ -11,32 +11,28 @@ const TierList = [
     was: "$1,500",
     link: "https://github.com/sponsors/benjie/sponsorships?tier_id=42012",
     buttonText: "",
-    frequency: "per month",
-    comparison: "",
+    frequency: "/mo",
+    comparison: "Cancel any time",
+    badge: "Updated August 2025",
     description: (
       <>
         <ul>
-          <li>All the benefits of a Featured Sponsor and...</li>
-          <li>One-to-one access to the Graphile team throughout the year </li>
           <li>
-            <strong>Priority support straight from the maintainer</strong>
+            Start today with <strong>payment through GitHub</strong>
           </li>
           <li>
-            Add the Graphile team to your chat server for timely responses
+            <strong>Flexible</strong>
           </li>
-          <li>Add the Graphile team to your GitHub/GitLab organization</li>
-          <li>Reference your code verbatim</li>
-          <li>Calls arranged as required</li>
-          <li>NDA available</li>
+          <li>New lower price for 2025</li>
+          <li>
+            <strong>Predictable monthly cost</strong> with no surprises
+          </li>
           <li>
             <strong>Access to discounted consultancy packages</strong>
           </li>
           <li>
-            The warm feeling that comes from knowing{" "}
-            <strong>
-              you’re making a significant difference to Graphile Worker’s
-              development and sustainability
-            </strong>
+            Includes a <strong>formal contract</strong> for your procurement
+            process
           </li>
         </ul>
       </>
@@ -45,38 +41,35 @@ const TierList = [
   {
     title: "Annual Plan",
     tagline: "Maximum savings with full year commitment",
-    pricing: "$9,999",
-    was: "$11,988",
+    pricing: "$899",
+    hint: "10% discount",
+    //was: "$11,988",
     link: "mailto:team@graphile.com?subject=Private%20Advisor%20enquiry",
     buttonText: "",
-    frequency: "per year",
-    comparison: "That's just $833.25/month",
-    badge: "Best Value - Save $1,999 ",
+    frequency: "/mo",
+    comparison: "Paid annually — $10,788/yr",
+    badge: "Best Value — Save $1,999",
     featured: true,
     description: (
       <>
         <ul>
-          <li>All the benefits of a Featured Sponsor and...</li>
-          <li>One-to-one access to the Graphile team throughout the year </li>
           <li>
-            <strong>Priority support straight from the maintainer</strong>
+            <strong>Lock in your rate</strong> for a full year
+          </li>
+
+          <li>
+            <strong>Save money</strong> — pay once, enjoy the lowest rate
           </li>
           <li>
-            Add the Graphile team to your chat server for timely responses
+            <strong>One invoice, one payment</strong> — no monthly admin
+            headaches
           </li>
-          <li>Add the Graphile team to your GitHub/GitLab organization</li>
-          <li>Reference your code verbatim</li>
-          <li>Calls arranged as required</li>
-          <li>NDA available</li>
           <li>
             <strong>Access to discounted consultancy packages</strong>
           </li>
           <li>
-            The warm feeling that comes from knowing{" "}
-            <strong>
-              you’re making a significant difference to Graphile Worker’s
-              development and sustainability
-            </strong>
+            Includes a <strong>formal contract</strong> for your procurement
+            process
           </li>
         </ul>
       </>
@@ -96,6 +89,7 @@ function Tier({
   comparison,
   badge,
   featured,
+  hint,
 }) {
   return (
     <div className={clsx(styles.tier, featured ? styles.featured : null)}>
@@ -103,14 +97,18 @@ function Tier({
       <div className={styles.banner}>
         <div className={styles.info}>
           <h2 className={styles.title}>{title}</h2>
-          <h3 className={styles.tagline}>{tagline}</h3>
-          <h3 className={styles.tagline}>
-            <span className={styles.was}>{was}</span>
-            <br />
-            <span className={styles.price}>{pricing}</span>&nbsp;
-            <span className={styles.note}>{frequency}</span>
+          <div className={styles.tagline}>{tagline}</div>
+          <div className={styles.priceline}>
+            {was ? <span className={styles.was}>{was}</span> : null}{" "}
+            <span className={styles.price}>
+              {pricing}
+              <span className={styles.pricesub}>{frequency}</span>
+            </span>
+            {hint ? <span className={styles.hint}>{hint}</span> : null}
+          </div>
+          <div className={styles.qualifierline}>
             <span className={styles.note}>{comparison}</span>
-          </h3>
+          </div>
         </div>
         <div className={styles.info}>
           <Link
@@ -121,7 +119,7 @@ function Tier({
           </Link>
         </div>
       </div>
-      <p>{description}</p>
+      <div className={styles.description}>{description}</div>
     </div>
   );
 }
