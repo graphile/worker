@@ -25,14 +25,7 @@ const TierList = [
           </li>
           <li>New lower price for 2025</li>
           <li>
-            <strong>Predictable monthly cost</strong> with no surprises
-          </li>
-          <li>
             <strong>Access to discounted consultancy packages</strong>
-          </li>
-          <li>
-            Includes a <strong>formal contract</strong> for your procurement
-            process
           </li>
         </ul>
       </>
@@ -48,7 +41,7 @@ const TierList = [
     buttonText: "",
     frequency: "/mo",
     comparison: "Paid annually — $10,788/yr",
-    badge: "Best Value — Save $1,999",
+    badge: "Best Value — Save $1,200",
     featured: true,
     description: (
       <>
@@ -68,8 +61,7 @@ const TierList = [
             <strong>Access to discounted consultancy packages</strong>
           </li>
           <li>
-            Includes a <strong>formal contract</strong> for your procurement
-            process
+            <strong>Formal contract</strong> for your procurement process
           </li>
         </ul>
       </>
