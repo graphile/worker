@@ -177,10 +177,6 @@
   background-color: var(--ifm-color-primary-lightest);
 }
 
-.button:before {
-  content: "Start Plan";
-}
-
 @media screen and (max-width: 1200px) {
   .tierRow {
     flex-direction: column;
@@ -191,8 +187,5 @@
   }
   .banner {
     flex-direction: column;
-  }
-  .button:before {
-    content: "GitHub Sponsors";
   }
 }
