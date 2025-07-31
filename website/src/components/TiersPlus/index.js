@@ -10,7 +10,7 @@ const TierList = [
     pricing: "$999",
     was: "$1,500",
     link: "https://github.com/sponsors/benjie/sponsorships?tier_id=42012",
-    buttonText: "",
+    buttonText: "Start Monthly Plan",
     frequency: "/mo",
     comparison: "Cancel any time",
     badge: "Updated August 2025",
@@ -38,7 +38,7 @@ const TierList = [
     hint: "10% discount",
     //was: "$11,988",
     link: "mailto:team@graphile.com?subject=Private%20Advisor%20enquiry",
-    buttonText: "",
+    buttonText: "Contact Graphile",
     frequency: "/mo",
     comparison: "Paid annually — $10,788/yr",
     badge: "Best Value — Save $1,200",
@@ -118,7 +118,7 @@ function Tier({
 
 export default function List() {
   return (
-    <section className="padding-vert--sm">
+    <section className="padding-vert--lg">
       <div className={styles.tiers}>
         <div className={clsx(styles.tierRow)}>
           {TierList.map((props, idx) => (
