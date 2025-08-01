@@ -131,14 +131,12 @@ function Tier({ title, tagline, link, buttonText, description, pricing }) {
 
 export default function List() {
   return (
-    <section className={clsx("padding-vert--md")}>
-      <div className={clsx("", styles.tiers)}>
-        <div className={clsx(styles.tierRow)}>
-          {TierList.map((props, idx) => (
-            <Tier key={idx} {...props} />
-          ))}
-        </div>
+    <div className={clsx("", styles.tiers)}>
+      <div className={clsx(styles.tierRow)}>
+        {TierList.map((props, idx) => (
+          <Tier key={idx} {...props} />
+        ))}
       </div>
-    </section>
+    </div>
   );
 }

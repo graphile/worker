@@ -3,9 +3,12 @@ title: "Sponsor Graphile Open Source Software"
 hide_table_of_contents: true
 ---
 
+import clsx from "clsx";
+
 import Sponsor from "@site/src/components/Sponsor";
 import Sponsors from "@site/src/components/Sponsors";
 import SponsorButtons from "@site/src/components/SponsorButtons";
+import sponsorStyles from "@site/src/components/TiersPlus/styles.module.css";
 import Link from "@docusaurus/Link";
 import TierList from "@site/src/components/Tiers";
 import TierPlusList from "@site/src/components/TiersPlus";
@@ -78,65 +81,52 @@ to fund ongoing development on Graphile Worker through sponsorship. THANK YOU!
 
 <!-- SPONSORS_END -->
 
-Graphile has a number of crowd-funded open-source projects, licensed under the
-permissive MIT license, including Graphile Worker, PostGraphile,
-Gra<em>fast</em>, Graphile Migrate and Graphile Starter. Sponsorship increases
-the rate of fixes, documentation improvements, and feature development on these
-and other projects.
-
-<SponsorButtons></SponsorButtons>
-
-## Why are Graphile projects &ldquo;crowd-funded open-source&rdquo;?
-
-Many of our projects are open-source to give users great freedom in how they use
-the software, and to enable the community to have influence over how the
-projects progress to make it appropriate for a wide range of use-cases. To
-ensure users can rely on these projects for years to come, they need to be well
-directed and financially sustainable.
-
-**The best way to ensure that Graphile software is something you can depend on
-for years to come is through monthly sponsorship.** Crowd-sourced funding
-enables us to spend the most time directly working on improving the software,
-which you and other users then benefit from.
-
 ## Sponsor tiers &amp; benefits
+
+<TierList />
+
+<div className={sponsorStyles.tiers}>
+  <div className={sponsorStyles.tierRow}>
+    <div className={clsx(sponsorStyles.tierSupport, sponsorStyles.featured)}>
+      <div className={sponsorStyles.banner}>
+        <div className={sponsorStyles.info}>
+          <div className={sponsorStyles.title}>Development Support</div>
+          <div className={sponsorStyles.pricelineSupport}>
+            <span className={sponsorStyles.note}>From</span>&nbsp;
+            <span className={sponsorStyles.price}>$899</span>
+            <span className={sponsorStyles.note}>/mo</span>
+          </div>
+        </div>
+        <Link
+          className={clsx(
+            "button button--primary button--lg",
+            sponsorStyles.button,
+          )}
+          to="/support"
+        >
+          Find out more
+        </Link>
+      </div>
+    </div>
+  </div>
+</div>
 
 As well as ensuring the sustainability and longevity of Graphile Worker and the
 wider Graphile suite of developer tooling, sponsorship also gives you or your
 company some additional benefits such as access to security announcements and
 being featured in the README files of Graphile’s main open source projects.
-Choose the tier which matches your funding goal, higher tiers come with more
-benefits.
 
-<TierList />
+<SponsorButtons></SponsorButtons>
 
-## Development Support
+## Why are Graphile projects &ldquo;crowd-funded open-source&rdquo;?
 
-Access development support for Graphile projects through the Private Advisor
-sponsor tier, giving your organization access to the knowledge and experience of
-the Graphile team for any issues you have with Graphile Worker, PostGraphile and
-the wider Graphile suite, and other tools in the ecosystem such as TypeScript,
-SQL, Node.js, GraphQL and more. If you’re running any of the Graphile tools, you
-won’t find anyone more qualified to help.
+Many of our projects are open-source under the permissive MIT license to give
+users great freedom in how they use the software, and to enable the community to
+have influence over how the projects progress to make it appropriate for a wide
+range of use-cases. To ensure users can rely on these projects for years to
+come, they need to be well directed and financially sustainable.
 
-<ul>
-  <li>All the benefits of a Featured Sponsor and...</li>
-  <li>One-to-one access to the Graphile team throughout the year </li>
-  <li>
-    <strong>Priority support straight from the maintainer</strong>
-  </li>
-  <li>Add the Graphile team to your chat server for timely responses</li>
-  <li>Add the Graphile team to your GitHub/GitLab organization</li>
-  <li>Reference your code verbatim</li>
-  <li>Calls arranged as required</li>
-  <li>NDA available</li>
-  <li>
-    The warm feeling that comes from knowing{" "}
-    <strong>
-      you’re making a significant difference to Graphile Worker’s development
-      and sustainability
-    </strong>
-  </li>
-</ul>
-
-<TierPlusList />
+**The best way to ensure that Graphile software is something you can depend on
+for years to come is through monthly sponsorship.** Crowd-sourced funding
+enables us to spend the most time directly working on improving the software,
+which you and other users then benefit from.
