@@ -1,8 +1,10 @@
 .tiers {
+  composes: wide from global;
   display: flex;
   width: 100%;
   flex-direction: row;
-  padding-bottom: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
 }
 
 .tierRow {
@@ -19,7 +21,6 @@
   align-items: flex-start;
   font-weight: normal;
   font-size: 0.9rem;
-  margin: 0.5rem;
   padding: 1rem;
   border: 2px solid var(--ifm-color-primary-darker);
   border-radius: 12px;
