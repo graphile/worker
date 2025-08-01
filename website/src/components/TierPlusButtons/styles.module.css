@@ -40,8 +40,12 @@
 }
 
 [data-theme="dark"] .sponsorbutton {
-  border: 1px solid var(--ifm-color-primary);
-  background-color: var(--ifm-color-primary);
+  border: 1px solid var(--ifm-color-primary-light);
+  background-color: var(--ifm-color-primary-light);
+}
+
+[data-theme="dark"] .borderbutton {
+  color: black;
 }
 
 [data-theme="dark"] .sponsorbutton:hover {
@@ -51,7 +55,7 @@
 
 [data-theme="dark"] .borderbutton:hover {
   border: 1px solid var(--ifm-color-primary-lightest);
-  color: var(--ifm-color-lightest);
+  background-color: var(--ifm-color-primary-lightest);
 }
 
 @media screen and (max-width: 995px) {
