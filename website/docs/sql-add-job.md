@@ -22,7 +22,9 @@ this underlying `add_job` SQL function.
   what to do, or an array of one or more of these objects for &ldquo;batch
   jobs&rdquo; (defaults to an empty object).
 - `queue_name` &mdash; if you want certain tasks to run one at a time, add them
-  to the same named queue (defaults to `null`).
+  to the same named queue. Avoid using high cardinality values (e.g., random
+  strings, UUIDs, timestamps) as this degrades performance and requires periodic
+  database cleanup (defaults to `null`).
 - `run_at` &mdash; a timestamp after which to run the job; defaults to now.
 - `max_attempts` &mdash; if this task fails, how many times should we retry it?
   (defaults to `25`. Must be castable to `smallint`).

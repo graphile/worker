@@ -58,7 +58,9 @@ export interface AddJobsJobSpec {
 
   /**
    * The queue to run this task under (only specify if you want jobs in this
-   * queue to run serially). (Default: null)
+   * queue to run serially). Avoid using high cardinality values (e.g., random
+   * strings, UUIDs, timestamps) as this degrades performance and requires
+   * periodic database cleanup. (Default: null)
    */
   queueName?: string;
 

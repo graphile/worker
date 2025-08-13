@@ -28,8 +28,21 @@ The `addJob` arguments are as follows:
 - `payload`: an optional JSON-compatible object to give the task more context on
   what it is doing, or a list of these objects in &ldquo;batch job&rdquo; mode
 - `options`: an optional object specifying:
+
   - `queueName`: if you want certain jobs to run one at a time, add them to the
     same named queue (defaults to null which enables parallelization)
+
+    :::warning
+
+    Avoid using high cardinality values (e.g., random strings, UUIDs,
+    timestamps) for queue names as this will create many dead queues that
+    degrade performance and require
+    [periodic database cleanup](../admin-functions.md#gc_job_queues). If you
+    find yourself needing to run the `GC_JOB_QUEUES` cleanup task regularly,
+    you're likely using queue names incorrectly.
+
+    :::
+
   - `runAt`: a `Date` to schedule this task to run in the future
   - `maxAttempts`: the maximum number of attempts we'll give the job
     (Default: 25)
