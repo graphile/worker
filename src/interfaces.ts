@@ -84,7 +84,9 @@ export interface AddJobsJobSpec<
 
   /**
    * The queue to run this task under (only specify if you want jobs in this
-   * queue to run serially). (Default: null)
+   * queue to run serially). Avoid using high cardinality values (e.g., random
+   * strings, UUIDs, timestamps) as this degrades performance and requires
+   * periodic database cleanup. (Default: null)
    */
   queueName?: string;
 
@@ -336,7 +338,9 @@ export interface CronItemOptions {
   /** Optionally override the default job max_attempts */
   maxAttempts?: number;
 
-  /** Optionally set the job queue_name to enforce that the jobs run serially */
+  /** Optionally set the job queue_name to enforce that the jobs run serially.
+   * Avoid using high cardinality values (e.g., random strings, UUIDs, timestamps)
+   * as this degrades performance and requires periodic database cleanup. */
   queueName?: string;
 
   /** Optionally set the job priority */
@@ -586,7 +590,9 @@ export interface Cron {
 export interface TaskSpec {
   /**
    * The queue to run this task under (only specify if you want jobs in this
-   * queue to run serially). (Default: null)
+   * queue to run serially). Avoid using high cardinality values (e.g., random
+   * strings, UUIDs, timestamps) as this degrades performance and requires
+   * periodic database cleanup. (Default: null)
    */
   queueName?: string;
 
