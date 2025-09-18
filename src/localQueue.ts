@@ -15,6 +15,7 @@ import {
   coerceError,
   RETRYABLE_ERROR_CODES,
   RetryOptions,
+  safeEmit,
   sleep,
 } from "./lib";
 import { batchGetJobs } from "./sql/getJobs";
@@ -231,7 +232,7 @@ export class LocalQueue {
   private refetchDelayAbortThreshold: number = Infinity;
 
   constructor(
-    private readonly compiledSharedOptions: CompiledSharedOptions<WorkerPoolOptions>,
+    private readonly ctx: CompiledSharedOptions<WorkerPoolOptions>,
     private readonly tasks: TaskList,
     private readonly withPgClient: EnhancedWithPgClient,
     public readonly workerPool: WorkerPool,
@@ -244,13 +245,10 @@ export class LocalQueue {
     private readonly continuous: boolean,
     private readonly onMajorError: (e: unknown) => void,
   ) {
-    this.ttl =
-      compiledSharedOptions.resolvedPreset.worker.localQueue?.ttl ?? 5 * MINUTE;
-    this.pollInterval =
-      compiledSharedOptions.resolvedPreset.worker.pollInterval ?? 2 * SECOND;
+    this.ttl = ctx.resolvedPreset.worker.localQueue?.ttl ?? 5 * MINUTE;
+    this.pollInterval = ctx.resolvedPreset.worker.pollInterval ?? 2 * SECOND;
     const localQueueRefetchDelayDuration =
-      compiledSharedOptions.resolvedPreset.worker.localQueue?.refetchDelay
-        ?.durationMs;
+      ctx.resolvedPreset.worker.localQueue?.refetchDelay?.durationMs;
     if (
       localQueueRefetchDelayDuration != null &&
       localQueueRefetchDelayDuration > this.pollInterval
@@ -259,8 +257,8 @@ export class LocalQueue {
         `Invalid configuration; 'preset.worker.localQueue.refetchDelay.durationMs' (${localQueueRefetchDelayDuration}) must not be larger than 'preset.worker.pollInterval' (${this.pollInterval})`,
       );
     }
-    compiledSharedOptions.events.emit("localQueue:init", {
-      ctx: compiledSharedOptions,
+    safeEmit(ctx, "localQueue:init", {
+      ctx: ctx,
       localQueue: this,
     });
     // Immediately enter polling mode.
@@ -276,8 +274,8 @@ export class LocalQueue {
     const oldMode = this.mode;
     // Override the 'readonly'
     (this.mode as LocalQueueMode) = newMode;
-    this.compiledSharedOptions.events.emit("localQueue:setMode", {
-      ctx: this.compiledSharedOptions,
+    safeEmit(this.ctx, "localQueue:setMode", {
+      ctx: this.ctx,
       localQueue: this,
       oldMode,
       newMode,
@@ -321,7 +319,7 @@ export class LocalQueue {
     } else {
       // If we're not shutting down, view this as a temporary error (but give
       // Benjie a wrist slap anyway).
-      this.compiledSharedOptions.logger.error(
+      this.ctx.logger.error(
         `GraphileWorkerInternalError<cd483429-3372-42f0-bcf6-c78e045c760d>: Backgrounding should never yield errors when the queue is not RELEASED`,
         { error: e },
       );
@@ -444,8 +442,8 @@ export class LocalQueue {
     }
     const jobsToReturn = this.jobQueue.splice(0, l);
 
-    this.compiledSharedOptions.events.emit("localQueue:returnJobs", {
-      ctx: this.compiledSharedOptions,
+    safeEmit(this.ctx, "localQueue:returnJobs", {
+      ctx: this.ctx,
       localQueue: this,
       jobs: jobsToReturn,
     });
@@ -459,7 +457,7 @@ export class LocalQueue {
         initialError = lastError;
       }
 
-      this.compiledSharedOptions.logger.error(
+      this.ctx.logger.error(
         `Failed to return jobs from local queue to database queue (attempt ${attempts}/${maxAttempts})`,
         {
           error: e,
@@ -502,7 +500,7 @@ export class LocalQueue {
             ++attempts;
             return sleep(delay).then(() =>
               returnJobs(
-                this.compiledSharedOptions,
+                this.ctx,
                 this.withPgClient, // We'll handle the retries via onError
                 this.workerPool.id,
                 jobsToReturn,
@@ -517,7 +515,7 @@ export class LocalQueue {
     // `onError` above, since `onError` returns the next promise each time.
     this.background(
       returnJobs(
-        this.compiledSharedOptions,
+        this.ctx,
         this.withPgClient, // We'll handle the retries via onError
         this.workerPool.id,
         jobsToReturn,
@@ -554,7 +552,7 @@ export class LocalQueue {
     this.background(
       this._fetch().catch((e) => {
         // This should not happen
-        this.compiledSharedOptions.logger.error(`Error occurred during fetch`, {
+        this.ctx.logger.error(`Error occurred during fetch`, {
           error: e,
         });
       }),
@@ -578,7 +576,7 @@ export class LocalQueue {
     /** How many jobs did we fetch? (Initialize to zero in case of error.) */
     let jobCount = 0;
     const refetchDelayOptions =
-      this.compiledSharedOptions.resolvedPreset.worker.localQueue?.refetchDelay;
+      this.ctx.resolvedPreset.worker.localQueue?.refetchDelay;
     try {
       assert.equal(this.mode, POLLING, "Can only fetch when in polling mode");
       assert.equal(
@@ -605,7 +603,7 @@ export class LocalQueue {
 
       // The ONLY await in this function.
       const jobs = await batchGetJobs(
-        this.compiledSharedOptions,
+        this.ctx,
         this.withPgClient,
         this.tasks,
         this.workerPool.id,
@@ -613,8 +611,8 @@ export class LocalQueue {
         this.getJobBatchSize,
       );
 
-      this.compiledSharedOptions.events.emit("localQueue:getJobs:complete", {
-        ctx: this.compiledSharedOptions,
+      safeEmit(this.ctx, "localQueue:getJobs:complete", {
+        ctx: this.ctx,
         localQueue: this,
         jobs,
       });
@@ -634,7 +632,7 @@ export class LocalQueue {
       this.receivedJobs(jobs);
     } catch (e) {
       // Error happened; rely on poll interval.
-      this.compiledSharedOptions.logger.error(
+      this.ctx.logger.error(
         `Error occurred fetching jobs; will try again on next poll interval. Error: ${e}`,
         { error: e },
       );
@@ -674,8 +672,8 @@ export class LocalQueue {
         this.refetchDelayCompleteOrAbort,
         refetchDelayMs,
       );
-      this.compiledSharedOptions.events.emit("localQueue:refetchDelay:start", {
-        ctx: this.compiledSharedOptions,
+      safeEmit(this.ctx, "localQueue:refetchDelay:start", {
+        ctx: this.ctx,
         localQueue: this,
         jobCount,
         threshold: refetchDelayOptions?.threshold ?? 0,
@@ -720,20 +718,17 @@ export class LocalQueue {
       // Force refetch because we've been notified of so many jobs!
       this.refetchDelayFetchOnComplete = true;
 
-      this.compiledSharedOptions.events.emit("localQueue:refetchDelay:abort", {
-        ctx: this.compiledSharedOptions,
+      safeEmit(this.ctx, "localQueue:refetchDelay:abort", {
+        ctx: this.ctx,
         localQueue: this,
         count: this.refetchDelayCounter,
         abortThreshold: this.refetchDelayAbortThreshold,
       });
     } else {
-      this.compiledSharedOptions.events.emit(
-        "localQueue:refetchDelay:expired",
-        {
-          ctx: this.compiledSharedOptions,
-          localQueue: this,
-        },
-      );
+      safeEmit(this.ctx, "localQueue:refetchDelay:expired", {
+        ctx: this.ctx,
+        localQueue: this,
+      });
     }
 
     if (this.mode === POLLING && this.refetchDelayFetchOnComplete) {
@@ -789,7 +784,7 @@ export class LocalQueue {
     if (flagsToSkip !== null) {
       // PERF: we could actually batch for similar flags, I guess.
       const jobsPromise = batchGetJobs(
-        this.compiledSharedOptions,
+        this.ctx,
         this.withPgClient,
         this.tasks,
         this.workerPool.id,

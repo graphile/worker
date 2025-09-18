@@ -23,6 +23,7 @@ import {
   CompiledSharedOptions,
   Releasers,
   RetryOptions,
+  safeEmit,
   sleep,
 } from "./lib";
 
@@ -208,7 +209,6 @@ async function registerAndBackfillItems(details: {
   const {
     ctx,
     pgPool,
-    events,
     cron,
     workerSchema,
     preparedStatements,
@@ -292,7 +292,7 @@ async function registerAndBackfillItems(details: {
         // the way the last_execution column of the known_crontabs table works.
         // At this time it's not expected that backfilling will be sufficiently
         // expensive to justify optimising this further.
-        events.emit("cron:backfill", {
+        safeEmit(ctx, "cron:backfill", {
           ctx,
           cron,
           itemsToBackfill,
@@ -386,7 +386,7 @@ export const runCron = (
 
     const start = new Date();
     const ctx = compiledSharedOptions;
-    events.emit("cron:starting", { ctx, cron, start });
+    safeEmit(ctx, "cron:starting", { ctx, cron, start });
 
     // We must backfill BEFORE scheduling any new jobs otherwise backfill won't
     // work due to known_crontabs.last_execution having been updated.
@@ -403,7 +403,7 @@ export const runCron = (
       useNodeTime,
     });
 
-    events.emit("cron:started", { ctx, cron, start });
+    safeEmit(ctx, "cron:started", { ctx, cron, start });
 
     if (!cron._active) {
       return stop();
@@ -465,7 +465,7 @@ export const runCron = (
               currentTimestamp,
             },
           );
-          events.emit("cron:prematureTimer", {
+          safeEmit(ctx, "cron:prematureTimer", {
             ctx,
             cron,
             currentTimestamp,
@@ -482,7 +482,7 @@ export const runCron = (
               ((currentTimestamp - expectedTimestamp) % ONE_MINUTE) / 1000,
             )}s behind)`,
           );
-          events.emit("cron:overdueTimer", {
+          safeEmit(ctx, "cron:overdueTimer", {
             ctx,
             cron,
             currentTimestamp,
@@ -505,7 +505,7 @@ export const runCron = (
 
         // Finally actually run the jobs.
         if (jobsAndIdentifiers.length) {
-          events.emit("cron:schedule", {
+          safeEmit(ctx, "cron:schedule", {
             ctx,
             cron,
             timestamp: expectedTimestamp,
@@ -520,7 +520,7 @@ export const runCron = (
             workerSchema,
             preparedStatements,
           );
-          events.emit("cron:scheduled", {
+          safeEmit(ctx, "cron:scheduled", {
             ctx,
             cron,
             timestamp: expectedTimestamp,

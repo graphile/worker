@@ -42,6 +42,16 @@ The `addJob` arguments are as follows:
     (see [Replacing and updating jobs](../job-key.md#replacingupdating-jobs) and
     [removing jobs](../job-key.md#removing-jobs))
 
+:::warning Avoid high cardinality in queue names
+
+Avoid using high cardinality values (e.g., random strings, UUIDs, timestamps)
+for queue names as this will create many dead queues that degrade performance
+and require [periodic database cleanup](../admin-functions.md#gc_job_queues). If
+you find yourself needing to run the `GC_JOB_QUEUES` cleanup task regularly,
+you're likely using queue names incorrectly.
+
+:::
+
 Example:
 
 ```js
