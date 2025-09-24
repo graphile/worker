@@ -314,11 +314,11 @@ export type TaskList = {
       Task<any>;
 };
 
-export interface ReleasableTaskList {
+export interface WatchedTaskList {
   tasks: TaskList;
   release: () => void;
 }
-export interface WatchedTaskList extends ReleasableTaskList {
+export interface InternalWatchedTaskList extends WatchedTaskList {
   /** @internal */
   compiledSharedOptions: CompiledSharedOptions;
 }

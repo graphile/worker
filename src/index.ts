@@ -7,11 +7,11 @@ import { getTasks } from "./getTasks";
 import {
   FileDetails,
   PromiseOrDirect,
-  ReleasableTaskList,
   RunOnceOptions,
   SharedOptions,
   Task,
   TaskList,
+  WatchedTaskList,
   WithPgClient,
   Worker,
   WorkerEvents,
@@ -91,7 +91,7 @@ declare global {
 
     interface GetTasksEvent {
       ctx: WorkerPluginContext;
-      taskList: ReleasableTaskList;
+      taskList: WatchedTaskList;
       taskPath: string;
     }
 
@@ -443,7 +443,7 @@ declare global {
        */
       getTasks(
         event: GraphileWorker.GetTasksEvent,
-      ): PromiseOrDirect<ReleasableTaskList>;
+      ): PromiseOrDirect<WatchedTaskList>;
 
       /**
        * Called when performing a graceful shutdown on a WorkerPool.

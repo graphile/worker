@@ -1,8 +1,4 @@
-import {
-  CompiledSharedOptions,
-  WatchedTaskList,
-  WorkerSharedOptions,
-} from "../src";
+import { WorkerSharedOptions } from "../src";
 import { getTasks } from "../src/getTasks";
 import { makeJobHelpers, makeWithPgClientFromClient } from "../src/helpers";
 import { makeEnhancedWithPgClient } from "../src/lib";
@@ -19,10 +15,10 @@ const abortPromise = new Promise<void>((_, reject) => {
 describe("commonjs", () => {
   test("gets tasks from folder", () =>
     withPgClient(async (client) => {
-      const { tasks, release, compiledSharedOptions } = (await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures/tasks`,
-      )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      );
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
 Array [
@@ -56,10 +52,10 @@ Array [
 
   test("get tasks from file (vanilla)", () =>
     withPgClient(async (client) => {
-      const { tasks, release, compiledSharedOptions } = (await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures/tasksFile.js`,
-      )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      );
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
 Array [
@@ -87,10 +83,10 @@ Array [
 
   test("get tasks from file (vanilla-ts)", () =>
     withPgClient(async (client) => {
-      const { tasks, release, compiledSharedOptions } = (await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures/tasksFile-ts.js`,
-      )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      );
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
 Array [
@@ -120,10 +116,10 @@ Array [
 
   test("get tasks from file (default)", () =>
     withPgClient(async (client) => {
-      const { tasks, release, compiledSharedOptions } = (await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures/tasksFile_default.js`,
-      )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      );
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
 Array [
@@ -151,10 +147,10 @@ Array [
 
   test("get tasks from file (default-ts)", () =>
     withPgClient(async (client) => {
-      const { tasks, release, compiledSharedOptions } = (await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures/tasksFile_default-ts.js`,
-      )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      );
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
 Array [
@@ -184,10 +180,10 @@ Array [
 describe("esm", () => {
   test("gets tasks from folder", () =>
     withPgClient(async (client) => {
-      const { tasks, release, compiledSharedOptions } = (await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures-esm/tasks`,
-      )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      );
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
 Array [
@@ -217,10 +213,10 @@ Array [
 
   test("get tasks from file (vanilla)", () =>
     withPgClient(async (client) => {
-      const { tasks, release, compiledSharedOptions } = (await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures-esm/tasksFile.js`,
-      )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      );
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
 Array [
@@ -248,10 +244,10 @@ Array [
 
   test("get tasks from file (default)", () =>
     withPgClient(async (client) => {
-      const { tasks, release, compiledSharedOptions } = (await getTasks(
+      const { tasks, release, compiledSharedOptions } = await getTasks(
         options,
         `${__dirname}/fixtures-esm/tasksFile_default.js`,
-      )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      );
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
 Array [

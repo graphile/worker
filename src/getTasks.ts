@@ -4,8 +4,8 @@ import { join as pathJoin } from "path";
 
 import { tryStat } from "./fs";
 import {
+  InternalWatchedTaskList,
   isValidTask,
-  ReleasableTaskList,
   SharedOptions,
   TaskList,
   WatchedTaskList,
@@ -94,7 +94,7 @@ async function loadFileIntoTasks(
 export async function getTasks(
   options: SharedOptions,
   taskPath: string,
-): Promise<WatchedTaskList> {
+): Promise<InternalWatchedTaskList> {
   const compiledSharedOptions = processSharedOptions(options);
   const result = await getTasksInternal(compiledSharedOptions, taskPath);
   // This assign is used in `__tests__/getTasks.test.ts`
@@ -104,7 +104,7 @@ export async function getTasks(
 export async function getTasksInternal(
   compiledSharedOptions: CompiledSharedOptions,
   taskPath: string,
-): Promise<ReleasableTaskList> {
+): Promise<WatchedTaskList> {
   return await compiledSharedOptions.middleware.run(
     "getTasks",
     {
@@ -121,7 +121,7 @@ export async function getTasksInternal(
 
 async function _getTasksFromFilesystem(
   event: GraphileWorker.GetTasksEvent,
-): Promise<ReleasableTaskList> {
+): Promise<WatchedTaskList> {
   const { ctx: compiledSharedOptions, taskList, taskPath } = event;
 
   const { logger } = compiledSharedOptions;
