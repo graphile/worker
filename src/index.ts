@@ -7,6 +7,7 @@ import { getTasks } from "./getTasks";
 import {
   FileDetails,
   PromiseOrDirect,
+  ReleasableTaskList,
   RunOnceOptions,
   SharedOptions,
   Task,
@@ -86,6 +87,12 @@ declare global {
        * premigrate, postmigrate, prebootstrap and postbootstrap
        */
       readonly scratchpad: Record<string, unknown>;
+    }
+
+    interface GetTasksEvent {
+      ctx: WorkerPluginContext;
+      taskList: ReleasableTaskList;
+      taskPath: string;
     }
 
     interface PoolGracefulShutdownEvent {
@@ -430,6 +437,13 @@ declare global {
        * Called when migrating the Graphile Worker DB.
        */
       migrate(event: GraphileWorker.MigrateEvent): PromiseOrDirect<void>;
+
+      /**
+       * Called when loading the tasks
+       */
+      getTasks(
+        event: GraphileWorker.GetTasksEvent,
+      ): PromiseOrDirect<ReleasableTaskList>;
 
       /**
        * Called when performing a graceful shutdown on a WorkerPool.

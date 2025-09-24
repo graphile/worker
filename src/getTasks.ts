@@ -5,9 +5,11 @@ import { join as pathJoin } from "path";
 import { tryStat } from "./fs";
 import {
   isValidTask,
+  ReleasableTaskList,
   SharedOptions,
   TaskList,
   WatchedTaskList,
+  WorkerPluginContext,
 } from "./interfaces";
 import { FileDetails } from "./interfaces.js";
 import { CompiledSharedOptions, processSharedOptions } from "./lib";
@@ -102,7 +104,26 @@ export async function getTasks(
 export async function getTasksInternal(
   compiledSharedOptions: CompiledSharedOptions,
   taskPath: string,
-): Promise<WatchedTaskList> {
+): Promise<ReleasableTaskList> {
+  return await compiledSharedOptions.middleware.run(
+    "getTasks",
+    {
+      ctx: compiledSharedOptions,
+      taskPath,
+      taskList: {
+        tasks: Object.create(null),
+        release() {},
+      },
+    },
+    _getTasksFromFilesystem,
+  );
+}
+
+async function _getTasksFromFilesystem(
+  event: GraphileWorker.GetTasksEvent,
+): Promise<ReleasableTaskList> {
+  const { ctx: compiledSharedOptions, taskList, taskPath } = event;
+
   const { logger } = compiledSharedOptions;
   const pathStat = await tryStat(taskPath);
   if (!pathStat) {
@@ -111,7 +132,7 @@ export async function getTasksInternal(
     );
   }
 
-  const tasks: TaskList = Object.create(null);
+  const tasks = taskList.tasks;
 
   if (pathStat.isFile()) {
     // Try and require it
@@ -142,6 +163,11 @@ export async function getTasksInternal(
       await compiledSharedOptions.hooks.process("loadTaskFromFiles", event);
       const handler = event.handler;
       if (handler) {
+        if (tasks[taskIdentifier]) {
+          logger.warn(`Overwriting task identifier '${taskIdentifier}'`, {
+            taskIdentifier,
+          });
+        }
         tasks[taskIdentifier] = handler;
       } else {
         logger.warn(
@@ -153,21 +179,11 @@ export async function getTasksInternal(
     }
   }
 
-  let released = false;
-  return {
-    tasks,
-    compiledSharedOptions,
-    release: () => {
-      if (released) {
-        return;
-      }
-      released = true;
-    },
-  };
+  return taskList;
 }
 
 async function getTasksFromDirectory(
-  compiledSharedOptions: CompiledSharedOptions,
+  compiledSharedOptions: WorkerPluginContext,
   collectedTaskPaths: Record<string, FileDetails[]>,
   taskPath: string,
   subpath: string[],
@@ -222,7 +238,7 @@ async function getTasksFromDirectory(
 }
 
 function maybeAddFile(
-  compiledSharedOptions: CompiledSharedOptions,
+  compiledSharedOptions: WorkerPluginContext,
   collectedTaskPaths: Record<string, FileDetails[]>,
   subpath: string[],
   entry: string,
