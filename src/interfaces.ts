@@ -1166,7 +1166,7 @@ export type WorkerEventMap = {
   "worker:getJob:empty": { ctx: WorkerPluginContext; worker: Worker };
 
   /**
-   * When a worker is created
+   * When a worker fails to complete or fail a job
    */
   "worker:fatalError": {
     ctx: WorkerPluginContext;
