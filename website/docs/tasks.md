@@ -193,6 +193,14 @@ any of these promises reject, then the job will be re-enqueued, but the payload
 will be overwritten to only contain the entries associated with the rejected
 promises &mdash; i.e. the successful entries will be removed.
 
+:::tip Accumulating batch payloads with job_key
+
+You can use [`job_key`](./job-key.md#array-payload-merging) with array payloads
+to accumulate multiple events into a single batch job. When both the existing
+and new payloads are arrays, they are concatenated automatically.
+
+:::
+
 ## `helpers`
 
 ### `helpers.abortPromise`
