@@ -12,12 +12,26 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-
     strategy:
       matrix:
         node-version: [20.x]
-        postgres-version: [12, 13, 14, 15]
+        postgres-version: [15]
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        include:
+          - node-version: 20.x
+            os: ubuntu-latest
+            postgres-version: 12
+          - node-version: 20.x
+            os: ubuntu-latest
+            postgres-version: 13
+          - node-version: 20.x
+            os: ubuntu-latest
+            postgres-version: 14
+
+    runs-on: ${{ matrix.os }}
 
     services:
       postgres:
