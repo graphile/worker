@@ -93,18 +93,20 @@ main().catch((e) => {
 async function forEmptyQueue(pgPool) {
   let remaining;
   do {
+    await sleep(2000);
     const {
       rows: [row],
     } = await pgPool.query(
       `\
-select count(*)
-from graphile_worker._private_jobs as jobs
-where task_id = (
-  select id from graphile_worker._private_tasks as tasks
-  where identifier = 'latency'
+select exists(
+  select 1
+  from graphile_worker._private_jobs as jobs
+  where task_id = (
+    select id from graphile_worker._private_tasks as tasks
+    where identifier = 'latency'
+  )
 )`,
     );
-    remaining = (row && row.count) || 0;
-    await sleep(2000);
-  } while (remaining > 0);
+    remaining = row.exists;
+  } while (remaining);
 }
