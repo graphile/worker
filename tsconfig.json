@@ -4,11 +4,13 @@
     "@tsconfig/node-ts/tsconfig.json"
   ],
   "compilerOptions": {
-    "rootDir": "src",
     "declarationDir": "./dist",
     "outDir": "./dist",
 
     "verbatimModuleSyntax": false,
+
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
 
     "declaration": true,
     "allowJs": false,

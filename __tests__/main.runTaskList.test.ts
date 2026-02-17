@@ -1,5 +1,5 @@
 // See also main.runTaskListOnce.test.ts
-import { Pool } from "pg";
+import type { Pool } from "pg";
 
 import deferred, { Deferred } from "../src/deferred";
 import { Job, Task, TaskList, WorkerSharedOptions } from "../src/interfaces";

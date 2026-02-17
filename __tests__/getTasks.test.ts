@@ -16,6 +16,8 @@ const abortPromise = new Promise<void>((_, reject) => {
   abortSignal.addEventListener("abort", reject);
 });
 
+const __dirname = import.meta.dirname;
+
 describe("commonjs", () => {
   test("gets tasks from folder", () =>
     withPgClient(async (client) => {

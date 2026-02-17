@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import pg from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "../src/config";
 import { Job, RunnerOptions, WorkerUtils } from "../src/interfaces";
@@ -95,7 +95,7 @@ test("at least a connectionString, a pgPool, the DATABASE_URL or PGDATABASE envv
 });
 
 test("connectionString and a pgPool cannot provided a the same time", async () => {
-  const pgPool = new Pool();
+  const pgPool = new pg.Pool();
   pgPool.on("error", () => {});
   pgPool.on("connect", () => {});
   const options: RunnerOptions = {

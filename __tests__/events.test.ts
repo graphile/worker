@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { Pool } from "pg";
+import type { Pool } from "pg";
 
 import { run } from "../src";
 import deferred, { Deferred } from "../src/deferred";
