@@ -11,6 +11,7 @@
 
     "module": "nodenext",
     "moduleResolution": "nodenext",
+    "isolatedModules": true,
 
     "declaration": true,
     "allowJs": false,
