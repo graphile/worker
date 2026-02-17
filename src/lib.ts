@@ -7,7 +7,8 @@ import {
   orderedApply,
   resolvePreset,
 } from "graphile-config";
-import { Client, Pool, PoolClient, PoolConfig } from "pg";
+import pg from "pg";
+import type { Pool, PoolClient, PoolConfig } from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "./config";
 import { migrations } from "./generated/sql";
@@ -234,7 +235,8 @@ export function processSharedOptions<
       },
       plugins,
     } = resolvedPreset;
-    const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
+    const escapedWorkerSchema =
+      pg.Client.prototype.escapeIdentifier(workerSchema);
 
     const ctx: WorkerPluginBaseContext = {
       version,
@@ -357,7 +359,7 @@ function makeNewPool(
   releasers: Releasers,
   poolOptions: PoolConfig,
 ) {
-  const pgPool = new Pool(poolOptions);
+  const pgPool = new pg.Pool(poolOptions);
   releasers.push(() => {
     pgPool.end();
   });

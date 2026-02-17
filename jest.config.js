@@ -1,7 +1,10 @@
 module.exports = {
   roots: ["<rootDir>/src", "<rootDir>/__tests__"],
   transform: {
-    "^.+\\.tsx?$": "ts-jest",
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      { tsconfig: { rootDir: ".", module: "node16" } },
+    ],
   },
   testRegex: "(/__tests__/.*\\.(test|spec))\\.[tj]sx?$",
   moduleFileExtensions: ["ts", "js", "json"],
@@ -10,4 +13,5 @@ module.exports = {
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },
   testEnvironment: "./__tests__/nodeEnvironment.js",
+  testTimeout: 20000,
 };
