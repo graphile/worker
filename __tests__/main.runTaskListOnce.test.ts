@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import defer, { Deferred } from "../src/deferred";
 import { DbJob, Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
 import { runTaskListOnce } from "../src/main";
@@ -42,12 +43,12 @@ test("runs jobs", () =>
     // Run the task
     const job3: Task = jest.fn((o) => {
       expect(o).toMatchInlineSnapshot(`
-        Object {
+        {
           "a": 1,
         }
       `);
     });
-    const job2: Task = jest.fn();
+    const job2: Task = jest.fn(() => {});
     const tasks: TaskList = {
       job3,
       job2,
@@ -194,7 +195,7 @@ test("supports future-scheduled jobs", () =>
     await pgClient.query(
       `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('future', run_at := now() + interval '3 seconds')`,
     );
-    const future: Task = jest.fn();
+    const future: Task = jest.fn(() => {});
     const tasks: TaskList = {
       future,
     };

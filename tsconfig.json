@@ -1,12 +1,18 @@
 {
-  "ts-node": {
-    "experimentalResolver": true
-  },
-  "extends": "@tsconfig/node18/tsconfig.json",
+  "extends": [
+    "@tsconfig/node20/tsconfig.json",
+    "@tsconfig/node-ts/tsconfig.json"
+  ],
   "compilerOptions": {
-    "rootDir": "src",
     "declarationDir": "./dist",
     "outDir": "./dist",
+
+    "verbatimModuleSyntax": false,
+
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "isolatedModules": true,
+
     "declaration": true,
     "allowJs": false,
     "sourceMap": true,

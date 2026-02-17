@@ -9,7 +9,7 @@ import { getUtilsAndReleasersFromOptions } from "./lib";
 import { EMPTY_PRESET, WorkerPreset } from "./preset";
 import { runInternal, runOnceInternal } from "./runner";
 
-const argv = yargs
+const argvPromise = yargs
   .parserConfiguration({
     "boolean-negation": false,
   })
@@ -86,7 +86,9 @@ function stripUndefined<T extends object>(
   ) as T;
 }
 
-function argvToPreset(inArgv: Awaited<typeof argv>): GraphileConfig.Preset {
+function argvToPreset(
+  inArgv: Awaited<typeof argvPromise>,
+): GraphileConfig.Preset {
   return {
     worker: stripUndefined({
       connectionString: inArgv["connection"],
@@ -101,6 +103,7 @@ function argvToPreset(inArgv: Awaited<typeof argv>): GraphileConfig.Preset {
 }
 
 async function main() {
+  const argv = await argvPromise;
   const userPreset = await loadConfig(argv.config);
   const ONCE = argv.once;
   const SCHEMA_ONLY = argv["schema-only"];
