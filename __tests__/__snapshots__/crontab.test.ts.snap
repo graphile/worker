@@ -1,11 +1,11 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`parses crontab file correctly 1`] = `
-Array [
-  Object {
+[
+  {
     "identifier": "simple",
     "match": [Function],
-    "options": Object {
+    "options": {
       "backfillPeriod": 0,
       "jobKey": undefined,
       "jobKeyMode": undefined,
@@ -17,10 +17,10 @@ Array [
     "task": "simple",
     Symbol(isParsed): true,
   },
-  Object {
+  {
     "identifier": "every_day_at_4_am",
     "match": [Function],
-    "options": Object {
+    "options": {
       "backfillPeriod": 0,
       "jobKey": undefined,
       "jobKeyMode": undefined,
@@ -32,10 +32,10 @@ Array [
     "task": "every_day_at_4_am",
     Symbol(isParsed): true,
   },
-  Object {
+  {
     "identifier": "every_sunday_at_4_am",
     "match": [Function],
-    "options": Object {
+    "options": {
       "backfillPeriod": 0,
       "jobKey": undefined,
       "jobKeyMode": undefined,
@@ -47,10 +47,10 @@ Array [
     "task": "every_sunday_at_4_am",
     Symbol(isParsed): true,
   },
-  Object {
+  {
     "identifier": "sunday_7",
     "match": [Function],
-    "options": Object {
+    "options": {
       "backfillPeriod": 0,
       "jobKey": undefined,
       "jobKeyMode": undefined,
@@ -62,10 +62,10 @@ Array [
     "task": "every_sunday_at_4_am",
     Symbol(isParsed): true,
   },
-  Object {
+  {
     "identifier": "every_tuesday_at_4_am",
     "match": [Function],
-    "options": Object {
+    "options": {
       "backfillPeriod": 0,
       "jobKey": undefined,
       "jobKeyMode": undefined,
@@ -73,16 +73,16 @@ Array [
       "priority": undefined,
       "queueName": undefined,
     },
-    "payload": Object {
+    "payload": {
       "isTuesday": true,
     },
     "task": "every_tuesday_at_4_am",
     Symbol(isParsed): true,
   },
-  Object {
+  {
     "identifier": "stuff",
     "match": [Function],
-    "options": Object {
+    "options": {
       "backfillPeriod": 2685660000,
       "jobKey": undefined,
       "jobKeyMode": undefined,
@@ -90,18 +90,18 @@ Array [
       "priority": 3,
       "queueName": "my_queue",
     },
-    "payload": Object {
-      "myExtraPayload": Object {
+    "payload": {
+      "myExtraPayload": {
         "stuff": "here with # hash char",
       },
     },
     "task": "one",
     Symbol(isParsed): true,
   },
-  Object {
+  {
     "identifier": "lots_of_spaces",
     "match": [Function],
-    "options": Object {
+    "options": {
       "backfillPeriod": 0,
       "jobKey": undefined,
       "jobKeyMode": undefined,
@@ -113,10 +113,10 @@ Array [
     "task": "lots_of_spaces",
     Symbol(isParsed): true,
   },
-  Object {
+  {
     "identifier": "with_key",
     "match": [Function],
-    "options": Object {
+    "options": {
       "backfillPeriod": 0,
       "jobKey": "my_key",
       "jobKeyMode": "replace",
@@ -128,10 +128,10 @@ Array [
     "task": "with_key",
     Symbol(isParsed): true,
   },
-  Object {
+  {
     "identifier": "with_key_and_mode",
     "match": [Function],
-    "options": Object {
+    "options": {
       "backfillPeriod": 0,
       "jobKey": "my_key",
       "jobKeyMode": "preserve_run_at",
@@ -143,10 +143,10 @@ Array [
     "task": "with_key_and_mode",
     Symbol(isParsed): true,
   },
-  Object {
+  {
     "identifier": "nested/task",
     "match": [Function],
-    "options": Object {
+    "options": {
       "backfillPeriod": 0,
       "jobKey": "my_key",
       "jobKeyMode": "preserve_run_at",
@@ -158,10 +158,10 @@ Array [
     "task": "nested/task",
     Symbol(isParsed): true,
   },
-  Object {
+  {
     "identifier": "nested/folder/task",
     "match": [Function],
-    "options": Object {
+    "options": {
       "backfillPeriod": 0,
       "jobKey": "my_key",
       "jobKeyMode": "preserve_run_at",
