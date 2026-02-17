@@ -5,7 +5,7 @@ import {
   sleep,
   sleepUntil as baseSleepUntil,
 } from "jest-time-helpers";
-import * as pg from "pg";
+import pg from "pg";
 
 import defer from "../src/deferred";
 import {
@@ -42,10 +42,6 @@ export function sleepUntil(condition: () => boolean, ms?: number) {
   // Bump the default timeout from 2000ms for CI
   return baseSleepUntil(condition, ms ?? 5000);
 }
-
-// Sometimes CI's clock can get interrupted (it is shared infra!) so this
-// extends the default timeout just in case.
-jest.setTimeout(20000);
 
 // process.env.GRAPHILE_LOGGER_DEBUG = "1";
 
