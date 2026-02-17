@@ -219,7 +219,7 @@ Array [
     withPgClient(async (client) => {
       const { tasks, release, compiledSharedOptions } = (await getTasks(
         options,
-        `${__dirname}/fixtures-esm/tasksFile.js`,
+        `${__dirname}/fixtures-esm/tasksFile.mjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
@@ -250,7 +250,7 @@ Array [
     withPgClient(async (client) => {
       const { tasks, release, compiledSharedOptions } = (await getTasks(
         options,
-        `${__dirname}/fixtures-esm/tasksFile_default.js`,
+        `${__dirname}/fixtures-esm/tasksFile_default.mjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
