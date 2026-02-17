@@ -105,6 +105,6 @@ where task_id = (
 )`,
     );
     remaining = (row && row.count) || 0;
-    sleep(2000);
+    await sleep(2000);
   } while (remaining > 0);
 }
