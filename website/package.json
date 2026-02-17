@@ -1,5 +1,5 @@
 {
-  "name": "graphile-worker",
+  "name": "@localrepo/graphile-worker-website",
   "version": "0.0.0",
   "private": true,
   "scripts": {
