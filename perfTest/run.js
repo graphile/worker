@@ -7,11 +7,13 @@ const JOB_COUNT = 200000;
 const STUCK_JOB_COUNT = 0;
 const PARALLELISM = 4;
 
+const NANOSECONDS_TO_MILLISECONDS = 1e-6;
+
 const time = async (cb) => {
-  const start = process.hrtime();
+  const start = process.hrtime.bigint();
   await cb();
-  const diff = process.hrtime(start);
-  const dur = diff[0] * 1e3 + diff[1] * 1e-6;
+  const diff = process.hrtime.bigint() - start;
+  const dur = Number(diff) * NANOSECONDS_TO_MILLISECONDS;
   console.log(`... it took ${dur.toFixed(0)}ms`);
   return dur;
 };
