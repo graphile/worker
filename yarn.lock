@@ -7482,10 +7482,10 @@ jest-snapshot@30.2.0:
     semver "^7.7.2"
     synckit "^0.11.8"
 
-jest-time-helpers@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/jest-time-helpers/-/jest-time-helpers-1.0.0.tgz#9982cfc6a62705edb1f49b5a0acc2a6908cd2a3e"
-  integrity sha512-mjGgfOk++/gdQxSO4C74YC7uLGSJkW3ZXX3QqMd0x6QHttlQ9/uMeh3UdOoiRLQcTpj1ej+cNcr8CVf/JsjOzw==
+jest-time-helpers@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/jest-time-helpers/-/jest-time-helpers-1.1.0.tgz#045d2228afe719d53e688b4901c9f71cad10788c"
+  integrity sha512-2aVc9RQS0aN245PDEKcXpFv3xe2H3soJ7eVvhiaGV8Qran4aXI2YCGk0adAGgVs54Fh7CmZ/8LJY6SdNDZjmMw==
 
 jest-util@30.2.0:
   version "30.2.0"
