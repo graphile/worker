@@ -71,6 +71,45 @@ The full `job_key_mode` algorithm is roughly as follows:
 - Otherwise:
   - the job will have all its attributes updated to their new values.
 
+### Array payload merging
+
+When updating an existing job via `job_key`, if both the existing job's
+payload and the new payload are JSON arrays, they will be **concatenated**
+rather than replaced. This enables a batching pattern where multiple
+events can be accumulated into a single job.
+
+```sql
+-- First call creates job with payload: [{"id": 1}]
+SELECT graphile_worker.add_job(
+  'process_events',
+  '[{"id": 1}]'::json,
+  job_key := 'my_batch',
+  job_key_mode := 'preserve_run_at',
+  run_at := NOW() + INTERVAL '10 seconds'
+);
+
+-- Second call (before job runs) merges to: [{"id": 1}, {"id": 2}]
+SELECT graphile_worker.add_job(
+  'process_events',
+  '[{"id": 2}]'::json,
+  job_key := 'my_batch',
+  job_key_mode := 'preserve_run_at',
+  run_at := NOW() + INTERVAL '10 seconds'
+);
+```
+
+Combined with `preserve_run_at` job_key_mode, this creates a fixed batching window: the job
+runs at the originally scheduled time with all accumulated payloads merged
+together. With the default `replace` job_key_mode, each new event would push the
+`run_at` forward, creating a rolling/debounce window instead.
+
+:::caution
+
+If **either** payload is not an array (e.g., one is an object), the standard
+replace behavior applies and the old payload will be lost.
+
+:::
+
 ## Removing jobs
 
 Pending jobs may also be removed using `job_key`:
