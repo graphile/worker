@@ -2,7 +2,10 @@
   "ts-node": {
     "experimentalResolver": true
   },
-  "extends": "@tsconfig/node18/tsconfig.json",
+  "extends": [
+    "@tsconfig/node22/tsconfig.json",
+    "@tsconfig/node-ts/tsconfig.json"
+  ],
   "compilerOptions": {
     "rootDir": "src",
     "declarationDir": "./dist",
