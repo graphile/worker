@@ -76,7 +76,7 @@ The full `job_key_mode` algorithm is roughly as follows:
 When updating an existing job via `job_key`, if both the existing job's
 payload and the new payload are JSON arrays, they will be **concatenated**
 rather than replaced. This enables a batching pattern where multiple
-events can be accumulated into a single job.
+events can be accumulated into a single job (except in `unsafe_dedupe` mode).
 
 ```sql
 -- First call creates job with payload: [{"id": 1}]
@@ -106,7 +106,9 @@ together. With the default `replace` job_key_mode, each new event would push the
 :::caution
 
 If **either** payload is not an array (e.g., one is an object), the standard
-replace behavior applies and the old payload will be lost.
+replace behavior applies and the old payload will be lost. Note that the
+default payload is an object, so calling `add_job(s)` without an explicit
+payload will also trigger a replace rather than a concatenation.
 
 :::
 
