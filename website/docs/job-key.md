@@ -118,7 +118,7 @@ payloads merged together. With the default `replace` job_key_mode, each new
 event would push the `run_at` forward, creating a rolling/debounce window
 instead.
 
-:::caution[Both payloads must be arrays for merging to occur]
+:::caution Both payloads must be arrays for merging to occur
 
 If **either** payload is not an array (e.g., one is an object, as is the default
 if no payload is specified), the standard replace behavior applies and the old
