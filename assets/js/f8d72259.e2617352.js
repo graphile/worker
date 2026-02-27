@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_localrepo_graphile_worker_website=self.webpackChunk_localrepo_graphile_worker_website||[]).push([[4900],{4147:e=>{e.exports=JSON.parse('{"permalink":"/news/tags/releases","page":1,"postsPerPage":10,"totalPages":1,"totalCount":1,"blogDescription":"Blog","blogTitle":"Blog"}')}}]);

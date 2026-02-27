@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_localrepo_graphile_worker_website=self.webpackChunk_localrepo_graphile_worker_website||[]).push([[2635],{2763:e=>{e.exports=JSON.parse('{"title":"Recent posts","items":[{"title":"Worker 0.16 released","permalink":"/news/2023-12-11-016-release"}]}')}}]);
