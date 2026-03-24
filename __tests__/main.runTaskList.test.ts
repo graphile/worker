@@ -1,5 +1,6 @@
 // See also main.runTaskListOnce.test.ts
-import { Pool } from "pg";
+import { jest } from "@jest/globals";
+import type { Pool } from "pg";
 
 import deferred, { Deferred } from "../src/deferred";
 import { Job, Task, TaskList, WorkerSharedOptions } from "../src/interfaces";

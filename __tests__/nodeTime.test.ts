@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import { run, runTaskListOnce } from "../src";
 import { Runner, WorkerSharedOptions } from "../src/interfaces";
 import {
@@ -24,7 +25,7 @@ test("useNodeTime works for regular jobs", () =>
     };
     await reset(pgClient, options);
 
-    const job1 = jest.fn();
+    const job1 = jest.fn(() => {});
     const tasks = { job1 };
 
     // Schedule a job "in the future" according to Node (but in the past according to Postgres).
@@ -52,7 +53,7 @@ test("validate the job would have run if not for useNodeTime", () =>
     };
     await reset(pgClient, options);
 
-    const job1 = jest.fn();
+    const job1 = jest.fn(() => {});
     const tasks = { job1 };
 
     // Schedule a job "in the future" according to Node (but in the past according to Postgres).

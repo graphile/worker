@@ -1,4 +1,5 @@
-import { Pool, PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
+import pg from "pg";
 
 import { DbJobSpec, Runner, RunnerOptions } from "../src/interfaces";
 import { run } from "../src/runner";
@@ -14,7 +15,7 @@ let runner: Runner | null = null;
 
 const JOB_COUNT = 10;
 beforeAll(() => {
-  pgPool = new Pool({
+  pgPool = new pg.Pool({
     connectionString: databaseDetails!.TEST_CONNECTION_STRING,
     max: JOB_COUNT * 2 + 5,
   });

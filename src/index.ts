@@ -23,12 +23,8 @@ import {
 import { CompiledSharedOptions } from "./lib";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
 export * from "./interfaces";
-export {
-  consoleLogFactory,
-  LogFunctionFactory,
-  Logger,
-  LogLevel,
-} from "./logger";
+export { consoleLogFactory, Logger, LogLevel } from "./logger";
+export type { LogFunctionFactory } from "./logger";
 export { runTaskList, runTaskListOnce } from "./main";
 export { WorkerPreset } from "./preset";
 export { run, runMigrations, runOnce } from "./runner";
@@ -36,7 +32,7 @@ export { addJobAdhoc, makeWorkerUtils, quickAddJob } from "./workerUtils";
 
 export { getTasks };
 export { getCronItems };
-export { CompiledSharedOptions };
+export type { CompiledSharedOptions };
 
 declare global {
   namespace GraphileWorker {

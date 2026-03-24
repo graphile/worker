@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { Pool } from "pg";
+import type { Pool } from "pg";
 
 import { parseCrontab } from "./crontab";
 import defer from "./deferred";

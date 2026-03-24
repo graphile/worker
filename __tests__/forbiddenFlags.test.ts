@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import {
   makeWorkerUtils,
   runTaskListOnce,
@@ -28,7 +29,7 @@ test("supports the flags API", () =>
     expect(jobs[0]).toHaveProperty("flags");
     expect(jobs[0].flags).toEqual({ a: true, b: true });
 
-    const task: Task = jest.fn();
+    const task: Task = jest.fn(() => {});
     const taskList: TaskList = { task };
     await runTaskListOnce(options, taskList, pgClient);
   }));
@@ -49,8 +50,8 @@ test.each([
   withPgPool(async (pgPool) => {
     await reset(pgPool, options);
 
-    const shouldRun = jest.fn();
-    const shouldSkip = jest.fn();
+    const shouldRun = jest.fn(() => {});
+    const shouldSkip = jest.fn(() => {});
 
     const job: Task = async (_payload, helpers) => {
       const flags = helpers.job.flags || {};
@@ -111,8 +112,8 @@ test.each([
   withPgPool(async (pgPool) => {
     await reset(pgPool, options);
 
-    const ranWithoutDFlag = jest.fn();
-    const ranWithDFlag = jest.fn();
+    const ranWithoutDFlag = jest.fn(() => {});
+    const ranWithDFlag = jest.fn(() => {});
 
     const job: Task = async (_payload, helpers) => {
       const flags = helpers.job.flags || {};

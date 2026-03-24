@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import {
   addJobAdhoc,
   makeWorkerUtils,
@@ -35,7 +36,7 @@ test("runs a job added through the worker utils", () =>
     const jobs = await getJobs(pgClient);
     expect(jobs).toHaveLength(1);
 
-    const task: Task = jest.fn();
+    const task: Task = jest.fn(() => {});
     const taskList = { task };
     await runTaskListOnce(options, taskList, pgClient);
   }));
@@ -61,7 +62,7 @@ test("supports the jobKey API", () =>
     expect((jobs[0].payload as any).a).toBe(4);
     expect(jobs[0].revision).toBe(3);
 
-    const task: Task = jest.fn();
+    const task: Task = jest.fn(() => {});
     const taskList = { task };
     await runTaskListOnce(options, taskList, pgClient);
   }));
@@ -130,7 +131,7 @@ test("supports the jobKey API with jobKeyMode", () =>
     expect((jobs[0].payload as any).a).toBe(4);
     expect(jobs[0].run_at.toISOString()).toBe(runAt4.toISOString());
 
-    const task: Task = jest.fn();
+    const task: Task = jest.fn(() => {});
     const taskList = { task };
     await runTaskListOnce(options, taskList, pgClient);
   }));
@@ -148,7 +149,7 @@ test("runs a job added through the addJob shortcut function", () =>
     const jobs = await getJobs(pgClient);
     expect(jobs).toHaveLength(1);
 
-    const task: Task = jest.fn();
+    const task: Task = jest.fn(() => {});
     const taskList = { task };
     await runTaskListOnce(options, taskList, pgClient);
   }));

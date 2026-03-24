@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { randomBytes } from "crypto";
 import { EventEmitter } from "events";
-import { Notification, Pool, PoolClient } from "pg";
+import type { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
 import defer, { Deferred } from "./deferred";

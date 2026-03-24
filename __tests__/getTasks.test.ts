@@ -25,12 +25,12 @@ describe("commonjs", () => {
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
-Array [
-  "wouldyoulike",
-  "wouldyoulike_default",
-  "wouldyoulike_ts",
-]
-`);
+        [
+          "wouldyoulike",
+          "wouldyoulike_default",
+          "wouldyoulike_ts",
+        ]
+      `);
       const helpers = makeJobHelpers(
         compiledSharedOptions,
         makeMockJob("would you like"),
@@ -62,11 +62,11 @@ Array [
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
-Array [
-  "task1",
-  "task2",
-]
-`);
+        [
+          "task1",
+          "task2",
+        ]
+      `);
 
       const helpers = makeJobHelpers(
         compiledSharedOptions,
@@ -93,11 +93,11 @@ Array [
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
-Array [
-  "task1",
-  "task2",
-]
-`);
+        [
+          "task1",
+          "task2",
+        ]
+      `);
 
       const helpers = makeJobHelpers(
         compiledSharedOptions,
@@ -126,11 +126,11 @@ Array [
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
-Array [
-  "t1",
-  "t2",
-]
-`);
+        [
+          "t1",
+          "t2",
+        ]
+      `);
 
       const helpers = makeJobHelpers(compiledSharedOptions, makeMockJob("t1"), {
         withPgClient: makeEnhancedWithPgClient(
@@ -157,11 +157,11 @@ Array [
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
-Array [
-  "t1",
-  "t2",
-]
-`);
+        [
+          "t1",
+          "t2",
+        ]
+      `);
 
       const helpers = makeJobHelpers(compiledSharedOptions, makeMockJob("t1"), {
         withPgClient: makeEnhancedWithPgClient(
@@ -190,11 +190,11 @@ describe("esm", () => {
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
-Array [
-  "wouldyoulike",
-  "wouldyoulike_default",
-]
-`);
+        [
+          "wouldyoulike",
+          "wouldyoulike_default",
+        ]
+      `);
       const helpers = makeJobHelpers(
         compiledSharedOptions,
         makeMockJob("would you like"),
@@ -219,15 +219,15 @@ Array [
     withPgClient(async (client) => {
       const { tasks, release, compiledSharedOptions } = (await getTasks(
         options,
-        `${__dirname}/fixtures-esm/tasksFile.js`,
+        `${__dirname}/fixtures-esm/tasksFile.mjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
-Array [
-  "task1",
-  "task2",
-]
-`);
+        [
+          "task1",
+          "task2",
+        ]
+      `);
 
       const helpers = makeJobHelpers(
         compiledSharedOptions,
@@ -250,15 +250,15 @@ Array [
     withPgClient(async (client) => {
       const { tasks, release, compiledSharedOptions } = (await getTasks(
         options,
-        `${__dirname}/fixtures-esm/tasksFile_default.js`,
+        `${__dirname}/fixtures-esm/tasksFile_default.mjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
-Array [
-  "t1",
-  "t2",
-]
-`);
+        [
+          "t1",
+          "t2",
+        ]
+      `);
 
       const helpers = makeJobHelpers(compiledSharedOptions, makeMockJob("t1"), {
         withPgClient: makeEnhancedWithPgClient(
