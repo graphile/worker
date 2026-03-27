@@ -59,3 +59,11 @@ figcaption {
 .prettyDivide path {
   fill: var(--ifm-color-primary);
 }
+
+.mdx-wrapper {
+  article > :not(.wide) {
+    max-width: 49rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
