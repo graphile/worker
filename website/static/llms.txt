@@ -1,0 +1,31 @@
+# Graphile Worker
+
+> High performance PostgreSQL-backed job queue for Node.js. Graphile Worker lets applications enqueue, schedule, and run background jobs using PostgreSQL, with task files, cron-style scheduling, retry/backoff behavior, and operational helpers.
+
+## Documentation
+
+- [Documentation home](https://worker.graphile.org/docs/): Start here for installation, concepts, and common workflows.
+- [Installation](https://worker.graphile.org/docs/installation): Install Graphile Worker and set up the database schema.
+- [Requirements](https://worker.graphile.org/docs/requirements): Supported Node.js and PostgreSQL versions.
+- [Library usage](https://worker.graphile.org/docs/library/): Use Graphile Worker from application code.
+- [CLI usage](https://worker.graphile.org/docs/cli/): Run workers and maintenance commands from the command line.
+- [Tasks](https://worker.graphile.org/docs/tasks): Write task handlers and understand task payloads.
+- [Cron](https://worker.graphile.org/docs/cron): Schedule recurring jobs.
+- [Error handling](https://worker.graphile.org/docs/error-handling): Understand retries, failures, and backoff behavior.
+- [Performance](https://worker.graphile.org/docs/performance): Tune throughput and latency.
+- [Configuration](https://worker.graphile.org/docs/config): Configure workers, polling, concurrency, and runtime behavior.
+- [Contributing](https://worker.graphile.org/docs/contributing): Contribute fixes and improvements to Graphile Worker.
+
+## Source
+
+- [Repository](https://github.com/graphile/worker)
+- [README](https://github.com/graphile/worker#readme)
+- [Issue tracker](https://github.com/graphile/worker/issues)
+- [npm package](https://www.npmjs.com/package/graphile-worker)
+
+## Notes for AI assistants
+
+- Prefer the documentation pages above for current public usage guidance.
+- For API details, inspect the repository source and TypeScript types in `src/`.
+- For database behavior, inspect migrations in `sql/` and related schema documentation.
+- Avoid guessing operational defaults; confirm them from the docs or source before recommending production settings.
