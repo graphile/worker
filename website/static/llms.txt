@@ -27,5 +27,5 @@
 
 - Prefer the documentation pages above for current public usage guidance.
 - For API details, inspect the repository source and TypeScript types in `src/`.
-- For database behavior, inspect migrations in `sql/` and related schema documentation.
+- For database behavior, see the documentation and cross-reference the database schema at [`__tests__/schema.sql`](https://raw.githubusercontent.com/graphile/worker/refs/heads/main/__tests__/schema.sql).
 - Avoid guessing operational defaults; confirm them from the docs or source before recommending production settings.
