@@ -112,13 +112,16 @@ See the [CLI documentation](./cli/run.md) for more information about CLI mode.
 
 ### Running in Library Mode
 
-When Graphile Worker users run in library mode, they use the functions exported
-from `src/index.ts`. The scrappiest thing you can do to run your local version
-of Graphile Worker similarly is to create a Typescript file that runs functions
-imported from `.`.
+#### In the Graphile Worker repo
 
-```ts title="src/temp.ts"
-import { run, WorkerPreset } from ".";
+When Graphile Worker users run in library mode, they use the functions exported
+from `src/index.ts`, which is compiled to `dist/index.js`. To run your local
+version of Graphile Worker similarly you can create a `.mts` Typescript file
+that runs functions imported from `./dist/index.js` (this uses Node.js' built in
+type stripping):
+
+```ts title="temp.mts"
+import { run, WorkerPreset } from "./dist/index.js";
 
 async function main() {
   const runner = await run({
@@ -144,21 +147,23 @@ main().catch((err) => {
 });
 ```
 
-Then you can run `temp.ts` with `ts-node`:
+Then you can run `temp.mts` by first compiling Graphile Worker then running your
+file with `node`:
 
 ```sh
-yarn run ts-node src/temp.ts
+yarn prepack && node temp.mts
 ```
 
-You have to remember not to commit `src/temp.ts`, so a cleaner way to achieve
-this would be using `yarn link`. In the root of your local Graphile Worker
-repository run the following:
+#### In your own repo
+
+To try out your Graphile Worker version in your own repository, use `yarn link`.
+In the root of your local Graphile Worker repository run the following:
 
 ```sh
 yarn link
 ```
 
-Create another node.js project with yarn that imports from `graphile-worker`
+Create another Node.js project with yarn that imports from `graphile-worker`
 like it would if it was using the published package. In that directory, run the
 following:
 
