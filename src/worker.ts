@@ -66,11 +66,9 @@ export function makeNewWorker(
   const promise: Promise<void> & {
     /** @internal */
     worker?: Worker;
-  } = workerDeferred
-    .finally(() => {
-      return hooks.process("stopWorker", { worker, withPgClient });
-    })
-    .catch(noop);
+  } = workerDeferred.finally(() => {
+    return hooks.process("stopWorker", { worker, withPgClient });
+  });
 
   promise.then(
     () => {
@@ -428,5 +426,3 @@ export function makeNewWorker(
 
   return worker;
 }
-
-function noop() {}
