@@ -96,7 +96,7 @@ worked on, so:
 
 - if a worker doesn't exit gracefully (e.g. it crashes or is forcefully killed),
   more jobs will remain locked and unable to execute until the 4 hour limit
-  expores. (Mitigation: Graphile Worker Pro.)
+  expires. (Mitigation: Graphile Worker Pro.)
 - execution latency may increase if jobs exist in one worker's local queue
   whilst another worker sits idle. (Mitigation: `preset.worker.localQueue.ttl`
   determines how long tasks may sit in the local queue without being worked on.)
