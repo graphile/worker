@@ -70,7 +70,8 @@ const argv = yargs
       "Clean the database, then exit. Accepts a comma-separated list of cleanup tasks: GC_TASK_IDENTIFIERS, GC_JOB_QUEUES, DELETE_PERMAFAILED_JOBS",
   })
   .string("cleanup")
-  .strict(true).argv;
+  .strict(true)
+  .parseSync();
 
 const integerOrUndefined = (n: number | undefined): number | undefined => {
   return typeof n === "number" && isFinite(n) && Math.round(n) === n
@@ -86,7 +87,7 @@ function stripUndefined<T extends object>(
   ) as T;
 }
 
-function argvToPreset(inArgv: Awaited<typeof argv>): GraphileConfig.Preset {
+function argvToPreset(inArgv: typeof argv): GraphileConfig.Preset {
   return {
     worker: stripUndefined({
       connectionString: inArgv["connection"],
