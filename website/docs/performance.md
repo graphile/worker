@@ -72,8 +72,8 @@ const preset = {
 
     // Sensible default for local queue size: one more than concurrency
     localQueue: { size: concurrentJobs + 1 },
-    completeJobBatchDelay: 25,
-    failJobBatchDelay: 25,
+    completeJobBatchDelay: 250,
+    failJobBatchDelay: 250,
   },
 };
 ```
