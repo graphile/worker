@@ -58,7 +58,8 @@ delete from graphile_worker._private_jobs where attempts = max_attempts and lock
 
 Jobs scheduled to run in the future can also keep the number of jobs in the jobs
 table higher, impacting peak performance. Be thoughtful about these tasks, and
-consider batching if it becomes an issue.
+consider using [batch jobs](/docs/library/add-job#batch-jobs) if it becomes an
+issue.
 
 ## Use the latest Graphile Worker release
 
