@@ -55,21 +55,74 @@ still wish to set it higher and then using Node&apos;s `child_process` or
 `worker_threads` to share the compute load over multiple cores without
 significantly impacting the main worker&apos;s run loop.
 
-## Enabling batching for highest performance
+## Batching
 
 Graphile Worker is limited by the performance of the underlying Postgres
-database, and when you hit this limit performance will start to go down (rather
-than up) as you add more workers.
+database; when you hit this limit, performance will start to go down (rather
+than up) as you add more workers. To mitigate this, batching functionality can
+be enabled via the configuration. If you have a high throughput job queue (even
+intermittently) we recommend that you enable batching; the settings to use will
+depend on your setup, but consider these as a starting point:
 
-To mitigate this, we've added batching functionality to many of the internal
-methods which you can enable via the configuration. For example using a local
-queue enables each pool to pull down a configurable number of jobs up front so
-its workers can start a new job the moment their previous one completes without
-having to request a new job from the database. This batching also reduces load
-on the database since there are fewer total queries per second, but it's a
-slight trade-off since more jobs are checked out but not necessarily actively
-being worked on, so latency may increase and in the event of a crash more jobs
-will be locked.
+```ts
+let concurrentJobs = 10; // Set this to whatever suits
+const preset = {
+  worker: {
+    concurrentJobs,
+
+    // Sensible default for local queue size: one more than concurrency
+    localQueue: { size: concurrentJobs + 1 },
+    completeJobBatchDelay: 25,
+    failJobBatchDelay: 25,
+  },
+};
+```
+
+Read on for more details.
+
+### `localQueue`
+
+The local queue feature is disabled by default, but it can have a significant
+impact on high throughput queues, both reducing database load and increasing
+throughput - sometimes by an order of magnitude!
+
+The local queue enables each pool to pull down a configurable number of jobs up
+front so its workers can start a new job the moment their previous one completes
+without having to request a new job from the database. This batching also
+reduces load on the database since there are fewer total queries per second, and
+table scans are allowed to return additional results. However, it's a trade-off
+since more jobs are checked out (locked) but not necessarily actively being
+worked on, so:
+
+- if a worker doesn't exit gracefully (e.g. it crashes or is forcefully killed),
+  more jobs will remain locked and unable to execute until the 4 hour limit
+  expores. (Mitigation: Graphile Worker Pro.)
+- execution latency may increase if jobs exist in one worker's local queue
+  whilst another worker sits idle. (Mitigation: `preset.worker.localQueue.ttl`
+  determines how long tasks may sit in the local queue without being worked on.)
+
+If your tasks are somewhat slow (taking many tens of seconds or more) and your
+throughput is very low or you need high priority tasks to be executed ASAP then
+you should set your localQueue size to either a low number (2+) or disable it
+entirely (`-1`). When doing so, you can leave `completeJobBatchDelay` and
+`failJobBatchDelay` enabled.
+
+### `completeJobBatchDelay` / `failJobBatchDelay`
+
+These methods cause job releasing (complete/fail) to become asynchronous,
+allowing multiple completes/fails in a small window of time to be released via
+the same roundtrip to the database, significantly reducing load on the database
+and WAL churn.
+
+The trade-off is that jobs will not be released immediately, so in the event of
+a catastrophic failure (worker crash or forced termination) more jobs may be
+left in the locked state than otherwise. So long as you ensure that your workers
+always exit cleanly/gracefully, these delays can significantly reduce database
+load and improve throughput with minimal additional risk.
+
+In general, we'd advise all users to enable these settings, even if they are set
+to `0` for minimal delay. `250` seems a reasonable default - release jobs at
+most once every quarter of a second.
 
 ## Running the performance tests
 
