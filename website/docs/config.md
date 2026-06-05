@@ -156,15 +156,28 @@ Here are the options under the `worker` key as defined by
 
 <!--BEGIN:OPTIONS-->
 
+Options for Graphile Worker
+
 ```ts
 {
+  completeJobBatchDelay?: number;
   concurrentJobs?: number;
   connectionString?: string;
   crontabFile?: string;
   events?: WorkerEvents;
+  failJobBatchDelay?: number;
   fileExtensions?: string[];
   getQueueNameBatchDelay?: number;
   gracefulShutdownAbortTimeout?: number;
+  localQueue?: {
+    size: number;
+    ttl?: number;
+    refetchDelay?: {
+        durationMs: number;
+        threshold?: number;
+        maxAbortThreshold?: number;
+    };
+};
   logger?: Logger<{}>;
   maxPoolSize?: number;
   maxResetLockedInterval?: number;
@@ -177,9 +190,17 @@ Here are the options under the `worker` key as defined by
 }
 ```
 
-See the
-[Graphile Worker source](https://github.com/jcgsville/worker/blob/85c36ac4e684a3a782fc528dca95c8ba6177fa8a/src/config.ts#L13)
-for the default `worker` options set by the default Worker Preset.
+### worker.completeJobBatchDelay
+
+Type: `number | undefined`
+
+The time in milliseconds to wait after a `completeJob` call to see if there are
+any other completeJob calls that can be batched together. A setting of `-1`
+disables this.
+
+Enabling this feature increases the time for which jobs are locked past
+completion, thus increasing the risk of catastrophic failure resulting in the
+jobs being executed again once they expire.
 
 ### worker.concurrentJobs
 
@@ -210,6 +231,16 @@ startup. (Without this, Worker will provision its own `EventEmitter`, but you
 can't retrieve it until the promise returned by the API you have called has
 resolved.)
 
+### worker.failJobBatchDelay
+
+Type: `number | undefined`
+
+The time in milliseconds to wait after a `failJob` call to see if there are any
+other failJob calls that can be batched together. A setting of `-1` disables
+this.
+
+Enabling this feature increases the time for which jobs are locked past failure.
+
 ### worker.fileExtensions
 
 Type: `string[] | undefined`
@@ -235,6 +266,15 @@ Type: `number | undefined`
 How long in milliseconds after a gracefulShutdown is triggered should Graphile
 Worker wait to trigger the AbortController, which should cancel supported
 asynchronous actions?
+
+### worker.localQueue
+
+Type:
+`{ size: number; ttl?: number; refetchDelay?: { durationMs: number; threshold?: number; maxAbortThreshold?: number; }; } | undefined`
+
+If you're running in high concurrency, you will likely want to reduce the load
+on the database by using a local queue to distribute jobs to workers rather than
+having each ask the database directly.
 
 ### worker.logger
 
