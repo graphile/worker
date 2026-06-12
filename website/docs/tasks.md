@@ -102,6 +102,13 @@ for inspiration.
 
 ### Loading TypeScript files
 
+:::info
+
+You might not need to use ts-node anymore since Node.js has native type
+stripping support. These docs need to be updated.
+
+:::
+
 :::tip
 
 For performance and memory usage reasons, we recommend that you compile
