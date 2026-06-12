@@ -137,7 +137,9 @@ test("emits the expected events", () =>
       expect(eventCount("pool:release")).toEqual(1);
       await expectJobCount(pgPool, 0);
     } finally {
-      if (runner) runner.stop();
+      if (runner) {
+        runner.stop();
+      }
       Object.values(jobPromises).forEach((p) => p?.resolve());
     }
   }));

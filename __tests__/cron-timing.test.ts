@@ -1,3 +1,4 @@
+import { run } from "../src";
 import {
   EventMonitor,
   getJobs,
@@ -9,7 +10,6 @@ import {
   sleep,
   withOptions,
 } from "./helpers";
-import { run } from "../src";
 
 const { setTime } = setupFakeTimers();
 const REFERENCE_TIMESTAMP = 1609459200000; /* 1st January 2021, 00:00:00 UTC */

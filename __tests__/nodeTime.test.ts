@@ -1,6 +1,7 @@
 import { jest } from "@jest/globals";
+
 import { run, runTaskListOnce } from "../src";
-import { Runner, WorkerSharedOptions } from "../src/interfaces";
+import { WorkerSharedOptions } from "../src/interfaces";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   EventMonitor,

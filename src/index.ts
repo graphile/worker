@@ -23,8 +23,8 @@ import {
 import { CompiledSharedOptions } from "./lib";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
 export * from "./interfaces";
-export { consoleLogFactory, Logger, LogLevel } from "./logger";
 export type { LogFunctionFactory } from "./logger";
+export { consoleLogFactory, Logger, LogLevel } from "./logger";
 export { runTaskList, runTaskListOnce } from "./main";
 export { WorkerPreset } from "./preset";
 export { run, runMigrations, runOnce } from "./runner";

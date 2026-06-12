@@ -7,7 +7,7 @@ import {
   orderedApply,
   resolvePreset,
 } from "graphile-config";
-import type { Client, Pool, PoolClient, PoolConfig } from "pg";
+import type { Pool, PoolClient, PoolConfig } from "pg";
 import pg from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "./config";
