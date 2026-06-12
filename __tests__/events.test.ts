@@ -2,7 +2,7 @@ import { jest } from "@jest/globals";
 import { EventEmitter } from "events";
 import type { Pool } from "pg";
 
-import { run } from "../src";
+import { run, Runner } from "../src";
 import deferred, { Deferred } from "../src/deferred";
 import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
 import {
@@ -54,6 +54,7 @@ test("emits the expected events", () =>
     const jobPromises: {
       [id: string]: Deferred | undefined;
     } = {};
+    let runner: Runner | undefined;
     try {
       const job1: Task<"job1"> = jest.fn(({ id }) => {
         const jobPromise = deferred();
@@ -82,7 +83,7 @@ test("emits the expected events", () =>
       });
 
       const CONCURRENCY = 3;
-      const runner = await run({
+      runner = await run({
         concurrency: CONCURRENCY,
         pgPool,
         taskList: tasks,
@@ -130,11 +131,13 @@ test("emits the expected events", () =>
       await sleep(1);
       expect(finished).toBeTruthy();
       await runner.promise;
+      runner = undefined;
       expect(eventCount("worker:release")).toEqual(CONCURRENCY);
       expect(eventCount("worker:stop")).toEqual(CONCURRENCY);
       expect(eventCount("pool:release")).toEqual(1);
       await expectJobCount(pgPool, 0);
     } finally {
+      if (runner) runner.stop();
       Object.values(jobPromises).forEach((p) => p?.resolve());
     }
   }));
