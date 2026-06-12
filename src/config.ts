@@ -34,7 +34,7 @@ export const makeWorkerPresetWorkerOptions = () =>
     maxResetLockedInterval: 10 * MINUTE,
     gracefulShutdownAbortTimeout: 5 * SECOND,
     useNodeTime: false,
-  } satisfies GraphileConfig.WorkerOptions);
+  }) satisfies GraphileConfig.WorkerOptions;
 
 function enforceStringOrUndefined(
   keyName: string,

@@ -52,8 +52,8 @@ export function makeAddJob(
           spec.runAt
             ? spec.runAt.toISOString()
             : useNodeTime
-            ? new Date().toISOString()
-            : null,
+              ? new Date().toISOString()
+              : null,
           spec.maxAttempts || null,
           spec.jobKey || null,
           spec.priority || null,

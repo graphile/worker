@@ -91,7 +91,7 @@ export async function batchGetJobs(
     strategy === 0
       ? `and jobs.job_queue_id is null`
       : strategy === 1
-      ? `and (
+        ? `and (
       jobs.job_queue_id is null
       or exists (
         select 1
@@ -102,8 +102,8 @@ export async function batchGetJobs(
         skip locked
       )
     )`
-      : strategy === 2
-      ? `and (
+        : strategy === 2
+          ? `and (
       jobs.job_queue_id is null
       or
       jobs.job_queue_id in (
@@ -114,7 +114,7 @@ export async function batchGetJobs(
         skip locked
       )
     )`
-      : `and (
+          : `and (
       jobs.job_queue_id is null
       or
       jobs.job_queue_id not in (

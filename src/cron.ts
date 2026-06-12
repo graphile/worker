@@ -421,10 +421,13 @@ export const runCron = (
       }
       // + 1 millisecond to try and ensure this happens in the next minute
       // rather than at the end of the previous.
-      timeout = setTimeout(() => {
-        timeout = null;
-        loop();
-      }, Math.max(+nextTimestamp - Date.now() + 1, 1));
+      timeout = setTimeout(
+        () => {
+          timeout = null;
+          loop();
+        },
+        Math.max(+nextTimestamp - Date.now() + 1, 1),
+      );
     };
 
     async function loop() {

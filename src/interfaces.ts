@@ -873,8 +873,9 @@ type BaseEventMap = Record<string, unknown>;
 type EventMapKey<TEventMap extends BaseEventMap> = string & keyof TEventMap;
 type EventCallback<TPayload> = (params: TPayload) => void;
 
-interface TypedEventEmitter<TEventMap extends BaseEventMap>
-  extends EventEmitter {
+interface TypedEventEmitter<
+  TEventMap extends BaseEventMap,
+> extends EventEmitter {
   addListener<TEventName extends EventMapKey<TEventMap>>(
     eventName: TEventName,
     callback: EventCallback<TEventMap[TEventName]>,

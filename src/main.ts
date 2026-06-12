@@ -776,7 +776,7 @@ export function _runTaskList(
     _workers: [],
     _withPgClient: withPgClient,
     get worker() {
-      return concurrency === 1 ? this._workers[0] ?? null : null;
+      return concurrency === 1 ? (this._workers[0] ?? null) : null;
     },
     nudge(this: WorkerPool, count: number) {
       if (localQueue) {
