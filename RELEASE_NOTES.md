@@ -19,8 +19,10 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
-## v0.17.3
+## v0.18.0
 
+- Since Node 20 is EOL, Node 22 is now the minimum supported version, per our
+  [requirements documentation](https://worker.graphile.org/docs/requirements).
 - `Runner` gains `[Symbol.asyncDispose]()` method, so you can
   `await using runner = await run(...)` and the worker will be released when you
   reach the end of the scope. (Primarily useful for tests.)
