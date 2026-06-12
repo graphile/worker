@@ -252,6 +252,9 @@ function buildRunner(input: {
     addJob,
     promise,
     events,
+    [Symbol.asyncDispose]() {
+      return stop("asyncDispose", true);
+    },
   };
 }
 

@@ -20,7 +20,7 @@ test("check timestamp is correct", () => {
 });
 
 test("executes job when expected", () =>
-  withOptions(async (options, cleanup) => {
+  withOptions(async (options) => {
     await setTime(REFERENCE_TIMESTAMP + HOUR); // 1am
     const { pgPool } = options;
     await reset(pgPool, options);
@@ -28,12 +28,11 @@ test("executes job when expected", () =>
     const cronFinishedBackfilling = eventMonitor.awaitNext("cron:started");
     const poolReady = eventMonitor.awaitNext("pool:listen:success");
     const cronScheduleCalls = eventMonitor.count("cron:schedule");
-    const runner = await run({
+    await using _runner = await run({
       ...options,
       crontab: `0 */4 * * * my_task`,
       events: eventMonitor.events,
     });
-    cleanup(() => runner.stop());
     await cronFinishedBackfilling;
     await poolReady;
     expect(cronScheduleCalls.count).toEqual(0);
@@ -61,7 +60,7 @@ test("executes job when expected", () =>
   }));
 
 test("doesn't schedule tasks twice when system clock reverses", () =>
-  withOptions(async (options, cleanup) => {
+  withOptions(async (options) => {
     await setTime(REFERENCE_TIMESTAMP + HOUR); // 1am
     const { pgPool } = options;
     await reset(pgPool, options);
@@ -69,12 +68,11 @@ test("doesn't schedule tasks twice when system clock reverses", () =>
     const cronFinishedBackfilling = eventMonitor.awaitNext("cron:started");
     const poolReady = eventMonitor.awaitNext("pool:listen:success");
     const cronScheduleCalls = eventMonitor.count("cron:schedule");
-    const runner = await run({
+    await using _runner = await run({
       ...options,
       crontab: `0 */4 * * * my_task`,
       events: eventMonitor.events,
     });
-    cleanup(() => runner.stop());
     await cronFinishedBackfilling;
     await poolReady;
     expect(cronScheduleCalls.count).toEqual(0);
@@ -94,7 +92,7 @@ test("doesn't schedule tasks twice when system clock reverses", () =>
   }));
 
 test("clock skew doesn't prevent task from being scheduled at the right time", () =>
-  withOptions(async (options, cleanup) => {
+  withOptions(async (options) => {
     await setTime(REFERENCE_TIMESTAMP + HOUR); // 1am
     const { pgPool } = options;
     await reset(pgPool, options);
@@ -102,12 +100,11 @@ test("clock skew doesn't prevent task from being scheduled at the right time", (
     const cronFinishedBackfilling = eventMonitor.awaitNext("cron:started");
     const poolReady = eventMonitor.awaitNext("pool:listen:success");
     const cronScheduleCalls = eventMonitor.count("cron:schedule");
-    const runner = await run({
+    await using _runner = await run({
       ...options,
       crontab: `0 */4 * * * my_task`,
       events: eventMonitor.events,
     });
-    cleanup(() => runner.stop());
     await cronFinishedBackfilling;
     await poolReady;
     expect(cronScheduleCalls.count).toEqual(0);
@@ -134,19 +131,18 @@ test("clock skew doesn't prevent task from being scheduled at the right time", (
   }));
 
 test("does not schedule duplicate jobs when a job key is supplied", () =>
-  withOptions(async (options, cleanup) => {
+  withOptions(async (options) => {
     await setTime(REFERENCE_TIMESTAMP + HOUR); // 1am
     const { pgPool } = options;
     await reset(pgPool, options);
     const eventMonitor = new EventMonitor();
     const cronFinishedBackfilling = eventMonitor.awaitNext("cron:started");
     const poolReady = eventMonitor.awaitNext("pool:listen:success");
-    const runner = await run({
+    await using _runner = await run({
       ...options,
       crontab: `0 */4 * * * my_task ?jobKey=foo`,
       events: eventMonitor.events,
     });
-    cleanup(() => runner.stop());
     await cronFinishedBackfilling;
     await poolReady;
 

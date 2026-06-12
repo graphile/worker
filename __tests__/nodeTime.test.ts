@@ -68,7 +68,7 @@ test("validate the job would have run if not for useNodeTime", () =>
 
 // Note: cron always works with Node time anyway, but this is for completeness.
 test("useNodeTime works for cron jobs", () =>
-  withOptions(async (options, cleanup) => {
+  withOptions(async (options) => {
     const pgPool = options.pgPool;
     await setTime(REFERENCE_TIMESTAMP + HOUR); // 1am
     await reset(pgPool, options);
@@ -77,13 +77,12 @@ test("useNodeTime works for cron jobs", () =>
     const poolReady = eventMonitor.awaitNext("pool:listen:success");
     const cronScheduleCalls = eventMonitor.count("cron:schedule");
     const cronScheduleComplete = eventMonitor.awaitNext("cron:scheduled");
-    const runner = await run({
+    await using _runner = await run({
       ...options,
       crontab: `0 */4 * * * my_task`,
       events: eventMonitor.events,
       useNodeTime: true,
     });
-    cleanup(() => runner.stop());
     await cronFinishedBackfilling;
     await poolReady;
     expect(cronScheduleCalls.count).toEqual(0);

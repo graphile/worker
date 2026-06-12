@@ -43,12 +43,7 @@ test("getTaskName works as expected", async () => {
       },
     },
   };
-  const runner = await run(options);
-  await using _ = {
-    [Symbol.asyncDispose]() {
-      return runner.stop()
-    }
-  }
+  await using _runner = await run(options);
 
   // Warmup pool
   {
