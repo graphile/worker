@@ -19,6 +19,12 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
+## v0.17.2
+
+Implement `npm pkg fix` hint; also: fix `version` export - was _still_
+incorrectly reporting 0.17.0-rc.0, because `npm publish` doesn't call `prepack`
+when `ignore-scripts` is `true`.
+
 ## v0.17.1
 
 Fix `version` export - was incorrectly reporting 0.17.0-rc.0.
