@@ -25,9 +25,7 @@
     "website:start": "yarn website start",
     "website:deploy": "yarn website deploy"
   },
-  "bin": {
-    "graphile-worker": "dist/cli.js"
-  },
+  "bin": "dist/cli.js",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/graphile/worker.git"
@@ -121,5 +119,6 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "packageManager": "yarn@4.16.0"
 }
