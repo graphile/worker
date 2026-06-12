@@ -1166,7 +1166,9 @@ export type WorkerEventMap = {
   "worker:getJob:empty": { ctx: WorkerPluginContext; worker: Worker };
 
   /**
-   * When a worker is created
+   * When an unexpected error occurs outside of task execution itself - for
+   * example when trying to update a task's status in the database after it
+   * completed.
    */
   "worker:fatalError": {
     ctx: WorkerPluginContext;
