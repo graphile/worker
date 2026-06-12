@@ -369,19 +369,33 @@ export class EventMonitor {
 }
 
 export function withOptions<T>(
-  callback: (options: RunnerOptions & { pgPool: pg.Pool }) => Promise<T>,
+  callback: (
+    options: RunnerOptions & { pgPool: pg.Pool },
+    cleanup: (cb: () => void | Promise<void>) => void,
+  ) => Promise<T>,
 ) {
-  return withPgPool((pgPool) =>
-    callback({
-      pgPool,
-      taskList: {
-        /* DO NOT ADD do_it HERE! */
-        do_something_else(payload, helpers) {
-          helpers.logger.debug("do_something_else called", { payload });
+  return withPgPool(async (pgPool) => {
+    const cleanupTasks: Array<() => void | Promise<void>> = [];
+    function cleanup(cb: () => void | Promise<void>) {
+      cleanupTasks.push(cb);
+    }
+    const result = await callback(
+      {
+        pgPool,
+        taskList: {
+          /* DO NOT ADD do_it HERE! */
+          do_something_else(payload, helpers) {
+            helpers.logger.debug("do_something_else called", { payload });
+          },
         },
       },
-    }),
-  );
+      cleanup,
+    );
+    for (let i = cleanupTasks.length - 1; i >= 0; i--) {
+      await cleanupTasks[i]();
+    }
+    return result;
+  });
 }
 
 /**
