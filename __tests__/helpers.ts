@@ -371,7 +371,7 @@ export class EventMonitor {
 export function withOptions<T>(
   callback: (options: RunnerOptions & { pgPool: pg.Pool }) => Promise<T>,
 ) {
-  return withPgPool(async (pgPool) =>
+  return withPgPool((pgPool) =>
     callback({
       pgPool,
       taskList: {
