@@ -101,6 +101,9 @@
     "typescript": "^5.9.3",
     "zx": "^8.8.5"
   },
+  "resolutions": {
+    "eslint-plugin-import/tsconfig-paths": "^4.2.0"
+  },
   "files": [
     "dist",
     "sql"
