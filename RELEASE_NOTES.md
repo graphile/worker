@@ -19,6 +19,10 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
+## v0.17.1
+
+Fix `version` export - was incorrectly reporting 0.17.0-rc.0.
+
 ## v0.17.0
 
 Major performance enhancements in this release, but they're opt-in!
