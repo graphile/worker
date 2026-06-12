@@ -1,6 +1,7 @@
-import { Pool, PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
+import pg from "pg";
 
-import { DbJobSpec, Runner, RunnerOptions } from "../src/interfaces";
+import { DbJobSpec, RunnerOptions } from "../src/interfaces";
 import { run } from "../src/runner";
 import {
   databaseDetails,
@@ -10,11 +11,10 @@ import {
 } from "./helpers";
 
 let pgPool!: Pool;
-let runner: Runner | null = null;
 
 const JOB_COUNT = 10;
 beforeAll(() => {
-  pgPool = new Pool({
+  pgPool = new pg.Pool({
     connectionString: databaseDetails!.TEST_CONNECTION_STRING,
     max: JOB_COUNT * 2 + 5,
   });
@@ -23,13 +23,6 @@ beforeAll(() => {
 });
 afterAll(() => {
   pgPool.end();
-});
-
-afterEach(async () => {
-  if (runner) {
-    await runner.stop();
-    runner = null;
-  }
 });
 
 test("getTaskName works as expected", async () => {
@@ -50,7 +43,7 @@ test("getTaskName works as expected", async () => {
       },
     },
   };
-  runner = await run(options);
+  await using _runner = await run(options);
 
   // Warmup pool
   {

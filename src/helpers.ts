@@ -1,4 +1,4 @@
-import { Pool, PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
 
 import defer, { Deferred } from "./deferred";
 import {
@@ -52,8 +52,8 @@ export function makeAddJob(
           spec.runAt
             ? spec.runAt.toISOString()
             : useNodeTime
-            ? new Date().toISOString()
-            : null,
+              ? new Date().toISOString()
+              : null,
           spec.maxAttempts || null,
           spec.jobKey || null,
           spec.priority || null,

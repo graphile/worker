@@ -1,4 +1,4 @@
-import { run, Runner } from "../src";
+import { run } from "../src";
 import {
   EventMonitor,
   getJobs,
@@ -14,16 +14,6 @@ import {
 const { setTime } = setupFakeTimers();
 const REFERENCE_TIMESTAMP = 1609459200000; /* 1st January 2021, 00:00:00 UTC */
 
-// Even on test fail we need the runner to shut down, so clean up after each test (rather than during).
-let runner: null | Runner = null;
-afterEach(() => {
-  if (runner) {
-    const promise = runner.stop();
-    runner = null;
-    return promise;
-  }
-});
-
 test("check timestamp is correct", () => {
   setTime(REFERENCE_TIMESTAMP);
   expect(new Date().toISOString()).toMatch(/^2021-01-01T00:00:0.*Z$/);
@@ -38,7 +28,7 @@ test("executes job when expected", () =>
     const cronFinishedBackfilling = eventMonitor.awaitNext("cron:started");
     const poolReady = eventMonitor.awaitNext("pool:listen:success");
     const cronScheduleCalls = eventMonitor.count("cron:schedule");
-    runner = await run({
+    await using _runner = await run({
       ...options,
       crontab: `0 */4 * * * my_task`,
       events: eventMonitor.events,
@@ -78,7 +68,7 @@ test("doesn't schedule tasks twice when system clock reverses", () =>
     const cronFinishedBackfilling = eventMonitor.awaitNext("cron:started");
     const poolReady = eventMonitor.awaitNext("pool:listen:success");
     const cronScheduleCalls = eventMonitor.count("cron:schedule");
-    runner = await run({
+    await using _runner = await run({
       ...options,
       crontab: `0 */4 * * * my_task`,
       events: eventMonitor.events,
@@ -110,7 +100,7 @@ test("clock skew doesn't prevent task from being scheduled at the right time", (
     const cronFinishedBackfilling = eventMonitor.awaitNext("cron:started");
     const poolReady = eventMonitor.awaitNext("pool:listen:success");
     const cronScheduleCalls = eventMonitor.count("cron:schedule");
-    runner = await run({
+    await using _runner = await run({
       ...options,
       crontab: `0 */4 * * * my_task`,
       events: eventMonitor.events,
@@ -148,7 +138,7 @@ test("does not schedule duplicate jobs when a job key is supplied", () =>
     const eventMonitor = new EventMonitor();
     const cronFinishedBackfilling = eventMonitor.awaitNext("cron:started");
     const poolReady = eventMonitor.awaitNext("pool:listen:success");
-    runner = await run({
+    await using _runner = await run({
       ...options,
       crontab: `0 */4 * * * my_task ?jobKey=foo`,
       events: eventMonitor.events,

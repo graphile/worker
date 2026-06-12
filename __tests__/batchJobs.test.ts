@@ -1,3 +1,5 @@
+import { jest } from "@jest/globals";
+
 import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
 import { runTaskListOnce } from "../src/main";
 import {
@@ -45,20 +47,20 @@ test("on success, deletes job", () =>
 
     const job3: Task = jest.fn((o) => {
       expect(o).toMatchInlineSnapshot(`
-        Array [
-          Object {
+        [
+          {
             "a": 1,
           },
-          Object {
+          {
             "a": 2,
           },
-          Object {
+          {
             "a": 3,
           },
         ]
       `);
     });
-    const job4: Task = jest.fn();
+    const job4: Task = jest.fn(() => {});
     const tasks: TaskList = {
       job3,
       job4,
@@ -83,7 +85,7 @@ test("on failure, re-enqueues job", () =>
     const job3: Task = jest.fn(() => {
       throw new Error("RETRY");
     });
-    const job4: Task = jest.fn();
+    const job4: Task = jest.fn(() => {});
     const tasks: TaskList = {
       job3,
       job4,
@@ -115,7 +117,7 @@ test("on partial fail, re-enqueues job with just failed elements", () =>
         a % 2 === 1 ? Promise.reject(new Error(String(a))) : null,
       );
     });
-    const job4: Task = jest.fn();
+    const job4: Task = jest.fn(() => {});
     const tasks: TaskList = {
       job3,
       job4,
@@ -147,7 +149,7 @@ test("on partial fail (promise), re-enqueues job with just failed elements", () 
         a % 2 === 1 ? Promise.reject(new Error(String(a))) : null,
       );
     });
-    const job4: Task = jest.fn();
+    const job4: Task = jest.fn(() => {});
     const tasks: TaskList = {
       job3,
       job4,

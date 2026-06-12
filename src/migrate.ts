@@ -1,4 +1,4 @@
-import { PoolClient } from "pg";
+import type { PoolClient } from "pg";
 
 import { migrations } from "./generated/sql";
 import { WorkerSharedOptions, Writeable } from "./interfaces";

@@ -231,20 +231,36 @@ export class LocalQueue {
    */
   private refetchDelayAbortThreshold: number = Infinity;
 
+  private readonly ctx: CompiledSharedOptions<WorkerPoolOptions>;
+  private readonly tasks: TaskList;
+  private readonly withPgClient: EnhancedWithPgClient;
+  public readonly workerPool: WorkerPool;
+  /** How many jobs to fetch at once */
+  private readonly getJobBatchSize: number;
+  /**
+   * If false, exit once the DB seems to have been exhausted of jobs, even if
+   * for just a moment. (I.e. `runOnce()`)
+   */
+  private readonly continuous: boolean;
+  private readonly onMajorError: (e: unknown) => void;
+
   constructor(
-    private readonly ctx: CompiledSharedOptions<WorkerPoolOptions>,
-    private readonly tasks: TaskList,
-    private readonly withPgClient: EnhancedWithPgClient,
-    public readonly workerPool: WorkerPool,
-    /** How many jobs to fetch at once */
-    private readonly getJobBatchSize: number,
-    /**
-     * If false, exit once the DB seems to have been exhausted of jobs, even if
-     * for just a moment. (I.e. `runOnce()`)
-     */
-    private readonly continuous: boolean,
-    private readonly onMajorError: (e: unknown) => void,
+    ctx: CompiledSharedOptions<WorkerPoolOptions>,
+    tasks: TaskList,
+    withPgClient: EnhancedWithPgClient,
+    workerPool: WorkerPool,
+    getJobBatchSize: number,
+    continuous: boolean,
+    onMajorError: (e: unknown) => void,
   ) {
+    this.ctx = ctx;
+    this.tasks = tasks;
+    this.withPgClient = withPgClient;
+    this.workerPool = workerPool;
+    this.getJobBatchSize = getJobBatchSize;
+    this.continuous = continuous;
+    this.onMajorError = onMajorError;
+
     this.ttl = ctx.resolvedPreset.worker.localQueue?.ttl ?? 5 * MINUTE;
     this.pollInterval = ctx.resolvedPreset.worker.pollInterval ?? 2 * SECOND;
     const localQueueRefetchDelayDuration =

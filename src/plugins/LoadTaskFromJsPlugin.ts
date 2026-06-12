@@ -53,12 +53,12 @@ export const LoadTaskFromJsPlugin: GraphileConfig.Plugin = {
             rawMod.default?.default?.__esModule === true
               ? rawMod.default.default
               : rawMod.default?.__esModule === true
-              ? rawMod.default
-              : Object.keys(rawMod).length === 1 &&
-                typeof rawMod.default === "object" &&
-                rawMod.default !== null
-              ? rawMod.default
-              : rawMod;
+                ? rawMod.default
+                : Object.keys(rawMod).length === 1 &&
+                    typeof rawMod.default === "object" &&
+                    rawMod.default !== null
+                  ? rawMod.default
+                  : rawMod;
 
           // Always take the default export if there is one
           const task = mod.default || mod;

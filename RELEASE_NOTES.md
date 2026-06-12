@@ -19,35 +19,88 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
-## Pending
+## v0.18.0
 
-- BREAKING: Jobs and queues are now `locked_by` their `WorkerPool`'s id rather
-  than the `workerId`. Be sure to upgrade
-  [Worker Pro](https://worker.graphile.org/docs/pro) at the same time if you're
-  using it!
+- Since Node 20 is EOL, Node 22 is now the minimum supported version, per our
+  [requirements documentation](https://worker.graphile.org/docs/requirements).
+- `Runner` gains `[Symbol.asyncDispose]()` method, so you can
+  `await using runner = await run(...)` and the worker will be released when you
+  reach the end of the scope. (Primarily useful for tests.)
+- Maintenance work: upgrade to latest TypeScript, Jest, eliminate ts-node, fix
+  yargs, use erasable syntax only for type-stripping support,
+
+## v0.17.2
+
+Implement `npm pkg fix` hint; also: fix `version` export - was _still_
+incorrectly reporting 0.17.0-rc.0, because `npm publish` doesn't call `prepack`
+when `ignore-scripts` is `true`.
+
+## v0.17.1
+
+Fix `version` export - was incorrectly reporting 0.17.0-rc.0.
+
+## v0.17.0
+
+Major performance enhancements in this release, but they're opt-in!
+
+- BREAKING: jobs and queues are now `locked_by` their `WorkerPool`'s id rather
+  than the `workerId`.
+- BREAKING: Worker Pro users need to update to `@graphile-pro/worker@0.2.x` at
+  the same time as updating Graphile Worker to this release (due to the above
+  breaking change).
+- BREAKING: We'll now warn you if you haven't installed error handlers on the
+  pool, and will only install them ourself if needed.
+- BREAKING: Fixes bug where CLI defaults override `graphile.config.js` settings
+  (by removing CLI defaults).
+- New **batching of job completion** can be enabled by setting
+  `preset.worker.completeJobBatchDelay` and `preset.worker.failJobBatchDelay` to
+  a number `0` or higher. This can significantly reduce load on the database, at
+  the cost of potentially leaving more locked jobs if worker crashes or is
+  killed without cleanup before the batch executes.
+- New **local queue** can be enabled by setting `preset.worker.localQueue.size`
+  to `1` or higher (recommend setting it to `concurrency + 1`). This allows jobs
+  to be fetched in a batch and distributed locally rather on-demand fetching
+  from each worker in the local pool; this significantly reduces load on the
+  database especially if you're running with high concurrency. The trade-off is
+  that more jobs will be locked at a time, and when local queues are full higher
+  priority tasks added to the database won't be "seen" until the local queue is
+  refetched.
 - New `addJobs()` JS method to enable efficiently adding a batch of jobs via the
-  JS API
+  JS API.
+- Prepared statements can now be disabled via
+  `preset.worker.preparedStatements = false`, useful when connecting to the
+  database in a way that does not reliably support them. There's a minor
+  performance penalty, so only turn them off if you need to.
+- New `middleware` system enabled by `graphile-config` is now preferred over
+  hooks (which will be deprecated and removed in later versions). Middleware
+  better enable activities to be wrapped, e.g. `bootstrap` middleware can take
+  actions both before and after bootstrapping and share variables between them,
+  rather than the old `prebootstrap`/`postbootstrap` hooks which need more
+  complex integration.
+- Fixed issue with cron where enough errors (for example due to database
+  downtime) would cause it to stop trying, leaving a seemingly healthy worker
+  that wasn't executing cron. Cron will now retry startup indefinitely (with
+  exponential backoff) _and_ will perform the relevant backfills when the
+  connection is re-established.
 - DEPRECATION: `quickAddJob` has been renamed to `addJobAdhoc` to make it
   clearer that it's for use in one-off locations (some felt the "quick" referred
   to the speed it executed, rather than the amount of effort required from the
-  programmer)
-- We'll now warn you if you haven't installed error handlers on the pool, and
-  will only install them ourself if needed
-- Fixes bug where CLI defaults override `graphile.config.js` settings (by
-  removing CLI defaults)
+  programmer).
 - Fix bug where executable tasks had their stdout/stderr ignored; this is now
   output via logging (thanks @wineTGH).
 - Fix race condition when multiple workers attempt to initialise the database at
-  the same time
+  the same time.
 - `helpers.abortSignal` is no longer typed as `| undefined`. It is still
   experimental!
 - `helpers.abortPromise` added; will reject when `abortSignal` aborts (useful
-  for `Promise.race()`)
+  for `Promise.race()`).
 - `backfillPeriod` is now marked as optional in TypeScript (defaults to 0).
 - Support for loading tasks from nested folders in crontab.
   - (`* * * * * nested/folder/task ?jobKey=my_key&jobKeyMode=preserve_run_at`)
 - Most of our event emitters now trap errors and output a log if such error were
   to occur - useful for debugging.
+- Worker event payloads now include `ctx`, making plugin/event integrations more
+  consistent.
 
 ## v0.16.6
 

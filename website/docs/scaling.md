@@ -5,12 +5,19 @@ title: Scaling tips
 PostgreSQL is not what you'd build a job queue on if you're the size of
 Facebook... But you're not the size of Facebook, right?
 
-Postgres can get you pretty far, processing over 10,000 jobs per second in our
-benchmarks. That's **almost a billion jobs per day**. Using Postgres as your job
-queue via Graphile Worker can keep your infrastructure simple, enabling you to
-focus less on infrastructure and more on getting your product's features to
-market. But to maintain this performance, there's some things you must keep in
-mind.
+Postgres can get you pretty far, and combined with Node even further &mdash;
+Graphile Worker can process over 180,000 trivial jobs per second in our
+benchmarks. That's around **fifteen _billion_ jobs per day**. Using Postgres as
+your job queue via Graphile Worker can keep your infrastructure simple, enabling
+you to focus less on infrastructure and more on getting your product's features
+to market. But to maintain this performance, there's some things you must keep
+in mind.
+
+## Enable batching
+
+If you have high throughput (even intermittently), we recommend you consider
+[enabling batching](/docs/performance#batching) for highest performance. This
+can improve performance by over an order of magnitude.
 
 ## Keep your jobs table small
 
@@ -51,7 +58,8 @@ delete from graphile_worker._private_jobs where attempts = max_attempts and lock
 
 Jobs scheduled to run in the future can also keep the number of jobs in the jobs
 table higher, impacting peak performance. Be thoughtful about these tasks, and
-consider batching if it becomes an issue.
+consider using [batch jobs](/docs/library/add-job#batch-jobs) if it becomes an
+issue.
 
 ## Use the latest Graphile Worker release
 
