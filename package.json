@@ -1,6 +1,6 @@
 {
   "name": "graphile-worker",
-  "version": "0.17.0-rc.0",
+  "version": "0.17.2",
   "type": "commonjs",
   "description": "Job queue for PostgreSQL",
   "main": "dist/index.js",
@@ -25,9 +25,7 @@
     "website:start": "yarn website start",
     "website:deploy": "yarn website deploy"
   },
-  "bin": {
-    "graphile-worker": "./dist/cli.js"
-  },
+  "bin": "dist/cli.js",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/graphile/worker.git"
@@ -98,10 +96,10 @@
     "prism-react-renderer": "^2.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "svgo": "^1.3.0",
+    "svgo": "^2.0.0",
     "ts-jest": "^29.4.6",
     "typescript": "^5.9.3",
-    "zx": "^7.2.3"
+    "zx": "^8.8.5"
   },
   "files": [
     "dist",
@@ -122,5 +120,6 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "packageManager": "yarn@4.16.0"
 }

@@ -172,6 +172,11 @@ const config = {
             position: "right",
           },
           {
+            to: "support",
+            label: "Support",
+            position: "right",
+          },
+          {
             to: "pricing",
             label: "Go Pro",
             position: "right",

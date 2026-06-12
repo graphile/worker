@@ -156,15 +156,28 @@ Here are the options under the `worker` key as defined by
 
 <!--BEGIN:OPTIONS-->
 
+Options for Graphile Worker
+
 ```ts
 {
+  completeJobBatchDelay?: number;
   concurrentJobs?: number;
   connectionString?: string;
   crontabFile?: string;
   events?: WorkerEvents;
+  failJobBatchDelay?: number;
   fileExtensions?: string[];
   getQueueNameBatchDelay?: number;
   gracefulShutdownAbortTimeout?: number;
+  localQueue?: {
+    size: number;
+    ttl?: number;
+    refetchDelay?: {
+        durationMs: number;
+        threshold?: number;
+        maxAbortThreshold?: number;
+    };
+};
   logger?: Logger<{}>;
   maxPoolSize?: number;
   maxResetLockedInterval?: number;
@@ -177,9 +190,21 @@ Here are the options under the `worker` key as defined by
 }
 ```
 
-See the
-[Graphile Worker source](https://github.com/jcgsville/worker/blob/85c36ac4e684a3a782fc528dca95c8ba6177fa8a/src/config.ts#L13)
-for the default `worker` options set by the default Worker Preset.
+### worker.completeJobBatchDelay
+
+Type: `number | undefined`
+
+The time in milliseconds to wait after a `completeJob` call to see if there are
+any other completeJob calls that can be batched together. A setting of `-1`
+disables this. This is most impactful when you have high throughput (even
+intermittently) as it can significantly reduce database load, though there are
+trade-offs. Even setting this to `0` can be impactful, but we recommend starting
+with a noticeable fraction of a second `250`.
+
+Enabling this feature increases the time for which jobs are locked past
+completion, thus increasing the risk that a catastrophic failure (e.g. worker
+crash or kill) may result in the jobs being executed again once they expire
+(after 4 hours by default).
 
 ### worker.concurrentJobs
 
@@ -210,6 +235,17 @@ startup. (Without this, Worker will provision its own `EventEmitter`, but you
 can't retrieve it until the promise returned by the API you have called has
 resolved.)
 
+### worker.failJobBatchDelay
+
+Type: `number | undefined`
+
+The time in milliseconds to wait after a `failJob` call to see if there are any
+other failJob calls that can be batched together. A setting of `-1` disables
+this. See `completeJobBatchDelay` for further details.
+
+Enabling this feature increases the time for which jobs may be locked past
+failure.
+
 ### worker.fileExtensions
 
 Type: `string[] | undefined`
@@ -235,6 +271,25 @@ Type: `number | undefined`
 How long in milliseconds after a gracefulShutdown is triggered should Graphile
 Worker wait to trigger the AbortController, which should cancel supported
 asynchronous actions?
+
+### worker.localQueue
+
+Type:
+`{ size: number; ttl?: number; refetchDelay?: { durationMs: number; threshold?: number; maxAbortThreshold?: number; }; } | undefined`
+
+The localQueue enables Graphile Worker to lock and pull down a batch of jobs to
+execute at once, distributing them to individual workers on demand without the
+worker needing a roundtrip to the database to fetch the next job. This
+significantly reduces load on the database and can massively improve throughput,
+but it does have tradeoffs: more jobs locked[^1] so job execution latency may
+increase (e.g. if jobs are locked in a local queue on one Worker instance whilst
+another Worker instance sits idle), and newly added high priority jobs will not
+be detected until the local queue is exhausted and triggers a re-fetch.
+
+[^1]:
+    Jobs are locked when they enter the local queue so no other Worker instance
+    can grab them, but this means even jobs that aren't being worked may be
+    locked.
 
 ### worker.logger
 
