@@ -1,5 +1,7 @@
+import { jest } from "@jest/globals";
+
 import { run, runTaskListOnce } from "../src";
-import { Runner, WorkerSharedOptions } from "../src/interfaces";
+import { WorkerSharedOptions } from "../src/interfaces";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   EventMonitor,
@@ -24,7 +26,7 @@ test("useNodeTime works for regular jobs", () =>
     };
     await reset(pgClient, options);
 
-    const job1 = jest.fn();
+    const job1 = jest.fn(() => {});
     const tasks = { job1 };
 
     // Schedule a job "in the future" according to Node (but in the past according to Postgres).
@@ -52,7 +54,7 @@ test("validate the job would have run if not for useNodeTime", () =>
     };
     await reset(pgClient, options);
 
-    const job1 = jest.fn();
+    const job1 = jest.fn(() => {});
     const tasks = { job1 };
 
     // Schedule a job "in the future" according to Node (but in the past according to Postgres).
@@ -65,16 +67,6 @@ test("validate the job would have run if not for useNodeTime", () =>
     expect(job1).toHaveBeenCalledTimes(1);
   }));
 
-// Even on test fail we need the runner to shut down, so clean up after each test (rather than during).
-let runner: null | Runner = null;
-afterEach(() => {
-  if (runner) {
-    const promise = runner.stop();
-    runner = null;
-    return promise;
-  }
-});
-
 // Note: cron always works with Node time anyway, but this is for completeness.
 test("useNodeTime works for cron jobs", () =>
   withOptions(async (options) => {
@@ -86,7 +78,7 @@ test("useNodeTime works for cron jobs", () =>
     const poolReady = eventMonitor.awaitNext("pool:listen:success");
     const cronScheduleCalls = eventMonitor.count("cron:schedule");
     const cronScheduleComplete = eventMonitor.awaitNext("cron:scheduled");
-    runner = await run({
+    await using _runner = await run({
       ...options,
       crontab: `0 */4 * * * my_task`,
       events: eventMonitor.events,

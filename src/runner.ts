@@ -49,9 +49,8 @@ export const runOnce = async (
   options: RunnerOptions,
   overrideTaskList?: TaskList,
 ): Promise<void> => {
-  const [compiledOptions, release] = await getUtilsAndReleasersFromOptions(
-    options,
-  );
+  const [compiledOptions, release] =
+    await getUtilsAndReleasersFromOptions(options);
   return runOnceInternal(compiledOptions, overrideTaskList, release);
 };
 
@@ -88,9 +87,8 @@ export const run = async (
   overrideTaskList?: TaskList,
   overrideParsedCronItems?: Array<ParsedCronItem>,
 ): Promise<Runner> => {
-  const [compiledOptions, release] = await getUtilsAndReleasersFromOptions(
-    rawOptions,
-  );
+  const [compiledOptions, release] =
+    await getUtilsAndReleasersFromOptions(rawOptions);
   return runInternal(
     compiledOptions,
     overrideTaskList,
@@ -252,6 +250,9 @@ function buildRunner(input: {
     addJob,
     promise,
     events,
+    [Symbol.asyncDispose]() {
+      return stop("asyncDispose", true);
+    },
   };
 }
 

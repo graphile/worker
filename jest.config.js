@@ -3,14 +3,15 @@ module.exports = {
   transform: {
     "^.+\\.tsx?$": [
       "ts-jest",
-      { tsconfig: { rootDir: ".", module: "node16" } },
+      { useESM: true, tsconfig: "<rootDir>/tsconfig.json" },
     ],
   },
   testRegex: "(/__tests__/.*\\.(test|spec))\\.[tj]sx?$",
-  moduleFileExtensions: ["ts", "js", "json"],
-  extensionsToTreatAsEsm: [".ts"],
+  moduleFileExtensions: ["ts", "mjs", "js", "json"],
+  extensionsToTreatAsEsm: [],
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },
-  testEnvironment: "./__tests__/nodeEnvironment.js",
+
+  testTimeout: 20000,
 };

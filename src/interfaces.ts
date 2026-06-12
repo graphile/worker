@@ -572,12 +572,13 @@ export interface WorkerPool {
 
 export interface Runner {
   /** Attempts to cleanly shut down the runner */
-  stop: (reason?: string) => Promise<void>;
+  stop(reason?: string): Promise<void>;
   /** Use .stop() instead, unless you know what you're doing */
-  kill: (reason?: string) => Promise<void>;
+  kill(reason?: string): Promise<void>;
   addJob: AddJobFunction;
   promise: Promise<void>;
   events: WorkerEvents;
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 export interface Cron {
@@ -872,8 +873,9 @@ type BaseEventMap = Record<string, unknown>;
 type EventMapKey<TEventMap extends BaseEventMap> = string & keyof TEventMap;
 type EventCallback<TPayload> = (params: TPayload) => void;
 
-interface TypedEventEmitter<TEventMap extends BaseEventMap>
-  extends EventEmitter {
+interface TypedEventEmitter<
+  TEventMap extends BaseEventMap,
+> extends EventEmitter {
   addListener<TEventName extends EventMapKey<TEventMap>>(
     eventName: TEventName,
     callback: EventCallback<TEventMap[TEventName]>,

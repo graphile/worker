@@ -7,7 +7,8 @@ import {
   orderedApply,
   resolvePreset,
 } from "graphile-config";
-import { Client, Pool, PoolClient, PoolConfig } from "pg";
+import type { Pool, PoolClient, PoolConfig } from "pg";
+import pg from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "./config";
 import { migrations } from "./generated/sql";
@@ -53,8 +54,9 @@ export type ResolvedWorkerPreset = GraphileConfig.ResolvedPreset & {
 };
 
 // NOTE: when you add things here, you may also want to add them to WorkerPluginContext
-export interface CompiledSharedOptions<T extends SharedOptions = SharedOptions>
-  extends WorkerPluginContext {
+export interface CompiledSharedOptions<
+  T extends SharedOptions = SharedOptions,
+> extends WorkerPluginContext {
   /**
    * DO NOT USE THIS! As we move over to presets this will be removed.
    *
@@ -234,7 +236,8 @@ export function processSharedOptions<
       },
       plugins,
     } = resolvedPreset;
-    const escapedWorkerSchema = Client.prototype.escapeIdentifier(workerSchema);
+    const escapedWorkerSchema =
+      pg.Client.prototype.escapeIdentifier(workerSchema);
 
     const ctx: WorkerPluginBaseContext = {
       version,
@@ -357,7 +360,7 @@ function makeNewPool(
   releasers: Releasers,
   poolOptions: PoolConfig,
 ) {
-  const pgPool = new Pool(poolOptions);
+  const pgPool = new pg.Pool(poolOptions);
   releasers.push(() => {
     pgPool.end();
   });
@@ -457,8 +460,7 @@ interface ProcessOptionsExtensions {
 }
 
 export interface CompiledOptions
-  extends CompiledSharedOptions<RunnerOptions>,
-    ProcessOptionsExtensions {}
+  extends CompiledSharedOptions<RunnerOptions>, ProcessOptionsExtensions {}
 
 type CompiledOptionsAndRelease = [
   compiledOptions: CompiledOptions,
@@ -481,44 +483,46 @@ export const getUtilsAndReleasersFromOptions = async (
       worker: { concurrentJobs: concurrency },
     },
   } = compiledSharedOptions;
-  return withReleasers(async function getUtilsFromOptions(
-    releasers,
-    release,
-  ): Promise<CompiledOptionsAndRelease> {
-    const pgPool: Pool = await assertPool(compiledSharedOptions, releasers);
-    // @ts-ignore
-    const max = pgPool?.options?.max || 10;
-    if (max < concurrency) {
-      logger.warn(
-        `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`,
-        { max, concurrency },
-      );
-    }
-
-    const withPgClient = makeEnhancedWithPgClient(
-      makeWithPgClientFromPool(pgPool),
-    );
-
-    // Migrate
-    await withPgClient(function migrateWithPgClient(client) {
-      return migrate(compiledSharedOptions, client);
-    });
-
-    const addJob = makeAddJob(compiledSharedOptions, withPgClient);
-    const addJobs = makeAddJobs(compiledSharedOptions, withPgClient);
-
-    return [
-      {
-        ...compiledSharedOptions,
-        pgPool,
-        withPgClient,
-        addJob,
-        addJobs,
-        releasers,
-      },
+  return withReleasers(
+    async function getUtilsFromOptions(
+      releasers,
       release,
-    ];
-  });
+    ): Promise<CompiledOptionsAndRelease> {
+      const pgPool: Pool = await assertPool(compiledSharedOptions, releasers);
+      // @ts-ignore
+      const max = pgPool?.options?.max || 10;
+      if (max < concurrency) {
+        logger.warn(
+          `WARNING: having maxPoolSize (${max}) smaller than concurrency (${concurrency}) may lead to non-optimal performance.`,
+          { max, concurrency },
+        );
+      }
+
+      const withPgClient = makeEnhancedWithPgClient(
+        makeWithPgClientFromPool(pgPool),
+      );
+
+      // Migrate
+      await withPgClient(function migrateWithPgClient(client) {
+        return migrate(compiledSharedOptions, client);
+      });
+
+      const addJob = makeAddJob(compiledSharedOptions, withPgClient);
+      const addJobs = makeAddJobs(compiledSharedOptions, withPgClient);
+
+      return [
+        {
+          ...compiledSharedOptions,
+          pgPool,
+          withPgClient,
+          addJob,
+          addJobs,
+          releasers,
+        },
+        release,
+      ];
+    },
+  );
 };
 
 export function tryParseJson<T = object>(

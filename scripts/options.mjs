@@ -13,7 +13,7 @@ cd(tmp);
 await $`yarn link graphile-worker`;
 await $`yarn add typescript graphile`;
 await fs.writeFile(
-  `graphile.config.ts`,
+  `graphile.config.mts`,
   `\
 import type {} from "graphile-worker";
 

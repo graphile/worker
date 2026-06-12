@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import pg from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "../src/config";
 import { Job, RunnerOptions, WorkerUtils } from "../src/interfaces";
@@ -34,10 +34,13 @@ async function withEnv<T>(
   envOverrides: { [key: string]: string | undefined },
   callback: () => Promise<T>,
 ): Promise<T> {
-  const old = Object.keys(envOverrides).reduce((memo, key) => {
-    memo[key] = process.env[key];
-    return memo;
-  }, {} as { [key: string]: string | undefined });
+  const old = Object.keys(envOverrides).reduce(
+    (memo, key) => {
+      memo[key] = process.env[key];
+      return memo;
+    },
+    {} as { [key: string]: string | undefined },
+  );
   setEnvvars(envOverrides);
   const prev = WorkerPreset.worker;
   WorkerPreset.worker = makeWorkerPresetWorkerOptions();
@@ -95,7 +98,7 @@ test("at least a connectionString, a pgPool, the DATABASE_URL or PGDATABASE envv
 });
 
 test("connectionString and a pgPool cannot provided a the same time", async () => {
-  const pgPool = new Pool();
+  const pgPool = new pg.Pool();
   pgPool.on("error", () => {});
   pgPool.on("connect", () => {});
   const options: RunnerOptions = {

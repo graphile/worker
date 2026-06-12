@@ -19,6 +19,16 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
+## v0.18.0
+
+- Since Node 20 is EOL, Node 22 is now the minimum supported version, per our
+  [requirements documentation](https://worker.graphile.org/docs/requirements).
+- `Runner` gains `[Symbol.asyncDispose]()` method, so you can
+  `await using runner = await run(...)` and the worker will be released when you
+  reach the end of the scope. (Primarily useful for tests.)
+- Maintenance work: upgrade to latest TypeScript, Jest, eliminate ts-node, fix
+  yargs, use erasable syntax only for type-stripping support,
+
 ## v0.17.2
 
 Implement `npm pkg fix` hint; also: fix `version` export - was _still_
