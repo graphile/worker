@@ -136,6 +136,12 @@ module.exports = [
         {
           files: ["__tests__/**/*", "test.js"],
           rules: {
+            // Forbid: `import x from "./foo"`; require `"./foo.ts"`
+            "import/extensions": [
+              "error",
+              "ignorePackages",
+              { checkTypeImports: true },
+            ],
             "@typescript-eslint/no-explicit-any": 0,
             "@typescript-eslint/explicit-function-return-type": 0,
             "@typescript-eslint/no-var-requires": 0,
