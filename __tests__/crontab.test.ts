@@ -248,9 +248,10 @@ describe("gives error on syntax error", () => {
       parseCrontab(`\
 * * * * * json_syntax_error {invalidJson=true}
 `),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `"Failed to parse JSON5 payload on line 1 of crontab: JSON5: invalid character '=' at 1:13"`,
-    );
+    ).toThrowErrorMatchingInlineSnapshot(`
+     "Failed to parse JSON5 payload on line 1 of crontab: JSON5: invalid character '=' at 1:13
+     Cause: JSON5: invalid character '=' at 1:13"
+    `);
   });
 });
 

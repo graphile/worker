@@ -271,9 +271,10 @@ test("throws helpful error message in migration 11", async () => {
     // Perform migration
     const promise = migrate(compiledSharedOptions, pgClient);
 
-    await expect(promise).rejects.toThrowErrorMatchingInlineSnapshot(
-      `"There are locked jobs present; migration 11 cannot complete. Please ensure all workers are shut down cleanly and all locked jobs and queues are unlocked before attempting this migration. To achieve this with minimal downtime, please consider using Worker Pro: https://worker.graphile.org/docs/pro/migration"`,
-    );
+    await expect(promise).rejects.toThrowErrorMatchingInlineSnapshot(`
+     "There are locked jobs present; migration 11 cannot complete. Please ensure all workers are shut down cleanly and all locked jobs and queues are unlocked before attempting this migration. To achieve this with minimal downtime, please consider using Worker Pro: https://worker.graphile.org/docs/pro/migration
+     Cause: division by zero"
+    `);
   });
 });
 
