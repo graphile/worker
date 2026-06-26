@@ -15,7 +15,7 @@
     "test": "yarn prepack && yarn depcheck && yarn test:setupdb && yarn test:only",
     "test:setupdb": "./scripts/setup_template_db.sh",
     "test:only": "NO_LOG_SUCCESS=1 node --experimental-vm-modules node_modules/.bin/jest",
-    "depcheck": "depcheck --ignores='graphile-worker,faktory-worker,@google-cloud/tasks,bullmq,jest-environment-node,@docusaurus/*,@fortawesome/*,@mdx-js/*,@types/jest,clsx,eslint_d,graphile,juice,postcss-nested,prism-react-renderer,react,react-dom,svgo,@types/*,@tsconfig/*,tslib,@typescript-eslint/*,eslint-*'",
+    "depcheck": "depcheck --ignores='graphile-worker,faktory-worker,@google-cloud/tasks,bullmq,jest-environment-node,@docusaurus/*,@fortawesome/*,@mdx-js/*,@types/jest,clsx,eslint_d,graphile,juice,postcss-nested,prism-react-renderer,react,react-dom,svgo,@types/*,@tsconfig/*,@typescript-eslint/*,eslint-*'",
     "db:dump": "./scripts/dump_db",
     "perfTest": "cd perfTest && node ./run.js",
     "towerDefence": "cd towerDefence && node ./run.mjs",
@@ -56,7 +56,6 @@
     "graphile-config": "^0.0.1-beta.16",
     "json5": "^2.2.3",
     "pg": "^8.11.3",
-    "tslib": "^2.8.1",
     "yargs": "^17.7.2"
   },
   "devDependencies": {
@@ -74,7 +73,7 @@
     "@jest/globals": "^30.2.0",
     "@mdx-js/react": "^1.6.22",
     "@tsconfig/node-ts": "^23.6.4",
-    "@tsconfig/node20": "^20.1.9",
+    "@tsconfig/node22": "^22.0.0",
     "@types/jest": "^30.0.0",
     "@types/json5": "^2.2.0",
     "@types/node": "^20.8.7",
@@ -111,8 +110,7 @@
     "sql"
   ],
   "engines": {
-    "node": ">=20.0.0",
-    "yarn": "^1.22.22"
+    "node": ">=22.18.0"
   },
   "browserslist": {
     "production": [

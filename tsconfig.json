@@ -1,6 +1,6 @@
 {
   "extends": [
-    "@tsconfig/node20/tsconfig.json",
+    "@tsconfig/node22/tsconfig.json",
     "@tsconfig/node-ts/tsconfig.json"
   ],
   "compilerOptions": {
@@ -8,19 +8,10 @@
     "outDir": "./dist",
 
     "verbatimModuleSyntax": false,
-
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
     "isolatedModules": true,
 
     "declaration": true,
-    "allowJs": false,
     "sourceMap": true,
-    "pretty": true,
-    "importHelpers": true,
-    "experimentalDecorators": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true,
     "noFallthroughCasesInSwitch": true,
     "noUnusedParameters": false,
     "noUnusedLocals": false,

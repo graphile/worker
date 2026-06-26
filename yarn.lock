@@ -3268,10 +3268,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tsconfig/node20@npm:^20.1.9":
-  version: 20.1.9
-  resolution: "@tsconfig/node20@npm:20.1.9"
-  checksum: 10/3d66cd9942175e477cb6b68d06d9523089fca32de8e63ef09433e2dc89fb737276b196700ee48e5991396a0ee35ba527a86599cf3c80310d6c569312ff79205e
+"@tsconfig/node22@npm:^22.0.0":
+  version: 22.0.5
+  resolution: "@tsconfig/node22@npm:22.0.5"
+  checksum: 10/2e21177946aa0bcd705e8303cd0844eb66d2abc1ceb9ca7bd7762443676e599bb11e7f7b257c027d8dec9d1c62cda114d1a3df5e38699c6b4943e6acadac261d
   languageName: node
   linkType: hard
 
@@ -8289,7 +8289,7 @@ __metadata:
     "@jest/globals": "npm:^30.2.0"
     "@mdx-js/react": "npm:^1.6.22"
     "@tsconfig/node-ts": "npm:^23.6.4"
-    "@tsconfig/node20": "npm:^20.1.9"
+    "@tsconfig/node22": "npm:^22.0.0"
     "@types/debug": "npm:^4.1.10"
     "@types/jest": "npm:^30.0.0"
     "@types/json5": "npm:^2.2.0"
@@ -8321,7 +8321,6 @@ __metadata:
     react-dom: "npm:^18.2.0"
     svgo: "npm:^2.0.0"
     ts-jest: "npm:^29.4.6"
-    tslib: "npm:^2.8.1"
     typescript: "npm:^5.9.3"
     yargs: "npm:^17.7.2"
     zx: "npm:^8.8.5"
