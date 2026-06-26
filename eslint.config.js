@@ -50,6 +50,13 @@ module.exports = [
       globals: {
         NodeJS: false, // For TypeScript
       },
+      settings: {
+        "import/resolver": {
+          typescript: {
+            alwaysTryTypes: true,
+          },
+        },
+      },
       rules: {
         "no-unused-vars": 0,
         "@typescript-eslint/no-unused-vars": [
@@ -104,8 +111,7 @@ module.exports = [
         ],
         "import/no-deprecated": "warn",
         "import/no-duplicates": "error",
-        // Doesn't support 'exports'?
-        "import/no-unresolved": "off",
+        "import/no-unresolved": "error",
         "@typescript-eslint/ban-ts-comment": "off",
         "@typescript-eslint/no-namespace": "off",
 
@@ -132,6 +138,12 @@ module.exports = [
           files: ["perfTest/**/*", "examples/**/*"],
           rules: {
             "@typescript-eslint/no-var-requires": 0,
+          },
+        },
+        {
+          files: ["website/**/*"],
+          rules: {
+            "import/no-unresolved": "off",
           },
         },
       ],
