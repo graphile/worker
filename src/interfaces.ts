@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
 import type { EventEmitter } from "events";
 import type { Stats } from "fs";
 import { AsyncHooks, Middleware } from "graphile-config";

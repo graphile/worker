@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
 import { cleanup } from "./cleanup";
 import {
   CleanupOptions,

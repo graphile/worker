@@ -189,6 +189,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e); // eslint-disable-line no-console
+  console.error(e);
   process.exit(1);
 });
