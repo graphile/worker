@@ -102,6 +102,12 @@ module.exports = [
         "simple-import-sort/exports": "error",
         "sort-imports": "off",
         "import-x/order": "off",
+        // Forbid: `import x from "./foo"`; require `"./foo.ts"`
+        "import-x/extensions": [
+          "error",
+          "ignorePackages",
+          { checkTypeImports: true },
+        ],
 
         "import-x/no-deprecated": "warn",
         "import-x/no-duplicates": "error",
@@ -123,12 +129,6 @@ module.exports = [
             project: true,
           },
           rules: {
-            // Forbid: `import x from "./foo"`; require `"./foo.ts"`
-            "import-x/extensions": [
-              "error",
-              "ignorePackages",
-              { checkTypeImports: true },
-            ],
             "@typescript-eslint/consistent-type-exports": "error",
             "@typescript-eslint/consistent-type-imports": "error",
           },
@@ -137,12 +137,6 @@ module.exports = [
           files: ["__tests__/**/*", "test.js"],
           plugins: ["import-x"],
           rules: {
-            // Forbid: `import x from "./foo"`; require `"./foo.ts"`
-            "import-x/extensions": [
-              "error",
-              "ignorePackages",
-              { checkTypeImports: true },
-            ],
             "@typescript-eslint/no-explicit-any": 0,
             "@typescript-eslint/explicit-function-return-type": 0,
             "@typescript-eslint/no-var-requires": 0,
@@ -155,6 +149,7 @@ module.exports = [
         {
           files: ["perfTest/**/*", "examples/**/*"],
           rules: {
+            "import-x/extensions": "off",
             "@typescript-eslint/no-var-requires": 0,
           },
         },

@@ -11,7 +11,7 @@ import Layout from "@theme/Layout";
 import clsx from "clsx";
 import React from "react";
 
-import HomepageTestimonials from "../components/HomepageTestimonials";
+import HomepageTestimonials from "../components/HomepageTestimonials/index.js";
 import styles from "./index.module.css";
 
 function HomepageHeader() {
