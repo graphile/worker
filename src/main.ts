@@ -1535,7 +1535,7 @@ function batch<TSpec, TResult>(
             // Tell other callers to wait until we're successful again (i.e. apply backpressure)
             holdup();
             lastError = coerceError(e);
-            throw e;
+            break;
           }
         }
         throw (

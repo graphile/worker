@@ -110,6 +110,7 @@ export async function runMigration(
     if (error.code === "22012" && migrationNumber === 11) {
       throw new Error(
         `There are locked jobs present; migration 11 cannot complete. Please ensure all workers are shut down cleanly and all locked jobs and queues are unlocked before attempting this migration. To achieve this with minimal downtime, please consider using Worker Pro: https://worker.graphile.org/docs/pro/migration`,
+        { cause: rawError },
       );
     }
     throw error;

@@ -48,6 +48,7 @@ export async function batchGetJobs(
   const flagsClause = hasFlags
     ? `and ((flags ?| $${++i}::text[]) is not true)`
     : "";
+  // eslint-disable-next-line no-useless-assignment
   const now = useNodeTime ? `$${++i}::timestamptz` : "now()";
 
   /**

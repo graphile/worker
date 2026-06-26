@@ -183,6 +183,7 @@ const parseCrontabPayload = (
       `Failed to parse JSON5 payload on line ${lineNumber} of crontab: ${
         coerceError(e).message
       }`,
+      { cause: e },
     );
   }
 };
