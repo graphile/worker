@@ -1,4 +1,4 @@
-import { run } from "../src";
+import { run } from "../src/index.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   EventMonitor,
@@ -6,7 +6,7 @@ import {
   getKnown,
   reset,
   withOptions,
-} from "./helpers";
+} from "./helpers.ts";
 
 const CRONTAB_DO_IT = `
 0 */4 * * * do_it ?fill=1d

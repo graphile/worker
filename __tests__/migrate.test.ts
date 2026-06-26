@@ -1,7 +1,7 @@
 import type { PoolClient } from "pg";
 
-import { WorkerSharedOptions } from "../src";
 import { migrations } from "../src/generated/sql.ts";
+import { WorkerSharedOptions } from "../src/index.ts";
 import { processSharedOptions } from "../src/lib.ts";
 import { installSchema, migrate, runMigration } from "../src/migrate.ts";
 import {
@@ -10,7 +10,7 @@ import {
   GRAPHILE_WORKER_SCHEMA,
   withPgClient,
   withPgPool,
-} from "./helpers";
+} from "./helpers.ts";
 
 const options: WorkerSharedOptions = {};
 

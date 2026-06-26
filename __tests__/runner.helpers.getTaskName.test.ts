@@ -8,7 +8,7 @@ import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   sleepUntil,
   withPgClient,
-} from "./helpers";
+} from "./helpers.ts";
 
 let pgPool!: Pool;
 

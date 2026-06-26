@@ -2,8 +2,8 @@ import { jest } from "@jest/globals";
 import { EventEmitter } from "events";
 import type { Pool } from "pg";
 
-import { run, Runner } from "../src";
 import deferred, { Deferred } from "../src/deferred.ts";
+import { run, Runner } from "../src/index.ts";
 import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
@@ -12,7 +12,7 @@ import {
   sleep,
   sleepUntil,
   withPgPool,
-} from "./helpers";
+} from "./helpers.ts";
 
 const EVENTS = [
   "pool:create",

@@ -13,7 +13,7 @@ import {
   sleep,
   sleepUntil,
   withPgPool,
-} from "./helpers";
+} from "./helpers.ts";
 
 const addJob = (pgPool: Pool, id?: string | number) =>
   pgPool.query(

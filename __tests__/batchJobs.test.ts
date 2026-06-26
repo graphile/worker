@@ -8,7 +8,7 @@ import {
   getJobs,
   reset,
   withPgClient,
-} from "./helpers";
+} from "./helpers.ts";
 
 const options: WorkerSharedOptions = {};
 

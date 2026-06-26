@@ -13,7 +13,7 @@ import {
   sleep,
   withOptions,
   withPgClient,
-} from "./helpers";
+} from "./helpers.ts";
 
 const { setTime } = setupFakeTimers();
 const REFERENCE_TIMESTAMP = 1609459200000; /* 1st January 2021, 00:00:00 UTC */
