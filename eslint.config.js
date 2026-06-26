@@ -123,6 +123,17 @@ module.exports = [
       },
       overrides: [
         {
+          // stricter rules for src
+          files: ["src/**/*"],
+          parserOptions: {
+            project: true,
+          },
+          rules: {
+            "@typescript-eslint/consistent-type-exports": "error",
+            "@typescript-eslint/consistent-type-imports": "error",
+          },
+        },
+        {
           files: ["__tests__/**/*", "test.js"],
           rules: {
             "@typescript-eslint/no-explicit-any": 0,
