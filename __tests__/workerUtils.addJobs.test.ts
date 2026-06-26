@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
 
-import type { Job } from "../src/index";
+import type { Job } from "../src/index.ts";
 import {
   addJobAdhoc,
   makeWorkerUtils,
@@ -8,8 +8,14 @@ import {
   Task,
   WorkerSharedOptions,
   WorkerUtils,
-} from "../src/index";
-import { getJobs, HOUR, reset, setupFakeTimers, withPgClient } from "./helpers";
+} from "../src/index.ts";
+import {
+  getJobs,
+  HOUR,
+  reset,
+  setupFakeTimers,
+  withPgClient,
+} from "./helpers.ts";
 
 const { setTime } = setupFakeTimers();
 const REFERENCE_TIMESTAMP = 1609459200000; /* 1st January 2021, 00:00:00 UTC */

@@ -6,8 +6,8 @@ import {
   Task,
   TaskList,
   WorkerSharedOptions,
-} from "../src/index";
-import { getJobs, reset, withPgClient, withPgPool } from "./helpers";
+} from "../src/index.ts";
+import { getJobs, reset, withPgClient, withPgPool } from "./helpers.ts";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

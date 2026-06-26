@@ -3,8 +3,8 @@ import { EventEmitter } from "events";
 import type { Pool } from "pg";
 
 import { run, Runner } from "../src";
-import deferred, { Deferred } from "../src/deferred";
-import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
+import deferred, { Deferred } from "../src/deferred.ts";
+import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   expectJobCount,

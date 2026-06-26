@@ -4,13 +4,13 @@ import {
   makeWorkerUtils,
   WorkerSharedOptions,
   WorkerUtils,
-} from "../src/index";
+} from "../src/index.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   makeSelectionOfJobs,
   reset,
   withPgClient,
-} from "./helpers";
+} from "./helpers.ts";
 
 /** For sorting arrays of numbers or numeric strings */
 function numerically(a: string | number, b: string | number) {

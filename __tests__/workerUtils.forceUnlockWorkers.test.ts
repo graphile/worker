@@ -3,13 +3,13 @@ import {
   makeWorkerUtils,
   WorkerSharedOptions,
   WorkerUtils,
-} from "../src/index";
+} from "../src/index.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobs,
   reset,
   withPgClient,
-} from "./helpers";
+} from "./helpers.ts";
 
 const options: WorkerSharedOptions = {};
 

@@ -1,4 +1,4 @@
-import { createCronMatcher } from "../src/cronMatcher";
+import { createCronMatcher } from "../src/cronMatcher.ts";
 
 describe("matches datetime", () => {
   const makeMatcher = (pattern: string) => createCronMatcher(pattern, "test");
