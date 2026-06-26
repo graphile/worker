@@ -8,6 +8,7 @@
     "outDir": "./dist",
 
     "verbatimModuleSyntax": false,
+    "isolatedModules": true,
 
     "declaration": true,
     "sourceMap": true,
