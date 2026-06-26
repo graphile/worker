@@ -1,4 +1,37 @@
-module.exports = {
+const js = require("@eslint/js");
+const { FlatCompat } = require("@eslint/eslintrc");
+const { readFileSync } = require("node:fs");
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+  recommendedConfig: js.configs.recommended,
+});
+
+const ignores = readFileSync(`${__dirname}/.eslintignore`, "utf8")
+  .split(/\n/)
+  .map((line) => {
+    let l = line.trim();
+    if (l == "") return null;
+    if (l.startsWith("/")) {
+      l = l.substring(1);
+    }
+    if (!l.match(/\.[a-z]+$/)) {
+      l += "/**";
+    }
+  })
+  .filter((l) => l != null);
+
+// prettier-ignore
+module.exports = [
+  {
+    ignores: [
+      ...ignores,
+      "eslint.config.js",
+      ".prettierrc.js",
+    ],
+  },
+  ...compat
+    .config({
   parser: "@typescript-eslint/parser",
   extends: [
     "eslint:recommended",
@@ -29,6 +62,7 @@ module.exports = {
         argsIgnorePattern: "^_",
         varsIgnorePattern: "^_",
         args: "after-used",
+        caughtErrors: "none",
         ignoreRestSiblings: true,
       },
     ],
@@ -72,6 +106,11 @@ module.exports = {
     "import/no-unresolved": "off",
     "@typescript-eslint/ban-ts-comment": "off",
     "@typescript-eslint/no-namespace": "off",
+
+    // ESLint 9 additions
+    "import/namespace": "off",
+    "@typescript-eslint/no-empty-object-type": "off",
+    "@typescript-eslint/no-require-imports": "off",
   },
   overrides: [
     {
@@ -81,6 +120,9 @@ module.exports = {
         "@typescript-eslint/explicit-function-return-type": 0,
         "@typescript-eslint/no-var-requires": 0,
         "@typescript-eslint/ban-ts-comment": 0,
+
+        // ESLint 9 additions
+        "@typescript-eslint/no-unused-expressions": 0,
       },
     },
     {
@@ -90,4 +132,9 @@ module.exports = {
       },
     },
   ],
-};
+    })
+    .map((config) => ({
+      ...config,
+      files: config.files ?? ["**/*.{js,jsx,ts,tsx,graphql}"],
+    })),
+];
