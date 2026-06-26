@@ -96,6 +96,12 @@ module.exports = [
         "sort-imports": "off",
         "import/order": "off",
 
+        // Forbid: `import x from "./foo"`; require `"./foo.ts"`
+        "import/extensions": [
+          "error",
+          "ignorePackages",
+          { checkTypeImports: true },
+        ],
         "import/no-deprecated": "warn",
         "import/no-duplicates": "error",
         // Doesn't support 'exports'?
