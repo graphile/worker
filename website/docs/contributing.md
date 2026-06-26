@@ -115,13 +115,13 @@ See the [CLI documentation](./cli/run.md) for more information about CLI mode.
 #### In the Graphile Worker repo
 
 When Graphile Worker users run in library mode, they use the functions exported
-from `src/index.ts`, which is compiled to `dist/index.js`. To run your local
-version of Graphile Worker similarly you can create a `.mts` Typescript file
-that runs functions imported from `./dist/index.js` (this uses Node.js' built in
-type stripping):
+from `src/index.ts` (which is compiled to `dist/index.js`, but thanks to Node's
+native type stripping you don't need to worry about that). To run your local
+version of Graphile Worker similarly you can create a `.ts` Typescript file that
+runs functions imported from `./src/index.ts`:
 
-```ts title="temp.mts"
-import { run, WorkerPreset } from "./dist/index.js";
+```ts title="temp.ts"
+import { run, type WorkerPreset } from "./src/index.ts";
 
 async function main() {
   const runner = await run({
@@ -147,11 +147,11 @@ main().catch((err) => {
 });
 ```
 
-Then you can run `temp.mts` by first compiling Graphile Worker then running your
+Then you can run `temp.ts` by first compiling Graphile Worker then running your
 file with `node`:
 
 ```sh
-yarn prepack && node temp.mts
+node temp.ts
 ```
 
 #### In your own repo
