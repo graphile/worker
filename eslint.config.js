@@ -18,6 +18,7 @@ const ignores = readFileSync(`${__dirname}/.lintignore`, "utf8")
     if (!l.match(/\.[a-z]+$/)) {
       l += "/**";
     }
+    return l;
   })
   .filter((l) => l != null);
 
