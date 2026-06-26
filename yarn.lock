@@ -8321,7 +8321,6 @@ __metadata:
     react-dom: "npm:^18.2.0"
     svgo: "npm:^2.0.0"
     ts-jest: "npm:^29.4.6"
-    tslib: "npm:^2.8.1"
     typescript: "npm:^5.9.3"
     yargs: "npm:^17.7.2"
     zx: "npm:^8.8.5"
