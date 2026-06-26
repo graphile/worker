@@ -180,7 +180,7 @@ export function makeNewWorker(
       const jobRow = await getJob(workerPool.id, flagsToSkip);
 
       // `doNext` cannot be executed concurrently, so we know this is safe.
-      // eslint-disable-next-line require-atomic-updates
+
       activeJob = jobRow && jobRow.id ? jobRow : null;
 
       if (activeJob) {
@@ -406,7 +406,7 @@ export function makeNewWorker(
       return;
     } finally {
       // `doNext` cannot be executed concurrently, so we know this is safe.
-      // eslint-disable-next-line require-atomic-updates
+
       activeJob = null;
     }
     if (active) {

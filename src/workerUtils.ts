@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-types */
 import { cleanup } from "./cleanup";
 import {
   CleanupOptions,

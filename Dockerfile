@@ -6,7 +6,7 @@ COPY package.json yarn.lock ./
 
 RUN yarn install --frozen-lockfile --production=false --no-progress
 
-COPY tsconfig.json .eslintrc.js .eslintignore .prettierrc.js ./
+COPY tsconfig.json eslint.config.js .lintignore .prettierrc.js ./
 COPY ./sql ./sql
 COPY ./src ./src
 COPY ./scripts ./scripts

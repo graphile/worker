@@ -78,7 +78,7 @@ export const LoadTaskFromJsPlugin: GraphileConfig.Plugin = {
           const message = `Error processing '${jsFile.fullPath}': ${
             coerceError(error).message
           }`;
-          throw new Error(message);
+          throw new Error(message, { cause: error });
         }
       },
     },
