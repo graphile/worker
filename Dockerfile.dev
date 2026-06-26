@@ -20,6 +20,6 @@ COPY ./tsconfig.json ./
 COPY ./jest.config.js ./
 COPY ./eslint.config.js ./
 COPY ./.prettierrc.js ./
-COPY ./.eslintignore ./
+COPY ./.lintignore ./
 
 RUN yarn prepack

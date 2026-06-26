@@ -7,7 +7,7 @@ const compat = new FlatCompat({
   recommendedConfig: js.configs.recommended,
 });
 
-const ignores = readFileSync(`${__dirname}/.eslintignore`, "utf8")
+const ignores = readFileSync(`${__dirname}/.lintignore`, "utf8")
   .split(/\n/)
   .map((line) => {
     let l = line.trim();
