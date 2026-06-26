@@ -1,5 +1,5 @@
-import { DbJob, EnhancedWithPgClient, WithPgClient } from "../interfaces";
-import { CompiledSharedOptions } from "../lib";
+import { DbJob, EnhancedWithPgClient, WithPgClient } from "../interfaces.ts";
+import { CompiledSharedOptions } from "../lib.ts";
 interface Spec {
   job: DbJob;
   message: string;

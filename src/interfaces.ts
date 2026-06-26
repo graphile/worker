@@ -13,10 +13,10 @@ import type {
   CompiledSharedOptions,
   Release,
   ResolvedWorkerPreset,
-} from "./lib";
-import { LocalQueue } from "./localQueue";
-import type { Logger } from "./logger";
-import type { Signal } from "./signals";
+} from "./lib.ts";
+import { LocalQueue } from "./localQueue.ts";
+import type { Logger } from "./logger.ts";
+import type { Signal } from "./signals.ts";
 
 /*
  * Terminology:

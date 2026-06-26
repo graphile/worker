@@ -4,11 +4,11 @@ import { EventEmitter } from "events";
 import type { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
-import defer, { Deferred } from "./deferred";
+import defer, { Deferred } from "./deferred.ts";
 import {
   makeWithPgClientFromClient,
   makeWithPgClientFromPool,
-} from "./helpers";
+} from "./helpers.ts";
 import {
   CompleteJobFunction,
   EnhancedWithPgClient,
@@ -21,7 +21,7 @@ import {
   TaskList,
   WorkerPool,
   WorkerPoolOptions,
-} from "./interfaces";
+} from "./interfaces.ts";
 import {
   calculateDelay,
   coerceError,
@@ -33,15 +33,15 @@ import {
   safeEmit,
   sleep,
   tryParseJson,
-} from "./lib";
-import { LocalQueue } from "./localQueue";
-import { Logger } from "./logger";
-import SIGNALS, { Signal } from "./signals";
-import { batchCompleteJobs } from "./sql/completeJobs";
-import { batchFailJobs, failJobs } from "./sql/failJobs";
-import { batchGetJobs } from "./sql/getJobs";
-import { resetLockedAt } from "./sql/resetLockedAt";
-import { makeNewWorker } from "./worker";
+} from "./lib.ts";
+import { LocalQueue } from "./localQueue.ts";
+import { Logger } from "./logger.ts";
+import SIGNALS, { Signal } from "./signals.ts";
+import { batchCompleteJobs } from "./sql/completeJobs.ts";
+import { batchFailJobs, failJobs } from "./sql/failJobs.ts";
+import { batchGetJobs } from "./sql/getJobs.ts";
+import { resetLockedAt } from "./sql/resetLockedAt.ts";
+import { makeNewWorker } from "./worker.ts";
 
 const BATCH_RETRY_OPTIONS: RetryOptions = {
   maxAttempts: 20,

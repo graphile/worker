@@ -2,8 +2,8 @@ import { Logger } from "@graphile/logger";
 import { MiddlewareHandlers, PluginHook } from "graphile-config";
 import type { PoolClient } from "pg";
 
-import { getCronItems } from "./getCronItems";
-import { getTasks } from "./getTasks";
+import { getCronItems } from "./getCronItems.ts";
+import { getTasks } from "./getTasks.ts";
 import {
   FileDetails,
   PromiseOrDirect,
@@ -19,16 +19,16 @@ import {
   WorkerPool,
   WorkerSharedOptions,
   WorkerUtilsOptions,
-} from "./interfaces";
-import { CompiledSharedOptions } from "./lib";
-export { parseCronItem, parseCronItems, parseCrontab } from "./crontab";
-export * from "./interfaces";
-export type { LogFunctionFactory } from "./logger";
-export { consoleLogFactory, Logger, LogLevel } from "./logger";
-export { runTaskList, runTaskListOnce } from "./main";
-export { WorkerPreset } from "./preset";
-export { run, runMigrations, runOnce } from "./runner";
-export { addJobAdhoc, makeWorkerUtils, quickAddJob } from "./workerUtils";
+} from "./interfaces.ts";
+import { CompiledSharedOptions } from "./lib.ts";
+export { parseCronItem, parseCronItems, parseCrontab } from "./crontab.ts";
+export * from "./interfaces.ts";
+export type { LogFunctionFactory } from "./logger.ts";
+export { consoleLogFactory, Logger, LogLevel } from "./logger.ts";
+export { runTaskList, runTaskListOnce } from "./main.ts";
+export { WorkerPreset } from "./preset.ts";
+export { run, runMigrations, runOnce } from "./runner.ts";
+export { addJobAdhoc, makeWorkerUtils, quickAddJob } from "./workerUtils.ts";
 
 export { getTasks };
 export { getCronItems };

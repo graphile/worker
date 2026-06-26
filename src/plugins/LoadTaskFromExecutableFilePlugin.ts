@@ -2,8 +2,8 @@ import { spawn } from "child_process";
 import { constants } from "fs";
 import { GraphileConfig } from "graphile-config";
 
-import { Task } from "../index.js";
-import { version } from "../version.js";
+import { Task } from "../index.ts";
+import { version } from "../version.ts";
 
 const supportsExecutableBit = [
   "darwin",

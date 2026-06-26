@@ -1,9 +1,9 @@
 import * as assert from "assert";
 import type { Pool } from "pg";
 
-import { parseCrontab } from "./crontab";
-import defer from "./deferred";
-import { getCronItemsInternal } from "./getCronItems";
+import { parseCrontab } from "./crontab.ts";
+import defer from "./deferred.ts";
+import { getCronItemsInternal } from "./getCronItems.ts";
 import {
   $$isParsed,
   Cron,
@@ -15,7 +15,7 @@ import {
   RunnerOptions,
   TimestampDigest,
   WorkerEvents,
-} from "./interfaces";
+} from "./interfaces.ts";
 import {
   calculateDelay,
   coerceError,
@@ -25,7 +25,7 @@ import {
   RetryOptions,
   safeEmit,
   sleep,
-} from "./lib";
+} from "./lib.ts";
 
 interface CronRequirements {
   pgPool: Pool;

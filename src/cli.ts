@@ -2,12 +2,12 @@
 import { loadConfig } from "graphile-config/load";
 import * as yargs from "yargs";
 
-import { assertCleanupTasks, cleanup } from "./cleanup";
-import { getCronItemsInternal } from "./getCronItems";
-import { getTasksInternal } from "./getTasks";
-import { getUtilsAndReleasersFromOptions } from "./lib";
-import { EMPTY_PRESET, WorkerPreset } from "./preset";
-import { runInternal, runOnceInternal } from "./runner";
+import { assertCleanupTasks, cleanup } from "./cleanup.ts";
+import { getCronItemsInternal } from "./getCronItems.ts";
+import { getTasksInternal } from "./getTasks.ts";
+import { getUtilsAndReleasersFromOptions } from "./lib.ts";
+import { EMPTY_PRESET, WorkerPreset } from "./preset.ts";
+import { runInternal, runOnceInternal } from "./runner.ts";
 
 const argv = yargs
   .parserConfiguration({

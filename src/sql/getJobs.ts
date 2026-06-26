@@ -1,6 +1,6 @@
-import { DbJob, EnhancedWithPgClient, Job, TaskList } from "../interfaces";
-import { CompiledSharedOptions } from "../lib";
-import { getTaskDetails } from "../taskIdentifiers";
+import { DbJob, EnhancedWithPgClient, Job, TaskList } from "../interfaces.ts";
+import { CompiledSharedOptions } from "../lib.ts";
+import { getTaskDetails } from "../taskIdentifiers.ts";
 
 export function isPromise<T>(t: T | Promise<T>): t is Promise<T> {
   return (

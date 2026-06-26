@@ -10,9 +10,13 @@ import {
 import type { Pool, PoolClient, PoolConfig } from "pg";
 import pg from "pg";
 
-import { makeWorkerPresetWorkerOptions } from "./config";
-import { migrations } from "./generated/sql";
-import { makeAddJob, makeAddJobs, makeWithPgClientFromPool } from "./helpers";
+import { makeWorkerPresetWorkerOptions } from "./config.ts";
+import { migrations } from "./generated/sql.ts";
+import {
+  makeAddJob,
+  makeAddJobs,
+  makeWithPgClientFromPool,
+} from "./helpers.ts";
 import {
   AddJobFunction,
   AddJobsFunction,
@@ -28,11 +32,11 @@ import {
   WorkerPluginContext,
   WorkerSharedOptions,
   WorkerUtilsOptions,
-} from "./interfaces";
-import { LogScope } from "./logger";
-import { migrate } from "./migrate";
-import { WorkerPreset } from "./preset";
-import { version } from "./version";
+} from "./interfaces.ts";
+import { LogScope } from "./logger.ts";
+import { migrate } from "./migrate.ts";
+import { WorkerPreset } from "./preset.ts";
+import { version } from "./version.ts";
 
 const MAX_MIGRATION_NUMBER = Object.keys(migrations).reduce(
   (memo, migrationFile) => {

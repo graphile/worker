@@ -1,5 +1,5 @@
-import { getParsedCronItemsFromOptions, runCron } from "./cron";
-import { getTasksInternal } from "./getTasks";
+import { getParsedCronItemsFromOptions, runCron } from "./cron.ts";
+import { getTasksInternal } from "./getTasks.ts";
 import {
   ParsedCronItem,
   PromiseOrDirect,
@@ -7,7 +7,7 @@ import {
   RunnerOptions,
   TaskList,
   WorkerPluginContext,
-} from "./interfaces";
+} from "./interfaces.ts";
 import {
   coerceError,
   CompiledOptions,
@@ -15,8 +15,8 @@ import {
   Releasers,
   safeEmit,
   sleep,
-} from "./lib";
-import { _runTaskList, runTaskListInternal } from "./main";
+} from "./lib.ts";
+import { _runTaskList, runTaskListInternal } from "./main.ts";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
   const [, release] = await getUtilsAndReleasersFromOptions(options);

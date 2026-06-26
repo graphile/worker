@@ -1,7 +1,7 @@
 // @ts-check
 
 /** @typedef {import("../dist/index.js")} Worker  */
-// import type {} from "../src/index.js";
+// import type {} from "../src/index.ts";
 
 // import { WorkerProPreset } from "../graphile-pro-worker/dist/index.js";
 

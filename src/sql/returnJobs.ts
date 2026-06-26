@@ -1,5 +1,5 @@
-import { DbJob, WithPgClient } from "../interfaces";
-import { CompiledSharedOptions } from "../lib";
+import { DbJob, WithPgClient } from "../interfaces.ts";
+import { CompiledSharedOptions } from "../lib.ts";
 
 export async function returnJobs(
   compiledSharedOptions: CompiledSharedOptions,

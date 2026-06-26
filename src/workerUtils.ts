@@ -1,13 +1,13 @@
-import { cleanup } from "./cleanup";
+import { cleanup } from "./cleanup.ts";
 import {
   CleanupOptions,
   DbJob,
   TaskSpec,
   WorkerUtils,
   WorkerUtilsOptions,
-} from "./interfaces";
-import { getUtilsAndReleasersFromOptions } from "./lib";
-import { migrate } from "./migrate";
+} from "./interfaces.ts";
+import { getUtilsAndReleasersFromOptions } from "./lib.ts";
+import { migrate } from "./migrate.ts";
 
 /**
  * Construct (asynchronously) a new WorkerUtils instance.

@@ -1,9 +1,9 @@
 import { GraphileConfig } from "graphile-config";
 import { pathToFileURL } from "url";
 
-import { FileDetails, isValidTask } from "../index.js";
-import { coerceError } from "../lib.js";
-import { version } from "../version.js";
+import { FileDetails, isValidTask } from "../index.ts";
+import { coerceError } from "../lib.ts";
+import { version } from "../version.ts";
 
 const DEFAULT_EXTENSIONS = [".js", ".mjs", ".cjs"];
 

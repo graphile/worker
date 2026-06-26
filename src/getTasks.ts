@@ -2,16 +2,16 @@ import { Stats } from "fs";
 import { lstat, readdir, realpath } from "fs/promises";
 import { join as pathJoin } from "path";
 
-import { tryStat } from "./fs";
+import { tryStat } from "./fs.ts";
 import {
+  FileDetails,
   isValidTask,
   SharedOptions,
   TaskList,
   WatchedTaskList,
-} from "./interfaces";
-import { FileDetails } from "./interfaces.js";
-import { CompiledSharedOptions, processSharedOptions } from "./lib";
-import { Logger } from "./logger";
+} from "./interfaces.ts";
+import { CompiledSharedOptions, processSharedOptions } from "./lib.ts";
+import { Logger } from "./logger.ts";
 
 const DIRECTORY_REGEXP = /^[A-Za-z0-9_-]+$/;
 const FILE_REGEXP = /^([A-Za-z0-9_-]+)((?:\.[A-Za-z0-9_-]+)*)$/;

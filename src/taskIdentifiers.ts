@@ -1,7 +1,7 @@
 import * as assert from "assert";
 
-import { EnhancedWithPgClient, TaskList } from "./interfaces";
-import { CompiledSharedOptions } from "./lib";
+import { EnhancedWithPgClient, TaskList } from "./interfaces.ts";
+import { CompiledSharedOptions } from "./lib.ts";
 
 export interface SupportedTaskIdentifierByTaskId {
   [id: number]: string;
