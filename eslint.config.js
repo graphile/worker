@@ -103,7 +103,8 @@ module.exports = [
         "@typescript-eslint/ban-ts-comment": "off",
         "@typescript-eslint/no-namespace": "off",
 
-        // ESLint 9 additions
+        // ESLint 10 additions
+        "@typescript-eslint/no-var-requires": "error",
         "import/namespace": "off",
         "@typescript-eslint/no-empty-object-type": "off",
         "@typescript-eslint/no-require-imports": "off",
