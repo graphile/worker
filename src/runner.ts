@@ -1,6 +1,6 @@
 import { getParsedCronItemsFromOptions, runCron } from "./cron.ts";
 import { getTasksInternal } from "./getTasks.ts";
-import {
+import type {
   ParsedCronItem,
   PromiseOrDirect,
   Runner,
@@ -8,11 +8,10 @@ import {
   TaskList,
   WorkerPluginContext,
 } from "./interfaces.ts";
+import type { CompiledOptions, Releasers } from "./lib.ts";
 import {
   coerceError,
-  CompiledOptions,
   getUtilsAndReleasersFromOptions,
-  Releasers,
   safeEmit,
   sleep,
 } from "./lib.ts";

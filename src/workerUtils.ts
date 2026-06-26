@@ -1,5 +1,5 @@
 import { cleanup } from "./cleanup.ts";
-import {
+import type {
   CleanupOptions,
   DbJob,
   TaskSpec,

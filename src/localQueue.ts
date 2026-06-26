@@ -1,23 +1,23 @@
 import assert from "assert";
 
 import { MINUTE, SECOND } from "./cronConstants.ts";
-import defer, { Deferred } from "./deferred.ts";
-import {
+import type { Deferred } from "./deferred.ts";
+import defer from "./deferred.ts";
+import type {
   EnhancedWithPgClient,
   GetJobFunction,
   Job,
   LocalQueueMode,
-  LocalQueueModes,
   TaskList,
   WorkerPool,
   WorkerPoolOptions,
 } from "./interfaces.ts";
+import { LocalQueueModes } from "./interfaces.ts";
+import type { CompiledSharedOptions, RetryOptions } from "./lib.ts";
 import {
   calculateDelay,
   coerceError,
-  CompiledSharedOptions,
   RETRYABLE_ERROR_CODES,
-  RetryOptions,
   safeEmit,
   sleep,
 } from "./lib.ts";

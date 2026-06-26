@@ -1,10 +1,10 @@
-import { Logger } from "@graphile/logger";
-import { MiddlewareHandlers, PluginHook } from "graphile-config";
+import type { Logger } from "@graphile/logger";
+import type { MiddlewareHandlers, PluginHook } from "graphile-config";
 import type { PoolClient } from "pg";
 
 import { getCronItems } from "./getCronItems.ts";
 import { getTasks } from "./getTasks.ts";
-import {
+import type {
   FileDetails,
   PromiseOrDirect,
   RunOnceOptions,
@@ -20,7 +20,7 @@ import {
   WorkerSharedOptions,
   WorkerUtilsOptions,
 } from "./interfaces.ts";
-import { CompiledSharedOptions } from "./lib.ts";
+import type { CompiledSharedOptions } from "./lib.ts";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab.ts";
 export * from "./interfaces.ts";
 export type { LogFunctionFactory } from "./logger.ts";

@@ -3,8 +3,8 @@ if (process.env.GRAPHILE_WORKER_DEBUG) {
   process.env.GRAPHILE_LOGGER_DEBUG = process.env.GRAPHILE_WORKER_DEBUG;
 }
 
+import type { LogFunctionFactory as GraphileLogFunctionFactory } from "@graphile/logger";
 import {
-  LogFunctionFactory as GraphileLogFunctionFactory,
   Logger as GraphileLogger,
   LogLevel,
   makeConsoleLogFactory,

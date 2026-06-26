@@ -4,12 +4,13 @@ import { EventEmitter } from "events";
 import type { Notification, Pool, PoolClient } from "pg";
 import { inspect } from "util";
 
-import defer, { Deferred } from "./deferred.ts";
+import type { Deferred } from "./deferred.ts";
+import defer from "./deferred.ts";
 import {
   makeWithPgClientFromClient,
   makeWithPgClientFromPool,
 } from "./helpers.ts";
-import {
+import type {
   CompleteJobFunction,
   EnhancedWithPgClient,
   FailJobFunction,
@@ -22,21 +23,21 @@ import {
   WorkerPool,
   WorkerPoolOptions,
 } from "./interfaces.ts";
+import type { CompiledSharedOptions, RetryOptions } from "./lib.ts";
 import {
   calculateDelay,
   coerceError,
-  CompiledSharedOptions,
   makeEnhancedWithPgClient,
   processSharedOptions,
   RETRYABLE_ERROR_CODES,
-  RetryOptions,
   safeEmit,
   sleep,
   tryParseJson,
 } from "./lib.ts";
 import { LocalQueue } from "./localQueue.ts";
-import { Logger } from "./logger.ts";
-import SIGNALS, { Signal } from "./signals.ts";
+import type { Logger } from "./logger.ts";
+import type { Signal } from "./signals.ts";
+import SIGNALS from "./signals.ts";
 import { batchCompleteJobs } from "./sql/completeJobs.ts";
 import { batchFailJobs, failJobs } from "./sql/failJobs.ts";
 import { batchGetJobs } from "./sql/getJobs.ts";

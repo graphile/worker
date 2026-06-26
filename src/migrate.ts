@@ -1,13 +1,9 @@
 import type { PoolClient } from "pg";
 
 import { migrations } from "./generated/sql.ts";
-import { WorkerSharedOptions, Writeable } from "./interfaces.ts";
-import {
-  BREAKING_MIGRATIONS,
-  coerceError,
-  CompiledSharedOptions,
-  sleep,
-} from "./lib.ts";
+import type { WorkerSharedOptions, Writeable } from "./interfaces.ts";
+import type { CompiledSharedOptions } from "./lib.ts";
+import { BREAKING_MIGRATIONS, coerceError, sleep } from "./lib.ts";
 
 function checkPostgresVersion(versionString: string) {
   const postgresVersion = parseInt(versionString, 10);

@@ -1,5 +1,5 @@
-import { EnhancedWithPgClient } from "../interfaces.ts";
-import { CompiledSharedOptions } from "../lib.ts";
+import type { EnhancedWithPgClient } from "../interfaces.ts";
+import type { CompiledSharedOptions } from "../lib.ts";
 
 export async function getQueueNames(
   compiledSharedOptions: CompiledSharedOptions,

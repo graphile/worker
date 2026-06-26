@@ -4,8 +4,7 @@ import type { Pool } from "pg";
 import { parseCrontab } from "./crontab.ts";
 import defer from "./deferred.ts";
 import { getCronItemsInternal } from "./getCronItems.ts";
-import {
-  $$isParsed,
+import type {
   Cron,
   CronJob,
   JobAndCronIdentifier,
@@ -16,16 +15,14 @@ import {
   TimestampDigest,
   WorkerEvents,
 } from "./interfaces.ts";
-import {
-  calculateDelay,
-  coerceError,
+import { $$isParsed } from "./interfaces.ts";
+import type {
   CompiledOptions,
   CompiledSharedOptions,
   Releasers,
   RetryOptions,
-  safeEmit,
-  sleep,
 } from "./lib.ts";
+import { calculateDelay, coerceError, safeEmit, sleep } from "./lib.ts";
 
 interface CronRequirements {
   pgPool: Pool;

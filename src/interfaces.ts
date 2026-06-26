@@ -1,6 +1,6 @@
 import type { EventEmitter } from "events";
 import type { Stats } from "fs";
-import { AsyncHooks, Middleware } from "graphile-config";
+import type { AsyncHooks, Middleware } from "graphile-config";
 import type {
   Notification,
   Pool,
@@ -14,7 +14,7 @@ import type {
   Release,
   ResolvedWorkerPreset,
 } from "./lib.ts";
-import { LocalQueue } from "./localQueue.ts";
+import type { LocalQueue } from "./localQueue.ts";
 import type { Logger } from "./logger.ts";
 import type { Signal } from "./signals.ts";
 

@@ -4,7 +4,11 @@ import {
   CRONTAB_TIME_PARTS,
   CRONTAB_WILDCARD,
 } from "./cronConstants.ts";
-import { CronMatcher, ParsedCronMatch, TimestampDigest } from "./interfaces.ts";
+import type {
+  CronMatcher,
+  ParsedCronMatch,
+  TimestampDigest,
+} from "./interfaces.ts";
 
 /**
  * Returns true if the cronItem should fire for the given timestamp digest,

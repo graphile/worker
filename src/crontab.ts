@@ -18,13 +18,13 @@ import {
   createCronMatcher,
   createCronMatcherFromRanges,
 } from "./cronMatcher.ts";
-import {
-  $$isParsed,
+import type {
   CronItem,
   CronItemOptions,
   ParsedCronItem,
   ParsedCronItemOptions,
 } from "./interfaces.ts";
+import { $$isParsed } from "./interfaces.ts";
 import { coerceError } from "./lib.ts";
 
 /**

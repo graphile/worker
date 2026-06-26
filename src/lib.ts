@@ -10,14 +10,14 @@ import {
 import type { Pool, PoolClient, PoolConfig } from "pg";
 import pg from "pg";
 
-import { makeWorkerPresetWorkerOptions } from "./config.ts";
+import type { makeWorkerPresetWorkerOptions } from "./config.ts";
 import { migrations } from "./generated/sql.ts";
 import {
   makeAddJob,
   makeAddJobs,
   makeWithPgClientFromPool,
 } from "./helpers.ts";
-import {
+import type {
   AddJobFunction,
   AddJobsFunction,
   EnhancedWithPgClient,
@@ -33,7 +33,7 @@ import {
   WorkerSharedOptions,
   WorkerUtilsOptions,
 } from "./interfaces.ts";
-import { LogScope } from "./logger.ts";
+import type { LogScope } from "./logger.ts";
 import { migrate } from "./migrate.ts";
 import { WorkerPreset } from "./preset.ts";
 import { version } from "./version.ts";

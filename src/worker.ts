@@ -3,7 +3,7 @@ import { randomBytes } from "crypto";
 
 import deferred from "./deferred.ts";
 import { makeJobHelpers } from "./helpers.ts";
-import {
+import type {
   CompleteJobFunction,
   EnhancedWithPgClient,
   FailJobFunction,
@@ -15,7 +15,8 @@ import {
   WorkerPool,
   WorkerSharedOptions,
 } from "./interfaces.ts";
-import { coerceError, CompiledSharedOptions, safeEmit } from "./lib.ts";
+import type { CompiledSharedOptions } from "./lib.ts";
+import { coerceError, safeEmit } from "./lib.ts";
 
 const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
 

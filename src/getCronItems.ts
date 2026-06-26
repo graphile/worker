@@ -1,13 +1,14 @@
 import { promises as fsp } from "fs";
 
 import { parseCrontab } from "./crontab.ts";
-import {
+import type {
   ParsedCronItem,
   SharedOptions,
   WatchedCronItems,
 } from "./interfaces.ts";
-import { CompiledSharedOptions, processSharedOptions } from "./lib.ts";
-import { Logger } from "./logger.ts";
+import type { CompiledSharedOptions } from "./lib.ts";
+import { processSharedOptions } from "./lib.ts";
+import type { Logger } from "./logger.ts";
 
 async function loadCrontabIntoCronItems(
   logger: Logger,
