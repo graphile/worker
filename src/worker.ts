@@ -1,9 +1,9 @@
 import * as assert from "assert";
 import { randomBytes } from "crypto";
 
-import deferred from "./deferred";
-import { makeJobHelpers } from "./helpers";
-import {
+import deferred from "./deferred.ts";
+import { makeJobHelpers } from "./helpers.ts";
+import type {
   CompleteJobFunction,
   EnhancedWithPgClient,
   FailJobFunction,
@@ -14,8 +14,9 @@ import {
   Worker,
   WorkerPool,
   WorkerSharedOptions,
-} from "./interfaces";
-import { coerceError, CompiledSharedOptions, safeEmit } from "./lib";
+} from "./interfaces.ts";
+import type { CompiledSharedOptions } from "./lib.ts";
+import { coerceError, safeEmit } from "./lib.ts";
 
 const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
 

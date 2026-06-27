@@ -1,16 +1,16 @@
 import type { PoolClient } from "pg";
 
-import { WorkerSharedOptions } from "../src";
-import { migrations } from "../src/generated/sql";
-import { processSharedOptions } from "../src/lib";
-import { installSchema, migrate, runMigration } from "../src/migrate";
+import { migrations } from "../src/generated/sql.ts";
+import { WorkerSharedOptions } from "../src/index.ts";
+import { processSharedOptions } from "../src/lib.ts";
+import { installSchema, migrate, runMigration } from "../src/migrate.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobs,
   GRAPHILE_WORKER_SCHEMA,
   withPgClient,
   withPgPool,
-} from "./helpers";
+} from "./helpers.ts";
 
 const options: WorkerSharedOptions = {};
 

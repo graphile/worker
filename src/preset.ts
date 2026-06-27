@@ -1,6 +1,6 @@
-import { makeWorkerPresetWorkerOptions } from "./config";
-import { LoadTaskFromExecutableFilePlugin } from "./plugins/LoadTaskFromExecutableFilePlugin";
-import { LoadTaskFromJsPlugin } from "./plugins/LoadTaskFromJsPlugin";
+import { makeWorkerPresetWorkerOptions } from "./config.ts";
+import { LoadTaskFromExecutableFilePlugin } from "./plugins/LoadTaskFromExecutableFilePlugin.ts";
+import { LoadTaskFromJsPlugin } from "./plugins/LoadTaskFromJsPlugin.ts";
 
 export const WorkerPreset: GraphileConfig.Preset = {
   plugins: [LoadTaskFromJsPlugin, LoadTaskFromExecutableFilePlugin],

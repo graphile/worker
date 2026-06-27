@@ -1,25 +1,28 @@
 import assert from "assert";
 
-import {
-  CompiledSharedOptions,
+import { MINUTE, SECOND } from "./cronConstants.ts";
+import type { Deferred } from "./deferred.ts";
+import defer from "./deferred.ts";
+import type {
   EnhancedWithPgClient,
+  GetJobFunction,
+  Job,
   LocalQueueMode,
-  LocalQueueModes,
+  TaskList,
+  WorkerPool,
   WorkerPoolOptions,
-} from ".";
-import { MINUTE, SECOND } from "./cronConstants";
-import defer, { Deferred } from "./deferred";
-import { GetJobFunction, Job, TaskList, WorkerPool } from "./interfaces";
+} from "./interfaces.ts";
+import { LocalQueueModes } from "./interfaces.ts";
+import type { CompiledSharedOptions, RetryOptions } from "./lib.ts";
 import {
   calculateDelay,
   coerceError,
   RETRYABLE_ERROR_CODES,
-  RetryOptions,
   safeEmit,
   sleep,
-} from "./lib";
-import { batchGetJobs } from "./sql/getJobs";
-import { returnJobs } from "./sql/returnJobs";
+} from "./lib.ts";
+import { batchGetJobs } from "./sql/getJobs.ts";
+import { returnJobs } from "./sql/returnJobs.ts";
 
 const RETURN_JOBS_RETRY_OPTIONS: RetryOptions = {
   maxAttempts: 20,

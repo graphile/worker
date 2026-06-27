@@ -1,14 +1,14 @@
 import type { Pool, PoolClient } from "pg";
 import pg from "pg";
 
-import { DbJobSpec, RunnerOptions } from "../src/interfaces";
-import { run } from "../src/runner";
+import { DbJobSpec, RunnerOptions } from "../src/interfaces.ts";
+import { run } from "../src/runner.ts";
 import {
   databaseDetails,
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   sleepUntil,
   withPgClient,
-} from "./helpers";
+} from "./helpers.ts";
 
 let pgPool!: Pool;
 

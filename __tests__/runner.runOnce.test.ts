@@ -1,12 +1,12 @@
 import pg from "pg";
 
-import { makeWorkerPresetWorkerOptions } from "../src/config";
-import { Job, RunnerOptions, WorkerUtils } from "../src/interfaces";
-import { coerceError } from "../src/lib";
-import { _allWorkerPools } from "../src/main";
-import { WorkerPreset } from "../src/preset";
-import { runOnce } from "../src/runner";
-import { makeWorkerUtils } from "../src/workerUtils";
+import { makeWorkerPresetWorkerOptions } from "../src/config.ts";
+import { Job, RunnerOptions, WorkerUtils } from "../src/interfaces.ts";
+import { coerceError } from "../src/lib.ts";
+import { _allWorkerPools } from "../src/main.ts";
+import { WorkerPreset } from "../src/preset.ts";
+import { runOnce } from "../src/runner.ts";
+import { makeWorkerUtils } from "../src/workerUtils.ts";
 import {
   databaseDetails,
   getJobs,
@@ -15,7 +15,7 @@ import {
   sleep,
   sleepUntil,
   withPgPool,
-} from "./helpers";
+} from "./helpers.ts";
 
 delete process.env.DATABASE_URL;
 delete process.env.PGDATABASE;

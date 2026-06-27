@@ -1,7 +1,7 @@
 import { jest } from "@jest/globals";
 
-import { run, runTaskListOnce } from "../src";
-import { WorkerSharedOptions } from "../src/interfaces";
+import { run, runTaskListOnce } from "../src/index.ts";
+import { WorkerSharedOptions } from "../src/interfaces.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   EventMonitor,
@@ -13,7 +13,7 @@ import {
   sleep,
   withOptions,
   withPgClient,
-} from "./helpers";
+} from "./helpers.ts";
 
 const { setTime } = setupFakeTimers();
 const REFERENCE_TIMESTAMP = 1609459200000; /* 1st January 2021, 00:00:00 UTC */

@@ -2,8 +2,13 @@ import {
   makeWorkerUtils,
   WorkerSharedOptions,
   WorkerUtils,
-} from "../src/index";
-import { getJobs, makeSelectionOfJobs, reset, withPgClient } from "./helpers";
+} from "../src/index.ts";
+import {
+  getJobs,
+  makeSelectionOfJobs,
+  reset,
+  withPgClient,
+} from "./helpers.ts";
 
 /** For sorting arrays of numbers or numeric strings */
 function numerically(a: string | number, b: string | number) {

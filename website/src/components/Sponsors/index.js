@@ -2,7 +2,7 @@ import styles from "@site/src/components/Sponsors/styles.module.css";
 import clsx from "clsx";
 import React from "react";
 
-import { SponsorContext } from "../../contexts/sponsor";
+import { SponsorContext } from "../../contexts/sponsor.js";
 
 export default function Sponsors({ children, level }) {
   return (

@@ -1,14 +1,14 @@
 import { jest } from "@jest/globals";
 
-import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
-import { runTaskListOnce } from "../src/main";
+import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces.ts";
+import { runTaskListOnce } from "../src/main.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobQueues,
   getJobs,
   reset,
   withPgClient,
-} from "./helpers";
+} from "./helpers.ts";
 
 const options: WorkerSharedOptions = {};
 

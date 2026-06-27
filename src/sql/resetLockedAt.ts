@@ -1,5 +1,5 @@
-import { EnhancedWithPgClient } from "../interfaces";
-import { CompiledSharedOptions } from "../lib";
+import type { EnhancedWithPgClient } from "../interfaces.ts";
+import type { CompiledSharedOptions } from "../lib.ts";
 
 export async function resetLockedAt(
   compiledSharedOptions: CompiledSharedOptions,

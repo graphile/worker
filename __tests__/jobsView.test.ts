@@ -1,10 +1,10 @@
-import { Job, makeWorkerUtils, WorkerSharedOptions } from "../src";
+import { Job, makeWorkerUtils, WorkerSharedOptions } from "../src/index.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   makeSelectionOfJobs,
   reset,
   withPgClient,
-} from "./helpers";
+} from "./helpers.ts";
 
 const options: WorkerSharedOptions = {};
 

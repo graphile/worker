@@ -6,9 +6,13 @@ import {
   TaskList,
   WorkerEvents,
   WorkerSharedOptions,
-} from "../src/interfaces";
-import { runTaskList } from "../src/main";
-import { ESCAPED_GRAPHILE_WORKER_SCHEMA, reset, withPgPool } from "./helpers";
+} from "../src/interfaces.ts";
+import { runTaskList } from "../src/main.ts";
+import {
+  ESCAPED_GRAPHILE_WORKER_SCHEMA,
+  reset,
+  withPgPool,
+} from "./helpers.ts";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

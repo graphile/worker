@@ -1,5 +1,5 @@
-import { DbJob, WithPgClient } from "../interfaces";
-import { CompiledSharedOptions } from "../lib";
+import type { DbJob, WithPgClient } from "../interfaces.ts";
+import type { CompiledSharedOptions } from "../lib.ts";
 
 const manualPrepare = false;
 

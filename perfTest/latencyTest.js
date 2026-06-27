@@ -1,8 +1,8 @@
 // @ts-check
 const assert = require("assert");
 const { Pool } = require("pg");
-const { runTaskList } = require("../dist/main");
-const { default: deferred } = require("../dist/deferred");
+const { runTaskList } = require("../dist/main.js");
+const { default: deferred } = require("../dist/deferred.js");
 const preset = require("./graphile.config.js");
 
 /** @type {(ms: number) => Promise<void>} */

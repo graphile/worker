@@ -1,7 +1,8 @@
 import type { Pool, PoolClient } from "pg";
 
-import defer, { Deferred } from "./deferred";
-import {
+import type { Deferred } from "./deferred.ts";
+import defer from "./deferred.ts";
+import type {
   AddJobFunction,
   AddJobsFunction,
   DbJob,
@@ -11,10 +12,10 @@ import {
   JobHelpers,
   PromiseOrDirect,
   WithPgClient,
-} from "./interfaces";
-import { CompiledSharedOptions } from "./lib";
-import { Logger } from "./logger";
-import { getQueueNames } from "./sql/getQueueNames";
+} from "./interfaces.ts";
+import type { CompiledSharedOptions } from "./lib.ts";
+import type { Logger } from "./logger.ts";
+import { getQueueNames } from "./sql/getQueueNames.ts";
 
 export function makeAddJob(
   compiledSharedOptions: CompiledSharedOptions,

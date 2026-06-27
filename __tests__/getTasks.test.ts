@@ -1,12 +1,12 @@
+import { getTasks } from "../src/getTasks.ts";
+import { makeJobHelpers, makeWithPgClientFromClient } from "../src/helpers.ts";
 import {
   CompiledSharedOptions,
   WatchedTaskList,
   WorkerSharedOptions,
-} from "../src";
-import { getTasks } from "../src/getTasks";
-import { makeJobHelpers, makeWithPgClientFromClient } from "../src/helpers";
-import { makeEnhancedWithPgClient } from "../src/lib";
-import { makeMockJob, withPgClient } from "./helpers";
+} from "../src/index.ts";
+import { makeEnhancedWithPgClient } from "../src/lib.ts";
+import { makeMockJob, withPgClient } from "./helpers.ts";
 
 const options: WorkerSharedOptions = {};
 

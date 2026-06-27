@@ -13,16 +13,19 @@ import {
   CRONTAB_OPTIONS_QUEUE,
   PERIOD_DURATIONS,
   TIMEPHRASE_PART,
-} from "./cronConstants";
-import { createCronMatcher, createCronMatcherFromRanges } from "./cronMatcher";
+} from "./cronConstants.ts";
 import {
-  $$isParsed,
+  createCronMatcher,
+  createCronMatcherFromRanges,
+} from "./cronMatcher.ts";
+import type {
   CronItem,
   CronItemOptions,
   ParsedCronItem,
   ParsedCronItemOptions,
-} from "./interfaces";
-import { coerceError } from "./lib";
+} from "./interfaces.ts";
+import { $$isParsed } from "./interfaces.ts";
+import { coerceError } from "./lib.ts";
 
 /**
  * Returns a period of time in milliseconds representing the time phrase given.

@@ -7,7 +7,7 @@ import {
 } from "jest-time-helpers";
 import pg from "pg";
 
-import defer from "../src/deferred";
+import defer from "../src/deferred.ts";
 import {
   DbJob,
   Job,
@@ -16,10 +16,10 @@ import {
   WorkerEventMap,
   WorkerPoolOptions,
   WorkerUtils,
-} from "../src/interfaces";
-import { processSharedOptions } from "../src/lib";
-import { _allWorkerPools } from "../src/main";
-import { migrate } from "../src/migrate";
+} from "../src/interfaces.ts";
+import { processSharedOptions } from "../src/lib.ts";
+import { _allWorkerPools } from "../src/main.ts";
+import { migrate } from "../src/migrate.ts";
 
 export { DAY, HOUR, MINUTE, SECOND, sleep, WEEK } from "jest-time-helpers";
 

@@ -33,11 +33,11 @@ module.exports = [
         "eslint:recommended",
         "plugin:@typescript-eslint/eslint-recommended",
         "plugin:@typescript-eslint/recommended",
-        "plugin:import/errors",
-        "plugin:import/typescript",
+        "plugin:import-x/errors",
+        "plugin:import-x/typescript",
         "prettier",
       ],
-      plugins: ["jest", "@typescript-eslint", "simple-import-sort", "import"],
+      plugins: ["jest", "@typescript-eslint", "simple-import-sort", "import-x"],
       parserOptions: {
         ecmaVersion: 2018,
         sourceType: "module",
@@ -49,6 +49,13 @@ module.exports = [
       },
       globals: {
         NodeJS: false, // For TypeScript
+      },
+      settings: {
+        "import-x/resolver": {
+          typescript: {
+            alwaysTryTypes: true,
+          },
+        },
       },
       rules: {
         "no-unused-vars": 0,
@@ -94,24 +101,41 @@ module.exports = [
         "simple-import-sort/imports": "error",
         "simple-import-sort/exports": "error",
         "sort-imports": "off",
-        "import/order": "off",
+        "import-x/order": "off",
+        // Forbid: `import x from "./foo"`; require `"./foo.ts"`
+        "import-x/extensions": [
+          "error",
+          "ignorePackages",
+          { checkTypeImports: true },
+        ],
 
-        "import/no-deprecated": "warn",
-        "import/no-duplicates": "error",
-        // Doesn't support 'exports'?
-        "import/no-unresolved": "off",
+        "import-x/no-deprecated": "warn",
+        "import-x/no-duplicates": "error",
+        "import-x/no-unresolved": "error",
         "@typescript-eslint/ban-ts-comment": "off",
         "@typescript-eslint/no-namespace": "off",
 
         // ESLint 10 additions
         "@typescript-eslint/no-var-requires": "error",
-        "import/namespace": "off",
+        "import-x/namespace": "off",
         "@typescript-eslint/no-empty-object-type": "off",
         "@typescript-eslint/no-require-imports": "off",
       },
       overrides: [
         {
+          // stricter rules for src
+          files: ["src/**/*"],
+          parserOptions: {
+            project: true,
+          },
+          rules: {
+            "@typescript-eslint/consistent-type-exports": "error",
+            "@typescript-eslint/consistent-type-imports": "error",
+          },
+        },
+        {
           files: ["__tests__/**/*", "test.js"],
+          plugins: ["import-x"],
           rules: {
             "@typescript-eslint/no-explicit-any": 0,
             "@typescript-eslint/explicit-function-return-type": 0,
@@ -125,7 +149,14 @@ module.exports = [
         {
           files: ["perfTest/**/*", "examples/**/*"],
           rules: {
+            "import-x/extensions": "off",
             "@typescript-eslint/no-var-requires": 0,
+          },
+        },
+        {
+          files: ["website/**/*"],
+          rules: {
+            "import-x/no-unresolved": "off",
           },
         },
       ],

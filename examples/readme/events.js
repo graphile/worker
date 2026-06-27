@@ -1,4 +1,6 @@
-const { run, addJobAdhoc } = require(/* "graphile-worker" */ "../..");
+const { run, addJobAdhoc } = require(
+  /* "graphile-worker" */ "../../dist/index.js",
+);
 
 async function main() {
   // Run a worker to execute jobs:

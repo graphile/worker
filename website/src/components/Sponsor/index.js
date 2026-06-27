@@ -4,7 +4,7 @@ import FallbackAvatar from "@site/static/img/avatar.svg";
 import clsx from "clsx";
 import React, { useContext } from "react";
 
-import { SponsorContext } from "../../contexts/sponsor";
+import { SponsorContext } from "../../contexts/sponsor.js";
 
 function Avatar({ src }) {
   return src ? (

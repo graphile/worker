@@ -2,9 +2,9 @@
 import { jest } from "@jest/globals";
 import type { Pool } from "pg";
 
-import deferred, { Deferred } from "../src/deferred";
-import { Job, Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
-import { runTaskList } from "../src/main";
+import deferred, { Deferred } from "../src/deferred.ts";
+import { Job, Task, TaskList, WorkerSharedOptions } from "../src/interfaces.ts";
+import { runTaskList } from "../src/main.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   expectJobCount,
@@ -13,7 +13,7 @@ import {
   sleep,
   sleepUntil,
   withPgPool,
-} from "./helpers";
+} from "./helpers.ts";
 
 const addJob = (pgPool: Pool, id?: string | number) =>
   pgPool.query(

@@ -1,8 +1,13 @@
 import { jest } from "@jest/globals";
 
-import defer, { Deferred } from "../src/deferred";
-import { DbJob, Task, TaskList, WorkerSharedOptions } from "../src/interfaces";
-import { runTaskListOnce } from "../src/main";
+import defer, { Deferred } from "../src/deferred.ts";
+import {
+  DbJob,
+  Task,
+  TaskList,
+  WorkerSharedOptions,
+} from "../src/interfaces.ts";
+import { runTaskListOnce } from "../src/main.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobQueues,
@@ -11,7 +16,7 @@ import {
   reset,
   sleepUntil,
   withPgClient,
-} from "./helpers";
+} from "./helpers.ts";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

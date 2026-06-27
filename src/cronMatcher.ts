@@ -3,8 +3,12 @@ import {
   CRONTAB_RANGE,
   CRONTAB_TIME_PARTS,
   CRONTAB_WILDCARD,
-} from "./cronConstants";
-import { CronMatcher, ParsedCronMatch, TimestampDigest } from "./interfaces";
+} from "./cronConstants.ts";
+import type {
+  CronMatcher,
+  ParsedCronMatch,
+  TimestampDigest,
+} from "./interfaces.ts";
 
 /**
  * Returns true if the cronItem should fire for the given timestamp digest,

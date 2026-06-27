@@ -1,5 +1,5 @@
-import { CleanupOptions, CleanupTask } from "./interfaces";
-import { CompiledOptions } from "./lib";
+import type { CleanupOptions, CleanupTask } from "./interfaces.ts";
+import type { CompiledOptions } from "./lib.ts";
 
 const ALL_CLEANUP_TASKS: CleanupTask[] = [
   "GC_TASK_IDENTIFIERS",
