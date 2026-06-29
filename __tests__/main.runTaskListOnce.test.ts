@@ -1,7 +1,8 @@
 import { jest } from "@jest/globals";
 
-import defer, { Deferred } from "../src/deferred.ts";
-import {
+import type { Deferred } from "../src/deferred.ts";
+import defer from "../src/deferred.ts";
+import type {
   DbJob,
   Task,
   TaskList,

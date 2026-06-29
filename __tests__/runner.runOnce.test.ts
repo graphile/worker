@@ -1,7 +1,7 @@
 import pg from "pg";
 
 import { makeWorkerPresetWorkerOptions } from "../src/config.ts";
-import { Job, RunnerOptions, WorkerUtils } from "../src/interfaces.ts";
+import type { Job, RunnerOptions, WorkerUtils } from "../src/interfaces.ts";
 import { coerceError } from "../src/lib.ts";
 import { _allWorkerPools } from "../src/main.ts";
 import { WorkerPreset } from "../src/preset.ts";

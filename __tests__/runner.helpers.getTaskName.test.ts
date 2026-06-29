@@ -1,7 +1,7 @@
 import type { Pool, PoolClient } from "pg";
 import pg from "pg";
 
-import { DbJobSpec, RunnerOptions } from "../src/interfaces.ts";
+import type { DbJobSpec, RunnerOptions } from "../src/interfaces.ts";
 import { run } from "../src/runner.ts";
 import {
   databaseDetails,

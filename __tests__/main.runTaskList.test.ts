@@ -2,8 +2,14 @@
 import { jest } from "@jest/globals";
 import type { Pool } from "pg";
 
-import deferred, { Deferred } from "../src/deferred.ts";
-import { Job, Task, TaskList, WorkerSharedOptions } from "../src/interfaces.ts";
+import type { Deferred } from "../src/deferred.ts";
+import deferred from "../src/deferred.ts";
+import type {
+  Job,
+  Task,
+  TaskList,
+  WorkerSharedOptions,
+} from "../src/interfaces.ts";
 import { runTaskList } from "../src/main.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,

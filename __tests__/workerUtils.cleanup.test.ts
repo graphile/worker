@@ -1,10 +1,10 @@
-import {
+import type {
   DbJob,
   Job,
-  makeWorkerUtils,
   WorkerSharedOptions,
   WorkerUtils,
 } from "../src/index.ts";
+import { makeWorkerUtils } from "../src/index.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   makeSelectionOfJobs,

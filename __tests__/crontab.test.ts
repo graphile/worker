@@ -1,5 +1,5 @@
 import { parseCronItem, parseCrontab } from "../src/crontab.ts";
-import { CronItemOptions, ParsedCronMatch } from "../src/index.ts";
+import type { CronItemOptions, ParsedCronMatch } from "../src/index.ts";
 
 // 0...59
 const ALL_MINUTES = Array.from(Array(60).keys());
