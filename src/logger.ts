@@ -3,10 +3,12 @@ if (process.env.GRAPHILE_WORKER_DEBUG) {
   process.env.GRAPHILE_LOGGER_DEBUG = process.env.GRAPHILE_WORKER_DEBUG;
 }
 
-import type { LogFunctionFactory as GraphileLogFunctionFactory } from "@graphile/logger";
+import type {
+  LogFunctionFactory as GraphileLogFunctionFactory,
+  LogLevel,
+} from "@graphile/logger";
 import {
   Logger as GraphileLogger,
-  LogLevel,
   makeConsoleLogFactory,
 } from "@graphile/logger";
 
@@ -17,7 +19,7 @@ export interface LogScope {
   jobId?: string;
 }
 
-export { LogLevel };
+export type { LogLevel };
 
 // For backwards compatibility
 export class Logger extends GraphileLogger<LogScope> {}

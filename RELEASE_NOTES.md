@@ -28,6 +28,8 @@ Read more:
   reach the end of the scope. (Primarily useful for tests.)
 - Maintenance work: upgrade to latest TypeScript, Jest, eliminate ts-node, fix
   yargs, use erasable syntax only for type-stripping support,
+- `LogLevel` export is now type only - a string union rather than a TypeScript
+  const enum.
 
 ## v0.17.2
 
