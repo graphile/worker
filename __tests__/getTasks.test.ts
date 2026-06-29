@@ -8,6 +8,8 @@ import type {
 import { makeEnhancedWithPgClient } from "../src/lib.ts";
 import { makeMockJob, withPgClient } from "./helpers.ts";
 
+const __dirname = import.meta.dirname;
+
 const options: WorkerSharedOptions = {};
 
 const neverAbortController = new AbortController();
@@ -58,7 +60,7 @@ describe("commonjs", () => {
     withPgClient(async (client) => {
       const { tasks, release, compiledSharedOptions } = (await getTasks(
         options,
-        `${__dirname}/fixtures/tasksFile.js`,
+        `${__dirname}/fixtures/tasksFile.cjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
@@ -89,7 +91,7 @@ describe("commonjs", () => {
     withPgClient(async (client) => {
       const { tasks, release, compiledSharedOptions } = (await getTasks(
         options,
-        `${__dirname}/fixtures/tasksFile-ts.js`,
+        `${__dirname}/fixtures/tasksFile-ts.cjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
@@ -122,7 +124,7 @@ describe("commonjs", () => {
     withPgClient(async (client) => {
       const { tasks, release, compiledSharedOptions } = (await getTasks(
         options,
-        `${__dirname}/fixtures/tasksFile_default.js`,
+        `${__dirname}/fixtures/tasksFile_default.cjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
@@ -153,7 +155,7 @@ describe("commonjs", () => {
     withPgClient(async (client) => {
       const { tasks, release, compiledSharedOptions } = (await getTasks(
         options,
-        `${__dirname}/fixtures/tasksFile_default-ts.js`,
+        `${__dirname}/fixtures/tasksFile_default-ts.cjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
