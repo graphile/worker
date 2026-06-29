@@ -2450,10 +2450,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@graphile/logger@npm:^0.2.0":
-  version: 0.2.0
-  resolution: "@graphile/logger@npm:0.2.0"
-  checksum: 10/0b080871c8c3698371ae5ce9633597ff636cf8be1227cf640c1effb70e2fa4d7aa7fb90e72da3f990076951a38511a2b6ab82c276a791644bec164966a38d000
+"@graphile/logger@npm:^0.3.0":
+  version: 0.3.0
+  resolution: "@graphile/logger@npm:0.3.0"
+  checksum: 10/2eff71dcc68eaf37fea241c6122219bd03c490688aab160f89db46c478dd86ea7e7165ce49c1a510587a785a2774825d9396b6a277ab860c4889e9e25e5beee7
   languageName: node
   linkType: hard
 
@@ -8013,7 +8013,7 @@ __metadata:
     "@fortawesome/free-regular-svg-icons": "npm:^6.5.1"
     "@fortawesome/free-solid-svg-icons": "npm:^6.5.1"
     "@fortawesome/react-fontawesome": "npm:^0.2.0"
-    "@graphile/logger": "npm:^0.2.0"
+    "@graphile/logger": "npm:^0.3.0"
     "@jest/globals": "npm:^30.2.0"
     "@mdx-js/react": "npm:^1.6.22"
     "@tsconfig/node-ts": "npm:^23.6.4"

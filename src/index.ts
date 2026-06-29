@@ -23,8 +23,8 @@ import type {
 import type { CompiledSharedOptions } from "./lib.ts";
 export { parseCronItem, parseCronItems, parseCrontab } from "./crontab.ts";
 export * from "./interfaces.ts";
-export type { LogFunctionFactory } from "./logger.ts";
-export { consoleLogFactory, Logger, LogLevel } from "./logger.ts";
+export type { LogFunctionFactory, LogLevel } from "./logger.ts";
+export { consoleLogFactory, Logger } from "./logger.ts";
 export { runTaskList, runTaskListOnce } from "./main.ts";
 export { WorkerPreset } from "./preset.ts";
 export { run, runMigrations, runOnce } from "./runner.ts";
