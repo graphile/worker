@@ -1,6 +1,6 @@
 import { getTasks } from "../src/getTasks.ts";
 import { makeJobHelpers, makeWithPgClientFromClient } from "../src/helpers.ts";
-import {
+import type {
   CompiledSharedOptions,
   WatchedTaskList,
   WorkerSharedOptions,

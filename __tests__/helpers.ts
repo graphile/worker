@@ -8,7 +8,7 @@ import {
 import pg from "pg";
 
 import defer from "../src/deferred.ts";
-import {
+import type {
   DbJob,
   Job,
   KnownCrontab,

@@ -1,7 +1,7 @@
 import { jest } from "@jest/globals";
 import { EventEmitter } from "events";
 
-import {
+import type {
   Task,
   TaskList,
   WorkerEvents,

@@ -1,12 +1,7 @@
 import { jest } from "@jest/globals";
 
-import {
-  makeWorkerUtils,
-  runTaskListOnce,
-  Task,
-  TaskList,
-  WorkerSharedOptions,
-} from "../src/index.ts";
+import type { Task, TaskList, WorkerSharedOptions } from "../src/index.ts";
+import { makeWorkerUtils, runTaskListOnce } from "../src/index.ts";
 import { getJobs, reset, withPgClient, withPgPool } from "./helpers.ts";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -1,14 +1,12 @@
 import { jest } from "@jest/globals";
 
-import type { Job } from "../src/index.ts";
-import {
-  addJobAdhoc,
-  makeWorkerUtils,
-  runTaskListOnce,
+import type {
+  Job,
   Task,
   WorkerSharedOptions,
   WorkerUtils,
 } from "../src/index.ts";
+import { addJobAdhoc, makeWorkerUtils, runTaskListOnce } from "../src/index.ts";
 import {
   getJobs,
   HOUR,

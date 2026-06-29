@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
 
-import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces.ts";
+import type { Task, TaskList, WorkerSharedOptions } from "../src/interfaces.ts";
 import { runTaskListOnce } from "../src/main.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,

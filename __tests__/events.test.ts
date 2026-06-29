@@ -2,9 +2,11 @@ import { jest } from "@jest/globals";
 import { EventEmitter } from "events";
 import type { Pool } from "pg";
 
-import deferred, { Deferred } from "../src/deferred.ts";
-import { run, Runner } from "../src/index.ts";
-import { Task, TaskList, WorkerSharedOptions } from "../src/interfaces.ts";
+import type { Deferred } from "../src/deferred.ts";
+import deferred from "../src/deferred.ts";
+import type { Runner } from "../src/index.ts";
+import { run } from "../src/index.ts";
+import type { Task, TaskList, WorkerSharedOptions } from "../src/interfaces.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   expectJobCount,

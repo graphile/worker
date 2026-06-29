@@ -1,9 +1,5 @@
-import {
-  Job,
-  makeWorkerUtils,
-  WorkerSharedOptions,
-  WorkerUtils,
-} from "../src/index.ts";
+import type { Job, WorkerSharedOptions, WorkerUtils } from "../src/index.ts";
+import { makeWorkerUtils } from "../src/index.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
   getJobs,

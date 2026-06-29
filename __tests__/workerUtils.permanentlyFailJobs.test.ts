@@ -1,8 +1,5 @@
-import {
-  makeWorkerUtils,
-  WorkerSharedOptions,
-  WorkerUtils,
-} from "../src/index.ts";
+import type { WorkerSharedOptions, WorkerUtils } from "../src/index.ts";
+import { makeWorkerUtils } from "../src/index.ts";
 import {
   getJobs,
   makeSelectionOfJobs,
