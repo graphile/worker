@@ -47,7 +47,7 @@ To create tasks in Cloud Tasks
 
 ```js
 // tasks/cloud-tasks-exporter.js
-const { CloudTasksClient } = require("@google-cloud/tasks");
+import { CloudTasksClient } from "@google-cloud/tasks";
 
 const client = new CloudTasksClient();
 
@@ -110,7 +110,7 @@ To run Graphile Worker task
 
 ```js
 // tasks/cloud-tasks-exporter.js
-module.exports = async (payload, { logger }) => {
+export default async function task(payload, { logger }) {
   logger.info(
     `Delegating task to Cloud Tasks with payload ${JSON.stringify(payload)}`,
   );
@@ -122,7 +122,7 @@ module.exports = async (payload, { logger }) => {
   });
 
   logger.info("Done!");
-};
+}
 ```
 
 ## Run the worker and add a job

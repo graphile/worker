@@ -1,6 +1,6 @@
-const faktory = require("faktory-worker");
+import faktory from "faktory-worker";
 
-module.exports = async (payload, helpers) => {
+export default async function faktoryExporter(payload, helpers) {
   const { param } = payload;
   const { logger } = helpers;
 
@@ -17,4 +17,4 @@ module.exports = async (payload, helpers) => {
   logger.info(`Received jid from Faktory: ${jid}. Thanks Faktory!`);
 
   await faktoryClient.close();
-};
+}

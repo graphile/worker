@@ -95,7 +95,7 @@ you should create a tasks folder first (but not in the root!):
 ```sh
 yarn prepack
 mkdir -p _LOCAL/tasks
-echo 'module.exports = () => {}' > _LOCAL/tasks/hello.js
+echo 'export default function hello() {}' > _LOCAL/tasks/hello.js
 cd _LOCAL
 node ../dist/cli.js -c "postgres:///my_db"
 ```

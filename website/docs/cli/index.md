@@ -24,10 +24,10 @@ Create a `tasks/` folder, and place in it JS files containing your task specs.
 The names of these files will be the task identifiers, e.g. `hello` below:
 
 ```js title="tasks/hello.js"
-module.exports = async (payload, helpers) => {
+export default async function hello(payload, helpers) {
   const { name } = payload;
   helpers.logger.info(`Hello, ${name}`);
-};
+}
 ```
 
 ### Run the worker

@@ -54,16 +54,16 @@ extra side effects) &mdash; for example sending emails.
 ## Example JS task executors
 
 ```js title="tasks/task_1.js"
-module.exports = async (payload) => {
+export default async function task1(payload) {
   await doMyLogicWith(payload);
-};
+}
 ```
 
 ```js title="tasks/task_2.js"
-module.exports = async (payload, helpers) => {
+export default async function task2(payload, helpers) {
   // async is optional, but best practice
   helpers.logger.debug(`Received ${JSON.stringify(payload)}`);
-};
+}
 ```
 
 ## The task directory

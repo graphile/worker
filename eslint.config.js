@@ -163,6 +163,7 @@ export default [
           files: ["perfTest/**/*", "examples/**/*"],
           rules: {
             "import-x/extensions": "off",
+            "import-x/no-unresolved": "off",
             "@typescript-eslint/no-var-requires": 0,
           },
         },

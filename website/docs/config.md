@@ -28,10 +28,10 @@ We therefore recommend that the preset be the default export of a
 
 Here's an example in JavaScript:
 
-```ts title="graphile.config.js"
-const { WorkerPreset } = require("graphile-worker");
+```js title="graphile.config.js"
+import { WorkerPreset } from "graphile-worker";
 
-module.exports = {
+export default {
   extends: [WorkerPreset],
   worker: {
     connectionString: process.env.DATABASE_URL,
