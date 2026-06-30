@@ -193,6 +193,8 @@ describe("esm", () => {
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
         [
+          "module-typescript",
+          "typescript",
           "wouldyoulike",
           "wouldyoulike_default",
         ]
@@ -214,6 +216,12 @@ describe("esm", () => {
       expect(
         await tasks.wouldyoulike_default!(helpers.job.payload, helpers),
       ).toEqual("some more sausages");
+      expect(await tasks.typescript!(helpers.job.payload, helpers)).toEqual(
+        "some typescript",
+      );
+      expect(
+        await tasks["module-typescript"]!(helpers.job.payload, helpers),
+      ).toEqual("some module typescript");
       await release();
     }));
 
