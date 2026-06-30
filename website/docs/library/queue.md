@@ -33,7 +33,7 @@ Useful for adding jobs from within JavaScript in an efficient way.
 Runnable example:
 
 ```js
-const { makeWorkerUtils } = require("graphile-worker");
+import { makeWorkerUtils } from "graphile-worker";
 
 async function main() {
   const workerUtils = await makeWorkerUtils({
@@ -143,7 +143,7 @@ one-off scripts this convenience method may be enough.
 Runnable example:
 
 ```js
-const { addJobAdhoc } = require("graphile-worker");
+import { addJobAdhoc } from "graphile-worker";
 
 async function main() {
   await addJobAdhoc(

@@ -1,4 +1,4 @@
-const { CloudTasksClient } = require("@google-cloud/tasks");
+import { CloudTasksClient } from "@google-cloud/tasks";
 
 const client = new CloudTasksClient();
 
@@ -56,7 +56,7 @@ async function createTask({
 }
 
 // Graphile Worker Task
-module.exports = async (payload, { logger }) => {
+export default async function cloudTasksExporter(payload, { logger }) {
   logger.info(
     `Delegating task to Cloud Tasks with payload ${JSON.stringify(payload)}`,
   );
@@ -68,4 +68,4 @@ module.exports = async (payload, { logger }) => {
   });
 
   logger.info("Done!");
-};
+}

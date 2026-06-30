@@ -22,9 +22,9 @@ job from a queue.
 
 ```JS
 // tasks/faktory-export.js
-const faktory = require("faktory-worker");
+import faktory from "faktory-worker";
 
-module.exports = async (payload, helpers) => {
+export default async function task(payload, helpers) {
   const { param } = payload;
   const { logger } = helpers;
 

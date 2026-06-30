@@ -1,4 +1,4 @@
-const { Queue } = require("bullmq");
+import { Queue } from "bullmq";
 
 const defaultQueueName = "database-events";
 const queueName = process.env.QUEUE_NAME || defaultQueueName;

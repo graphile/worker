@@ -1,7 +1,8 @@
-const js = require("@eslint/js");
-const { FlatCompat } = require("@eslint/eslintrc");
-const { readFileSync } = require("node:fs");
+import js from "@eslint/js";
+import { FlatCompat } from "@eslint/eslintrc";
+import { readFileSync } from "node:fs";
 
+const __dirname = import.meta.dirname;
 const compat = new FlatCompat({
   baseDirectory: __dirname,
   recommendedConfig: js.configs.recommended,
@@ -22,7 +23,7 @@ const ignores = readFileSync(`${__dirname}/.lintignore`, "utf8")
   })
   .filter((l) => l != null);
 
-module.exports = [
+export default [
   {
     ignores: [...ignores, "eslint.config.js", ".prettierrc.js"],
   },
@@ -162,6 +163,7 @@ module.exports = [
           files: ["perfTest/**/*", "examples/**/*"],
           rules: {
             "import-x/extensions": "off",
+            "import-x/no-unresolved": "off",
             "@typescript-eslint/no-var-requires": 0,
           },
         },

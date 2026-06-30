@@ -26,7 +26,7 @@ The following is equivalent to the setup in
 [the CLI quickstart](/docs/cli#quickstart):
 
 ```js
-const { run } = require("graphile-worker");
+import { run } from "graphile-worker";
 
 async function main() {
   // Run a worker to execute jobs:
@@ -62,12 +62,20 @@ main().catch((err) => {
 });
 ```
 
+:::tip CommonJS
+
+Graphile Worker is published as ESM, but the minimum supported Node.js version
+supports `require(esm)`. If your application is still CommonJS, you may continue
+to load the library with `const { run } = require("graphile-worker")`.
+
+:::
+
 ### Add a job via the library
 
 You can also use the library to quickly add a job:
 
 ```js
-const { addJobAdhoc } = require("graphile-worker");
+import { addJobAdhoc } from "graphile-worker";
 
 addJobAdhoc(
   // makeWorkerUtils options

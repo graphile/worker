@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { loadConfig } from "graphile-config/load";
-import * as yargs from "yargs";
+import yargs from "yargs";
 
 import { assertCleanupTasks, cleanup } from "./cleanup.ts";
 import { getCronItemsInternal } from "./getCronItems.ts";
@@ -9,7 +9,7 @@ import { getUtilsAndReleasersFromOptions } from "./lib.ts";
 import { EMPTY_PRESET, WorkerPreset } from "./preset.ts";
 import { runInternal, runOnceInternal } from "./runner.ts";
 
-const argv = yargs
+const argv = yargs(process.argv.slice(2))
   .parserConfiguration({
     "boolean-negation": false,
   })

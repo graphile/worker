@@ -28,10 +28,10 @@ We therefore recommend that the preset be the default export of a
 
 Here's an example in JavaScript:
 
-```ts title="graphile.config.js"
-const { WorkerPreset } = require("graphile-worker");
+```js title="graphile.config.js"
+import { WorkerPreset } from "graphile-worker";
 
-module.exports = {
+export default {
   extends: [WorkerPreset],
   worker: {
     connectionString: process.env.DATABASE_URL,
@@ -173,11 +173,11 @@ Options for Graphile Worker
     size: number;
     ttl?: number;
     refetchDelay?: {
-        durationMs: number;
-        threshold?: number;
-        maxAbortThreshold?: number;
+      durationMs: number;
+      threshold?: number;
+      maxAbortThreshold?: number;
     };
-};
+  };
   logger?: Logger<{}>;
   maxPoolSize?: number;
   maxResetLockedInterval?: number;
@@ -208,19 +208,22 @@ crash or kill) may result in the jobs being executed again once they expire
 
 ### worker.concurrentJobs
 
-Type: `number | undefined`
+Type: `number | undefined`  
+Default value: `1`
 
 Number of jobs to run concurrently on a single Graphile Worker instance.
 
 ### worker.connectionString
 
-Type: `string | undefined`
+Type: `string | undefined`  
+Default value: `process.env.DATABASE_URL`
 
 Database [connection string](/docs/connection-string).
 
 ### worker.crontabFile
 
-Type: `string | undefined`
+Type: `string | undefined`  
+Default value: `process.cwd() + "/crontab"`
 
 The path to a file in which Graphile Worker should look for crontab schedules.
 See: [recurring tasks (crontab)](/docs/cron)).
@@ -248,7 +251,8 @@ failure.
 
 ### worker.fileExtensions
 
-Type: `string[] | undefined`
+Type: `string[] | undefined`  
+Default value: `[".js", ".cjs", ".mjs"]`
 
 A list of file extensions (in priority order) that Graphile Worker should
 attempt to import as Node modules when loading task executors from the file
@@ -256,7 +260,8 @@ system.
 
 ### worker.getQueueNameBatchDelay
 
-Type: `number | undefined`
+Type: `number | undefined`  
+Default value: `50`
 
 **Experimental**
 
@@ -266,7 +271,8 @@ window for greater efficiency, or reduce it to improve latency.
 
 ### worker.gracefulShutdownAbortTimeout
 
-Type: `number | undefined`
+Type: `number | undefined`  
+Default value: `5_000`
 
 How long in milliseconds after a gracefulShutdown is triggered should Graphile
 Worker wait to trigger the AbortController, which should cancel supported
@@ -275,7 +281,18 @@ asynchronous actions?
 ### worker.localQueue
 
 Type:
-`{ size: number; ttl?: number; refetchDelay?: { durationMs: number; threshold?: number; maxAbortThreshold?: number; }; } | undefined`
+
+```ts
+{
+  size: number;
+  ttl?: number;
+  refetchDelay?: {
+    durationMs: number;
+    threshold?: number;
+    maxAbortThreshold?: number;
+  };
+} | undefined
+```
 
 The localQueue enables Graphile Worker to lock and pull down a batch of jobs to
 execute at once, distributing them to individual workers on demand without the
@@ -299,7 +316,8 @@ A Logger instance (see [Logger](/docs/library/logger)).
 
 ### worker.maxPoolSize
 
-Type: `number | undefined`
+Type: `number | undefined`  
+Default value: `10`
 
 Maximum number of concurrent connections to Postgres; must be at least `2`. This
 number can be lower than `concurrentJobs`, however a low pool size may cause
@@ -311,7 +329,8 @@ your logic.)
 
 ### worker.maxResetLockedInterval
 
-Type: `number | undefined`
+Type: `number | undefined`  
+Default value: `600_000`
 
 **Experimental**
 
@@ -320,7 +339,8 @@ scans for jobs that have been locked too long (see `minResetLockedInterval`).
 
 ### worker.minResetLockedInterval
 
-Type: `number | undefined`
+Type: `number | undefined`  
+Default value: `480_000`
 
 **Experimental**
 
@@ -330,31 +350,36 @@ choose a time between this and `maxResetLockedInterval`.
 
 ### worker.pollInterval
 
-Type: `number | undefined`
+Type: `number | undefined`  
+Default value: `2000`
 
 ### worker.preparedStatements
 
-Type: `boolean | undefined`
+Type: `boolean | undefined`  
+Default value: `true`
 
 Whether Graphile Worker should use prepared statements. Set `false` if you use
 software (e.g. some Postgres pools) that don't support them.
 
 ### worker.schema
 
-Type: `string | undefined`
+Type: `string | undefined`  
+Default value: `graphile_worker`
 
 The database schema in which Graphile Worker's tables, functions, views, etc are
 located. Graphile Worker will create or edit things in this schema as necessary.
 
 ### worker.taskDirectory
 
-Type: `string | undefined`
+Type: `string | undefined`  
+Default value: `process.cwd() + "/tasks"`
 
 The path to a directory in which Graphile Worker should look for task executors.
 
 ### worker.useNodeTime
 
-Type: `boolean | undefined`
+Type: `boolean | undefined`  
+Default value: `false`
 
 Set to `true` to use the time as recorded by Node.js rather than PostgreSQL.
 It's strongly recommended that you ensure the Node.js and PostgreSQL times are

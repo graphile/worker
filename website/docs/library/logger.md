@@ -24,7 +24,7 @@ You may customize where log messages from `graphile-worker` (and your tasks) go
 by supplying a custom `Logger` instance using your own `logFactory`.
 
 ```js
-const { Logger, run } = require("graphile-worker");
+import { Logger, run } from "graphile-worker";
 
 /* Replace this function with your own implementation */
 function logFactory(scope) {
