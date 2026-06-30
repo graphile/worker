@@ -4,16 +4,51 @@ import "zx/globals";
 
 import * as fs from "fs/promises";
 
-await $`yarn link`;
-
 // Create a temporary instance so we can read the options
 const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "gwdu-"));
 const prev = process.cwd();
-cd(tmp);
-await $`yarn link graphile-worker`;
-await $`yarn add typescript graphile`;
+
+// Determine TypeScript version to synchronise with ours
+const packageJson = JSON.parse(
+  await fs.readFile(`${prev}/package.json`, "utf8"),
+);
+const typescriptVersion = packageJson.devDependencies.typescript;
+if (!typescriptVersion) {
+  throw new Error("Could not determine `typescript` version");
+}
+const graphileVersion = packageJson.devDependencies.graphile;
+if (!graphileVersion) {
+  throw new Error("Could not determine `graphile` version");
+}
+
 await fs.writeFile(
-  `graphile.config.mts`,
+  `${tmp}/package.json`,
+  JSON.stringify(
+    { type: "module", name: "@localrepo/tmp", private: true },
+    null,
+    2,
+  ) + "\n",
+);
+await fs.cp(`${prev}/.yarnrc.yml`, `${tmp}/.yarnrc.yml`);
+await fs.cp(`${prev}/.yarn`, `${tmp}/.yarn/`, { recursive: true });
+cd(tmp);
+await $`yarn link ${prev}`;
+
+// If we have the crystal repo locally, use it's version of the `graphile` CLI
+try {
+  const crystalRepo = `${process.env.HOME}/Dev/graphile/crystal`;
+  const stat = await fs.stat(crystalRepo);
+  if (stat.isDirectory()) {
+    console.log(`Using local crystal modules`);
+    await $`yarn link ${crystalRepo} --all`;
+  }
+} catch {
+  // Ignore
+}
+
+await $`yarn add graphile-worker graphile@${graphileVersion} typescript@${typescriptVersion}`;
+await fs.writeFile(
+  `graphile.config.ts`,
   `\
 import type {} from "graphile-worker";
 
@@ -26,7 +61,7 @@ export default preset;
 );
 
 // Get the markdown output for options
-const output = await $`graphile config options`;
+const output = await $`yarn graphile config options`;
 
 // Go back and destroy our tempdir
 cd(prev);
@@ -37,6 +72,7 @@ await fs.rm(tmp, { recursive: true, force: true });
 const SEARCH = "\n## worker\n";
 const i = output.stdout.indexOf(SEARCH);
 if (i < 0) {
+  console.log(output.stdout);
   throw new Error("Worker heading not found!");
 }
 const optionsMd = output.stdout
