@@ -21,13 +21,18 @@ Read more:
 
 ## v0.18.0
 
+- Now published as pure ESM, but worry not as unflagged require(ESM) is now
+  enabled by default in
+  [Node 20.19.0+](https://nodejs.org/pt-br/blog/release/v20.19.0),
+  [Node 22.12.0+](https://nodejs.org/en/blog/release/v22.12.0) and Node 24+ so
+  everything should continue to work as before.
 - Since Node 20 is EOL, Node 22 is now the minimum supported version, per our
   [requirements documentation](https://worker.graphile.org/docs/requirements).
 - `Runner` gains `[Symbol.asyncDispose]()` method, so you can
   `await using runner = await run(...)` and the worker will be released when you
   reach the end of the scope. (Primarily useful for tests.)
 - Maintenance work: upgrade to latest TypeScript, Jest, eliminate ts-node, fix
-  yargs, use erasable syntax only for type-stripping support,
+  yargs, use erasable syntax only for type-stripping support.
 - `LogLevel` export is now type only - a string union rather than a TypeScript
   const enum.
 
