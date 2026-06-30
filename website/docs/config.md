@@ -41,7 +41,7 @@ export default {
     schema: "graphile_worker",
     crontabFile: "crontab",
     concurrentJobs: 1,
-    fileExtensions: [".js", ".cjs", ".mjs"],
+    fileExtensions: [".js", ".cjs", ".mjs", ".ts", ".mts"],
   },
 };
 ```
@@ -61,7 +61,7 @@ const preset: GraphileConfig.Preset = {
     schema: "graphile_worker",
     crontabFile: "crontab",
     concurrentJobs: 1,
-    fileExtensions: [".js", ".cjs", ".mjs"],
+    fileExtensions: [".js", ".cjs", ".mjs", ".ts", ".mts"],
   },
 };
 

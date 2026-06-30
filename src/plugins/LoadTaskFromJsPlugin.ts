@@ -6,7 +6,7 @@ import { isValidTask } from "../index.ts";
 import { coerceError } from "../lib.ts";
 import { version } from "../version.ts";
 
-const DEFAULT_EXTENSIONS = [".js", ".mjs", ".cjs"];
+const DEFAULT_EXTENSIONS = [".js", ".cjs", ".mjs", ".ts", ".mts"];
 
 export const LoadTaskFromJsPlugin: GraphileConfig.Plugin = {
   name: "LoadTaskFromJsPlugin",

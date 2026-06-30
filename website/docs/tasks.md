@@ -89,11 +89,13 @@ the plugins you have loaded.
 
 ## Loading JavaScript files
 
-With the default preset, Graphile Worker will load `.js`, `.cjs` and `.mjs`
-files as task executors using the `import()` function. If the file is a CommonJS
-module, then Worker will expect `module.exports` to be the task executor
-function; if the file is an ECMAScript module (ESM) then Worker will expect the
-default export to be the task executor function.
+With the default preset, Graphile Worker will group files in the `tasks` folder
+by basename; for each basename it will load via `import()` the first matching
+file, if any, with extension (in priority order) `.js`, `.cjs`, `.mjs`, `.ts`,
+or `.mts`. If the file is a CommonJS module, then Worker will expect
+`module.exports` to be the task executor function; if the file is an ECMAScript
+module (ESM) then Worker will expect the default export to be the task executor
+function.
 
 You can add support for other ways of loading task executors via plugins; look
 at the source code of
@@ -109,33 +111,42 @@ TypeScript files to JS and then have Graphile Worker load the JS files.
 
 :::
 
-To load TypeScript files directly as task executors (without precompilation),
-one way is to do the following:
+Graphile Worker includes `.ts` and `.mts` in its default task file extensions
+and will attempt to use Node.js' native `import()` to import them; this relies
+on the TypeScript support of your Node.js version. All LTS versions of Node.js
+support type stripping by default, so a simple TS file using only erasable
+syntax should work out of the box:
 
-1. Install `ts-node`.
-2. Add `".ts"` to the `worker.fileExtensions` list in your preset.
-3. Run Graphile Worker with the environment variable
-   `NODE_OPTIONS="--loader ts-node/esm"` set.
+```ts title="tasks/send_email.ts"
+import type { JobHelpers } from "graphile-worker";
 
-```ts title="Example graphile.config.ts"
-import { WorkerPreset } from "graphile-worker";
-
-const preset: GraphileConfig.Preset = {
-  extends: [WorkerPreset],
-  worker: {
-    connectionString: process.env.DATABASE_URL,
-    concurrentJobs: 5,
-    fileExtensions: [".js", ".cjs", ".mjs", ".ts", ".cts", ".mts"],
-  },
-};
-
-export default preset;
+export default async function sendEmail(
+  payload: { to: string },
+  helpers: JobHelpers,
+) {
+  helpers.logger.info(`Sending email to ${payload.to}`);
+}
 ```
 
-```bash title="Running graphile-worker with '--loader ts-node/esm'"
-NODE_OPTIONS="--loader ts-node/esm" graphile-worker -c ...
-# OR: node --loader ts-node/esm node_modules/.bin/graphile-worker -c ...
+To help enforce that you're only using erasable syntax, we recommend adding the
+`@tsconfig/node-ts` (ts: type-stripping) preset to your tsconfig.json file:
+
+```json title="tsconfig.json"
+{
+  "extends": [
+    "@tsconfig/node22/tsconfig.json",
+    "@tsconfig/node-ts/tsconfig.json"
+  ]
+}
 ```
+
+If your tasks use TypeScript features that require transforms, you can:
+
+1. compile them to JavaScript before running Worker,
+2. enable more advanced Node.js options (e.g. `--experimental-transform-types`),
+3. use a loader with TypeScript support (e.g.
+   `NODE_OPTIONS="--loader ts-node/esm"`), or
+4. add support via your own plugin.
 
 ## Loading executable files
 

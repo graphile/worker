@@ -28,7 +28,7 @@ export const makeWorkerPresetWorkerOptions = () =>
     preparedStatements: true as boolean,
     crontabFile: `${process.cwd()}/crontab`,
     taskDirectory: `${process.cwd()}/tasks`,
-    fileExtensions: [".js", ".cjs", ".mjs"],
+    fileExtensions: [".js", ".cjs", ".mjs", ".ts", ".mts"],
     logger: defaultLogger,
     minResetLockedInterval: 8 * MINUTE,
     maxResetLockedInterval: 10 * MINUTE,

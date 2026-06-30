@@ -112,13 +112,13 @@ See the [CLI documentation](./cli/run.md) for more information about CLI mode.
 
 ### Running in Library Mode
 
-When Graphile Worker users run in library mode, they use the functions exported
-from `src/index.ts`. The scrappiest thing you can do to run your local version
-of Graphile Worker similarly is to create a Typescript file that runs functions
-imported from `.`.
+#### In the Graphile Worker repo
 
-```ts title="src/temp.ts"
-import { run, WorkerPreset } from ".";
+Since `graphile-worker` has `exports`, you can simply copy your test script into
+the Graphile Worker repository:
+
+```ts title="temp.ts"
+import { run, type WorkerPreset } from "graphile-worker";
 
 async function main() {
   const runner = await run({
@@ -144,26 +144,33 @@ main().catch((err) => {
 });
 ```
 
-Then you can run `temp.ts` with `ts-node`:
+Don't forget to make sure Graphile Worker is compiled:
 
 ```sh
-yarn run ts-node src/temp.ts
+yarn prepack
 ```
 
-You have to remember not to commit `src/temp.ts`, so a cleaner way to achieve
-this would be using `yarn link`. In the root of your local Graphile Worker
-repository run the following:
+Then run `temp.ts` using Node.js's native type stripping support:
 
 ```sh
-yarn link
+node temp.ts
 ```
 
-Create another node.js project with yarn that imports from `graphile-worker`
-like it would if it was using the published package. In that directory, run the
-following:
+#### In your own repo
+
+**This only works if your local repository is using Yarn 4+**.
+
+In your repository, run:
 
 ```sh
-yarn link graphile-worker
+yarn link /path/to/graphile-worker
+```
+
+This will set up a "resolution" so that any attempt to install Graphile Worker
+will install the linked module. Then simply install graphile-worker:
+
+```sh
+yarn add graphile-worker
 ```
 
 Note that once you link, you still need to compile your local graphile-worker
@@ -181,8 +188,8 @@ time there is a change. You can do so with the following command:
 yarn watch
 ```
 
-See the [yarn link](https://classic.yarnpkg.com/lang/en/docs/cli/link/) docs for
-more information about how linking works, including instructions for unlinking.
+See the [yarn link](https://yarnpkg.com/cli/link) docs for more information
+about how linking works, including instructions for unlinking.
 
 ### Docker Compose
 

@@ -186,7 +186,7 @@ declare global {
        * should attempt to import as Node modules when loading task executors from
        * the file system.
        *
-       * @defaultValue `[".js", ".cjs", ".mjs"]`
+       * @defaultValue `[".js", ".cjs", ".mjs", ".ts", ".mts"]`
        */
       fileExtensions?: string[];
 
