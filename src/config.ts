@@ -4,7 +4,46 @@ import { MINUTE, SECOND } from "./cronConstants.ts";
 import { defaultLogger } from "./logger.ts";
 
 const cosmiconfigResult = cosmiconfigSync("graphile-worker").search();
-const cosmiconfig = cosmiconfigResult?.config;
+
+if (cosmiconfigResult && !cosmiconfigResult.isEmpty) {
+  const { config: cosmiconfig, filepath } = cosmiconfigResult;
+  if (
+    cosmiconfig.schema != null ||
+    cosmiconfig.pollInterval != null ||
+    cosmiconfig.maxPoolSize != null
+  ) {
+    console.error(
+      `Cosmiconfig configuration found in ${filepath}. cosmiconfig is no longer supported, please switch to graphile.config.ts - an equivalent configuration might look like:`,
+    );
+    console.error();
+    console.error("```ts");
+    console.error("// graphile.config.ts");
+    console.error('import { WorkerPreset } from "graphile-worker";');
+    console.error("");
+    console.error("const preset: GraphileConfig.Preset = {");
+    console.error("  extends: [WorkerPreset],");
+    console.error("  worker: {");
+    if (cosmiconfig.schema != null) {
+      console.error(`    schema: ${JSON.stringify(cosmiconfig.schema)},`);
+    }
+    if (cosmiconfig.pollInterval != null) {
+      console.error(
+        `    pollInterval: ${JSON.stringify(cosmiconfig.pollInterval)},`,
+      );
+    }
+    if (cosmiconfig.maxPoolSize != null) {
+      console.error(
+        `    maxPoolSize: ${JSON.stringify(cosmiconfig.maxPoolSize)},`,
+      );
+    }
+    console.error("  },");
+    console.error("};");
+    console.error("");
+    console.error("export default preset;");
+    console.error("```");
+    process.exit(1);
+  }
+}
 
 /**
  * Defaults to use for various options throughout the codebase, sourced from
@@ -13,18 +52,10 @@ const cosmiconfig = cosmiconfigResult?.config;
 export const makeWorkerPresetWorkerOptions = () =>
   ({
     connectionString: process.env.DATABASE_URL,
-    schema:
-      process.env.GRAPHILE_WORKER_SCHEMA ||
-      enforceStringOrUndefined("schema", cosmiconfig?.schema) ||
-      "graphile_worker",
-    pollInterval:
-      enforceNumberOrUndefined("pollInterval", cosmiconfig?.pollInterval) ||
-      2000,
-    concurrentJobs:
-      enforceNumberOrUndefined("concurrentJobs", cosmiconfig?.concurrentJobs) ||
-      1,
-    maxPoolSize:
-      enforceNumberOrUndefined("maxPoolSize", cosmiconfig?.maxPoolSize) || 10,
+    schema: process.env.GRAPHILE_WORKER_SCHEMA || "graphile_worker",
+    pollInterval: 2000,
+    concurrentJobs: 1,
+    maxPoolSize: 10,
     preparedStatements: true as boolean,
     crontabFile: `${process.cwd()}/crontab`,
     taskDirectory: `${process.cwd()}/tasks`,
@@ -35,42 +66,3 @@ export const makeWorkerPresetWorkerOptions = () =>
     gracefulShutdownAbortTimeout: 5 * SECOND,
     useNodeTime: false,
   }) satisfies GraphileConfig.WorkerOptions;
-
-function enforceStringOrUndefined(
-  keyName: string,
-  str: unknown,
-): string | undefined {
-  if (typeof str === "string") {
-    return str;
-  } else if (!str) {
-    return undefined;
-  } else {
-    throw new Error(
-      `Expected '${keyName}' to be a string (or not set), but received ${typeof str}`,
-    );
-  }
-}
-
-function enforceNumberOrUndefined(
-  keyName: string,
-  nr: unknown,
-): number | undefined {
-  if (typeof nr === "number") {
-    return nr;
-  } else if (typeof nr === "string") {
-    const val = parseFloat(nr);
-    if (isFinite(val)) {
-      return val;
-    } else {
-      throw new Error(
-        `Expected '${keyName}' to be a number (or not set), but received ${nr}`,
-      );
-    }
-  } else if (!nr) {
-    return undefined;
-  } else {
-    throw new Error(
-      `Expected '${keyName}' to be a number (or not set), but received ${typeof nr}`,
-    );
-  }
-}

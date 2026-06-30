@@ -21,6 +21,9 @@ Read more:
 
 ## v0.18.0
 
+- For consistency, `cosmiconfig` is no longer supported for configuration; use
+  `graphile.config.ts` instead. (This release will throw errors if you're using
+  cosmisconfig, in later releases cosmiconfigs will not be detected.)
 - Now published as pure ESM, but worry not as unflagged require(ESM) is now
   enabled by default in
   [Node 20.19.0+](https://nodejs.org/pt-br/blog/release/v20.19.0),
