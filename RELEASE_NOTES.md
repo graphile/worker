@@ -26,6 +26,11 @@ Read more:
   [Node 20.19.0+](https://nodejs.org/pt-br/blog/release/v20.19.0),
   [Node 22.12.0+](https://nodejs.org/en/blog/release/v22.12.0) and Node 24+ so
   everything should continue to work as before.
+- TypeScript task files with `.ts` and `.mts` extensions are now recognized by
+  default and loaded through Node's native type stripping if possible. Only
+  erasable, verbatim TypeScript syntax is supported without a custom loader or
+  precompilation. `.js`, `.cjs` and `.mjs` files are prioritised ahead of `.ts`
+  and `.mts` files.
 - Since Node 20 is EOL, Node 22 is now the minimum supported version, per our
   [requirements documentation](https://worker.graphile.org/docs/requirements).
 - `Runner` gains `[Symbol.asyncDispose]()` method, so you can
