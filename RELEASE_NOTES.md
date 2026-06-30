@@ -26,6 +26,9 @@ Read more:
   [Node 20.19.0+](https://nodejs.org/pt-br/blog/release/v20.19.0),
   [Node 22.12.0+](https://nodejs.org/en/blog/release/v22.12.0) and Node 24+ so
   everything should continue to work as before.
+- We now use the `exports` option, meaning sub-path imports
+  (`require("graphile-worker/...")`) are no longer supported. If you need
+  something not exported by default, raise an issue.
 - TypeScript task files with `.ts` and `.mts` extensions are now recognized by
   default and loaded through Node's native type stripping if possible. Only
   erasable, verbatim TypeScript syntax is supported without a custom loader or
