@@ -89,12 +89,13 @@ the plugins you have loaded.
 
 ## Loading JavaScript files
 
-With the default preset, Graphile Worker will look for files ending in `.js`,
-`.cjs`, `.mjs`, `.ts`, or `.mts` (in that order of priority) and attempt to load
-them as task executors using the `import()` function. If the file is a CommonJS
-module, then Worker will expect `module.exports` to be the task executor
-function; if the file is an ECMAScript module (ESM) then Worker will expect the
-default export to be the task executor function.
+With the default preset, Graphile Worker will group files in the `tasks` folder
+by basename; for each basename it will load via `import()` the first matching
+file, if any, with extension (in priority order) `.js`, `.cjs`, `.mjs`, `.ts`,
+or `.mts`. If the file is a CommonJS module, then Worker will expect
+`module.exports` to be the task executor function; if the file is an ECMAScript
+module (ESM) then Worker will expect the default export to be the task executor
+function.
 
 You can add support for other ways of loading task executors via plugins; look
 at the source code of
