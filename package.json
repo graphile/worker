@@ -105,7 +105,8 @@
     "zx": "^8.8.5"
   },
   "resolutions": {
-    "eslint-plugin-import/tsconfig-paths": "^4.2.0"
+    "eslint-plugin-import/tsconfig-paths": "^4.2.0",
+    "webpack": "5.x <5.106"
   },
   "files": [
     "dist",
