@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunk_localrepo_graphile_worker_website=globalThis.webpackChunk_localrepo_graphile_worker_website||[]).push([[2626],{940(e){e.exports=JSON.parse('{"label":"releases","permalink":"/news/tags/releases","allTagsPath":"/news/tags","count":1}')}}]);
