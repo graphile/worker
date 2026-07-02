@@ -19,7 +19,7 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
-## v0.18.0
+## Pending (v0.18.0)
 
 - For consistency, `cosmiconfig` is no longer supported for configuration; use
   `graphile.config.ts` instead. (This release will throw errors if you're using
