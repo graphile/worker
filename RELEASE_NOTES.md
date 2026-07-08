@@ -47,6 +47,12 @@ Read more:
 - `LogLevel` export is now type only - a string union rather than a TypeScript
   const enum.
 
+## v0.17.3
+
+Fixes a bad cast (`::int[]` instead of `::bigint[]`) in `failJobs` resulting in
+an error being thrown on shutdown for people who have processed more than 2.147
+billion jobs with Graphile Worker.
+
 ## v0.17.2
 
 Implement `npm pkg fix` hint; also: fix `version` export - was _still_
