@@ -19,6 +19,12 @@ to make sure the system as a whole remains consistent.
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
+## v0.17.3
+
+Fixes a bad cast (`::int[]` instead of `::bigint[]`) in `failJobs` resulting in
+an error being thrown on shutdown for people who have processed more than 2.147
+billion jobs with Graphile Worker.
+
 ## v0.17.2
 
 Implement `npm pkg fix` hint; also: fix `version` export - was _still_
