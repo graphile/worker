@@ -123,7 +123,7 @@ last_error = $2::text,
 run_at = greatest(now(), run_at) + (exp(least(attempts, 10)) * interval '1 second'),
 locked_by = null,
 locked_at = null
-where id = any($1::int[]) and locked_by = $3::text
+where id = any($1::bigint[]) and locked_by = $3::text
 returning *
 ), queues as (
 update ${escapedWorkerSchema}._private_job_queues as job_queues
