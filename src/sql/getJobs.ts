@@ -155,8 +155,36 @@ q as (
     where job_queues.id = j.job_queue_id
 )`;
 
+  /**
+   * A batch (`batchSize > 1`) may select multiple jobs from the same named
+   * queue: `queueClause` locks each eligible queue row only once, but then
+   * every job belonging to that queue passes the eligibility check, so a
+   * single statement can lock several jobs from one queue. Those jobs would
+   * then run concurrently, breaking the serial execution guarantee for named
+   * queues (and once the first of them completes, `completeJobs`/`returnJobs`
+   * would unlock the queue while its siblings are still running, letting
+   * other pools claim yet more jobs from the same queue).
+   *
+   * To prevent this, keep only the first job per named queue and discard the
+   * rest. The discarded rows' `for update` locks release when the
+   * transaction ends and their `locked_at`/`locked_by` were never set, so
+   * they remain available; they cannot be picked up early because their
+   * queue stays locked (via `q` below) until the job we did keep completes.
+   * Jobs that aren't in a named queue are unaffected.
+   */
+  const dedupeClause =
+    batchSize > 1
+      ? `,
+j as (
+  select distinct on (job_queue_id, case when job_queue_id is null then id end)
+      job_queue_id, priority, run_at, id
+    from j_raw
+    order by job_queue_id, case when job_queue_id is null then id end, priority asc, run_at asc
+)`
+      : "";
+
   const text = `\
-with j as (
+with ${batchSize > 1 ? "j_raw" : "j"} as (
   select jobs.job_queue_id, jobs.priority, jobs.run_at, jobs.id
     from ${escapedWorkerSchema}._private_jobs as jobs
     where jobs.is_available = true
@@ -168,7 +196,7 @@ with j as (
     limit ${batchSize}
     for update
     skip locked
-)${updateQueue}
+)${dedupeClause}${updateQueue}
   update ${escapedWorkerSchema}._private_jobs as jobs
     set
       attempts = jobs.attempts + 1,
