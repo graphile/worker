@@ -14,7 +14,7 @@ import {
 
 const options: WorkerSharedOptions = {};
 
-const MAX_MIGRATION_NUMBER = 19;
+const MAX_MIGRATION_NUMBER = 20;
 
 test("migration installs schema; second migration does no harm", async () => {
   await withPgClient(async (pgClient) => {
