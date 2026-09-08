@@ -57,7 +57,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 22.x
+          node-version: lts/*
       - run: yarn --frozen-lockfile
       - run: yarn lint
 
@@ -85,7 +85,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 22.x
+          node-version: lts/*
       - run: yarn --frozen-lockfile
       - run: yarn prepack
       - run: yarn test:setupdb
@@ -113,7 +113,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 22.x
+          node-version: lts/*
       - run: yarn --frozen-lockfile
       - name: Install pg_dump
         run: |
