@@ -163,6 +163,8 @@ jobs:
 
           & "$env:PGBIN\createdb.exe" -U postgres graphile_worker_test
 
+          Add-Content -Path $env:GITHUB_PATH -Value $env:PGBIN
+
       - name: Install and start PostgreSQL 18 on macOS
         if: runner.os == 'macOS'
         shell: bash
