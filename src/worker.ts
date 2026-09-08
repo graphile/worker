@@ -5,7 +5,6 @@ import deferred from "./deferred.ts";
 import { makeJobHelpers } from "./helpers.ts";
 import type {
   CompleteJobFunction,
-  EnhancedWithPgClient,
   FailJobFunction,
   GetJobFunction,
   Job,
@@ -13,18 +12,16 @@ import type {
   TaskList,
   Worker,
   WorkerPool,
-  WorkerSharedOptions,
+  WorkerShared,
 } from "./interfaces.ts";
-import type { CompiledSharedOptions } from "./lib.ts";
 import { coerceError, safeEmit } from "./lib.ts";
 
 const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
 
 export function makeNewWorker(
-  compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
+  workerShared: WorkerShared,
   params: {
     tasks: TaskList;
-    withPgClient: EnhancedWithPgClient;
     continuous: boolean;
     abortSignal: AbortSignal;
     abortPromise: Promise<void>;
@@ -36,10 +33,10 @@ export function makeNewWorker(
     failJob: FailJobFunction;
   },
 ): Worker {
+  const { compiledSharedOptions, withPgClient } = workerShared;
   const ctx = compiledSharedOptions;
   const {
     tasks,
-    withPgClient,
     continuous,
     abortSignal,
     abortPromise,
@@ -250,8 +247,7 @@ export function makeNewWorker(
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
         assert.ok(task, `Unsupported task '${job.task_identifier}'`);
-        const helpers = makeJobHelpers(compiledSharedOptions, job, {
-          withPgClient,
+        const helpers = makeJobHelpers(workerShared, job, {
           logger,
           abortSignal,
           abortPromise,

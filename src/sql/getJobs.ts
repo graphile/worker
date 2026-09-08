@@ -16,15 +16,18 @@ export function isPromise<T>(t: T | Promise<T>): t is Promise<T> {
   );
 }
 
+// This is unlikely to ever have many entries in it unless the user is
+// deliberately doing something funky - no need for LRU.
+const queryCache: Record<string, string> = Object.create(null);
+
 export async function batchGetJobs(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: EnhancedWithPgClient,
   tasks: TaskList,
   poolId: string,
   flagsToSkip: string[] | null,
-  rawBatchSize: number,
+  batchSize: number,
 ): Promise<Job[]> {
-  const batchSize = parseInt(String(rawBatchSize), 10) || 1;
   const {
     escapedWorkerSchema,
     workerSchema,
@@ -47,9 +50,50 @@ export async function batchGetJobs(
     logger.error("No tasks found; nothing to do!");
     return [];
   }
+  const hasFlags = flagsToSkip != null && flagsToSkip.length > 0;
+  // Must be 63 or fewer characters long
+  const signature = `get_job${batchSize === 1 ? "" : batchSize}${hasFlags ? "F" : ""}${
+    useNodeTime ? "N" : ""
+  }/${workerSchema}`;
+  const name = !preparedStatements ? undefined : signature;
 
+  const text = (queryCache[signature] ??= constructQuery(
+    batchSize,
+    hasFlags,
+    useNodeTime,
+    escapedWorkerSchema,
+  ));
+
+  const values: unknown[] = [poolId, taskDetails.taskIds];
+  if (hasFlags) {
+    values.push(flagsToSkip!);
+  }
+  if (useNodeTime) {
+    values.push(new Date().toISOString());
+  }
+
+  const { rows } = await withPgClient.withRetries((client) =>
+    client.query<DbJob>({
+      text,
+      values,
+      name,
+    }),
+  );
+  return rows.map((jobRow) =>
+    Object.assign(jobRow, {
+      task_identifier:
+        taskDetails.supportedTaskIdentifierByTaskId[jobRow.task_id],
+    }),
+  );
+}
+
+function constructQuery(
+  batchSize: number,
+  hasFlags: boolean,
+  useNodeTime: boolean,
+  escapedWorkerSchema: string,
+) {
   let i = 2;
-  const hasFlags = flagsToSkip && flagsToSkip.length > 0;
   const flagsClause = hasFlags
     ? `and ((flags ?| $${++i}::text[]) is not true)`
     : "";
@@ -207,29 +251,6 @@ with ${batchSize > 1 ? "j_raw" : "j"} as (
     returning *`;
   // TODO: breaking change; change this to more optimal:
   // `RETURNING id, job_queue_id, task_id, payload`,
-  const values = [
-    poolId,
-    taskDetails.taskIds,
-    ...(hasFlags ? [flagsToSkip!] : []),
-    ...(useNodeTime ? [new Date().toISOString()] : []),
-  ];
-  const name = !preparedStatements
-    ? undefined
-    : `get_job${batchSize === 1 ? "" : batchSize}${hasFlags ? "F" : ""}${
-        useNodeTime ? "N" : ""
-      }/${workerSchema}`;
 
-  const { rows } = await withPgClient.withRetries((client) =>
-    client.query<DbJob>({
-      text,
-      values,
-      name,
-    }),
-  );
-  return rows.map((jobRow) =>
-    Object.assign(jobRow, {
-      task_identifier:
-        taskDetails.supportedTaskIdentifierByTaskId[jobRow.task_id],
-    }),
-  );
+  return text;
 }
