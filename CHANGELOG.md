@@ -1,4 +1,4 @@
-# Release notes
+# Changelog
 
 ## Worker Pro: easing migration
 
@@ -18,38 +18,6 @@ to make sure the system as a whole remains consistent.
 
 Read more:
 [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
-
-## Pending (v0.18.0)
-
-- For consistency, `cosmiconfig` is no longer supported for configuration; use
-  `graphile.config.ts` instead. (This release will throw errors if you're using
-  cosmisconfig, in later releases cosmiconfigs will not be detected.)
-- Now published as pure ESM, but worry not as unflagged require(ESM) is now
-  enabled by default in
-  [Node 20.19.0+](https://nodejs.org/pt-br/blog/release/v20.19.0),
-  [Node 22.12.0+](https://nodejs.org/en/blog/release/v22.12.0) and Node 24+ so
-  everything should continue to work as before.
-- We now use the `exports` option, meaning sub-path imports
-  (`require("graphile-worker/...")`) are no longer supported. If you need
-  something not exported by default, raise an issue.
-- TypeScript task files with `.ts` and `.mts` extensions are now recognized by
-  default and loaded through Node's native type stripping if possible. Only
-  erasable, verbatim TypeScript syntax is supported without a custom loader or
-  precompilation. `.js`, `.cjs` and `.mjs` files are prioritised ahead of `.ts`
-  and `.mts` files.
-- Since Node 20 is EOL, Node 22 is now the minimum supported version, per our
-  [requirements documentation](https://worker.graphile.org/docs/requirements).
-- `Runner` gains `[Symbol.asyncDispose]()` method, so you can
-  `await using runner = await run(...)` and the worker will be released when you
-  reach the end of the scope. (Primarily useful for tests.)
-- Maintenance work: upgrade to latest TypeScript, Jest, eliminate ts-node, fix
-  yargs, use erasable syntax only for type-stripping support.
-- `LogLevel` export is now type only - a string union rather than a TypeScript
-  const enum.
-- Fix issue where enabling `localQueue` could cause jobs from the same named
-  queue to run concurrently (violating the serial execution guarantee for named
-  queues): a single batch fetch could lock multiple jobs belonging to one named
-  queue. Batch fetches now return at most one job per named queue (#621).
 
 ## v0.17.3
 
