@@ -20,8 +20,8 @@
     "db:dump": "./scripts/dump_db",
     "perfTest": "cd perfTest && node ./run.js",
     "towerDefence": "cd towerDefence && node ./run.mjs",
-    "preversion": "grep '^### Pending' RELEASE_NOTES.md && echo \"⚠️ Cannot publish with 'Pending' in RELEASE_NOTES ⚠️\" && exit 1 || true",
-    "version": "node scripts/postversion.mjs && git add src/version.ts",
+    "changeset-version": "yarn changeset version && node scripts/postversion.mjs && yarn install --mode=update-lockfile --no-immutable && git add -u -- CHANGELOG.md package.json src/version.ts yarn.lock .changeset && git commit -m 'RELEASING: Releasing graphile-worker'",
+    "changeset-publish": "yarn prepack && changeset publish",
     "website": "cd website && yarn run",
     "website:start": "yarn website start",
     "website:deploy": "yarn website deploy"
@@ -60,6 +60,8 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.2",
     "@docusaurus/core": "2.4.3",
     "@docusaurus/module-type-aliases": "2.4.3",
     "@docusaurus/preset-classic": "2.4.3",
@@ -112,6 +114,9 @@
     "dist",
     "sql"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=22.18.0"
   },
