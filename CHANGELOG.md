@@ -22,6 +22,75 @@
 > Read more:
 > [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
+## 0.18.0
+
+### Minor Changes
+
+- [#628](https://github.com/graphile/worker/pull/628)
+  [`bc98aaf`](https://github.com/graphile/worker/commit/bc98aaf705fa69a52ba650a28b9b74dde9631ce9)
+  Thanks [@benjie](https://github.com/benjie)! - Now published as pure ESM, but
+  worry not as unflagged require(ESM) is now enabled by default in
+  [Node 20.19.0+](https://nodejs.org/pt-br/blog/release/v20.19.0),
+  [Node 22.12.0+](https://nodejs.org/en/blog/release/v22.12.0) and Node 24+ so
+  everything should continue to work as before.
+
+- [#628](https://github.com/graphile/worker/pull/628)
+  [`bc98aaf`](https://github.com/graphile/worker/commit/bc98aaf705fa69a52ba650a28b9b74dde9631ce9)
+  Thanks [@benjie](https://github.com/benjie)! - For consistency, `cosmiconfig`
+  is no longer supported for configuration; use `graphile.config.ts` instead.
+  (This release will throw errors if you're using cosmisconfig, in later
+  releases cosmiconfigs will not be detected.)
+
+- [#628](https://github.com/graphile/worker/pull/628)
+  [`bc98aaf`](https://github.com/graphile/worker/commit/bc98aaf705fa69a52ba650a28b9b74dde9631ce9)
+  Thanks [@benjie](https://github.com/benjie)! - TypeScript task files with
+  `.ts` and `.mts` extensions are now recognized by default and loaded through
+  Node's native type stripping if possible. Only erasable, verbatim TypeScript
+  syntax is supported without a custom loader or precompilation. `.js`, `.cjs`
+  and `.mjs` files are prioritised ahead of `.ts` and `.mts` files.
+
+- [#628](https://github.com/graphile/worker/pull/628)
+  [`bc98aaf`](https://github.com/graphile/worker/commit/bc98aaf705fa69a52ba650a28b9b74dde9631ce9)
+  Thanks [@benjie](https://github.com/benjie)! - We now use the `exports`
+  option, meaning sub-path imports (`require("graphile-worker/...")`) are no
+  longer supported. If you need something not exported by default, raise an
+  issue.
+
+- [#628](https://github.com/graphile/worker/pull/628)
+  [`bc98aaf`](https://github.com/graphile/worker/commit/bc98aaf705fa69a52ba650a28b9b74dde9631ce9)
+  Thanks [@benjie](https://github.com/benjie)! - Since Node 20 is EOL, Node 22
+  is now the minimum supported version, per our
+  [requirements documentation](https://worker.graphile.org/docs/requirements).
+
+- [#628](https://github.com/graphile/worker/pull/628)
+  [`bc98aaf`](https://github.com/graphile/worker/commit/bc98aaf705fa69a52ba650a28b9b74dde9631ce9)
+  Thanks [@benjie](https://github.com/benjie)! - `LogLevel` export is now type
+  only - a string union rather than a TypeScript const enum.
+
+- [#628](https://github.com/graphile/worker/pull/628)
+  [`bc98aaf`](https://github.com/graphile/worker/commit/bc98aaf705fa69a52ba650a28b9b74dde9631ce9)
+  Thanks [@benjie](https://github.com/benjie)! - `Runner` gains
+  `[Symbol.asyncDispose]()` method, so you can
+  `await using runner = await run(...)` and the worker will be released when you
+  reach the end of the scope. (Primarily useful for tests.)
+
+### Patch Changes
+
+- [#628](https://github.com/graphile/worker/pull/628)
+  [`bc98aaf`](https://github.com/graphile/worker/commit/bc98aaf705fa69a52ba650a28b9b74dde9631ce9)
+  Thanks [@benjie](https://github.com/benjie)! - Fix issue where enabling
+  `localQueue` could cause jobs from the same named queue to run concurrently
+  (violating the serial execution guarantee for named queues): a single batch
+  fetch could lock multiple jobs belonging to one named queue. Batch fetches now
+  return at most one job per named queue
+  ([#621](https://github.com/graphile/worker/issues/621)).
+
+- [#628](https://github.com/graphile/worker/pull/628)
+  [`bc98aaf`](https://github.com/graphile/worker/commit/bc98aaf705fa69a52ba650a28b9b74dde9631ce9)
+  Thanks [@benjie](https://github.com/benjie)! - Maintenance work: upgrade to
+  latest TypeScript, Jest, eliminate ts-node, fix yargs, use erasable syntax
+  only for type-stripping support.
+
 ## 0.17.3
 
 Fixes a bad cast (`::int[]` instead of `::bigint[]`) in `failJobs` resulting in
