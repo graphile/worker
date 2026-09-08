@@ -77,5 +77,4 @@ jobs:
 
       - name: Publish snapshot
         run:
-          yarn prepack && yarn changeset publish --tag "snapshot-${{
-          github.ref_name }}" --no-git-tag
+          yarn prepack && npm stage publish --tag "snapshot-${{ github.ref_name }}"
