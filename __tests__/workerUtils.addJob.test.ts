@@ -3,10 +3,7 @@ import { jest } from "@jest/globals";
 import { makeWithPgClientFromClient } from "../src/helpers.ts";
 import type { Task, WorkerSharedOptions, WorkerUtils } from "../src/index.ts";
 import { addJobAdhoc, makeWorkerUtils, runTaskListOnce } from "../src/index.ts";
-import {
-  makeEnhancedWithPgClient,
-  processSharedOptions,
-} from "../src/lib.ts";
+import { makeEnhancedWithPgClient, processSharedOptions } from "../src/lib.ts";
 import { getTaskDetails } from "../src/taskIdentifiers.ts";
 import {
   ESCAPED_GRAPHILE_WORKER_SCHEMA,
@@ -261,4 +258,3 @@ test("does not consume task identity when identifier already exists (GH-619)", (
     await utils.release();
     utils = null;
   }));
-
