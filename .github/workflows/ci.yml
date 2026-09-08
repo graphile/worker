@@ -52,16 +52,12 @@ jobs:
   lint:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [22.x]
-
     steps:
       - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.x
       - run: yarn --frozen-lockfile
       - run: yarn lint
 
@@ -70,14 +66,9 @@ jobs:
     env:
       GRAPHILE_WORKER_SCHEMA: custom_schema
 
-    strategy:
-      matrix:
-        node-version: [22.x]
-        postgres-version: [12]
-
     services:
       postgres:
-        image: postgres:${{ matrix.postgres-version }}
+        image: postgres:14
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -91,10 +82,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.x
       - run: yarn --frozen-lockfile
       - run: yarn prepack
       - run: yarn test:setupdb
@@ -103,14 +94,9 @@ jobs:
   database_updated:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [22.x]
-        postgres-version: [12]
-
     services:
       postgres:
-        image: postgres:${{ matrix.postgres-version }}
+        image: postgres:14
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -124,10 +110,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 22.x
       - run: yarn --frozen-lockfile
       - name: Install pg_dump
         run: |
