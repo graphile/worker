@@ -135,16 +135,15 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
-        node-version: [lts/*]
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v7
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: lts/*
 
       - name: Start PostgreSQL 17 on Windows
         if: runner.os == 'Windows'
