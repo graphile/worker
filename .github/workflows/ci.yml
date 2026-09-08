@@ -154,14 +154,22 @@ jobs:
         run: |
           Set-Service postgresql-x64-17 -StartupType Manual
           Start-Service postgresql-x64-17
+
+          $env:PGPASSWORD = "root"
+
           & "$env:PGBIN\psql.exe" -U postgres -d postgres `
             -c "ALTER USER postgres PASSWORD 'postgres'"
+
+          $env:PGPASSWORD = "postgres"
+
           & "$env:PGBIN\createdb.exe" -U postgres graphile_worker_test
 
       - name: Install and start PostgreSQL 18 on macOS
         if: runner.os == 'macOS'
         shell: bash
         run: |
+          unset PGUSER PGPASSWORD PGHOST PGPORT
+
           brew install postgresql@18
 
           PG_BIN="$(brew --prefix postgresql@18)/bin"
