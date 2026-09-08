@@ -1697,7 +1697,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@changesets/apply-release-plan@npm:^8.1.0":
+"@changesets/apply-release-plan@npm:8.1.0":
   version: 8.1.0
   resolution: "@changesets/apply-release-plan@npm:8.1.0"
   dependencies:
@@ -1710,6 +1710,22 @@ __metadata:
     jsonc-parser: "npm:^3.3.1"
     semver: "npm:^7.8.1"
   checksum: 10/051b9632ba05fb99191c6b8c6c2e986f987c73462bd7d7e00dbac9fa7d9a78182e5875ccea7052c9e5077d8d34c702c8f17a7d204d61c43a8e132eda2174a70a
+  languageName: node
+  linkType: hard
+
+"@changesets/apply-release-plan@patch:@changesets/apply-release-plan@npm%3A8.1.0#~/.yarn/patches/@changesets-apply-release-plan-npm-8.1.0-22072881f7.patch":
+  version: 8.1.0
+  resolution: "@changesets/apply-release-plan@patch:@changesets/apply-release-plan@npm%3A8.1.0#~/.yarn/patches/@changesets-apply-release-plan-npm-8.1.0-22072881f7.patch::version=8.1.0&hash=b6fa72"
+  dependencies:
+    "@changesets/config": "npm:^4.0.0"
+    "@changesets/format": "npm:^0.1.2"
+    "@changesets/git": "npm:^4.0.1"
+    "@changesets/should-skip-package": "npm:^1.0.0"
+    "@changesets/types": "npm:^7.0.0"
+    import-meta-resolve: "npm:^4.2.0"
+    jsonc-parser: "npm:^3.3.1"
+    semver: "npm:^7.8.1"
+  checksum: 10/32a85936651ec69aa414a3464dce17be5cb737f0323ed6d068e52593c1e5964a885dd848050932550e59aa0fce17d553625a9b8a7d289992ae607fa5769880de
   languageName: node
   linkType: hard
 

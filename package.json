@@ -108,7 +108,8 @@
   },
   "resolutions": {
     "eslint-plugin-import/tsconfig-paths": "^4.2.0",
-    "webpack": "5.x <5.106"
+    "webpack": "5.x <5.106",
+    "@changesets/apply-release-plan@npm:^8.1.0": "patch:@changesets/apply-release-plan@npm%3A8.1.0#~/.yarn/patches/@changesets-apply-release-plan-npm-8.1.0-22072881f7.patch"
   },
   "files": [
     "dist",
