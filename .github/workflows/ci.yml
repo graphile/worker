@@ -44,7 +44,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
-      - run: yarn --frozen-lockfile
+      - run: yarn --immutable
       - run: yarn prepack
       - run: yarn test:setupdb
       - run: yarn test:only --ci
@@ -58,7 +58,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: lts/*
-      - run: yarn --frozen-lockfile
+      - run: yarn --immutable
       - run: yarn lint
 
   altschema:
@@ -86,7 +86,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: lts/*
-      - run: yarn --frozen-lockfile
+      - run: yarn --immutable
       - run: yarn prepack
       - run: yarn test:setupdb
       - run: yarn test:only --ci
@@ -114,7 +114,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: lts/*
-      - run: yarn --frozen-lockfile
+      - run: yarn --immutable
       - name: Install pg_dump
         run: |
           sudo bash -c "echo deb http://apt.postgresql.org/pub/repos/apt/ jammy-pgdg main >> /etc/apt/sources.list.d/pgdg.list"
@@ -130,3 +130,64 @@ jobs:
           yarn db:dump
           git update-index -q --refresh
           git diff-index --quiet HEAD -- || (git diff && echo "^^^ The database schema has changed, please run 'yarn db:dump'" && exit 1)
+
+  test_platforms:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Start PostgreSQL 17 on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PGPASSWORD: root
+        run: |
+          Set-Service postgresql-x64-17 -StartupType Manual
+          Start-Service postgresql-x64-17
+
+          $env:PGPASSWORD = "root"
+
+          & "$env:PGBIN\psql.exe" -U postgres -d postgres `
+            -c "ALTER USER postgres PASSWORD 'postgres'"
+
+          $env:PGPASSWORD = "postgres"
+
+          & "$env:PGBIN\createdb.exe" -U postgres graphile_worker_test
+
+          Add-Content -Path $env:GITHUB_PATH -Value $env:PGBIN
+
+      - name: Install and start PostgreSQL 18 on macOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          unset PGUSER PGPASSWORD PGHOST PGPORT
+
+          brew install postgresql@18
+
+          PG_BIN="$(brew --prefix postgresql@18)/bin"
+          echo "$PG_BIN" >> "$GITHUB_PATH"
+
+          brew services start postgresql@18
+
+          until "$PG_BIN/pg_isready"; do
+            sleep 1
+          done
+
+          "$PG_BIN/createuser" --superuser postgres
+          "$PG_BIN/psql" postgres \
+            -c "ALTER USER postgres PASSWORD 'postgres'"
+          "$PG_BIN/createdb" --owner postgres graphile_worker_test
+
+      - run: yarn --immutable
+      - run: yarn prepack
+      - run: yarn test:setupdb
+      - run: yarn test:only --ci
