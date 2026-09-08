@@ -16,8 +16,8 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [22.x]
-        postgres-version: [12, 13, 14, 15]
+        node-version: [22.x, 24.x, 26.x]
+        postgres-version: [14, 15, 16, 17, 18]
 
     services:
       postgres:
