@@ -20,7 +20,7 @@
     "db:dump": "./scripts/dump_db",
     "perfTest": "cd perfTest && node ./run.js",
     "towerDefence": "cd towerDefence && node ./run.mjs",
-    "changeset-version": "yarn changeset version && node scripts/postversion.mjs && yarn install --mode=update-lockfile --no-immutable && git add -u -- package.json src/version.ts yarn.lock .changeset && { test ! -f CHANGELOG.md || git add CHANGELOG.md; } && git commit -m 'RELEASING: Releasing graphile-worker'",
+    "changeset-version": "yarn changeset version && node scripts/postversion.mjs && yarn install --mode=update-lockfile --no-immutable && git add -u -- CHANGELOG.md package.json src/version.ts yarn.lock .changeset && git commit -m 'RELEASING: Releasing graphile-worker'",
     "changeset-publish": "yarn prepack && changeset publish",
     "website": "cd website && yarn run",
     "website:start": "yarn website start",
