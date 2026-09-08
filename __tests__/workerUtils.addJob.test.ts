@@ -206,11 +206,15 @@ test("does not consume task identity when identifier already exists (GH-619)", (
     expect(initialTaskCount).toBe(1);
     expect(initialQueueCount).toBe(1);
 
-    await pgClient.query(
-      `select setval(pg_get_serial_sequence('${GRAPHILE_WORKER_SCHEMA}._private_tasks', 'id'), 2147483647, true)`,
+    const {
+      rows: [{ tasksPrev }],
+    } = await pgClient.query(
+      `select currval(pg_get_serial_sequence('${GRAPHILE_WORKER_SCHEMA}._private_tasks', 'id')) as "tasksPrev"`,
     );
-    await pgClient.query(
-      `select setval(pg_get_serial_sequence('${GRAPHILE_WORKER_SCHEMA}._private_job_queues', 'id'), 2147483647, true)`,
+    const {
+      rows: [{ jobsPrev }],
+    } = await pgClient.query(
+      `select currval(pg_get_serial_sequence('${GRAPHILE_WORKER_SCHEMA}._private_job_queues', 'id')) as "jobsPrev"`,
     );
 
     // Same identifier + queue must not call nextval (would raise at integer ceiling)
@@ -254,6 +258,20 @@ test("does not consume task identity when identifier already exists (GH-619)", (
       `select count(*)::int as task_count from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_tasks`,
     );
     expect(taskCountAfterDetails).toBe(1);
+
+    const {
+      rows: [{ tasksNow }],
+    } = await pgClient.query(
+      `select currval(pg_get_serial_sequence('${GRAPHILE_WORKER_SCHEMA}._private_tasks', 'id')) as "tasksNow"`,
+    );
+    const {
+      rows: [{ jobsNow }],
+    } = await pgClient.query(
+      `select currval(pg_get_serial_sequence('${GRAPHILE_WORKER_SCHEMA}._private_job_queues', 'id')) as "jobsNow"`,
+    );
+
+    expect(tasksNow).toEqual(tasksPrev);
+    expect(jobsNow).toEqual(jobsPrev);
 
     await utils.release();
     utils = null;
