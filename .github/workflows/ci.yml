@@ -44,7 +44,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
-      - run: yarn --frozen-lockfile
+      - run: yarn --immutable
       - run: yarn prepack
       - run: yarn test:setupdb
       - run: yarn test:only --ci
@@ -58,7 +58,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: lts/*
-      - run: yarn --frozen-lockfile
+      - run: yarn --immutable
       - run: yarn lint
 
   altschema:
@@ -86,7 +86,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: lts/*
-      - run: yarn --frozen-lockfile
+      - run: yarn --immutable
       - run: yarn prepack
       - run: yarn test:setupdb
       - run: yarn test:only --ci
@@ -114,7 +114,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: lts/*
-      - run: yarn --frozen-lockfile
+      - run: yarn --immutable
       - name: Install pg_dump
         run: |
           sudo bash -c "echo deb http://apt.postgresql.org/pub/repos/apt/ jammy-pgdg main >> /etc/apt/sources.list.d/pgdg.list"
@@ -187,7 +187,7 @@ jobs:
             -c "ALTER USER postgres PASSWORD 'postgres'"
           "$PG_BIN/createdb" --owner postgres graphile_worker_test
 
-      - run: yarn --frozen-lockfile
+      - run: yarn --immutable
       - run: yarn prepack
       - run: yarn test:setupdb
       - run: yarn test:only --ci
