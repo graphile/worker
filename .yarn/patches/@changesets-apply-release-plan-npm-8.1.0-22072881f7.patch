@@ -1,0 +1,21 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index ffe7f5cc11801bda72789240081ac33762a34dfe..d08f3bee7f149308908006ba600b2c9ca904316c 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -364,10 +364,13 @@ async function updateChangelog(changelogPath, changelog, name) {
+ 		await fs.writeFile(changelogPath, completelyNewChangelog);
+ 		return;
+ 	}
+-	const isVersionHeading = /^#{1,6}\s+\d+\.\d+/.test(fileData);
++	const firstVersionHeaderIndex = fileData.search(/^#{1,6}\s+\d+\.\d+/m);
+ 	let newChangelog;
+-	if (isVersionHeading) newChangelog = templateString.trimStart() + fileData;
+-	else {
++	if (firstVersionHeaderIndex >= 0) {
++		const prefix = fileData.substring(0, firstVersionHeaderIndex);
++    const suffix = fileData.substring(firstVersionHeaderIndex);
++    newChangelog = prefix + templateString.trimStart() + "\n" + suffix;
++	} else {
+ 		const index = fileData.indexOf("\n");
+ 		newChangelog = index === -1 ? fileData + templateString : fileData.slice(0, index) + templateString + fileData.slice(index + 1);
+ 	}
