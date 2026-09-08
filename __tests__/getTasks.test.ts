@@ -1,5 +1,9 @@
 import { getTasks } from "../src/getTasks.ts";
-import { makeJobHelpers, makeWithPgClientFromClient } from "../src/helpers.ts";
+import {
+  makeJobHelpers,
+  makeWithPgClientFromClient,
+  makeWorkerShared,
+} from "../src/helpers.ts";
 import type {
   CompiledSharedOptions,
   WatchedTaskList,
@@ -25,6 +29,12 @@ describe("commonjs", () => {
         options,
         `${__dirname}/fixtures/tasks`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      const workerShared = makeWorkerShared({
+        compiledSharedOptions,
+        withPgClient: makeEnhancedWithPgClient(
+          makeWithPgClientFromClient(client),
+        ),
+      });
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
         [
@@ -34,15 +44,9 @@ describe("commonjs", () => {
         ]
       `);
       const helpers = makeJobHelpers(
-        compiledSharedOptions,
+        workerShared,
         makeMockJob("would you like"),
-        {
-          withPgClient: makeEnhancedWithPgClient(
-            makeWithPgClientFromClient(client),
-          ),
-          abortSignal,
-          abortPromise,
-        },
+        { abortSignal, abortPromise },
       );
       expect(await tasks.wouldyoulike!(helpers.job.payload, helpers)).toEqual(
         "some sausages",
@@ -62,6 +66,12 @@ describe("commonjs", () => {
         options,
         `${__dirname}/fixtures/tasksFile.cjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      const workerShared = makeWorkerShared({
+        compiledSharedOptions,
+        withPgClient: makeEnhancedWithPgClient(
+          makeWithPgClientFromClient(client),
+        ),
+      });
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
         [
@@ -70,17 +80,10 @@ describe("commonjs", () => {
         ]
       `);
 
-      const helpers = makeJobHelpers(
-        compiledSharedOptions,
-        makeMockJob("task1"),
-        {
-          withPgClient: makeEnhancedWithPgClient(
-            makeWithPgClientFromClient(client),
-          ),
-          abortSignal,
-          abortPromise,
-        },
-      );
+      const helpers = makeJobHelpers(workerShared, makeMockJob("task1"), {
+        abortSignal,
+        abortPromise,
+      });
       expect(await tasks.task1!(helpers.job.payload, helpers)).toEqual("hi");
       expect(await tasks.task2!(helpers.job.payload, helpers)).toEqual("hello");
 
@@ -93,6 +96,12 @@ describe("commonjs", () => {
         options,
         `${__dirname}/fixtures/tasksFile-ts.cjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      const workerShared = makeWorkerShared({
+        compiledSharedOptions,
+        withPgClient: makeEnhancedWithPgClient(
+          makeWithPgClientFromClient(client),
+        ),
+      });
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
         [
@@ -101,17 +110,10 @@ describe("commonjs", () => {
         ]
       `);
 
-      const helpers = makeJobHelpers(
-        compiledSharedOptions,
-        makeMockJob("task1"),
-        {
-          withPgClient: makeEnhancedWithPgClient(
-            makeWithPgClientFromClient(client),
-          ),
-          abortSignal,
-          abortPromise,
-        },
-      );
+      const helpers = makeJobHelpers(workerShared, makeMockJob("task1"), {
+        abortSignal,
+        abortPromise,
+      });
       expect(await tasks.task1!(helpers.job.payload, helpers)).toEqual("hi");
       expect(await tasks.task2!(helpers.job.payload, helpers)).toEqual(
         "hello from TS",
@@ -126,6 +128,12 @@ describe("commonjs", () => {
         options,
         `${__dirname}/fixtures/tasksFile_default.cjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      const workerShared = makeWorkerShared({
+        compiledSharedOptions,
+        withPgClient: makeEnhancedWithPgClient(
+          makeWithPgClientFromClient(client),
+        ),
+      });
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
         [
@@ -134,10 +142,7 @@ describe("commonjs", () => {
         ]
       `);
 
-      const helpers = makeJobHelpers(compiledSharedOptions, makeMockJob("t1"), {
-        withPgClient: makeEnhancedWithPgClient(
-          makeWithPgClientFromClient(client),
-        ),
+      const helpers = makeJobHelpers(workerShared, makeMockJob("t1"), {
         abortSignal,
         abortPromise,
       });
@@ -157,6 +162,12 @@ describe("commonjs", () => {
         options,
         `${__dirname}/fixtures/tasksFile_default-ts.cjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      const workerShared = makeWorkerShared({
+        compiledSharedOptions,
+        withPgClient: makeEnhancedWithPgClient(
+          makeWithPgClientFromClient(client),
+        ),
+      });
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
         [
@@ -165,10 +176,7 @@ describe("commonjs", () => {
         ]
       `);
 
-      const helpers = makeJobHelpers(compiledSharedOptions, makeMockJob("t1"), {
-        withPgClient: makeEnhancedWithPgClient(
-          makeWithPgClientFromClient(client),
-        ),
+      const helpers = makeJobHelpers(workerShared, makeMockJob("t1"), {
         abortSignal,
         abortPromise,
       });
@@ -190,6 +198,12 @@ describe("esm", () => {
         options,
         `${__dirname}/fixtures-esm/tasks`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      const workerShared = makeWorkerShared({
+        compiledSharedOptions,
+        withPgClient: makeEnhancedWithPgClient(
+          makeWithPgClientFromClient(client),
+        ),
+      });
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
         [
@@ -200,15 +214,9 @@ describe("esm", () => {
         ]
       `);
       const helpers = makeJobHelpers(
-        compiledSharedOptions,
+        workerShared,
         makeMockJob("would you like"),
-        {
-          withPgClient: makeEnhancedWithPgClient(
-            makeWithPgClientFromClient(client),
-          ),
-          abortSignal,
-          abortPromise,
-        },
+        { abortSignal, abortPromise },
       );
       expect(await tasks.wouldyoulike!(helpers.job.payload, helpers)).toEqual(
         "some sausages",
@@ -231,6 +239,12 @@ describe("esm", () => {
         options,
         `${__dirname}/fixtures-esm/tasksFile.mjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      const workerShared = makeWorkerShared({
+        compiledSharedOptions,
+        withPgClient: makeEnhancedWithPgClient(
+          makeWithPgClientFromClient(client),
+        ),
+      });
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
         [
@@ -239,17 +253,10 @@ describe("esm", () => {
         ]
       `);
 
-      const helpers = makeJobHelpers(
-        compiledSharedOptions,
-        makeMockJob("task1"),
-        {
-          withPgClient: makeEnhancedWithPgClient(
-            makeWithPgClientFromClient(client),
-          ),
-          abortSignal,
-          abortPromise,
-        },
-      );
+      const helpers = makeJobHelpers(workerShared, makeMockJob("task1"), {
+        abortSignal,
+        abortPromise,
+      });
       expect(await tasks.task1!(helpers.job.payload, helpers)).toEqual("hi");
       expect(await tasks.task2!(helpers.job.payload, helpers)).toEqual("hello");
 
@@ -262,6 +269,12 @@ describe("esm", () => {
         options,
         `${__dirname}/fixtures-esm/tasksFile_default.mjs`,
       )) as WatchedTaskList & { compiledSharedOptions: CompiledSharedOptions };
+      const workerShared = makeWorkerShared({
+        compiledSharedOptions,
+        withPgClient: makeEnhancedWithPgClient(
+          makeWithPgClientFromClient(client),
+        ),
+      });
       expect(tasks).toBeTruthy();
       expect(Object.keys(tasks).sort()).toMatchInlineSnapshot(`
         [
@@ -270,10 +283,7 @@ describe("esm", () => {
         ]
       `);
 
-      const helpers = makeJobHelpers(compiledSharedOptions, makeMockJob("t1"), {
-        withPgClient: makeEnhancedWithPgClient(
-          makeWithPgClientFromClient(client),
-        ),
+      const helpers = makeJobHelpers(workerShared, makeMockJob("t1"), {
         abortSignal,
         abortPromise,
       });

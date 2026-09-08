@@ -1425,3 +1425,12 @@ export const LocalQueueModes = {
 } as const;
 
 export type LocalQueueMode = keyof typeof LocalQueueModes;
+
+/** @internal */
+export interface WorkerShared {
+  compiledSharedOptions: CompiledSharedOptions;
+  query: JobHelpers["query"];
+  addJob: JobHelpers["addJob"];
+  addJobs: JobHelpers["addJobs"];
+  withPgClient: EnhancedWithPgClient;
+}

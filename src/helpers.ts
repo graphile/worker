@@ -12,6 +12,7 @@ import type {
   JobHelpers,
   PromiseOrDirect,
   WithPgClient,
+  WorkerShared,
 } from "./interfaces.ts";
 import type { CompiledSharedOptions } from "./lib.ts";
 import type { Logger } from "./logger.ts";
@@ -221,27 +222,29 @@ function getQueueName(
 }
 
 export function makeJobHelpers(
-  compiledSharedOptions: CompiledSharedOptions,
+  workerShared: WorkerShared,
   job: Job,
   {
-    withPgClient,
     abortSignal,
     abortPromise,
     logger: overrideLogger,
   }: {
-    withPgClient: EnhancedWithPgClient;
     abortSignal: AbortSignal;
     abortPromise: Promise<void>;
     logger?: Logger;
   },
 ): JobHelpers {
+  const { compiledSharedOptions, query, addJob, addJobs, withPgClient } =
+    workerShared;
   const baseLogger = overrideLogger ?? compiledSharedOptions.logger;
   const logger = baseLogger.scope({
     label: "job",
     taskIdentifier: job.task_identifier,
     jobId: job.id,
   });
-  const helpers: JobHelpers = {
+  const helpers: JobHelpers & {
+    debug(format: string, ...parameters: unknown[]): void;
+  } = {
     abortSignal,
     abortPromise,
     job,
@@ -250,23 +253,20 @@ export function makeJobHelpers(
     },
     logger,
     withPgClient,
-    query: (queryText, values) =>
-      withPgClient((pgClient) => pgClient.query(queryText, values)),
-    addJob: makeAddJob(compiledSharedOptions, withPgClient),
-    addJobs: makeAddJobs(compiledSharedOptions, withPgClient),
+    query,
+    addJob,
+    addJobs,
 
-    // TODO: add an API for giving workers more helpers
-  };
-
-  // DEPRECATED METHODS
-  Object.assign(helpers, {
-    debug(format: string, ...parameters: unknown[]): void {
+    // DEPRECATED METHODS
+    debug(format, ...parameters) {
       logger.error(
         "REMOVED: `helpers.debug` has been replaced with `helpers.logger.debug`; please do not use `helpers.debug`",
       );
       logger.debug(format, { parameters });
     },
-  } as unknown);
+
+    // TODO: add an API for giving workers more helpers
+  };
 
   return helpers;
 }
@@ -287,5 +287,22 @@ export function makeWithPgClientFromPool(pgPool: Pool) {
 export function makeWithPgClientFromClient(pgClient: PoolClient) {
   return async <T>(callback: (pgClient: PoolClient) => Promise<T>) => {
     return callback(pgClient);
+  };
+}
+
+export function makeWorkerShared({
+  compiledSharedOptions,
+  withPgClient,
+}: {
+  compiledSharedOptions: CompiledSharedOptions;
+  withPgClient: EnhancedWithPgClient;
+}): WorkerShared {
+  return {
+    compiledSharedOptions,
+    withPgClient,
+    query: (queryText, values) =>
+      withPgClient((pgClient) => pgClient.query(queryText, values)),
+    addJob: makeAddJob(compiledSharedOptions, withPgClient),
+    addJobs: makeAddJobs(compiledSharedOptions, withPgClient),
   };
 }

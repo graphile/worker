@@ -2,7 +2,7 @@ import * as assert from "assert";
 import { randomBytes } from "crypto";
 
 import deferred from "./deferred.ts";
-import { makeJobHelpers } from "./helpers.ts";
+import { makeJobHelpers, makeWorkerShared } from "./helpers.ts";
 import type {
   CompleteJobFunction,
   EnhancedWithPgClient,
@@ -13,6 +13,7 @@ import type {
   TaskList,
   Worker,
   WorkerPool,
+  WorkerShared,
   WorkerSharedOptions,
 } from "./interfaces.ts";
 import type { CompiledSharedOptions } from "./lib.ts";
@@ -60,6 +61,11 @@ export function makeNewWorker(
   const logger = compiledSharedOptions.logger.scope({
     label: "worker",
     workerId,
+  });
+
+  const workerShared: WorkerShared = makeWorkerShared({
+    compiledSharedOptions,
+    withPgClient,
   });
 
   const workerDeferred = deferred();
@@ -250,8 +256,7 @@ export function makeNewWorker(
         logger.debug(`Found task ${job.id} (${job.task_identifier})`);
         const task = tasks[job.task_identifier];
         assert.ok(task, `Unsupported task '${job.task_identifier}'`);
-        const helpers = makeJobHelpers(compiledSharedOptions, job, {
-          withPgClient,
+        const helpers = makeJobHelpers(workerShared, job, {
           logger,
           abortSignal,
           abortPromise,
