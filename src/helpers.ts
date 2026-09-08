@@ -122,7 +122,7 @@ const $$cache = Symbol("queueNameById");
 const $$nextBatch = Symbol("pendingQueueIds");
 function getQueueName(
   compiledSharedOptions: CompiledSharedOptions & {
-    [$$cache]?: Record<number, string | Deferred<string> | undefined>;
+    [$$cache]?: Map<number, string | Deferred<string> | undefined>;
     [$$nextBatch]?: number[];
   },
   withPgClient: EnhancedWithPgClient,
@@ -134,16 +134,16 @@ function getQueueName(
 
   let rawCache = compiledSharedOptions[$$cache];
   if (!rawCache) {
-    rawCache = compiledSharedOptions[$$cache] = Object.create(null) as Record<
+    rawCache = compiledSharedOptions[$$cache] = new Map<
       number,
-      string | Deferred<string> | undefined
-    >;
+      string | Deferred<string>
+    >();
   }
 
   // Appease TypeScript; this is not null
   const cache = rawCache;
 
-  const existing = cache[queueId];
+  const existing = cache.get(queueId);
   if (existing !== undefined) {
     return existing;
   }
@@ -152,7 +152,7 @@ function getQueueName(
 
   // Not currently requested; queue us (and don't queue us again)
   const promise = defer<string>();
-  cache[queueId] = promise;
+  cache.set(queueId, promise);
 
   if (nextBatch) {
     // Already scheduled; add us to the next batch
@@ -178,26 +178,26 @@ function getQueueName(
             for (let i = 0, l = queueIds.length; i < l; i++) {
               const queueId = queueIds[i];
               const name = names[i];
-              const cached = cache[queueId];
+              const cached = cache.get(queueId);
               if (typeof cached === "object") {
                 // It's a deferred; need to resolve/reject
                 if (name != null) {
                   cached.resolve(name);
-                  cache[queueId] = name;
+                  cache.set(queueId, name);
                 } else {
                   cached.reject(
                     new Error(`Queue with id '${queueId}' not found`),
                   );
                   // Try again
-                  cache[queueId] = undefined;
+                  cache.delete(queueId);
                 }
               } else {
                 // It's already cached... but we got it again?!
                 if (name != null) {
-                  cache[queueId] = name;
+                  cache.set(queueId, name);
                 } else {
                   // Try again
-                  cache[queueId] = undefined;
+                  cache.delete(queueId);
                 }
               }
             }
@@ -205,9 +205,9 @@ function getQueueName(
           (e) => {
             // An error occurred; reject all the deferreds but allow them to run again
             for (const queueId of queueIds) {
-              (cache[queueId] as Deferred<string>).reject(e);
+              (cache.get(queueId) as Deferred<string>).reject(e);
               // Retry next time
-              cache[queueId] = undefined;
+              cache.delete(queueId);
             }
           },
         )
