@@ -43,7 +43,7 @@ export function getTaskDetails(
     cache.lastDigest = (async () => {
       const { rows } = await withPgClient.withRetries(async (client) => {
         await client.query({
-          text: `insert into ${escapedWorkerSchema}._private_tasks as tasks (identifier) select unnest($1::text[]) on conflict do nothing`,
+          text: `insert into ${escapedWorkerSchema}._private_tasks as tasks (identifier) select i from unnest($1::text[]) as u(i) where not exists (select 1 from ${escapedWorkerSchema}._private_tasks as existing where existing.identifier = u.i) on conflict do nothing`,
           values: [supportedTaskNames],
         });
         return client.query<{ id: number; identifier: string }>({

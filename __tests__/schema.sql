@@ -55,14 +55,24 @@ begin
     limit 1;
     return v_job;
   elsif job_key_mode = 'unsafe_dedupe' then
-    -- Ensure all the tasks exist
+    -- Ensure all the tasks exist (insert only missing identifiers so identity is not consumed)
     insert into "graphile_worker"._private_tasks as tasks (identifier)
-    values (add_job.identifier)
+    select add_job.identifier
+    where not exists (
+      select 1
+      from "graphile_worker"._private_tasks as existing
+      where existing.identifier = add_job.identifier
+    )
     on conflict do nothing;
     -- Ensure all the queues exist
     if add_job.queue_name is not null then
       insert into "graphile_worker"._private_job_queues as job_queues (queue_name)
-      values (add_job.queue_name)
+      select add_job.queue_name
+      where not exists (
+        select 1
+        from "graphile_worker"._private_job_queues as existing
+        where existing.queue_name = add_job.queue_name
+      )
       on conflict do nothing;
     end if;
     -- Insert job, but if one already exists then do nothing, even if the
@@ -118,16 +128,26 @@ CREATE FUNCTION graphile_worker.add_jobs(specs graphile_worker.job_spec[], job_k
     LANGUAGE plpgsql
     AS $$
 begin
-  -- Ensure all the tasks exist
+  -- Ensure all the tasks exist (insert only missing identifiers so identity is not consumed)
   insert into "graphile_worker"._private_tasks as tasks (identifier)
   select distinct spec.identifier
   from unnest(specs) spec
+  where not exists (
+    select 1
+    from "graphile_worker"._private_tasks as existing
+    where existing.identifier = spec.identifier
+  )
   on conflict do nothing;
   -- Ensure all the queues exist
   insert into "graphile_worker"._private_job_queues as job_queues (queue_name)
   select distinct spec.queue_name
   from unnest(specs) spec
   where spec.queue_name is not null
+  and not exists (
+    select 1
+    from "graphile_worker"._private_job_queues as existing
+    where existing.queue_name = spec.queue_name
+  )
   on conflict do nothing;
   -- Ensure any locked jobs have their key cleared - in the case of locked
   -- existing job create a new job instead as it must have already started
@@ -395,4 +415,5 @@ COPY graphile_worker.migrations (id, ts, breaking) FROM stdin;
 17	1970-01-01 00:00:00.000000+00	f
 18	1970-01-01 00:00:00.000000+00	f
 19	1970-01-01 00:00:00.000000+00	t
+20	1970-01-01 00:00:00.000000+00	f
 \.
