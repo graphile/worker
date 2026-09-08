@@ -39,9 +39,6 @@ jobs:
         with:
           version-script: yarn changeset-version
           publish-script: yarn changeset-publish
-        env:
-          # Supplies GitHub metadata to @changesets/changelog-github.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   snapshot:
     if:
