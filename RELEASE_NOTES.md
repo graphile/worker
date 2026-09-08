@@ -46,6 +46,10 @@ Read more:
   yargs, use erasable syntax only for type-stripping support.
 - `LogLevel` export is now type only - a string union rather than a TypeScript
   const enum.
+- Fix issue where enabling `localQueue` could cause jobs from the same named
+  queue to run concurrently (violating the serial execution guarantee for named
+  queues): a single batch fetch could lock multiple jobs belonging to one named
+  queue. Batch fetches now return at most one job per named queue (#621).
 
 ## v0.17.3
 

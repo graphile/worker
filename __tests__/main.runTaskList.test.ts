@@ -140,3 +140,106 @@ test("gracefulShutdown", async () =>
     const [job] = jobs;
     expect(job.last_error).toBeTruthy();
   }));
+
+test("jobs in the same named queue run serially even when the local queue is enabled", () =>
+  withPgPool(async (pgPool) => {
+    await reset(pgPool, options);
+
+    const jobPromises: Deferred[] = [];
+    try {
+      const job1: Task<"job1"> = jest.fn(() => {
+        const jobPromise = deferred();
+        jobPromises.push(jobPromise);
+        return jobPromise;
+      });
+      const tasks: TaskList = {
+        job1,
+      };
+
+      // A backlog of 5 jobs in the same named queue, before the pool starts
+      for (let i = 0; i < 5; i++) {
+        await addJob(pgPool, i);
+      }
+
+      const workerPool = runTaskList(
+        {
+          concurrency: 4,
+          preset: { worker: { localQueue: { size: 5 }, pollInterval: 10 } },
+        },
+        tasks,
+        pgPool,
+      );
+
+      for (let i = 0; i < 5; i++) {
+        await sleepUntil(() => jobPromises.length >= i + 1);
+        // Give the pool a chance to (incorrectly) hand more jobs from the
+        // same queue to the other, idle workers
+        await sleep(50);
+        expect(jobPromises).toHaveLength(i + 1);
+
+        // Complete this job, on to the next one
+        jobPromises[i].resolve();
+      }
+
+      await workerPool.gracefulShutdown();
+      await expectJobCount(pgPool, 0);
+    } finally {
+      jobPromises.forEach((p) => p.resolve());
+    }
+  }));
+
+test("jobs in different named queues run in parallel when the local queue is enabled", () =>
+  withPgPool(async (pgPool) => {
+    await reset(pgPool, options);
+
+    const started: string[] = [];
+    const jobPromisesById: Record<string, Deferred> = {};
+    try {
+      const job1: Task<"job1"> = jest.fn(({ id }) => {
+        const jobPromise = deferred();
+        jobPromisesById[id] = jobPromise;
+        started.push(id);
+        return jobPromise;
+      });
+      const tasks: TaskList = {
+        job1,
+      };
+
+      const addJobToQueue = (id: string, queueName: string) =>
+        pgPool.query(
+          `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', json_build_object('id', $1::text), $2::text)`,
+          [id, queueName],
+        );
+      await addJobToQueue("a1", "queue_a");
+      await addJobToQueue("b1", "queue_b");
+      await addJobToQueue("a2", "queue_a");
+      await addJobToQueue("b2", "queue_b");
+
+      const workerPool = runTaskList(
+        {
+          concurrency: 4,
+          preset: { worker: { localQueue: { size: 5 }, pollInterval: 10 } },
+        },
+        tasks,
+        pgPool,
+      );
+
+      // The first job of each queue should run concurrently...
+      await sleepUntil(() => started.length >= 2);
+      await sleep(50);
+      expect([...started].sort()).toEqual(["a1", "b1"]);
+
+      // ...but each queue's second job must wait for its first to complete
+      jobPromisesById["a1"].resolve();
+      jobPromisesById["b1"].resolve();
+      await sleepUntil(() => started.length >= 4);
+      expect([...started].sort()).toEqual(["a1", "a2", "b1", "b2"]);
+      jobPromisesById["a2"].resolve();
+      jobPromisesById["b2"].resolve();
+
+      await workerPool.gracefulShutdown();
+      await expectJobCount(pgPool, 0);
+    } finally {
+      Object.values(jobPromisesById).forEach((p) => p.resolve());
+    }
+  }));
