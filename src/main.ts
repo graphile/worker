@@ -9,6 +9,7 @@ import defer from "./deferred.ts";
 import {
   makeWithPgClientFromClient,
   makeWithPgClientFromPool,
+  makeWorkerShared,
 } from "./helpers.ts";
 import type {
   CompleteJobFunction,
@@ -572,6 +573,10 @@ export function _runTaskList(
     onTerminate?: () => Promise<void> | void;
   },
 ): WorkerPool {
+  const workerShared = makeWorkerShared({
+    compiledSharedOptions,
+    withPgClient,
+  });
   const ctx = compiledSharedOptions;
   const {
     resolvedPreset: {
@@ -1338,9 +1343,8 @@ export function _runTaskList(
   ) as { release: (() => void) | null; fn: FailJobFunction };
 
   const createNewWorkerInPool = () => {
-    const worker = makeNewWorker(compiledSharedOptions, {
+    const worker = makeNewWorker(workerShared, {
       tasks,
-      withPgClient,
       continuous,
       abortSignal,
       abortPromise,

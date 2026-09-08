@@ -2,10 +2,9 @@ import * as assert from "assert";
 import { randomBytes } from "crypto";
 
 import deferred from "./deferred.ts";
-import { makeJobHelpers, makeWorkerShared } from "./helpers.ts";
+import { makeJobHelpers } from "./helpers.ts";
 import type {
   CompleteJobFunction,
-  EnhancedWithPgClient,
   FailJobFunction,
   GetJobFunction,
   Job,
@@ -14,18 +13,15 @@ import type {
   Worker,
   WorkerPool,
   WorkerShared,
-  WorkerSharedOptions,
 } from "./interfaces.ts";
-import type { CompiledSharedOptions } from "./lib.ts";
 import { coerceError, safeEmit } from "./lib.ts";
 
 const NO_LOG_SUCCESS = !!process.env.NO_LOG_SUCCESS;
 
 export function makeNewWorker(
-  compiledSharedOptions: CompiledSharedOptions<WorkerSharedOptions>,
+  workerShared: WorkerShared,
   params: {
     tasks: TaskList;
-    withPgClient: EnhancedWithPgClient;
     continuous: boolean;
     abortSignal: AbortSignal;
     abortPromise: Promise<void>;
@@ -37,10 +33,10 @@ export function makeNewWorker(
     failJob: FailJobFunction;
   },
 ): Worker {
+  const { compiledSharedOptions, withPgClient } = workerShared;
   const ctx = compiledSharedOptions;
   const {
     tasks,
-    withPgClient,
     continuous,
     abortSignal,
     abortPromise,
@@ -61,11 +57,6 @@ export function makeNewWorker(
   const logger = compiledSharedOptions.logger.scope({
     label: "worker",
     workerId,
-  });
-
-  const workerShared: WorkerShared = makeWorkerShared({
-    compiledSharedOptions,
-    withPgClient,
   });
 
   const workerDeferred = deferred();
