@@ -1,14 +1,14 @@
 module.exports = {
   roots: ["<rootDir>/src", "<rootDir>/__tests__"],
   transform: {
-    "^.+\\.tsx?$": [
+    "^.+\\.m?tsx?$": [
       "ts-jest",
       { useESM: true, tsconfig: "<rootDir>/tsconfig.json" },
     ],
   },
   testRegex: "(/__tests__/.*\\.(test|spec))\\.[tj]sx?$",
-  moduleFileExtensions: ["ts", "mjs", "js", "json"],
-  extensionsToTreatAsEsm: [".ts"],
+  moduleFileExtensions: ["ts", "mts", "mjs", "js", "json"],
+  extensionsToTreatAsEsm: [".ts", ".mts"],
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },

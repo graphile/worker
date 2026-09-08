@@ -16,8 +16,13 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [22.x]
-        postgres-version: [12, 13, 14, 15]
+        node-version: [24.x]
+        postgres-version: [14, 15, 16, 17, 18]
+        include:
+          - node-version: 22.x
+            postgres-version: 14
+          - node-version: 26.x
+            postgres-version: 18
 
     services:
       postgres:
@@ -34,9 +39,9 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
       - run: yarn --frozen-lockfile
@@ -47,16 +52,12 @@ jobs:
   lint:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [22.x]
-
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v7
+      - name: Use Node.js
+        uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: lts/*
       - run: yarn --frozen-lockfile
       - run: yarn lint
 
@@ -65,14 +66,9 @@ jobs:
     env:
       GRAPHILE_WORKER_SCHEMA: custom_schema
 
-    strategy:
-      matrix:
-        node-version: [22.x]
-        postgres-version: [12]
-
     services:
       postgres:
-        image: postgres:${{ matrix.postgres-version }}
+        image: postgres:14
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -85,11 +81,11 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v7
+      - name: Use Node.js
+        uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: lts/*
       - run: yarn --frozen-lockfile
       - run: yarn prepack
       - run: yarn test:setupdb
@@ -98,14 +94,9 @@ jobs:
   database_updated:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [22.x]
-        postgres-version: [12]
-
     services:
       postgres:
-        image: postgres:${{ matrix.postgres-version }}
+        image: postgres:14
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -118,11 +109,11 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v7
+      - name: Use Node.js
+        uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: lts/*
       - run: yarn --frozen-lockfile
       - name: Install pg_dump
         run: |
