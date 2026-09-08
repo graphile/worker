@@ -206,16 +206,17 @@ test("does not consume task identity when identifier already exists (GH-619)", (
     expect(initialTaskCount).toBe(1);
     expect(initialQueueCount).toBe(1);
 
-    const {
-      rows: [{ tasksPrev }],
-    } = await pgClient.query(
-      `select currval(pg_get_serial_sequence('${GRAPHILE_WORKER_SCHEMA}._private_tasks', 'id')) as "tasksPrev"`,
-    );
-    const {
-      rows: [{ jobsPrev }],
-    } = await pgClient.query(
-      `select currval(pg_get_serial_sequence('${GRAPHILE_WORKER_SCHEMA}._private_job_queues', 'id')) as "jobsPrev"`,
-    );
+    async function getSequenceValue(table: string, column: string) {
+      const { rows } = await pgClient.query<{ last_value: number }>(
+        // psql \d+ on `pg_sequences` reveals the usage of internal function `pg_sequence_last_value`
+        `select pg_catalog.pg_sequence_last_value(pg_catalog.pg_get_serial_sequence($1, $2)) as "last_value";`,
+        [`${GRAPHILE_WORKER_SCHEMA}.${table}`, column],
+      );
+      return rows[0].last_value;
+    }
+
+    const tasksPrev = await getSequenceValue("_private_tasks", "id");
+    const jobQueuesPrev = await getSequenceValue("_private_job_queues", "id");
 
     // Same identifier + queue must not call nextval (would raise at integer ceiling)
     await expect(
@@ -259,19 +260,11 @@ test("does not consume task identity when identifier already exists (GH-619)", (
     );
     expect(taskCountAfterDetails).toBe(1);
 
-    const {
-      rows: [{ tasksNow }],
-    } = await pgClient.query(
-      `select currval(pg_get_serial_sequence('${GRAPHILE_WORKER_SCHEMA}._private_tasks', 'id')) as "tasksNow"`,
-    );
-    const {
-      rows: [{ jobsNow }],
-    } = await pgClient.query(
-      `select currval(pg_get_serial_sequence('${GRAPHILE_WORKER_SCHEMA}._private_job_queues', 'id')) as "jobsNow"`,
-    );
+    const tasksNow = await getSequenceValue("_private_tasks", "id");
+    const jobQueuesNow = await getSequenceValue("_private_job_queues", "id");
 
     expect(tasksNow).toEqual(tasksPrev);
-    expect(jobsNow).toEqual(jobsPrev);
+    expect(jobQueuesNow).toEqual(jobQueuesPrev);
 
     await utils.release();
     utils = null;
