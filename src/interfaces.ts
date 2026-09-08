@@ -1430,7 +1430,7 @@ export type LocalQueueMode = keyof typeof LocalQueueModes;
 export interface WorkerShared {
   compiledSharedOptions: CompiledSharedOptions;
   query: JobHelpers["query"];
-  addJob: JobHelpers["addJob"];
-  addJobs: JobHelpers["addJobs"];
+  addJob: AddJobFunction;
+  addJobs: AddJobsFunction;
   withPgClient: EnhancedWithPgClient;
 }
