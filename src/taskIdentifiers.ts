@@ -40,7 +40,7 @@ export function getTaskDetails(
     const { escapedWorkerSchema } = compiledSharedOptions;
     assert.ok(supportedTaskNames.length, "No runnable tasks!");
     cache.lastStr = str;
-    cache.lastDigest = (async () => {
+    const pending = (async () => {
       const { rows } = await withPgClient.withRetries(async (client) => {
         await client.query({
           text: `insert into ${escapedWorkerSchema}._private_tasks as tasks (identifier) select i from unnest($1::text[]) as u(i) where not exists (select 1 from ${escapedWorkerSchema}._private_tasks as existing where existing.identifier = u.i) on conflict do nothing`,
@@ -61,14 +61,24 @@ export function getTaskDetails(
         parseInt(s, 10),
       );
 
-      // Overwrite promises with concrete values
-      cache.lastDigest = {
-        supportedTaskIdentifierByTaskId,
-        taskIds,
-      };
-      cache.lastStr = str;
-      return cache.lastDigest;
-    })();
+      return { supportedTaskIdentifierByTaskId, taskIds };
+    })().then(
+      (result) => {
+        // A changed task list may have started a newer lookup meanwhile.
+        if (cache.lastDigest === pending) {
+          cache.lastDigest = result;
+        }
+        return result;
+      },
+      (error) => {
+        // Let the next poll retry rather than caching a rejection indefinitely.
+        if (cache.lastDigest === pending) {
+          cacheByOptions.delete(compiledSharedOptions);
+        }
+        throw error;
+      },
+    );
+    cache.lastDigest = pending;
   }
   return cache.lastDigest;
 }
