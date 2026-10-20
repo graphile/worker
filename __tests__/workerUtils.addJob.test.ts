@@ -269,3 +269,98 @@ test("does not consume task identity when identifier already exists (GH-619)", (
     await utils.release();
     utils = null;
   }));
+
+test("does not drop a keyed addJob when a worker locks the row concurrently (GH-580)", () =>
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
+    await reset(pgClient, options);
+
+    utils = await makeWorkerUtils({
+      connectionString: TEST_CONNECTION_STRING,
+    });
+
+    async function waitForBlockedQuery() {
+      for (let i = 0; i < 500; i++) {
+        const {
+          rows: [{ waiting }],
+        } = await pgClient.query<{ waiting: number }>(
+          `select count(*)::int as waiting
+           from pg_locks
+           where pid != pg_backend_pid() and not granted`,
+        );
+        if (waiting > 0) {
+          return;
+        }
+      }
+      throw new Error("Timed out waiting for concurrent addJob to block");
+    }
+
+    // Case 1: existing unlocked row is claimed by a worker before add_jobs's INSERT
+    const firstJob = await utils.addJob(
+      "job3",
+      { a: 1 },
+      { jobKey: "race_key_existing" },
+    );
+
+    await pgClient.query("begin");
+    try {
+      await pgClient.query(
+        `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs
+         set locked_at = now(), locked_by = 'worker-1', attempts = 1
+         where id = $1`,
+        [firstJob.id],
+      );
+
+      const secondJobPromise = utils.addJob(
+        "job3",
+        { a: 2 },
+        { jobKey: "race_key_existing" },
+      );
+      await waitForBlockedQuery();
+      await pgClient.query("commit");
+
+      const secondJob = await secondJobPromise;
+      expect(secondJob.id).not.toBeNull();
+      expect(secondJob.id).not.toEqual(firstJob.id);
+      expect(secondJob.key).toBe("race_key_existing");
+      expect(secondJob.payload).toEqual({ a: 2 });
+    } catch (e) {
+      await pgClient.query("rollback");
+      throw e;
+    }
+
+    // Case 2: a concurrent transaction inserts and locks the same key before add_jobs's INSERT
+    await pgClient.query("begin");
+    try {
+      const {
+        rows: [insertedJob],
+      } = await pgClient.query<{ id: string }>(
+        `select id from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '{"a": 3}'::json, job_key := 'race_key_new')`,
+      );
+      await pgClient.query(
+        `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs
+         set locked_at = now(), locked_by = 'worker-1', attempts = 1
+         where id = $1`,
+        [insertedJob.id],
+      );
+
+      const replacementPromise = utils.addJob(
+        "job3",
+        { a: 4 },
+        { jobKey: "race_key_new" },
+      );
+      await waitForBlockedQuery();
+      await pgClient.query("commit");
+
+      const replacementJob = await replacementPromise;
+      expect(replacementJob.id).not.toBeNull();
+      expect(replacementJob.id).not.toEqual(insertedJob.id);
+      expect(replacementJob.key).toBe("race_key_new");
+      expect(replacementJob.payload).toEqual({ a: 4 });
+    } catch (e) {
+      await pgClient.query("rollback");
+      throw e;
+    }
+
+    await utils.release();
+    utils = null;
+  }));
