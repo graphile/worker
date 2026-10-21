@@ -197,18 +197,21 @@ function buildRunner(input: {
     }
   };
 
-  const wp = workerPool.promise
-    .then(
-      () => (running ? stop("worker pool exited cleanly", true) : void 0),
-      (e) => (running ? stop(`worker pool exited with error: ${e}`) : void 0),
-    )
-    .catch(noop);
-  const cp = cron.promise
-    .then(
-      () => (running ? stop("cron exited cleanly", true) : void 0),
-      (e) => (running ? stop(`cron exited with error: ${e}`) : void 0),
-    )
-    .catch(noop);
+  // A clean exit stops the runner; an error exit stops the runner *and*
+  // re-throws, so that `runner.promise` rejects with the original error.
+  const onExit = (what: string) =>
+    [
+      () =>
+        running ? stop(`${what} exited cleanly`, true).catch(noop) : void 0,
+      async (e: unknown) => {
+        if (running) {
+          await stop(`${what} exited with error: ${e}`).catch(noop);
+        }
+        throw e;
+      },
+    ] as const;
+  const wp = workerPool.promise.then(...onExit("worker pool"));
+  const cp = cron.promise.then(...onExit("cron"));
 
   const promise = Promise.all([cp, wp]).then(
     () => {
