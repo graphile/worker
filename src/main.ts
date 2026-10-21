@@ -13,6 +13,7 @@ import {
 } from "./helpers.ts";
 import type {
   CompleteJobFunction,
+  DbJob,
   EnhancedWithPgClient,
   FailJobFunction,
   GetJobFunction,
@@ -1248,6 +1249,31 @@ export function _runTaskList(
         return jobs[0];
       };
 
+  const handleCompleteJobsError = (
+    error: unknown,
+    jobs: ReadonlyArray<DbJob>,
+  ) => {
+    safeEmit(ctx, "pool:fatalError", {
+      ctx,
+      error,
+      workerPool,
+      action: "completeJob",
+    });
+    logger.error(
+      `Failed to complete jobs '${jobs
+        .map((j) => j.id)
+        .join("', '")}':\n${String(error)}`,
+      { fatalError: error, jobs },
+    );
+    if (!workerPool._shuttingDown) {
+      // This is the reason for shutdown
+      _finErrors.push(coerceError(error));
+      workerPool.gracefulShutdown(
+        `Could not completeJobs; queue is in an inconsistent state; aborting.`,
+      );
+    }
+  };
+
   const { release: releaseCompleteJob, fn: completeJob } = (
     completeJobBatchDelay >= 0
       ? batch(
@@ -1260,40 +1286,46 @@ export function _runTaskList(
               workerPool.id,
               jobs,
             ),
-          (error, jobs) => {
-            safeEmit(ctx, "pool:fatalError", {
-              ctx,
-              error,
-              workerPool,
-              action: "completeJob",
-            });
-            logger.error(
-              `Failed to complete jobs '${jobs
-                .map((j) => j.id)
-                .join("', '")}':\n${String(error)}`,
-              { fatalError: error, jobs },
-            );
-            if (!workerPool._shuttingDown) {
-              // This is the reason for shutdown
-              _finErrors.push(coerceError(error));
-              workerPool.gracefulShutdown(
-                `Could not completeJobs; queue is in an inconsistent state; aborting.`,
-              );
-            }
-          },
+          handleCompleteJobsError,
           BATCH_RETRY_OPTIONS,
         )
       : {
           release: null,
+          // Handle errors the same way as when batching
           fn: (job) =>
             batchCompleteJobs(
               compiledSharedOptions,
               withPgClient.withRetries,
               workerPool.id,
               [job],
-            ),
+            ).then(null, (error) => handleCompleteJobsError(error, [job])),
         }
   ) as { release: (() => void) | null; fn: CompleteJobFunction };
+
+  const handleFailJobsError = (
+    error: unknown,
+    specs: ReadonlyArray<Parameters<FailJobFunction>[0]>,
+  ) => {
+    safeEmit(ctx, "pool:fatalError", {
+      ctx,
+      error,
+      workerPool,
+      action: "failJob",
+    });
+    logger.error(
+      `Failed to fail jobs '${specs
+        .map((spec) => spec.job.id)
+        .join("', '")}':\n${String(error)}`,
+      { fatalError: error, specs },
+    );
+    if (!workerPool._shuttingDown) {
+      // This is the reason for shutdown
+      _finErrors.push(coerceError(error));
+      workerPool.gracefulShutdown(
+        `Could not failJobs; queue is in an inconsistent state; aborting.`,
+      );
+    }
+  };
 
   const { release: releaseFailJob, fn: failJob } = (
     failJobBatchDelay >= 0
@@ -1307,38 +1339,19 @@ export function _runTaskList(
               workerPool.id,
               specs,
             ),
-          (error, specs) => {
-            safeEmit(ctx, "pool:fatalError", {
-              ctx,
-              error,
-              workerPool,
-              action: "failJob",
-            });
-            logger.error(
-              `Failed to fail jobs '${specs
-                .map((spec) => spec.job.id)
-                .join("', '")}':\n${String(error)}`,
-              { fatalError: error, specs },
-            );
-            if (!workerPool._shuttingDown) {
-              // This is the reason for shutdown
-              _finErrors.push(coerceError(error));
-              workerPool.gracefulShutdown(
-                `Could not failJobs; queue is in an inconsistent state; aborting.`,
-              );
-            }
-          },
+          handleFailJobsError,
           BATCH_RETRY_OPTIONS,
         )
       : {
           release: null,
+          // Handle errors the same way as when batching
           fn: (spec) =>
             batchFailJobs(
               compiledSharedOptions,
               withPgClient.withRetries,
               workerPool.id,
               [spec],
-            ),
+            ).then(null, (error) => handleFailJobsError(error, [spec])),
         }
   ) as { release: (() => void) | null; fn: FailJobFunction };
 
