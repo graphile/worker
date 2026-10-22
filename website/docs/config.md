@@ -303,6 +303,9 @@ increase (e.g. if jobs are locked in a local queue on one Worker instance whilst
 another Worker instance sits idle), and newly added high priority jobs will not
 be detected until the local queue is exhausted and triggers a re-fetch.
 
+See [Local queue](/docs/local-queue) for what each option does, its defaults,
+and guidance on choosing values.
+
 [^1]:
     Jobs are locked when they enter the local queue so no other Worker instance
     can grab them, but this means even jobs that aren't being worked may be
