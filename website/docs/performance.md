@@ -107,6 +107,9 @@ you should set your localQueue size to either a low number (2+) or disable it
 entirely (`-1`). When doing so, you can leave `completeJobBatchDelay` and
 `failJobBatchDelay` enabled.
 
+For a full description of every `localQueue` option (including `ttl` and
+`refetchDelay`), see [Local queue](/docs/local-queue).
+
 ### `completeJobBatchDelay` / `failJobBatchDelay`
 
 These methods cause job releasing (complete/fail) to become asynchronous,
