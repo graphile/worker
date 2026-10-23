@@ -2612,14 +2612,14 @@ begin
     set
       key = null,
       attempts = case
-        when json_typeof(jobs.payload) = 'array' and jobs.locked_at is not null then jobs.attempts
+        when json_typeof(jobs.payload) = 'array' then jobs.attempts
         else jobs.max_attempts
       end,
       updated_at = now()
     from unnest(v_remaining_specs) spec
     where spec.job_key is not null
     and jobs.key = spec.job_key
-    and is_available is not true;
+    and jobs.locked_at is not null;
 
     return query
     with upserted as (
@@ -2690,6 +2690,23 @@ begin
   end loop;
   return;
 end;
+$$;
+
+CREATE OR REPLACE FUNCTION :GRAPHILE_WORKER_SCHEMA.force_unlock_workers(worker_ids text[]) RETURNS void
+    LANGUAGE sql
+    AS $$
+delete from :GRAPHILE_WORKER_SCHEMA._private_jobs as jobs
+where locked_by = any(worker_ids)
+  and key is null
+  and json_typeof(payload) != 'array'
+  and attempts >= max_attempts
+  and last_error is null;
+update :GRAPHILE_WORKER_SCHEMA._private_jobs as jobs
+set locked_at = null, locked_by = null
+where locked_by = any(worker_ids);
+update :GRAPHILE_WORKER_SCHEMA._private_job_queues as job_queues
+set locked_at = null, locked_by = null
+where locked_by = any(worker_ids);
 $$;
 `,
 };

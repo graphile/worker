@@ -174,14 +174,14 @@ begin
     set
       key = null,
       attempts = case
-        when json_typeof(jobs.payload) = 'array' and jobs.locked_at is not null then jobs.attempts
+        when json_typeof(jobs.payload) = 'array' then jobs.attempts
         else jobs.max_attempts
       end,
       updated_at = now()
     from unnest(v_remaining_specs) spec
     where spec.job_key is not null
     and jobs.key = spec.job_key
-    and is_available is not true;
+    and jobs.locked_at is not null;
     return query
     with upserted as (
       insert into "graphile_worker"._private_jobs as jobs (
@@ -266,6 +266,12 @@ $$;
 CREATE FUNCTION graphile_worker.force_unlock_workers(worker_ids text[]) RETURNS void
     LANGUAGE sql
     AS $$
+delete from "graphile_worker"._private_jobs as jobs
+where locked_by = any(worker_ids)
+  and key is null
+  and json_typeof(payload) != 'array'
+  and attempts >= max_attempts
+  and last_error is null;
 update "graphile_worker"._private_jobs as jobs
 set locked_at = null, locked_by = null
 where locked_by = any(worker_ids);

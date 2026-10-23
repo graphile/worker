@@ -364,3 +364,82 @@ test("does not drop a keyed addJob when a worker locks the row concurrently (GH-
     await utils.release();
     utils = null;
   }));
+
+test("updates an unlocked permanently-failed keyed job in-place without leaving an orphan row", () =>
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
+    await reset(pgClient, options);
+
+    utils = await makeWorkerUtils({
+      connectionString: TEST_CONNECTION_STRING,
+    });
+
+    const initialJob = await utils.addJob(
+      "job3",
+      { a: 1 },
+      { jobKey: "failed_key" },
+    );
+
+    await pgClient.query(
+      `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs
+       set attempts = max_attempts, last_error = 'boom'
+       where id = $1`,
+      [initialJob.id],
+    );
+
+    const rescheduledJob = await utils.addJob(
+      "job3",
+      { a: 2 },
+      { jobKey: "failed_key" },
+    );
+
+    expect(rescheduledJob.id).toEqual(initialJob.id);
+    expect(rescheduledJob.attempts).toBe(0);
+    expect(rescheduledJob.last_error).toBeNull();
+    expect(rescheduledJob.payload).toEqual({ a: 2 });
+
+    const jobs = await getJobs(pgClient);
+    expect(jobs).toHaveLength(1);
+
+    await utils.release();
+    utils = null;
+  }));
+
+test("deletes a superseded in-flight non-batch job when forceUnlockWorkers is called", () =>
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
+    await reset(pgClient, options);
+
+    utils = await makeWorkerUtils({
+      connectionString: TEST_CONNECTION_STRING,
+    });
+
+    const firstJob = await utils.addJob(
+      "job3",
+      { a: 1 },
+      { jobKey: "superseded_key" },
+    );
+
+    await pgClient.query(
+      `update ${ESCAPED_GRAPHILE_WORKER_SCHEMA}._private_jobs
+       set locked_at = now(), locked_by = 'worker-dead', attempts = 1
+       where id = $1`,
+      [firstJob.id],
+    );
+
+    const replacementJob = await utils.addJob(
+      "job3",
+      { a: 2 },
+      { jobKey: "superseded_key" },
+    );
+    expect(replacementJob.id).not.toEqual(firstJob.id);
+
+    await utils.forceUnlockWorkers(["worker-dead"]);
+
+    const jobs = await getJobs(pgClient);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0].id).toEqual(replacementJob.id);
+    expect(jobs[0].key).toBe("superseded_key");
+    expect(jobs[0].payload).toEqual({ a: 2 });
+
+    await utils.release();
+    utils = null;
+  }));
