@@ -18,10 +18,24 @@ export async function resetLockedAt(
   await withPgClient.withRetries((client) =>
     client.query({
       text: `\
-with j as (
+with deleted as (
+delete from ${escapedWorkerSchema}._private_jobs as jobs
+where locked_at < ${now} - interval '4 hours'
+and key is null
+and json_typeof(payload) != 'array'
+and attempts >= max_attempts
+and last_error is null
+),
+j as (
 update ${escapedWorkerSchema}._private_jobs as jobs
 set locked_at = null, locked_by = null, run_at = greatest(run_at, ${now})
 where locked_at < ${now} - interval '4 hours'
+and not (
+  key is null
+  and json_typeof(payload) != 'array'
+  and attempts >= max_attempts
+  and last_error is null
+)
 )
 update ${escapedWorkerSchema}._private_job_queues as job_queues
 set locked_at = null, locked_by = null
