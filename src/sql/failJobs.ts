@@ -2,6 +2,7 @@ import type {
   DbJob,
   EnhancedWithPgClient,
   WithPgClient,
+  WorkerPool,
 } from "../interfaces.ts";
 import type { CompiledSharedOptions } from "../lib.ts";
 interface Spec {
@@ -13,9 +14,10 @@ interface Spec {
 export async function batchFailJobs(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: WithPgClient,
-  poolId: string,
+  workerPool: WorkerPool,
   specs: ReadonlyArray<Spec>,
 ): Promise<void> {
+  const poolId = workerPool.id;
   const {
     escapedWorkerSchema,
     workerSchema,
@@ -95,6 +97,11 @@ where id = (el->>'jobId')::bigint and locked_by = $1::text;`,
         name: !preparedStatements ? undefined : `fail_job/${workerSchema}`,
       }),
     );
+  }
+
+  // Avoid slow drain of named queues by nudging now lock is released
+  if (specsWithQueues.length > 0) {
+    workerPool.nudge(specsWithQueues.length);
   }
 }
 

@@ -4,6 +4,7 @@ import type { Pool } from "pg";
 
 import type { Deferred } from "../src/deferred.ts";
 import deferred from "../src/deferred.ts";
+import { WorkerPreset } from "../src/index.ts";
 import type {
   Job,
   Task,
@@ -246,10 +247,10 @@ test("jobs in different named queues run in parallel when the local queue is ena
 
 test.each([
   ["without the local queue", {}],
-  ["with the local queue", { localQueue: { size: 5 } }],
+  ["with the local queue", { worker: { localQueue: { size: 5 } } }],
 ])(
   "a backlog in a named queue drains without waiting for a poll per job once inserts stop (%s)",
-  (_description, workerPreset) =>
+  (_description, testPreset) =>
     withPgPool(async (pgPool) => {
       await reset(pgPool, options);
 
@@ -266,17 +267,18 @@ test.each([
         `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', json_build_object('id', n::text), 'serial') from generate_series(1, 5) n`,
       );
 
-      // Each job that has to wait for a poll would take a minute.
-      const workerPool = runTaskList(
-        {
-          concurrency: 3,
-          preset: { worker: { ...workerPreset, pollInterval: 60_000 } },
+      const preset: GraphileConfig.Preset = {
+        extends: [WorkerPreset, testPreset],
+        worker: {
+          concurrentJobs: 3,
+          pollInterval: 60_000,
         },
-        tasks,
-        pgPool,
-      );
+      };
+
+      const workerPool = runTaskList({ preset }, tasks, pgPool);
       try {
-        await sleepUntil(() => completedCount >= 5);
+        // Each poll would take a minute; we only wait a second so no polls.
+        await sleepUntil(() => completedCount >= 5, 1000);
       } finally {
         await workerPool.gracefulShutdown();
       }

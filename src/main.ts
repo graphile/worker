@@ -1252,27 +1252,6 @@ export function _runTaskList(
         return jobs[0];
       };
 
-  /**
-   * Completing or failing a job that belongs to a named queue unlocks that
-   * queue, so the next job in it can now be fetched. Workers only learn about
-   * new work from `jobs:insert` notifications and from polling, and the worker
-   * that ran the job asked for its next job before the completion was
-   * committed (completion does not block the worker). Without this nudge, a
-   * backlog in a named queue only advances once per `pollInterval` after
-   * inserts stop.
-   */
-  const nudgeAfterQueuedJobsReleased = (jobs: ReadonlyArray<DbJob>) => {
-    let releasedQueueCount = 0;
-    for (const job of jobs) {
-      if (job.job_queue_id != null) {
-        releasedQueueCount++;
-      }
-    }
-    if (releasedQueueCount > 0) {
-      workerPool.nudge(releasedQueueCount);
-    }
-  };
-
   const { release: releaseCompleteJob, fn: completeJob } = (
     completeJobBatchDelay >= 0
       ? batch(
@@ -1282,9 +1261,9 @@ export function _runTaskList(
             batchCompleteJobs(
               compiledSharedOptions,
               withPgClient, // batch handles retries and adds backpressure
-              workerPool.id,
+              workerPool,
               jobs,
-            ).then(() => nudgeAfterQueuedJobsReleased(jobs)),
+            ),
           (error, jobs) => {
             safeEmit(ctx, "pool:fatalError", {
               ctx,
@@ -1314,9 +1293,9 @@ export function _runTaskList(
             batchCompleteJobs(
               compiledSharedOptions,
               withPgClient.withRetries,
-              workerPool.id,
+              workerPool,
               [job],
-            ).then(() => nudgeAfterQueuedJobsReleased([job])),
+            ),
         }
   ) as { release: (() => void) | null; fn: CompleteJobFunction };
 
@@ -1329,10 +1308,8 @@ export function _runTaskList(
             batchFailJobs(
               compiledSharedOptions,
               withPgClient, // batch handles retries and adds backpressure
-              workerPool.id,
+              workerPool,
               specs,
-            ).then(() =>
-              nudgeAfterQueuedJobsReleased(specs.map((spec) => spec.job)),
             ),
           (error, specs) => {
             safeEmit(ctx, "pool:fatalError", {
@@ -1363,9 +1340,9 @@ export function _runTaskList(
             batchFailJobs(
               compiledSharedOptions,
               withPgClient.withRetries,
-              workerPool.id,
+              workerPool,
               [spec],
-            ).then(() => nudgeAfterQueuedJobsReleased([spec.job])),
+            ),
         }
   ) as { release: (() => void) | null; fn: FailJobFunction };
 
