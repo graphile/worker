@@ -1501,6 +1501,10 @@ function batch<TSpec, TResult>(
   function allgood() {
     if (backpressure) {
       backpressure.resolve();
+      // Clear it so a subsequent `holdup()` creates a fresh deferred (and a
+      // matching `incrementPending()`); otherwise the stale resolved deferred
+      // would suppress future backpressure and unbalance the pending refcount.
+      backpressure = null;
       // Bump a tick to give the things held up by backpressure a chance to register.
       process.nextTick(decrementPending);
     }
@@ -1540,7 +1544,14 @@ function batch<TSpec, TResult>(
             // Tell other callers to wait until we're successful again (i.e. apply backpressure)
             holdup();
             lastError = coerceError(e);
-            break;
+            // Only retry transient failures. A non-retryable error (e.g. a
+            // programming/constraint error) will never succeed, so we fail fast
+            // rather than looping `maxAttempts` times with backoff - matching
+            // `makeEnhancedWithPgClient.withRetries`. Retryable errors fall
+            // through to the next iteration (which applies the backoff delay).
+            if (!RETRYABLE_ERROR_CODES[lastError.code as string]) {
+              break;
+            }
           }
         }
         throw (
