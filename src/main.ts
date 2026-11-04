@@ -13,7 +13,6 @@ import {
 } from "./helpers.ts";
 import type {
   CompleteJobFunction,
-  DbJob,
   EnhancedWithPgClient,
   FailJobFunction,
   GetJobFunction,
