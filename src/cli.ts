@@ -5,7 +5,8 @@ import yargs from "yargs";
 import { assertCleanupTasks, cleanup } from "./cleanup.ts";
 import { getCronItemsInternal } from "./getCronItems.ts";
 import { getTasksInternal } from "./getTasks.ts";
-import { getUtilsAndReleasersFromOptions } from "./lib.ts";
+import { getUtilsAndReleasersFromOptions, releaseAfterError } from "./lib.ts";
+import { migrate } from "./migrate.ts";
 import { EMPTY_PRESET, WorkerPreset } from "./preset.ts";
 import { runInternal, runOnceInternal } from "./runner.ts";
 
@@ -118,6 +119,14 @@ async function main() {
       extends: [WorkerPreset, userPreset ?? EMPTY_PRESET, argvPreset],
     },
   });
+  try {
+    await compiledOptions.withPgClient((client) =>
+      migrate(compiledOptions, client),
+    );
+  } catch (e) {
+    await releaseAfterError(compiledOptions.logger, release, e);
+    throw e;
+  }
   try {
     if (
       !compiledOptions.resolvedPreset.worker.connectionString &&
