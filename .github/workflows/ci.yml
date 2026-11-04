@@ -92,7 +92,7 @@ jobs:
       - run: yarn test:only --ci
 
   database_updated:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     services:
       postgres:
