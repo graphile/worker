@@ -114,13 +114,14 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: lts/*
-      - run: yarn --immutable
       - name: Install pg_dump
         run: |
-          sudo bash -c "echo deb http://apt.postgresql.org/pub/repos/apt/ jammy-pgdg main >> /etc/apt/sources.list.d/pgdg.list"
-          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          sudo mkdir -p /usr/share/keyrings
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /usr/share/keyrings/pgdg-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/pgdg-archive-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
           sudo apt-get update
-          sudo apt-get -yqq install postgresql-client-11
+          sudo apt-get -yqq install postgresql-client-14
+      - run: yarn --immutable
       - name: "Build code"
         run: |
           yarn prepack
