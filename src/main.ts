@@ -786,6 +786,9 @@ export function _runTaskList(
       return concurrency === 1 ? (this._workers[0] ?? null) : null;
     },
     nudge(this: WorkerPool, count: number) {
+      if (!this._active || this._shuttingDown) {
+        return;
+      }
       if (localQueue) {
         localQueue.pulse(count);
       } else {
@@ -1259,9 +1262,6 @@ export function _runTaskList(
    * inserts stop.
    */
   const nudgeAfterQueuedJobsReleased = (jobs: ReadonlyArray<DbJob>) => {
-    if (!workerPool._active || workerPool._shuttingDown) {
-      return;
-    }
     let releasedQueueCount = 0;
     for (const job of jobs) {
       if (job.job_queue_id != null) {
@@ -1269,14 +1269,7 @@ export function _runTaskList(
       }
     }
     if (releasedQueueCount > 0) {
-      try {
-        workerPool.nudge(releasedQueueCount);
-      } catch (e) {
-        logger.error(
-          `Failed to nudge workers after releasing named queues: ${coerceError(e)}`,
-          { error: e },
-        );
-      }
+      workerPool.nudge(releasedQueueCount);
     }
   };
 
