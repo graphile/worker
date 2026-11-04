@@ -13,6 +13,7 @@ import {
 } from "./helpers.ts";
 import type {
   CompleteJobFunction,
+  DbJob,
   EnhancedWithPgClient,
   FailJobFunction,
   GetJobFunction,
@@ -1248,6 +1249,37 @@ export function _runTaskList(
         return jobs[0];
       };
 
+  /**
+   * Completing or failing a job that belongs to a named queue unlocks that
+   * queue, so the next job in it can now be fetched. Workers only learn about
+   * new work from `jobs:insert` notifications and from polling, and the worker
+   * that ran the job asked for its next job before the completion was
+   * committed (completion does not block the worker). Without this nudge, a
+   * backlog in a named queue only advances once per `pollInterval` after
+   * inserts stop.
+   */
+  const nudgeAfterQueuedJobsReleased = (jobs: ReadonlyArray<DbJob>) => {
+    if (!workerPool._active || workerPool._shuttingDown) {
+      return;
+    }
+    let releasedQueueCount = 0;
+    for (const job of jobs) {
+      if (job.job_queue_id != null) {
+        releasedQueueCount++;
+      }
+    }
+    if (releasedQueueCount > 0) {
+      try {
+        workerPool.nudge(releasedQueueCount);
+      } catch (e) {
+        logger.error(
+          `Failed to nudge workers after releasing named queues: ${coerceError(e)}`,
+          { error: e },
+        );
+      }
+    }
+  };
+
   const { release: releaseCompleteJob, fn: completeJob } = (
     completeJobBatchDelay >= 0
       ? batch(
@@ -1259,7 +1291,7 @@ export function _runTaskList(
               withPgClient, // batch handles retries and adds backpressure
               workerPool.id,
               jobs,
-            ),
+            ).then(() => nudgeAfterQueuedJobsReleased(jobs)),
           (error, jobs) => {
             safeEmit(ctx, "pool:fatalError", {
               ctx,
@@ -1291,7 +1323,7 @@ export function _runTaskList(
               withPgClient.withRetries,
               workerPool.id,
               [job],
-            ),
+            ).then(() => nudgeAfterQueuedJobsReleased([job])),
         }
   ) as { release: (() => void) | null; fn: CompleteJobFunction };
 
@@ -1306,6 +1338,8 @@ export function _runTaskList(
               withPgClient, // batch handles retries and adds backpressure
               workerPool.id,
               specs,
+            ).then(() =>
+              nudgeAfterQueuedJobsReleased(specs.map((spec) => spec.job)),
             ),
           (error, specs) => {
             safeEmit(ctx, "pool:fatalError", {
@@ -1338,7 +1372,7 @@ export function _runTaskList(
               withPgClient.withRetries,
               workerPool.id,
               [spec],
-            ),
+            ).then(() => nudgeAfterQueuedJobsReleased([spec.job])),
         }
   ) as { release: (() => void) | null; fn: FailJobFunction };
 

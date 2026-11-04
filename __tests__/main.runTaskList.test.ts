@@ -243,3 +243,43 @@ test("jobs in different named queues run in parallel when the local queue is ena
       Object.values(jobPromisesById).forEach((p) => p.resolve());
     }
   }));
+
+test.each([
+  ["without the local queue", {}],
+  ["with the local queue", { localQueue: { size: 5 } }],
+])(
+  "a backlog in a named queue drains without waiting for a poll per job once inserts stop (%s)",
+  (_description, workerPreset) =>
+    withPgPool(async (pgPool) => {
+      await reset(pgPool, options);
+
+      let completedCount = 0;
+      const tasks: TaskList = {
+        job1: () => {
+          completedCount++;
+        },
+      };
+
+      // One statement, so no `jobs:insert` notification arrives once the
+      // pool has started.
+      await pgPool.query(
+        `select ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job1', json_build_object('id', n::text), 'serial') from generate_series(1, 5) n`,
+      );
+
+      // Each job that has to wait for a poll would take a minute.
+      const workerPool = runTaskList(
+        {
+          concurrency: 3,
+          preset: { worker: { ...workerPreset, pollInterval: 60_000 } },
+        },
+        tasks,
+        pgPool,
+      );
+      try {
+        await sleepUntil(() => completedCount >= 5);
+      } finally {
+        await workerPool.gracefulShutdown();
+      }
+      await expectJobCount(pgPool, 0);
+    }),
+);
