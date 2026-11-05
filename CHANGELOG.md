@@ -22,6 +22,16 @@
 > Read more:
 > [Worker Pro Migration](https://worker.graphile.org/docs/pro/migration).
 
+## 0.18.1
+
+### Patch Changes
+
+- [#653](https://github.com/graphile/worker/pull/653)
+  [`1a16023`](https://github.com/graphile/worker/commit/1a1602380fb1ae10340f76fadae76f94573f3a5f)
+  Thanks [@efeesrefinal](https://github.com/efeesrefinal)! - Fix a bug
+  (introduced 0.17.0) where jobs in named queues may drain as slowly as once per
+  `pollInterval`.
+
 ## 0.18.0
 
 ### Minor Changes
