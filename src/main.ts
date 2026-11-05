@@ -785,6 +785,9 @@ export function _runTaskList(
       return concurrency === 1 ? (this._workers[0] ?? null) : null;
     },
     nudge(this: WorkerPool, count: number) {
+      if (!this._active || this._shuttingDown) {
+        return;
+      }
       if (localQueue) {
         localQueue.pulse(count);
       } else {
@@ -1257,7 +1260,7 @@ export function _runTaskList(
             batchCompleteJobs(
               compiledSharedOptions,
               withPgClient, // batch handles retries and adds backpressure
-              workerPool.id,
+              workerPool,
               jobs,
             ),
           (error, jobs) => {
@@ -1289,7 +1292,7 @@ export function _runTaskList(
             batchCompleteJobs(
               compiledSharedOptions,
               withPgClient.withRetries,
-              workerPool.id,
+              workerPool,
               [job],
             ),
         }
@@ -1304,7 +1307,7 @@ export function _runTaskList(
             batchFailJobs(
               compiledSharedOptions,
               withPgClient, // batch handles retries and adds backpressure
-              workerPool.id,
+              workerPool,
               specs,
             ),
           (error, specs) => {
@@ -1336,7 +1339,7 @@ export function _runTaskList(
             batchFailJobs(
               compiledSharedOptions,
               withPgClient.withRetries,
-              workerPool.id,
+              workerPool,
               [spec],
             ),
         }

@@ -1,4 +1,4 @@
-import type { DbJob, WithPgClient } from "../interfaces.ts";
+import type { DbJob, WithPgClient, WorkerPool } from "../interfaces.ts";
 import type { CompiledSharedOptions } from "../lib.ts";
 
 const manualPrepare = false;
@@ -6,9 +6,10 @@ const manualPrepare = false;
 export async function batchCompleteJobs(
   compiledSharedOptions: CompiledSharedOptions,
   withPgClient: WithPgClient,
-  poolId: string,
+  workerPool: WorkerPool,
   jobs: ReadonlyArray<DbJob>,
 ): Promise<void> {
+  const poolId = workerPool.id;
   const {
     escapedWorkerSchema,
     workerSchema,
@@ -82,5 +83,10 @@ where id = n`,
         }),
       );
     }
+  }
+
+  // Avoid slow drain of named queues by nudging now lock is released
+  if (jobIdsWithQueue.length > 0) {
+    workerPool.nudge(jobIdsWithQueue.length);
   }
 }

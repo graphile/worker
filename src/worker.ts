@@ -107,7 +107,11 @@ export function makeNewWorker(
   };
 
   const nudge = () => {
-    assert.ok(active, "nudge called after worker terminated");
+    if (!active) {
+      // A released worker can still be in the pool until its promise settles
+      logger.debug("Ignoring nudge; worker is no longer active");
+      return false;
+    }
     if (doNextTimer) {
       // Must be idle; call early
       doNext();
