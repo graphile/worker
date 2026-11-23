@@ -129,6 +129,8 @@ CREATE FUNCTION graphile_worker.add_jobs(specs graphile_worker.job_spec[], job_k
     AS $$
 declare
   v_remaining_specs "graphile_worker".job_spec[] := specs;
+  v_lock_namespace integer;
+  v_key_hash integer;
 begin
   -- Ensure all the tasks exist (insert only missing identifiers so identity is not consumed)
   insert into "graphile_worker"._private_tasks as tasks (identifier)
@@ -139,6 +141,7 @@ begin
     from "graphile_worker"._private_tasks as existing
     where existing.identifier = spec.identifier
   )
+  order by spec.identifier
   on conflict do nothing;
   -- Ensure all the queues exist
   insert into "graphile_worker"._private_job_queues as job_queues (queue_name)
@@ -150,9 +153,25 @@ begin
     from "graphile_worker"._private_job_queues as existing
     where existing.queue_name = spec.queue_name
   )
+  order by spec.queue_name
   on conflict do nothing;
   -- WARNING: this count is not 100% accurate; 'on conflict' clause will cause it to be an overestimate
   perform pg_notify('jobs:insert', '{"r":' || random()::text || ',"count":' || coalesce(array_length(specs, 1), 0)::text || '}');
+  -- Serialize concurrent add_jobs calls with overlapping job_keys even when
+  -- some rows do not exist yet, preventing deadlocks from lock-order
+  -- inversion between the FOR UPDATE pass on existing rows and the
+  -- INSERT ... ON CONFLICT pass.
+  v_lock_namespace := hashtext(
+    'graphile_worker.add_jobs:' || pg_typeof(null::"graphile_worker"._private_jobs)::oid::text
+  );
+  for v_key_hash in
+    select distinct hashtext(spec.job_key)
+    from unnest(specs) spec
+    where spec.job_key is not null
+    order by 1
+  loop
+    perform pg_advisory_xact_lock(v_lock_namespace, v_key_hash);
+  end loop;
   loop
     exit when coalesce(array_length(v_remaining_specs, 1), 0) = 0;
     -- Lock any existing rows for the incoming job_keys so a concurrent get_job
@@ -211,6 +230,7 @@ begin
         on tasks.identifier = spec.identifier
         left join "graphile_worker"._private_job_queues as job_queues
         on job_queues.queue_name = spec.queue_name
+        order by spec.job_key nulls last
       on conflict (key) do update set
         job_queue_id = excluded.job_queue_id,
         task_id = excluded.task_id,
@@ -237,7 +257,7 @@ begin
       returning *
     )
     select * from upserted;
-    select coalesce(array_agg(spec), array[]::"graphile_worker".job_spec[])
+    select coalesce(array_agg(spec order by spec.job_key), array[]::"graphile_worker".job_spec[])
     into v_remaining_specs
     from unnest(v_remaining_specs) spec
     where spec.job_key is not null
