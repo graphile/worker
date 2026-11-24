@@ -782,6 +782,30 @@ circumstances.
 
 :::
 
+### Example: Prisma Postgres
+
+Prisma Postgres only accepts SSL connections (without an SSL option in the
+connection string the connection fails with `read ECONNRESET`), and its
+certificate is already trusted by Node.js so there is no need for `sslrootcert`.
+The connection string that Prisma gives you ends in `?sslmode=require`, which
+works; current versions of `pg` treat it the same as `?sslmode=verify-full` but
+print a warning about it, so you may prefer to use `verify-full` directly:
+
+```
+graphile-worker -c \
+  "postgres://user:pass@db.prisma.io:5432/postgres?sslmode=verify-full"
+```
+
+Prisma Postgres exposes the same database via two hosts: `db.prisma.io` is a
+direct connection, and `pooled.db.prisma.io` goes through a connection pool in
+transaction mode. Use the direct host for your workers. Through the pooled host
+`LISTEN` is accepted without error but the notifications never arrive, so
+workers only find new jobs by polling (up to `pollInterval` after they were
+added) rather than as soon as they are added; see
+[the FAQ](./faq.md#is-listennotify-used-by-default-and-will-this-pose-a-problem-for-pgbouncer)
+for more on this. Adding jobs through the pooled host is fine: workers listening
+via the direct host are still notified immediately.
+
 ## `socket:` protocol
 
 Only used for Unix domain sockets.
