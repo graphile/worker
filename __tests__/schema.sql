@@ -127,7 +127,20 @@ $$;
 CREATE FUNCTION graphile_worker.add_jobs(specs graphile_worker.job_spec[], job_key_preserve_run_at boolean DEFAULT false) RETURNS SETOF graphile_worker._private_jobs
     LANGUAGE plpgsql
     AS $$
+declare
+  v_key text;
 begin
+  -- Hold each key until commit so another add_jobs call cannot insert the same
+  -- key between this function's locked-job UPDATE and INSERT. Sort keys to
+  -- keep concurrent batches from acquiring the same locks in opposite orders.
+  for v_key in
+    select distinct spec.job_key
+    from unnest(specs) spec
+    where spec.job_key is not null
+    order by spec.job_key
+  loop
+    perform pg_advisory_xact_lock(hashtextextended('graphile_worker:add_jobs:' || v_key, 0));
+  end loop;
   -- Ensure all the tasks exist (insert only missing identifiers so identity is not consumed)
   insert into "graphile_worker"._private_tasks as tasks (identifier)
   select distinct spec.identifier
@@ -416,4 +429,5 @@ COPY graphile_worker.migrations (id, ts, breaking) FROM stdin;
 18	1970-01-01 00:00:00.000000+00	f
 19	1970-01-01 00:00:00.000000+00	t
 20	1970-01-01 00:00:00.000000+00	f
+21	1970-01-01 00:00:00.000000+00	f
 \.
