@@ -1,6 +1,7 @@
 import type { Stats } from "fs";
 import { lstat, readdir, realpath } from "fs/promises";
 import { join as pathJoin } from "path";
+import { pathToFileURL } from "url";
 
 import { tryStat } from "./fs.ts";
 import type {
@@ -48,7 +49,7 @@ async function loadFileIntoTasks(
   filename: string,
   name: string | null = null,
 ) {
-  const rawMod = await import(filename);
+  const rawMod = await import(pathToFileURL(filename).href);
 
   // Normally, import() of a commonJS module with `module.exports` write
   // would result in `{ default: module.exports }`.

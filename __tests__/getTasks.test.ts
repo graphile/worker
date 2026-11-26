@@ -1,3 +1,9 @@
+import { execFile } from "child_process";
+import { mkdir, mkdtemp, rm, writeFile } from "fs/promises";
+import { tmpdir } from "os";
+import { dirname, join } from "path";
+import { promisify } from "util";
+
 import { getTasks } from "../src/getTasks.ts";
 import {
   makeJobHelpers,
@@ -20,6 +26,55 @@ const neverAbortController = new AbortController();
 const abortSignal = neverAbortController.signal;
 const abortPromise = new Promise<void>((_, reject) => {
   abortSignal.addEventListener("abort", reject);
+});
+
+describe.each(["cjs", "mjs"])("task file paths (%s)", (extension) => {
+  test.each([
+    "tasks#hash",
+    "tasks%percent",
+    "tasks%20encoded",
+    "parent#%directory/tasks",
+  ])("loads the requested file: %s", async (name) => {
+    const directory = await mkdtemp(join(tmpdir(), "graphile-worker-tasks-"));
+    const filename = join(directory, `${name}.${extension}`);
+    try {
+      await mkdir(dirname(filename), { recursive: true });
+      await writeFile(
+        filename,
+        extension === "cjs"
+          ? "module.exports = { requestedTask() {} };"
+          : "export function requestedTask() {}",
+      );
+      // A literal percent escape must not select a different, existing file.
+      if (name.includes("%20")) {
+        await writeFile(
+          filename.replace("%20", " "),
+          extension === "cjs"
+            ? "module.exports = { otherTask() {} };"
+            : "export function otherTask() {}",
+        );
+      }
+      // Jest's module resolver accepts paths that Node's native import rejects.
+      const { stdout } = await promisify(execFile)(process.execPath, [
+        "--input-type=module",
+        "--eval",
+        `
+          const { getTasks } = await import(process.argv[1]);
+          const { tasks, release } = await getTasks({}, process.argv[2]);
+          try {
+            console.log(JSON.stringify(Object.keys(tasks)));
+          } finally {
+            await release();
+          }
+        `,
+        new URL("../dist/index.js", import.meta.url).href,
+        filename,
+      ]);
+      expect(JSON.parse(stdout)).toEqual(["requestedTask"]);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("commonjs", () => {
