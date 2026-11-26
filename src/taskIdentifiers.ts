@@ -40,7 +40,7 @@ export function getTaskDetails(
     const { escapedWorkerSchema } = compiledSharedOptions;
     assert.ok(supportedTaskNames.length, "No runnable tasks!");
     cache.lastStr = str;
-    cache.lastDigest = (async () => {
+    const digestPromise = (async () => {
       const { rows } = await withPgClient.withRetries(async (client) => {
         await client.query({
           text: `insert into ${escapedWorkerSchema}._private_tasks as tasks (identifier) select i from unnest($1::text[]) as u(i) where not exists (select 1 from ${escapedWorkerSchema}._private_tasks as existing where existing.identifier = u.i) on conflict do nothing`,
@@ -69,6 +69,12 @@ export function getTaskDetails(
       cache.lastStr = str;
       return cache.lastDigest;
     })();
+    cache.lastDigest = digestPromise;
+    void digestPromise.catch(() => {
+      if (cache.lastStr === str) {
+        cache.lastStr = "";
+      }
+    });
   }
   return cache.lastDigest;
 }
