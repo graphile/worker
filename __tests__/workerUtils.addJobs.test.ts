@@ -227,3 +227,49 @@ test("adding lots of jobs works", () =>
     const a = jobs.map((j) => j.payload.a).sort();
     expect(a).toEqual([1, 2, 3, 4, 5, 6]);
   }));
+
+test("does not deadlock when concurrent addJobs calls share overlapping jobKeys in different orders", () =>
+  withPgClient(async (pgClient, { TEST_CONNECTION_STRING }) => {
+    await reset(pgClient, options);
+
+    utils = await makeWorkerUtils({
+      connectionString: TEST_CONNECTION_STRING,
+    });
+
+    const rounds = 25;
+    for (let round = 0; round < rounds; round++) {
+      const k1 = `deadlock_r${round}_a`;
+      const k2 = `deadlock_r${round}_b`;
+      const k3 = `deadlock_r${round}_c`;
+      const k4 = `deadlock_r${round}_d`;
+
+      await Promise.all([
+        utils.addJobs([
+          { identifier: "job3", payload: { round, caller: 1 }, jobKey: k4 },
+          { identifier: "job3", payload: { round, caller: 1 }, jobKey: k2 },
+          { identifier: "job3", payload: { round, caller: 1 }, jobKey: k3 },
+          { identifier: "job3", payload: { round, caller: 1 }, jobKey: k1 },
+        ]),
+        utils.addJobs([
+          { identifier: "job3", payload: { round, caller: 2 }, jobKey: k1 },
+          { identifier: "job3", payload: { round, caller: 2 }, jobKey: k3 },
+          { identifier: "job3", payload: { round, caller: 2 }, jobKey: k2 },
+          { identifier: "job3", payload: { round, caller: 2 }, jobKey: k4 },
+        ]),
+        utils.addJobs([
+          { identifier: "job3", payload: { round, caller: 3 }, jobKey: k3 },
+          { identifier: "job3", payload: { round, caller: 3 }, jobKey: k1 },
+        ]),
+        utils.addJobs([
+          { identifier: "job3", payload: { round, caller: 4 }, jobKey: k2 },
+          { identifier: "job3", payload: { round, caller: 4 }, jobKey: k4 },
+        ]),
+      ]);
+    }
+
+    const jobs = await getJobs(pgClient);
+    expect(jobs).toHaveLength(rounds * 4);
+
+    await utils.release();
+    utils = null;
+  }));

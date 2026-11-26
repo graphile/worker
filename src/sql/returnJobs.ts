@@ -30,7 +30,17 @@ export async function returnJobs(
     await withPgClient((client) =>
       client.query({
         text: `\
-with j as (
+with deleted as (
+delete from ${escapedWorkerSchema}._private_jobs as jobs
+where id = ANY($2::bigint[])
+and locked_by = $1::text
+and key is null
+and json_typeof(payload) != 'array'
+and attempts >= max_attempts
+and last_error is null
+returning job_queue_id
+),
+j as (
 update ${escapedWorkerSchema}._private_jobs as jobs
 set
 attempts = GREATEST(0, attempts - 1),
@@ -38,12 +48,23 @@ locked_by = null,
 locked_at = null
 where id = ANY($2::bigint[])
 and locked_by = $1::text
-returning *
+and not (
+  key is null
+  and json_typeof(payload) != 'array'
+  and attempts >= max_attempts
+  and last_error is null
+)
+returning job_queue_id
+),
+all_queues as (
+select job_queue_id from deleted
+union
+select job_queue_id from j
 )
 update ${escapedWorkerSchema}._private_job_queues as job_queues
 set locked_by = null, locked_at = null
-from j
-where job_queues.id = j.job_queue_id and job_queues.locked_by = $1::text;`,
+from all_queues
+where job_queues.id = all_queues.job_queue_id and job_queues.locked_by = $1::text;`,
         values: [poolId, jobsWithQueues.map((job) => job.id)],
         name: !preparedStatements ? undefined : `return_job_q/${workerSchema}`,
       }),
@@ -53,13 +74,28 @@ where job_queues.id = j.job_queue_id and job_queues.locked_by = $1::text;`,
     await withPgClient((client) =>
       client.query({
         text: `\
+with deleted as (
+delete from ${escapedWorkerSchema}._private_jobs as jobs
+where id = ANY($2::bigint[])
+and locked_by = $1::text
+and key is null
+and json_typeof(payload) != 'array'
+and attempts >= max_attempts
+and last_error is null
+)
 update ${escapedWorkerSchema}._private_jobs as jobs
 set
 attempts = GREATEST(0, attempts - 1),
 locked_by = null,
 locked_at = null
 where id = ANY($2::bigint[])
-and locked_by = $1::text;`,
+and locked_by = $1::text
+and not (
+  key is null
+  and json_typeof(payload) != 'array'
+  and attempts >= max_attempts
+  and last_error is null
+);`,
         values: [poolId, jobsWithoutQueues.map((job) => job.id)],
         name: !preparedStatements ? undefined : `return_job/${workerSchema}`,
       }),

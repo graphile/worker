@@ -167,3 +167,35 @@ test("on partial fail (promise), re-enqueues job with just failed elements", () 
     const jobQueues = await getJobQueues(pgClient);
     expect(jobQueues).toHaveLength(0);
   }));
+
+test("preserves retry attempts on an in-flight batch job when a new batch item is added with the same job_key", () =>
+  withPgClient(async (pgClient) => {
+    await reset(pgClient, options);
+
+    await pgClient.query(
+      `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '[{"a": 1}, {"a": 2}]', job_key := 'mykey')`,
+    );
+
+    let calls = 0;
+    const job3: Task = jest.fn(async () => {
+      calls += 1;
+      if (calls === 1) {
+        await pgClient.query(
+          `select * from ${ESCAPED_GRAPHILE_WORKER_SCHEMA}.add_job('job3', '[{"a": 3}]', job_key := 'mykey')`,
+        );
+        throw new Error("RETRY");
+      }
+    });
+    const tasks: TaskList = {
+      job3,
+    };
+    await runTaskListOnce(options, tasks, pgClient);
+
+    expect(job3).toHaveBeenCalledTimes(2);
+    const jobs = await getJobs(pgClient);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0].key).toBeNull();
+    expect(jobs[0].payload).toEqual([{ a: 1 }, { a: 2 }]);
+    expect(jobs[0].attempts).toEqual(1);
+    expect(jobs[0].is_available).toBe(true);
+  }));

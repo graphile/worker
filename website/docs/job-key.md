@@ -71,6 +71,8 @@ The full `job_key_mode` algorithm is roughly as follows:
 - Otherwise, if the existing job is locked:
   - it will have its `key` cleared
   - it will have its attempts set to `max_attempts` to avoid it running again
+    (unless its payload is a JSON array, in which case `attempts` is preserved
+    so failed batch entries can still retry)
   - a new job will be created with the new attributes.
 - Otherwise, if the existing job has previously failed:
   - it will have its `attempts` reset to 0 (as if it were newly scheduled)
@@ -148,14 +150,9 @@ the `task_identifier` into the `job_key`.
 
 If a job is updated using `add_job` when it is currently locked (i.e. running),
 a second job will be scheduled separately (unless
-`job_key_mode = 'unsafe_dedupe'`), meaning both will run. (The old job will be
-prevented from running again, and will have the `job_key` removed from it.)
+`job_key_mode = 'unsafe_dedupe'`), meaning both will run. The old job will have
+the `job_key` removed from it and, unless it is a batch job (JSON array
+payload), will be prevented from running again.
 
 Calling `remove_job` for a locked (i.e. running) job will not actually remove
 it, but will prevent it from running again on failure.
-
-There's currently a race condition in adding jobs with a job key which means
-under very high contention of a specific key an `add_job` may fail and return
-`null`. You should check for this `null` and handle it appropriately: retrying,
-throwing an error, or however else makes sense to your code. See:
-https://github.com/graphile/worker/issues/580 for more details.
