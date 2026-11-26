@@ -33,8 +33,7 @@ import type {
   WorkerSharedOptions,
   WorkerUtilsOptions,
 } from "./interfaces.ts";
-import type { LogScope } from "./logger.ts";
-import { migrate } from "./migrate.ts";
+import type { Logger, LogScope } from "./logger.ts";
 import { WorkerPreset } from "./preset.ts";
 import { version } from "./version.ts";
 
@@ -419,6 +418,21 @@ function installErrorHandlers(
 
 export type Release = () => PromiseOrDirect<void>;
 
+export async function releaseAfterError(
+  logger: Logger,
+  release: Release,
+  error: unknown,
+): Promise<void> {
+  try {
+    await release();
+  } catch (secondError) {
+    logger.error(
+      `Error occurred whilst attempting to release options after error occurred`,
+      { error, secondError },
+    );
+  }
+}
+
 export async function withReleasers<T>(
   callback: (releasers: Releasers, release: Release) => Promise<T>,
 ): Promise<T> {
@@ -505,11 +519,6 @@ export const getUtilsAndReleasersFromOptions = async (
       const withPgClient = makeEnhancedWithPgClient(
         makeWithPgClientFromPool(pgPool),
       );
-
-      // Migrate
-      await withPgClient(function migrateWithPgClient(client) {
-        return migrate(compiledSharedOptions, client);
-      });
 
       const addJob = makeAddJob(compiledSharedOptions, withPgClient);
       const addJobs = makeAddJobs(compiledSharedOptions, withPgClient);

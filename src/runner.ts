@@ -12,13 +12,24 @@ import type { CompiledOptions, Releasers } from "./lib.ts";
 import {
   coerceError,
   getUtilsAndReleasersFromOptions,
+  releaseAfterError,
   safeEmit,
   sleep,
 } from "./lib.ts";
 import { _runTaskList, runTaskListInternal } from "./main.ts";
+import { migrate } from "./migrate.ts";
 
 export const runMigrations = async (options: RunnerOptions): Promise<void> => {
-  const [, release] = await getUtilsAndReleasersFromOptions(options);
+  const [compiledOptions, release] =
+    await getUtilsAndReleasersFromOptions(options);
+  try {
+    await compiledOptions.withPgClient((client) =>
+      migrate(compiledOptions, client),
+    );
+  } catch (e) {
+    await releaseAfterError(compiledOptions.logger, release, e);
+    throw e;
+  }
   await release();
 };
 
@@ -50,6 +61,14 @@ export const runOnce = async (
 ): Promise<void> => {
   const [compiledOptions, release] =
     await getUtilsAndReleasersFromOptions(options);
+  try {
+    await compiledOptions.withPgClient((client) =>
+      migrate(compiledOptions, client),
+    );
+  } catch (e) {
+    await releaseAfterError(compiledOptions.logger, release, e);
+    throw e;
+  }
   return runOnceInternal(compiledOptions, overrideTaskList, release);
 };
 
@@ -88,6 +107,14 @@ export const run = async (
 ): Promise<Runner> => {
   const [compiledOptions, release] =
     await getUtilsAndReleasersFromOptions(rawOptions);
+  try {
+    await compiledOptions.withPgClient((client) =>
+      migrate(compiledOptions, client),
+    );
+  } catch (e) {
+    await releaseAfterError(compiledOptions.logger, release, e);
+    throw e;
+  }
   return runInternal(
     compiledOptions,
     overrideTaskList,
@@ -123,14 +150,7 @@ export const runInternal = async (
       release,
     });
   } catch (e) {
-    try {
-      await release();
-    } catch (e2) {
-      compiledOptions.logger.error(
-        `Error occurred whilst attempting to release options after error occurred`,
-        { error: e, secondError: e2 },
-      );
-    }
+    await releaseAfterError(compiledOptions.logger, release, e);
     throw e;
   }
 };
