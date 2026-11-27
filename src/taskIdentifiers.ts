@@ -16,7 +16,7 @@ interface Cache {
   lastStr: string | Promise<string>;
   lastDigest: TaskDetails | Promise<TaskDetails>;
 }
-const cacheByOptions = new Map<CompiledSharedOptions, Cache>();
+const cacheByOptions = new WeakMap<CompiledSharedOptions, Cache>();
 
 export function getTaskDetails(
   compiledSharedOptions: CompiledSharedOptions,
